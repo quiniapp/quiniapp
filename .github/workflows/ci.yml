@@ -19,9 +19,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build helper
-        run: npm run build --workspace=helper
-
       - name: Build API
         run: npm run build --workspace=api
 

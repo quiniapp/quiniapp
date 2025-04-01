@@ -5,8 +5,7 @@
   "private": true,
   "workspaces": [
     "api",
-    "web",
-    "helper"
+    "web"
   ],
   "scripts": {
     "lint": "npm run lint --workspaces",
