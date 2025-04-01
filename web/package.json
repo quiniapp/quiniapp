@@ -1,0 +1,17 @@
+{
+    "name": "web",
+    "version": "1.0.0",
+    "scripts": {
+      "dev": "next dev",
+      "build": "next build",
+      "start": "next start",
+      "lint": "eslint 'src/**/*.{ts,tsx}'",
+      "format": "prettier --write 'src/**/*.{ts,tsx,json,md}'"
+    },
+    "dependencies": {
+      "next": "latest",
+      "react": "18.x",
+      "react-dom": "18.x"
+    }
+  }
+  
