@@ -5,7 +5,7 @@
   "private": true,
   "workspaces": [
     "api",
-    "web"
+    "web","helper"
   ],
   "scripts": {
     "lint": "npm run lint --workspaces",
@@ -20,7 +20,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/quiniapp/quiniapp/issues"
   },
@@ -30,6 +30,7 @@
     "express": "^5.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.23.0",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
     "eslint": "^9.23.0",
@@ -41,6 +42,9 @@
     "typescript": "^5.8.2"
   },
   "lint-staged": {
-  "*.{ts,tsx}": ["eslint --fix", "prettier --write"]
-}
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
 }
