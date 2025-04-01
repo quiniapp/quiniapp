@@ -5,6 +5,5 @@
     "compilerOptions": {
       "jsx": "preserve"
     },
-    "references": [{ "path": "../helper" }]
   }
   
