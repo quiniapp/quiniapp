@@ -19,4 +19,5 @@ export interface IUserEntityBack {
   user_salt: string;
   token: string;
   user_type: USER_TYPE;
+  disabled: boolean;
 }
