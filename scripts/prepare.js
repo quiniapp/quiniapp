@@ -1,11 +1,14 @@
-// scripts/prepare.js
-const isCI = process.env.CI === 'true';
-const isVercel = !!process.env.VERCEL;
+import { execSync } from 'child_process';
 
-if (isCI || isVercel) {
-  console.log('Skipping husky install in CI/Vercel');
-  process.exit(0);
+export function prepareHusky() {
+  const isCI = process.env.CI === 'true';
+  const isVercel = !!process.env.VERCEL;
+
+  if (isCI || isVercel) {
+    console.log('Skipping husky install in CI/Vercel');
+    process.exit(0);
+  }
+
+  console.log('Running husky install...');
+  execSync('husky install', { stdio: 'inherit' });
 }
-
-console.log('Running husky install...');
-require('child_process').execSync('husky install', { stdio: 'inherit' });
