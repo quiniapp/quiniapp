@@ -1,7 +1,5 @@
-import Layout from '@/components/layout';
-
 const AgentCommissionContent = () => {
-  return <Layout classname="flex">AgentCommissionContent</Layout>;
+  return <p>AgentCommissionContent</p>;
 };
 
 export default AgentCommissionContent;

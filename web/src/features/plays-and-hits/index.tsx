@@ -1,7 +1,5 @@
-import Layout from '@/components/layout';
-
 const PlaysAndHitsContent = () => {
-  return <Layout classname="flex">plays-and-hits</Layout>;
+  return <p>plays-and-hits</p>;
 };
 
 export default PlaysAndHitsContent;

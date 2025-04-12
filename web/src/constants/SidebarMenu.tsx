@@ -1,31 +1,35 @@
 import { HomeIcon, TicketIcon, SettingsIcon, FileTextIcon, UserIcon } from 'lucide-react';
 import { ROUTES } from '@/types/routes.type';
+import { MENU_ITEM } from '@/types/menu-item.tsx';
 
-const MENU_ITEMS = [
+const MENU_ITEMS: MENU_ITEM[] = [
   {
     id: 'Home',
     name: 'Jugadas',
     route: ROUTES.HOME,
     icon: <HomeIcon size={20} />,
+    children: [
+      {
+        id: 'PlayDetails',
+        name: 'Realizar Jugadas',
+        route: ROUTES.PLAY_DETAILS,
+        icon: <FileTextIcon size={20} />,
+      },
+      {
+        id: 'PlaysAndHits',
+        name: 'Jugadas y Aciertos',
+        route: ROUTES.PLAYS_AND_HITS,
+        icon: <TicketIcon size={20} />,
+      },
+      {
+        id: 'TerminalTicket',
+        name: 'Revisar Ticket',
+        route: ROUTES.TERMINAL_TICKET,
+        icon: <TicketIcon size={20} />,
+      },
+    ],
   },
-  {
-    id: 'PlayDetails',
-    name: 'Detalles Jugadas',
-    route: ROUTES.PLAY_DETAILS,
-    icon: <FileTextIcon size={20} />,
-  },
-  {
-    id: 'PlaysAndHits',
-    name: 'Jugadas y Aciertos',
-    route: ROUTES.PLAYS_AND_HITS,
-    icon: <TicketIcon size={20} />,
-  },
-  {
-    id: 'TerminalTicket',
-    name: 'Terminal Ticket',
-    route: ROUTES.TERMINAL_TICKET,
-    icon: <TicketIcon size={20} />,
-  },
+
   {
     id: 'Results',
     name: 'Resultados',

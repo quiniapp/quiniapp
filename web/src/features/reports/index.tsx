@@ -1,7 +1,5 @@
-import Layout from '@/components/layout';
-
 const ReportsContent = () => {
-  return <Layout classname="flex">ReportsContent</Layout>;
+  return <p> ReportsContent</p>;
 };
 
 export default ReportsContent;

@@ -1,7 +1,5 @@
-import Layout from '@/components/layout';
-
 const SettingsContent = () => {
-  return <Layout classname="flex">SettingsContent</Layout>;
+  return <p> SettingsContent. </p>;
 };
 
 export default SettingsContent;

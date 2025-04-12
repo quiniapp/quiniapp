@@ -15,66 +15,86 @@ import UsersPage from '@/pages/users';
 import { ROUTES } from '@/types/routes.type';
 import ReportsPage from '@/pages/reports';
 import SettingsPage from '@/pages/settings';
+import LoginPage from '@/features/login';
+import PlaysPage from '@/pages/plays.tsx';
+import Layout from '@/components/layout';
 
 export const RoutesContent = [
   {
-    path: ROUTES.HOME,
-    id: 'Home',
-    element: <Index />,
+    path: ROUTES.LOGIN,
+    id: 'Login',
+    element: <LoginPage />,
   },
   {
-    path: ROUTES.NOT_FOUND,
+    path: '/',
+    id: 'MainLayout',
+    element: <Layout />,
+    children: [
+      {
+        path: ROUTES.HOME,
+        id: 'Home',
+        element: <Index />,
+      },
+      {
+        path: ROUTES.PLAYS,
+        id: 'Plays',
+        element: <PlaysPage />,
+      },
+      {
+        path: ROUTES.PLAY_DETAILS,
+        id: 'PlayDetails',
+        element: <PlayDetailsPage />,
+      },
+      {
+        path: ROUTES.PLAYS_AND_HITS,
+        id: 'PlaysAndHits',
+        element: <PlaysAndHitsPage />,
+      },
+      {
+        path: ROUTES.TERMINAL_TICKET,
+        id: 'TerminalTicket',
+        element: <TerminalTicketPage />,
+      },
+      {
+        path: ROUTES.RESULTS,
+        id: 'Results',
+        element: <ResultsPage />,
+      },
+      {
+        path: ROUTES.CLIENTS,
+        id: 'Clients',
+        element: <ClientPage />,
+      },
+      {
+        path: ROUTES.AGENT_COMMISSION,
+        id: 'AgentCommission',
+        element: <AgentCommissionPage />,
+      },
+      {
+        path: ROUTES.SHIFTS,
+        id: 'Shifts',
+        element: <ShiftsPage />,
+      },
+      {
+        path: ROUTES.USERS,
+        id: 'Users',
+        element: <UsersPage />,
+      },
+      {
+        path: ROUTES.REPORTS,
+        id: 'Reports',
+        element: <ReportsPage />,
+      },
+      {
+        path: ROUTES.SETTINGS,
+        id: 'Settings',
+        element: <SettingsPage />,
+      },
+    ],
+  },
+  {
+    path: '*',
     id: 'NotFound',
     element: <NotFound />,
-  },
-  {
-    path: ROUTES.PLAY_DETAILS,
-    id: 'PlayDetails',
-    element: <PlayDetailsPage />,
-  },
-  {
-    path: ROUTES.PLAYS_AND_HITS,
-    id: 'PlaysAndHits',
-    element: <PlaysAndHitsPage />,
-  },
-  {
-    path: ROUTES.TERMINAL_TICKET,
-    id: 'TerminalTicket',
-    element: <TerminalTicketPage />,
-  },
-  {
-    path: ROUTES.RESULTS,
-    id: 'Results',
-    element: <ResultsPage />,
-  },
-  {
-    path: ROUTES.CLIENTS,
-    id: 'Clients',
-    element: <ClientPage />,
-  },
-  {
-    path: ROUTES.AGENT_COMMISSION,
-    id: 'AgentCommission',
-    element: <AgentCommissionPage />,
-  },
-  {
-    path: ROUTES.SHIFTS,
-    id: 'Shifts',
-    element: <ShiftsPage />,
-  },
-  {
-    path: ROUTES.USERS,
-    id: 'Users',
-    element: <UsersPage />,
-  },
-  {
-    path: ROUTES.REPORTS,
-    id: 'Reports',
-    element: <ReportsPage />,
-  },
-  {
-    path: ROUTES.SETTINGS,
-    id: 'Settings',
-    element: <SettingsPage />,
   },
 ];

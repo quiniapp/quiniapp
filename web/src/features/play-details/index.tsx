@@ -1,7 +1,17 @@
-import Layout from '@/components/layout';
+import Box from '@/components/box';
+
+import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
+import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
+import ResultsOverview from '@/features/play-details/results-overview.tsx';
 
 const PlayDetailsContent = () => {
-  return <Layout classname="flex">detalles de jugadas</Layout>;
+  return (
+    <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
+      <HeaderPlayDetail />
+      <FillOutATicket />
+      <ResultsOverview />
+    </Box>
+  );
 };
 
 export default PlayDetailsContent;

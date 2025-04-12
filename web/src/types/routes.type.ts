@@ -1,6 +1,7 @@
 export enum ROUTES {
   HOME = '/',
   NOT_FOUND = '/not-found',
+  PLAYS = '/plays',
   PLAY_DETAILS = '/play-details',
   PLAYS_AND_HITS = '/plays-and-hits',
   TERMINAL_TICKET = '/terminal-ticket',
@@ -11,4 +12,5 @@ export enum ROUTES {
   USERS = '/users',
   REPORTS = '/reports',
   SETTINGS = '/settings',
+  LOGIN = '/login',
 }

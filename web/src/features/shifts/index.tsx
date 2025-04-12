@@ -1,7 +1,5 @@
-import Layout from '@/components/layout';
-
 const ShiftsContent = () => {
-  return <Layout classname="flex">ShiftsContent</Layout>;
+  return <p>ShiftsContent</p>;
 };
 
 export default ShiftsContent;
