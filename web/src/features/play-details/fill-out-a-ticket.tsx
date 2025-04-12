@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { PlusIcon, TrashIcon } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox.tsx';
+
+import GameTurns from '@/features/play-details/game-turns.tsx';
 
 const FillOutATicket = () => {
   return (
@@ -35,49 +36,15 @@ const FillOutATicket = () => {
           <Flex className={' gap-4 py-[24px]'}>
             <Button type={'button'} className={'flex-1'}>
               {' '}
-              <PlusIcon /> Agregar{' '}
+              <PlusIcon /> Agregar
             </Button>
             <Button type={'reset'} className={'flex-1 max-w-[120px]'} variant={'outline'}>
-              {' '}
-              <TrashIcon /> Borrar{' '}
+              <TrashIcon /> Borrar
             </Button>
           </Flex>
         </form>
       </Flex>
-      <Flex className={'flex-col space-y-4 flex-1'}>
-        <Flex className={'flex-col border-2 p-4 '}>
-          <p className={'text-lg'}> Turnos </p>
-          <Flex className={'pt-8 space-x-4'}>
-            <Flex className={'gap-2'}>
-              <Label htmlFor={'f1'}> La Previa </Label>
-              <Checkbox id={'f1'} name={'f1'} className={'border-2'} />
-            </Flex>
-
-            <Flex className={'gap-2'}>
-              <Label htmlFor={'primera'}> Primera </Label>
-              <Checkbox id={'primera'} name={'primera'} className={'border-2'} />
-            </Flex>
-
-            <Flex className={'gap-2'}>
-              <Label htmlFor={'f2'}> Matutina </Label>
-              <Checkbox id={'f2'} name={'f2'} className={'border-2'} />
-            </Flex>
-
-            <Flex className={'gap-2'}>
-              <Label htmlFor={'f3'}> Vespertina </Label>
-              <Checkbox id={'f3'} name={'f3'} className={'border-2'} />
-            </Flex>
-
-            <Flex className={'gap-2'}>
-              <Label htmlFor={'f4'}> Nocturna </Label>
-              <Checkbox id={'f4'} name={'f4'} className={'border-2'} />
-            </Flex>
-          </Flex>
-        </Flex>
-        <Flex className={'flex-col border-2 p-4'}>
-          <p className={'text-lg'}>Quinielas </p>
-        </Flex>
-      </Flex>
+      <GameTurns />
     </Flex>
   );
 };
