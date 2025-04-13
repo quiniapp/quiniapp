@@ -8,17 +8,17 @@ import GameTurns from '@/features/play-details/game-turns.tsx';
 
 const FillOutATicket = () => {
   return (
-    <Flex className={'flex-col xl:flex-row py-[36px] gap-[56px]'}>
-      <Flex className={'flex-1 max-w-[350px]'}>
+    <Flex className={'flex-col xl:flex-row py-[36px] gap-[36px]'}>
+      <Flex className={'flex-1 max-w-[380px] '}>
         <form className={'w-full'}>
-          <Flex className={'flex-col space-y-4 '}>
+          <Flex className={'flex-col space-y-4 border px-4 pt-8'}>
             <Flex className={'flex-col space-y-3 '}>
               <Label htmlFor={'number'}> Numero </Label>
-              <Input id="number" name={'ticket-number'} type={'number'} placeholder={'000'} />
+              <Input id="number" name={'ticket-number'} type={'number'} placeholder={'000000'} />
             </Flex>
             <Flex className={'flex-col space-y-3 '}>
               <Label htmlFor={'amount'}> Monto </Label>
-              <Input id="amount" name={'ticket-amount'} type={'number'} placeholder={'000'} />
+              <Input id="amount" name={'ticket-amount'} type={'number'} placeholder={'000000'} />
             </Flex>
             <Flex className={'flex-col space-y-3 '}>
               <Label htmlFor={'place'}> Ubicacion </Label>
@@ -32,15 +32,14 @@ const FillOutATicket = () => {
               <Label htmlFor={'position'}> Posición </Label>
               <Input id="position" name={'ticket-position'} type={'number'} placeholder={'000'} />
             </Flex>
-          </Flex>
-          <Flex className={' gap-4 py-[24px]'}>
-            <Button type={'button'} className={'flex-1'}>
-              {' '}
-              <PlusIcon /> Agregar
-            </Button>
-            <Button type={'reset'} className={'flex-1 max-w-[120px]'} variant={'outline'}>
-              <TrashIcon /> Borrar
-            </Button>
+            <Flex className={' gap-4 py-[24px]'}>
+              <Button type={'button'} className={'flex-1'}>
+                <PlusIcon /> Agregar
+              </Button>
+              <Button type={'reset'} className={'flex-1 max-w-[120px]'} variant={'outline'}>
+                <TrashIcon /> Borrar
+              </Button>
+            </Flex>
           </Flex>
         </form>
       </Flex>

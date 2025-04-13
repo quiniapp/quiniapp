@@ -1,21 +1,51 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, Dispatch, SetStateAction, RefObject } from 'react';
 
-type KeyRefPair = {
-  key: string;
-  ref: React.RefObject<HTMLInputElement>;
+type CheckboxState = {
+  checked: boolean;
+  setChecked: Dispatch<SetStateAction<boolean>>;
+  ref: RefObject<HTMLButtonElement | null>;
 };
 
-export function useHotkeyCheckbox(pairs: KeyRefPair[]) {
+type CheckboxStateMap = Record<string, CheckboxState>;
+
+export const useKeyboardCheckboxes = (): CheckboxStateMap => {
+  const [isF1Checked, setIsF1Checked] = useState(false);
+  const [isF2Checked, setIsF2Checked] = useState(false);
+  const [isF3Checked, setIsF3Checked] = useState(false);
+  const [isF4Checked, setIsF4Checked] = useState(false);
+  const [isF5Checked, setIsF5Checked] = useState(false);
+
+  const refF1 = useRef<HTMLButtonElement>(null);
+  const refF2 = useRef<HTMLButtonElement>(null);
+  const refF3 = useRef<HTMLButtonElement>(null);
+  const refF4 = useRef<HTMLButtonElement>(null);
+  const refF5 = useRef<HTMLButtonElement>(null);
+
+  const keyMap: Record<string, React.Dispatch<React.SetStateAction<boolean>>> = {
+    F1: setIsF1Checked,
+    F2: setIsF2Checked,
+    F3: setIsF3Checked,
+    F4: setIsF4Checked,
+    F5: setIsF5Checked,
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const match = pairs.find((pair) => pair.key === e.key);
-      if (match && match.ref.current) {
+      if (keyMap[e.key]) {
         e.preventDefault();
-        match.ref.current.click();
+        keyMap[e.key]((prev) => !prev);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pairs]);
-}
+  }, []);
+
+  return {
+    f1: { checked: isF1Checked, setChecked: setIsF1Checked, ref: refF1 },
+    f2: { checked: isF2Checked, setChecked: setIsF2Checked, ref: refF2 },
+    f3: { checked: isF3Checked, setChecked: setIsF3Checked, ref: refF3 },
+    f4: { checked: isF4Checked, setChecked: setIsF4Checked, ref: refF4 },
+    f5: { checked: isF5Checked, setChecked: setIsF5Checked, ref: refF5 },
+  };
+};
