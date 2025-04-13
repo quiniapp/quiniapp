@@ -4,11 +4,17 @@
     {
       "path": "./tsconfig.app.json"
     },
-    {
-      "path": "./tsconfig.node.json"
-    }
+
   ],
   "compilerOptions": {
+    "moduleResolution": "node16",
+    "module": "esnext",
+    "types": ["tailwindcss"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "esnext",
+    "lib": ["dom", "esnext"],
     "baseUrl": ".",
     "paths": {
       "@/*": [
