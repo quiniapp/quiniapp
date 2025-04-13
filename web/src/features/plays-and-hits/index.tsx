@@ -25,8 +25,7 @@ const PlaysAndHitsContent = () => {
       <Flex className={'items-center justify-between py-[16px]'}>
         <p>Montos</p>
         <Button>
-          {' '}
-          Cerrar <XIcon />{' '}
+          Cerrar <XIcon />
         </Button>
       </Flex>
     </Box>
