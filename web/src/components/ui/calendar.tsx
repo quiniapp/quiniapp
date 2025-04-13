@@ -39,6 +39,7 @@ export function Calendar({
         }
         popperPlacement="bottom-start"
         showPopperArrow={false}
+        showMonthYearDropdown={true}
       />
       <CalendarIcon className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
     </div>
