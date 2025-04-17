@@ -1,3 +1,7 @@
+export enum LOTTERY_TYPE {
+  NORMAL,
+  BORRATINA,
+}
 export interface IBetEntityBack {
   bet_id: string;
   ticket_id: string;
@@ -9,6 +13,7 @@ export interface IBetEntityBack {
   with: number;
   position: number;
   winner: boolean;
+  lottery_type: LOTTERY_TYPE;
   created_at: string;
   deleted_at: string;
 }
