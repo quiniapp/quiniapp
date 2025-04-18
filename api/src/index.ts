@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan'; // <--- import morgan
-
 import { isAuthenticated } from '../middlewares/auth.middleware';
 import privateRouter, { publicRouter } from './router';
 
