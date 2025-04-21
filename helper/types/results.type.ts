@@ -5,11 +5,11 @@ export interface ILotteryResultsEntityBack {
   lottery_id: string;
   schedule_id: string;
   created_at: string;
-  updated_at: string;
+  edited_at: string;
   deleted_at: string | null;
 }
 
 export type IBetEntityFront = Omit<
   ILotteryResultsEntityBack,
-  'created_at' | 'updated_at' | 'deleted_at'
+  'created_at' | 'edited_at' | 'deleted_at'
 >;

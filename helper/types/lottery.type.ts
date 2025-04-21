@@ -3,7 +3,7 @@ export interface ILotteryEntityBack {
   name: string;
   active: boolean;
   created_at: string;
-  updated_at: string;
+  edited_at: string;
 }
 
-export type IBetEntityFront = Omit<ILotteryEntityBack, 'created_at' | 'updated_at'>;
+export type IBetEntityFront = Omit<ILotteryEntityBack, 'created_at' | 'edited_at'>;
