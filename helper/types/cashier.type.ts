@@ -21,11 +21,11 @@ export interface ICashierEntityBack {
   token: string;
   disabled: boolean;
   created_at: string;
-  updated_at: string;
+  edited_at: string;
   deleted_at: string | null;
 }
 
 export type ICashierEntityFront = Omit<
   ICashierEntityBack,
-  'created_at' | 'updated_at' | 'deleted_at'
+  'created_at' | 'edited_at' | 'deleted_at'
 >;

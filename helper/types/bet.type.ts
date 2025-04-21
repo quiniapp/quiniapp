@@ -16,8 +16,8 @@ export interface IBetEntityBack {
   winner: boolean;
   lottery_type: LOTTERY_TYPE;
   created_at: string;
-  updated_at: string;
+  edited_at: string;
   deleted_at: string | null;
 }
 
-export type IBetEntityFront = Omit<IBetEntityBack, 'created_at' | 'updated_at' | 'deleted_at'>;
+export type IBetEntityFront = Omit<IBetEntityBack, 'created_at' | 'edited_at' | 'deleted_at'>;

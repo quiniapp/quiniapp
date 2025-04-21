@@ -20,11 +20,11 @@ export interface IUserEntityBack {
   token: string;
   disabled: boolean;
   created_at: string;
-  updated_at: string;
+  edited_at: string;
   deleted_at: string | null;
 }
 
 export type IBetEntityFront = Omit<
   IUserEntityBack,
-  'password' | 'disabled' | 'user_salt' | 'created_at' | 'deleted_at' | 'updated_at'
+  'password' | 'disabled' | 'user_salt' | 'created_at' | 'deleted_at' | 'edited_at'
 >;

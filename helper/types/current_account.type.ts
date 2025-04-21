@@ -14,7 +14,7 @@ export interface ICurrentAccountEntityBack {
   leave: number;
   date: string;
   created_at: string;
-  updated_at: string;
+  edited_at: string;
 }
 
-export type IBetEntityFront = Omit<ICurrentAccountEntityBack, 'created_at' | 'updated_at'>;
+export type IBetEntityFront = Omit<ICurrentAccountEntityBack, 'created_at' | 'edited_at'>;
