@@ -8,5 +8,5 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "middlewares"]
+  "include": ["src", "middlewares", "src/auth/controller", "helper"]
 }
