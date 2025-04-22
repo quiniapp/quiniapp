@@ -1,6 +1,6 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import Flex from '@/components/flex';
+import { Flex, FlexCol } from '@/components/flex';
 import { useKeyboardCheckboxes } from '@/hooks/useHotkeyCheckbox.ts';
 
 const GameTurns = () => {
@@ -8,7 +8,7 @@ const GameTurns = () => {
 
   return (
     <Flex className="flex-col space-y-8 flex-1">
-      <Flex className="flex-col border-2 p-4">
+      <FlexCol className=" border-2 p-4">
         <p className="text-lg">Turnos</p>
         <Flex className="pt-8 space-x-4">
           <Flex className="gap-2">
@@ -75,7 +75,7 @@ const GameTurns = () => {
             />
           </Flex>
         </Flex>
-      </Flex>
+      </FlexCol>
       <Flex className="flex-col border-2 p-4">
         <p className="text-lg">Qunielas</p>
       </Flex>

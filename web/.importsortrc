@@ -1,0 +1,14 @@
+{
+  ".ts, .tsx": {
+    "parser": "typescript",
+    "style": "module",
+    "options": {
+      "groups": [
+        ["^react"],
+        ["^@?\\w"],
+        ["^@components", "^@features", "^@hooks", "^@utils"],
+        ["^\\.\\./", "^\\./"]
+      ]
+    }
+  }
+}

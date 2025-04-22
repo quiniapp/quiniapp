@@ -1,4 +1,4 @@
-import Flex from '@/components/flex';
+import { Flex, FlexCol } from '@/components/flex';
 import { Button } from '@/components/ui/button.tsx';
 import { Trash2Icon, TimerReset } from 'lucide-react';
 
@@ -8,12 +8,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 const ResultsOverview = () => {
   return (
     <Flex className={'justify-between py-[24px] border-t-2'}>
-      <Flex className={'flex-col'}>
+      <FlexCol>
         <Flex>Monto parcial</Flex>
         <Flex>Total</Flex>
-      </Flex>
+      </FlexCol>
       <Flex className={'space-x-[100px]'}>
-        <Flex className={'flex-col'}>
+        <FlexCol>
           <RadioGroup defaultValue="option-one">
             <Flex className=" items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />
@@ -24,7 +24,7 @@ const ResultsOverview = () => {
               <Label htmlFor="option-two">Exportar</Label>
             </Flex>
           </RadioGroup>
-        </Flex>
+        </FlexCol>
         <Flex className={'gap-4'}>
           <Button>Cerrar Ticket </Button>
           <Button variant={'outline'}>

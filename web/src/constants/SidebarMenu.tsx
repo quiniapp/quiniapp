@@ -1,4 +1,11 @@
-import { HomeIcon, TicketIcon, SettingsIcon, FileTextIcon, UserIcon } from 'lucide-react';
+import {
+  HomeIcon,
+  TicketIcon,
+  SettingsIcon,
+  FileTextIcon,
+  UserIcon,
+  UsersIcon,
+} from 'lucide-react';
 import { ROUTES } from '@/types/routes.type';
 import { MENU_ITEM } from '@/types/menu-item.tsx';
 
@@ -36,30 +43,55 @@ const MENU_ITEMS: MENU_ITEM[] = [
     route: ROUTES.RESULTS,
     icon: <FileTextIcon size={20} />,
   },
+  // Admin ve Qunielas
   {
-    id: 'Clients',
-    name: 'Clientes',
+    id: 'Quinielas',
+    name: 'Qunielas',
     route: ROUTES.CLIENTS,
     icon: <UserIcon size={20} />,
+    children: [
+      {
+        id: 'AgentCommission',
+        name: 'Qunielas a jugarse',
+        route: ROUTES.LOTTERIES,
+        icon: <FileTextIcon size={20} />,
+      },
+      {
+        id: 'Shifts',
+        name: 'Turnos',
+        route: ROUTES.SHIFTS,
+        icon: <FileTextIcon size={20} />,
+      },
+    ],
   },
-  {
-    id: 'AgentCommission',
-    name: 'Comisión a agente',
-    route: ROUTES.AGENT_COMMISSION,
-    icon: <FileTextIcon size={20} />,
-  },
-  {
-    id: 'Shifts',
-    name: 'Turnos',
-    route: ROUTES.SHIFTS,
-    icon: <FileTextIcon size={20} />,
-  },
+
   {
     id: 'Users',
     name: 'Usuarios',
     route: ROUTES.USERS,
     icon: <UserIcon size={20} />,
+    children: [
+      {
+        id: 'UsersLIst',
+        name: 'Listado de Usuarios',
+        route: ROUTES.USERS,
+        icon: <UsersIcon size={20} />,
+      },
+      {
+        id: 'Groups',
+        name: 'Grupos',
+        route: ROUTES.USERS,
+        icon: <UsersIcon size={20} />,
+      },
+    ],
   },
+  {
+    id: 'CurrentAccount',
+    name: 'Cuenta Corriente',
+    route: ROUTES.CURRENT_ACCOUNT,
+    icon: <FileTextIcon size={20} />,
+  },
+
   {
     id: 'Reports',
     name: 'Reportes',

@@ -8,7 +8,6 @@ import ShiftsPage from '@/pages/shifts';
 import { TerminalTicketPage } from '@/pages/terminal-ticket';
 import ResultsPage from '@/pages/results';
 import ClientPage from '@/pages/clients';
-import AgentCommissionPage from '@/pages/agent-commission';
 import UsersPage from '@/pages/users';
 
 // @Types
@@ -18,6 +17,9 @@ import SettingsPage from '@/pages/settings';
 import LoginPage from '@/features/login';
 import PlaysPage from '@/pages/plays.tsx';
 import Layout from '@/components/layout';
+import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
+import CurrentAccountPage from '@/pages/current-account.tsx';
+import ProtectedRoute from '@/protected/protected-routes.tsx';
 
 export const RoutesContent = [
   {
@@ -28,7 +30,11 @@ export const RoutesContent = [
   {
     path: '/',
     id: 'MainLayout',
-    element: <Layout />,
+    element: (
+      <ProtectedRoute>
+        <Layout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         path: ROUTES.HOME,
@@ -66,9 +72,9 @@ export const RoutesContent = [
         element: <ClientPage />,
       },
       {
-        path: ROUTES.AGENT_COMMISSION,
-        id: 'AgentCommission',
-        element: <AgentCommissionPage />,
+        path: ROUTES.CURRENT_ACCOUNT,
+        id: 'CurrentAccount',
+        element: <CurrentAccountPage />,
       },
       {
         path: ROUTES.SHIFTS,
@@ -89,6 +95,11 @@ export const RoutesContent = [
         path: ROUTES.SETTINGS,
         id: 'Settings',
         element: <SettingsPage />,
+      },
+      {
+        path: ROUTES.LOTTERIES,
+        id: 'Lotteries',
+        element: <UpcomingLotteriesPage />,
       },
     ],
   },

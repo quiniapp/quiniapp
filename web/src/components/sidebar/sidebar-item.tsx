@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 // @Components
-import Flex from '@/components/flex';
+import { Flex } from '@/components/flex';
 
 // @types
 import type { MENU_ITEM } from '@/types/menu-item';
@@ -70,7 +70,7 @@ const SidebarItem = ({ data }: SidebarItemProps) => {
               key={child.id}
               onClick={() => navigate(child.route)}
               className={` items-center gap-2 text-sm p-3 rounded hover:bg-[var(--primary-bg-hover)] cursor-pointer ${
-                isRouteActive(child.route) ? 'bg-accent' : ''
+                isRouteActive(child.route) ? 'bg-[var(--bg-card)]' : ''
               }`}
             >
               <span className="text-gray-400">{child.icon}</span>
