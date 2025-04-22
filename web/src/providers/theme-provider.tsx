@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(savedTheme);
   }, []);
 
-  // Aplicar clase al elemento HTML
+
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('light', 'dark');

@@ -19,6 +19,7 @@ import PlaysPage from '@/pages/plays.tsx';
 import Layout from '@/components/layout';
 import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
 import CurrentAccountPage from '@/pages/current-account.tsx';
+import ProtectedRoute from '@/protected/protected-routes.tsx';
 
 export const RoutesContent = [
   {
@@ -29,7 +30,11 @@ export const RoutesContent = [
   {
     path: '/',
     id: 'MainLayout',
-    element: <Layout />,
+    element: (
+      <ProtectedRoute>
+        <Layout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         path: ROUTES.HOME,
