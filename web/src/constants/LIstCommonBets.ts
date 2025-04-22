@@ -1,0 +1,68 @@
+
+export const QUINIELA_OPTIONS = {
+
+  PROVINCIAS: [
+    { value: 'nac', label: 'Nacional' },
+    { value: 'pro', label: 'Provincia' },
+    { value: 'sfe', label: 'Santa Fe' },
+    { value: 'cba', label: 'Córdoba' },
+    { value: 'men', label: 'Mendoza' },
+    { value: 'tuc', label: 'Tucumán' },
+    { value: 'sla', label: 'Salta' },
+    { value: 'sju', label: 'San Juan' },
+    { value: 'lpa', label: 'La Pampa' },
+    { value: 'for', label: 'Formosa' },
+    { value: 'cha', label: 'Chaco' },
+    { value: 'cor', label: 'Corrientes' },
+    { value: 'eri', label: 'Entre Ríos' },
+    { value: 'slu', label: 'San Luis' },
+    { value: 'rne', label: 'Río Negro' },
+    { value: 'chu', label: 'Chubut' },
+    { value: 'tfe', label: 'Tierra del Fuego' },
+    { value: 'cat', label: 'Catamarca' },
+    { value: 'lri', label: 'La Rioja' },
+    { value: 'snt', label: 'Santiago del Estero' },
+    { value: 'mis', label: 'Misiones' },
+    { value: 'neu', label: 'Neuquén' },
+    { value: 'sct', label: 'Santa Cruz' },
+    { value: 'juy', label: 'Jujuy' }
+  ],
+
+  PASADORES: [
+    { value: 'Pasador 1', label: 'Grupo 1' },
+    { value: 'Pasador 2', label: 'Grupo 2' },
+    { value: 'Pasador 3', label: 'Grupo 3' },
+    { value: 'Pasador 4', label: 'Grupo 4' },
+    { value: 'Pasador 5', label: 'Grupo 5' },
+    { value: 'Pasador 6', label: 'Grupo 6' },
+    { value: 'Pasador 7', label: 'Grupo 7' },
+    { value: 'Pasador 8', label: 'Grupo 8' },
+    { value: 'Pasador 9', label: 'Grupo 9' },
+    { value: 'Pasador 0', label: 'Grupo 0' }
+  ],
+
+  MODALIDADES: [
+    { value: 'comun', label: 'Común' },
+    { value: 'matutina', label: 'Matutina' },
+    { value: 'vespertina', label: 'Vespertina' },
+    { value: 'nocturna', label: 'Nocturna' },
+    { value: 'preferida', label: 'Preferida' }
+  ]
+} as const;
+export const MODALIDADES = [
+  { value: 'previa', label: 'Previa (10:15 hs)' },
+  { value: 'matutina', label: 'Matutina (13:05 hs)' },
+  { value: 'vespertina', label: 'Vespertina (17:05 hs)' },
+  { value: 'nocturna', label: 'Nocturna (20:05 hs)' },
+  { value: 'preferida', label: 'Preferida (21:35 hs)' },
+  { value: 'revancha', label: 'Revancha (22:30 hs)' },
+  { value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)' }
+] as const;
+
+const PROVINCIAS = ['NAC', 'PRO', 'SFE', 'CBA', 'MEN', 'TUC', 'SLA', 'SJU', 'LPA', 'FOR', 'CHA', 'COR', 'ERI', 'SLU', 'RNE', 'CHU', 'TFE', 'CAT', 'LRI', 'SNT', 'MIS', 'NEU', 'SCT', 'JUY'];
+
+export const QUINIELA_PROVINCIAS = PROVINCIAS.map(
+  prov => ({
+  value: prov,
+  label: prov
+}));

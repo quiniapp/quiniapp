@@ -1,10 +1,13 @@
-import Box from '@/components/box';
-import HeaderSection from '@/components/header-section';
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
-import Flex from '@/components/flex';
 import { Button } from '@/components/ui/button.tsx';
+import Box from '@/components/box';
+import { Flex, FlexCol } from '@/components/flex';
+import HeaderSection from '@/components/header-section';
+
+import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table.tsx';
-import { XIcon } from 'lucide-react';
+
+import { XIcon, Search } from 'lucide-react';
+import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box.tsx';
 
 const PlaysAndHitsContent = () => {
   return (
@@ -13,18 +16,24 @@ const PlaysAndHitsContent = () => {
         <SelectDayToSearch />
       </HeaderSection>
       <Flex className={'flex-col space-y-8'}>
-        <Flex className={'flex-col'}>
-          <p> Ver</p>
-          <Flex className={'border flex-col '}>
-            <p>checkboxes</p>
-            <Button> Buscar </Button>
-          </Flex>
-        </Flex>
+        <FlexCol className={'space-y-4 py-[24px]'}>
+
+          <PlayAndHitsBox />
+
+          <Box className={'w-[200px]'}>
+            <Button className={'w-full'}>
+              <Search /> Buscar
+            </Button>
+          </Box>
+        </FlexCol>
         <PlaysAndHitsTable />
       </Flex>
       <Flex className={'items-center justify-between py-[16px]'}>
-        <p>Montos</p>
-        <Button>
+        <FlexCol>
+          <p>Total Monto de juagada: </p>
+          <p>Total Monto de ciertos: </p>
+        </FlexCol>
+        <Button className={'w-[130px] bg-white text-neutral-700 font-bold'}>
           Cerrar <XIcon />
         </Button>
       </Flex>

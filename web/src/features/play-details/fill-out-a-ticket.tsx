@@ -1,4 +1,4 @@
-import Flex from '@/components/flex';
+import { Flex } from '@/components/flex';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { Button } from '@/components/ui/button.tsx';

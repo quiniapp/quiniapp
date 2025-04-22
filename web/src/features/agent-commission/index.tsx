@@ -1,5 +1,5 @@
-const AgentCommissionContent = () => {
-  return <p>AgentCommissionContent</p>;
+const CurrentAccountContent = () => {
+  return <p>CurrentAccountContent</p>;
 };
 
-export default AgentCommissionContent;
+export default CurrentAccountContent;

@@ -1,13 +1,16 @@
 import FilterSection from '@/components/filter-section';
 
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
+import { Flex, FlexCol } from '@/components/flex';
 
 const Home = () => {
   return (
-    <div className="flex flex-col md:flex-col   overflow-hidden">
+    <Flex>
+      <FlexCol className=" md:flex-col   overflow-hidden">
       <FilterSection />
       <SettlementPayrollTable />
-    </div>
+    </FlexCol>
+    </Flex>
   );
 };
 

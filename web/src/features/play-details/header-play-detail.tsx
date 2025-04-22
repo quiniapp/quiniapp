@@ -1,4 +1,4 @@
-import Flex from '@/components/flex';
+import { Flex } from '@/components/flex';
 
 import HeaderSection from '@/components/header-section';
 import { Input } from '@/components/ui/input.tsx';

@@ -13,4 +13,6 @@ export enum ROUTES {
   REPORTS = '/reports',
   SETTINGS = '/settings',
   LOGIN = '/login',
+  LOTTERIES = '/upcoming-lotteries',
+  CURRENT_ACCOUNT = '/current-account'
 }
