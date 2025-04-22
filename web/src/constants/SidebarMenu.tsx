@@ -62,7 +62,6 @@ const MENU_ITEMS: MENU_ITEM[] = [
         route: ROUTES.SHIFTS,
         icon: <FileTextIcon size={20} />,
       },
-
     ],
   },
 

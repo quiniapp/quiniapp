@@ -33,7 +33,7 @@ export const TerminalTicketContent = () => {
         </Flex>
       </FlexCol>
       <Flex className={'w-full justify-between py-8 border-t'}>
-        <Button variant={'destructive'} >
+        <Button variant={'destructive'}>
           <TicketX /> Eliminar Ticket
         </Button>
         <Button variant={'outline'}> Cerrar </Button>

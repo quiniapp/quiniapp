@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
-import { format } from "date-fns";
+import { format } from 'date-fns';
 import { CalendarIcon, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
 import { Flex } from '@/components/flex';
 import { Button } from '@/components/ui/button';
-import { Calendar} from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,9 +12,7 @@ import { cn } from '@/lib/utils.ts';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 
-
-
-const ResultsContent = ( ) => {
+const ResultsContent = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [resultados, setResultados] = useState<string[]>(Array(20).fill(''));
 
@@ -35,7 +32,6 @@ const ResultsContent = ( ) => {
     { id: 'entrerios', label: 'Entre Rios' },
     { id: 'cordoba', label: 'Cordoba' },
   ];
-
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -64,28 +60,25 @@ const ResultsContent = ( ) => {
               />
             </PopoverContent>
           </Popover>
-         <Flex className={'gap-6'}>
-           <Button variant="outline"   className="flex items-center gap-2">
-             <RefreshCw size={16} />
-             Actualizar
-           </Button>
-           <Button variant={'success'} className="  hover:bg-green-700 text-white" >
-             Generar Ganadores
-           </Button>
-         </Flex>
+          <Flex className={'gap-6'}>
+            <Button variant="outline" className="flex items-center gap-2">
+              <RefreshCw size={16} />
+              Actualizar
+            </Button>
+            <Button variant={'success'} className="  hover:bg-green-700 text-white">
+              Generar Ganadores
+            </Button>
+          </Flex>
         </Flex>
       </HeaderSection>
       <div className=" rounded-xl   py-[24px] space-y-6">
-
-
         <div className=" bg-[var(--bg-card)]  p-4 space-y-4">
           <div className="border border-dark-lighter rounded-lg p-4">
             <h3 className="text-sm font-medium mb-3">Turno</h3>
             <Box className="grid grid-cols-3 gap-4">
               {turnos.map((turno) => (
                 <Flex key={turno.id} className="  items-center space-x-2">
-
-                  <Checkbox id={turno.id}  className="border-4" />
+                  <Checkbox id={turno.id} className="border-4" />
                   <Label
                     htmlFor={turno.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -109,8 +102,6 @@ const ResultsContent = ( ) => {
                   >
                     {quiniela.label}
                   </Label>
-
-
                 </Flex>
               ))}
             </Box>
@@ -136,16 +127,18 @@ const ResultsContent = ( ) => {
               ))}
             </Box>
             <div className="flex justify-between mt-6 gap-4">
-              <Button variant={'outline'} className="w-1/2 bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium">
+              <Button
+                variant={'outline'}
+                className="w-1/2 bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium"
+              >
                 <PencilIcon /> Editar
               </Button>
               <Button variant={'default'} className="w-1/2   text-white">
-                 <SaveIcon /> Guardar Resultados
+                <SaveIcon /> Guardar Resultados
               </Button>
             </div>
           </div>
         </div>
-
       </div>
     </Box>
   );

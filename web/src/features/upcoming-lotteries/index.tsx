@@ -1,15 +1,19 @@
-
 import { useState } from 'react';
 import Box from '@/components/box';
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button.tsx';
 import { Checkbox } from '@/components/ui/checkbox.tsx';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select.tsx';
-import { Calendar, Clock, Ticket } from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select.tsx';
+import { Calendar, Clock, Ticket } from 'lucide-react';
 
 const UpcomingLotteriesContent = () => {
-
   const [selectedDay, setSelectedDay] = useState<string>('domingo');
 
   const turnos = [
@@ -32,7 +36,6 @@ const UpcomingLotteriesContent = () => {
 
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
       <HeaderSection title={'Quinielas a jugarse'} className={'w-full sticky top-0'} />
@@ -40,8 +43,6 @@ const UpcomingLotteriesContent = () => {
         <div className=" rounded-xl w-full  py-[24px] space-y-6">
           <div className=" bg-[var(--bg-card)]  p-4 space-y-4">
             <div className="bg-dark-light rounded-xl p-6 space-y-6">
-
-
               <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
