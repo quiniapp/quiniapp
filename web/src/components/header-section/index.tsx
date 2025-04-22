@@ -10,11 +10,13 @@ interface HeaderSectionProps {
 
 const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
   return (
-    <Flex className={`${cn(className)} items-center justify-between py-[16px] border-b min-h-[90px]`}>
-      <Flex>
+    <Flex
+      className={`${cn(className)} items-center justify-between py-[16px] border-b min-h-[90px]`}
+    >
+      <Flex className={'flex-1'}>
         <p className={'text-lg font-medium '}>{title}</p>
       </Flex>
-      <Flex>{children}</Flex>
+      <Flex className={'flex-1'}>{children}</Flex>
     </Flex>
   );
 };

@@ -1,8 +1,13 @@
-
 import { Flex, FlexCol } from '@/components/flex';
 import Box from '@/components/box';
 import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { SearchIcon } from 'lucide-react';
@@ -10,7 +15,6 @@ import { SearchIcon } from 'lucide-react';
 const FormHeaderFilter = () => {
   return (
     <form>
-
       <FlexCol className={' space-y-4 py-[24px]'}>
         <FlexCol className={'bg-bg-card border p-4 mb-4  space-y-6 '}>
           <Box className={'space-x-6 grid grid-cols-[repeat(3,1fr)]'}>
@@ -57,10 +61,13 @@ const FormHeaderFilter = () => {
               <Input type={'number'} placeholder={''} className={'h-[48px]'} />
             </FlexCol>
             <FlexCol className={'w-full gap-3 pt-[30px]'}>
-
               <Flex className={'gap-4'}>
-                <Button type={'button'}> <SearchIcon /> Buscar </Button>
-                <Button type={'reset'} variant={'outline'}> Limpiar</Button>
+                <Button type={'button'} className={'!px-6'}>
+                  <SearchIcon /> Buscar
+                </Button>
+                <Button type={'reset'} variant={'outline'} className={'!px-6'}>
+                  Limpiar
+                </Button>
               </Flex>
             </FlexCol>
           </Box>

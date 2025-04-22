@@ -19,7 +19,7 @@ const Layout = ({ classname }: LayoutProps) => {
       <Aside />
       <main className={`${cn(classname)} flex gap-6 w-full ml-[260px] `}>
         <div className="grid grid-rows-[auto_1fr_auto] w-full overflow-hidden flex-1 border-[var(--isActive)] rounded-xl m-[24px]">
-          <Header title="General Liquidaciones" />
+          <Header title="" />
           <div className="px-4 bg-[var(--primary-bg-content)]">
             <Outlet />
           </div>

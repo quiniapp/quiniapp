@@ -1,4 +1,11 @@
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 
 const TableTerminalTicket = () => {
   return (
@@ -18,57 +25,65 @@ const TableTerminalTicket = () => {
             <TableCell>1</TableCell>
             <TableCell>1</TableCell>
             <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-            <TableCell>1</TableCell>
-          </TableRow><TableRow>
+          </TableRow>
+          <TableRow>
             <TableCell>1</TableCell>
             <TableCell>1</TableCell>
             <TableCell>1</TableCell>
             <TableCell>1</TableCell>
           </TableRow>
-
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+            <TableCell>1</TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </div>
-      );
-      };
+  );
+};
 
-      export default TableTerminalTicket;
+export default TableTerminalTicket;

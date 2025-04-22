@@ -4,7 +4,7 @@ import { Maximize, MinusIcon, Sun, Moon } from 'lucide-react';
 const Header = ({ title }: { title: string }) => {
   const { theme, setTheme } = useTheme();
   return (
-    <div className="bg-red-500 text-white h-10 flex justify-between items-center px-4">
+    <div className="bg-rose-600 text-white h-10 flex justify-between items-center px-4">
       <h1 className="font-semibold">{title}</h1>
       <div className="flex gap-[16px]">
         <button className="ml-2 hover:bg-red-600 p-1">

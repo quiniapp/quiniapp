@@ -1,4 +1,11 @@
-import { HomeIcon, TicketIcon, SettingsIcon, FileTextIcon, UserIcon, UsersIcon } from 'lucide-react';
+import {
+  HomeIcon,
+  TicketIcon,
+  SettingsIcon,
+  FileTextIcon,
+  UserIcon,
+  UsersIcon,
+} from 'lucide-react';
 import { ROUTES } from '@/types/routes.type';
 import { MENU_ITEM } from '@/types/menu-item.tsx';
 
@@ -44,18 +51,19 @@ const MENU_ITEMS: MENU_ITEM[] = [
     icon: <UserIcon size={20} />,
     children: [
       {
-        id: 'Shifts',
-        name: 'Turnos',
-        route: ROUTES.SHIFTS,
-        icon: <FileTextIcon size={20} />,
-      },
-      {
         id: 'AgentCommission',
         name: 'Qunielas a jugarse',
         route: ROUTES.LOTTERIES,
         icon: <FileTextIcon size={20} />,
       },
-    ]
+      {
+        id: 'Shifts',
+        name: 'Turnos',
+        route: ROUTES.SHIFTS,
+        icon: <FileTextIcon size={20} />,
+      },
+
+    ],
   },
 
   {
@@ -75,8 +83,8 @@ const MENU_ITEMS: MENU_ITEM[] = [
         name: 'Grupos',
         route: ROUTES.USERS,
         icon: <UsersIcon size={20} />,
-      }
-    ]
+      },
+    ],
   },
   {
     id: 'CurrentAccount',

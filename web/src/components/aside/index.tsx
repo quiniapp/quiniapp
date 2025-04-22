@@ -14,27 +14,22 @@ import { Collapsible } from '@radix-ui/react-collapsible';
 import { CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronRight, UserIcon } from 'lucide-react';
 import MENU_ITEMS from '@/constants/SidebarMenu';
-import {   useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils.ts';
 import { useState } from 'react';
 
 const Aside = () => {
-
   const navigate = useNavigate();
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-
   return (
     <Sidebar className="h-screen min-w-[260px]">
-      <SidebarHeader className={'p-6'} >
-        quiniapp
-      </SidebarHeader>
+      <SidebarHeader className={'p-6'}>quiniapp</SidebarHeader>
       <SidebarContent className="gap-0">
         {MENU_ITEMS.map((item) => {
           const hasChildren = !!item.children?.length;
-
 
           if (hasChildren) {
             const isOpen = openId === item.id;
@@ -54,8 +49,8 @@ const Aside = () => {
                   <CollapsibleTrigger asChild>
                     <SidebarGroupLabel
                       className={cn(
-                        "cursor-pointer flex items-center gap-2 h-[48px] px-3 !rounded-none transition-colors",
-                        isActive ? "bg-primary text-white" : "hover:bg-muted/10 text-white"
+                        'cursor-pointer flex items-center gap-2 h-[48px] px-3 !rounded-none transition-colors',
+                        isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                       )}
                     >
                       <div className="flex items-center gap-2 !h-[48px]">
@@ -76,7 +71,7 @@ const Aside = () => {
                               navigate(child.route);
                             }}
                             className={cn(
-                              "text-neutral-300 !rounded-none h-[48px] bg-[var(--bg-card)] transition-colors",
+                              'text-neutral-300 !rounded-none h-[48px] bg-[var(--bg-card)] cursor-pointer transition-colors',
                               activeId === child.id && '!bg-primary'
                             )}
                             asChild
@@ -95,7 +90,6 @@ const Aside = () => {
             );
           }
 
-
           const isActive = activeId === item.id;
 
           return (
@@ -109,7 +103,7 @@ const Aside = () => {
                       navigate(item.route);
                     }}
                     className={cn(
-                      "h-[48px] px-3 !rounded-none transition-colors",
+                      'h-[48px] px-3 !rounded-none transition-colors cursor-pointer',
                       isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                     )}
                     asChild

@@ -1,6 +1,4 @@
-
 export const QUINIELA_OPTIONS = {
-
   PROVINCIAS: [
     { value: 'nac', label: 'Nacional' },
     { value: 'pro', label: 'Provincia' },
@@ -25,7 +23,7 @@ export const QUINIELA_OPTIONS = {
     { value: 'mis', label: 'Misiones' },
     { value: 'neu', label: 'Neuquén' },
     { value: 'sct', label: 'Santa Cruz' },
-    { value: 'juy', label: 'Jujuy' }
+    { value: 'juy', label: 'Jujuy' },
   ],
 
   PASADORES: [
@@ -38,7 +36,7 @@ export const QUINIELA_OPTIONS = {
     { value: 'Pasador 7', label: 'Grupo 7' },
     { value: 'Pasador 8', label: 'Grupo 8' },
     { value: 'Pasador 9', label: 'Grupo 9' },
-    { value: 'Pasador 0', label: 'Grupo 0' }
+    { value: 'Pasador 0', label: 'Grupo 0' },
   ],
 
   MODALIDADES: [
@@ -46,8 +44,8 @@ export const QUINIELA_OPTIONS = {
     { value: 'matutina', label: 'Matutina' },
     { value: 'vespertina', label: 'Vespertina' },
     { value: 'nocturna', label: 'Nocturna' },
-    { value: 'preferida', label: 'Preferida' }
-  ]
+    { value: 'preferida', label: 'Preferida' },
+  ],
 } as const;
 export const MODALIDADES = [
   { value: 'previa', label: 'Previa (10:15 hs)' },
@@ -56,13 +54,37 @@ export const MODALIDADES = [
   { value: 'nocturna', label: 'Nocturna (20:05 hs)' },
   { value: 'preferida', label: 'Preferida (21:35 hs)' },
   { value: 'revancha', label: 'Revancha (22:30 hs)' },
-  { value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)' }
+  { value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)' },
 ] as const;
 
-const PROVINCIAS = ['NAC', 'PRO', 'SFE', 'CBA', 'MEN', 'TUC', 'SLA', 'SJU', 'LPA', 'FOR', 'CHA', 'COR', 'ERI', 'SLU', 'RNE', 'CHU', 'TFE', 'CAT', 'LRI', 'SNT', 'MIS', 'NEU', 'SCT', 'JUY'];
+const PROVINCIAS = [
+  'NAC',
+  'PRO',
+  'SFE',
+  'CBA',
+  'MEN',
+  'TUC',
+  'SLA',
+  'SJU',
+  'LPA',
+  'FOR',
+  'CHA',
+  'COR',
+  'ERI',
+  'SLU',
+  'RNE',
+  'CHU',
+  'TFE',
+  'CAT',
+  'LRI',
+  'SNT',
+  'MIS',
+  'NEU',
+  'SCT',
+  'JUY',
+];
 
-export const QUINIELA_PROVINCIAS = PROVINCIAS.map(
-  prov => ({
+export const QUINIELA_PROVINCIAS = PROVINCIAS.map((prov) => ({
   value: prov,
-  label: prov
+  label: prov,
 }));

@@ -1,10 +1,7 @@
+import UpcomingLotteriesContent from '@/features/upcoming-lotteries';
 
 const UpcomingLotteriesPage = () => {
-  return (
-    <div>
-      upcoming-lotteries
-    </div>
-  );
+  return <UpcomingLotteriesContent />;
 };
 
 export default UpcomingLotteriesPage;

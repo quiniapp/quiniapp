@@ -17,7 +17,6 @@ const PlaysAndHitsContent = () => {
       </HeaderSection>
       <Flex className={'flex-col space-y-8'}>
         <FlexCol className={'space-y-4 py-[24px]'}>
-
           <PlayAndHitsBox />
 
           <Box className={'w-[200px]'}>

@@ -13,7 +13,7 @@ const ResultsOverview = () => {
         <Flex>Total</Flex>
       </FlexCol>
       <Flex className={'space-x-[100px]'}>
-        <FlexCol >
+        <FlexCol>
           <RadioGroup defaultValue="option-one">
             <Flex className=" items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />

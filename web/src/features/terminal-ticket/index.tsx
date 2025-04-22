@@ -8,7 +8,6 @@ import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket.tsx';
 
-
 export const TerminalTicketContent = () => {
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
@@ -34,7 +33,7 @@ export const TerminalTicketContent = () => {
         </Flex>
       </FlexCol>
       <Flex className={'w-full justify-between py-8 border-t'}>
-        <Button variant={'destructive'}>
+        <Button variant={'destructive'} >
           <TicketX /> Eliminar Ticket
         </Button>
         <Button variant={'outline'}> Cerrar </Button>

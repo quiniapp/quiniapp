@@ -1,4 +1,3 @@
-
 module.exports = {
   rules: {
     'import/order': [
@@ -10,21 +9,21 @@ module.exports = {
           'internal',
           ['parent', 'sibling', 'index'],
           'object',
-          'type'
+          'type',
         ],
         pathGroups: [
           {
             pattern: '@components/**',
             group: 'internal',
-            position: 'before'
+            position: 'before',
           },
           {
             pattern: '@features/**',
-            group: 'internal'
-          }
+            group: 'internal',
+          },
         ],
-        'newlines-between': 'always'
-      }
-    ]
-  }
-}
+        'newlines-between': 'always',
+      },
+    ],
+  },
+};

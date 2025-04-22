@@ -9,14 +9,15 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({
-                          children,
-                          //requiredPermission,
-                          //redirectUnauthenticatedTo = "/login",
-                         // redirectUnauthorizedTo = "/dashboard",
-                        }: ProtectedRouteProps) => {
+  children,
+  //requiredPermission,
+  //redirectUnauthenticatedTo = "/login",
+  // redirectUnauthorizedTo = "/dashboard",
+}: ProtectedRouteProps) => {
   //const { user, loading, hasPermission } = useAuth();
- // const location = useLocation();
-  {/*
+  // const location = useLocation();
+  {
+    /*
     if (loading) {
       return (
         <div className="flex items-center justify-center min-h-screen">

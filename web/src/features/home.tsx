@@ -7,9 +7,9 @@ const Home = () => {
   return (
     <Flex>
       <FlexCol className=" md:flex-col   overflow-hidden">
-      <FilterSection />
-      <SettlementPayrollTable />
-    </FlexCol>
+        <FilterSection />
+        <SettlementPayrollTable />
+      </FlexCol>
     </Flex>
   );
 };

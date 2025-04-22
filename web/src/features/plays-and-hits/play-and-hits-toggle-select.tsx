@@ -16,7 +16,6 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
 
   return (
     <Flex className={'space-x-5'}>
-
       <FlexCol className={'flex-1 border bg-[var(--bg-card)] rounded-sm p-4 gap-3'}>
         <TypographyMuted label={'Ver'} />
         <ToggleGroup
@@ -41,7 +40,6 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
           </ToggleGroupItem>
         </ToggleGroup>
       </FlexCol>
-
 
       <FlexCol className={'flex-1 border bg-[var(--bg-card)] rounded-sm p-4 gap-3'}>
         <TypographyMuted label={'Agrupado'} />

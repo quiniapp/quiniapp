@@ -14,5 +14,5 @@ export enum ROUTES {
   SETTINGS = '/settings',
   LOGIN = '/login',
   LOTTERIES = '/upcoming-lotteries',
-  CURRENT_ACCOUNT = '/current-account'
+  CURRENT_ACCOUNT = '/current-account',
 }
