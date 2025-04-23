@@ -7,14 +7,9 @@ const router = Router();
 // Rutas públicas
 export const publicRouter = router.use('/auth', authPublickRoute);
 
-// Test route
-router.get('/test', (req, res) => {
-  res.json({ message: 'Ruta privada accedida correctamente' });
-});
-
 // Rutas privadas
 router.use('/auth', authPrivateRoute);
-router.use('/user', new UserRouter().router); // 🔥 Instanciás y le pasás el router expuesto
+router.use('/user', new UserRouter().router);
 
 const privateRouter = router;
 export default privateRouter;

@@ -5,12 +5,12 @@ export class JWT {
   private static ACCESS_TOKEN_SECRET = ACCESS_TOKEN_SECRET;
   private static REFRESH_TOKEN_SECRET = REFRESH_TOKEN_SECRET;
 
-  static generateAccessToken(payload: object, expiresIn = '15m') {
-    return jwt.sign(payload, JWT.ACCESS_TOKEN_SECRET, { expiresIn });
+  static generateAccessToken(payload: object) {
+    return jwt.sign(payload, JWT.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
   }
 
-  static generateRefreshToken(payload: object, expiresIn = '7d') {
-    return jwt.sign(payload, JWT.REFRESH_TOKEN_SECRET, { expiresIn });
+  static generateRefreshToken(payload: object) {
+    return jwt.sign(payload, JWT.REFRESH_TOKEN_SECRET, { expiresIn: '12h' });
   }
 
   static verifyAccessToken(token: string) {
