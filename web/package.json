@@ -77,5 +77,8 @@
     "*.{js,ts,tsx,css,md,json}": [
       "prettier --write"
     ]
+  },
+  "husky": {
+    "skipCI": true
   }
 }
