@@ -20,7 +20,7 @@ const GameTurns = () => {
               ref={f1.ref}
               checked={f1.checked}
               onCheckedChange={() => f1.setChecked((prev) => !prev)}
-              className="border-2"
+              className="  border-2 border-primary"
             />
           </Flex>
 
@@ -32,7 +32,7 @@ const GameTurns = () => {
               id="primera"
               checked={f2.checked}
               onCheckedChange={() => f2.setChecked((prev) => !prev)}
-              className="border-2"
+              className="  border-2 border-primary"
             />
           </Flex>
 
@@ -45,7 +45,7 @@ const GameTurns = () => {
               ref={f2.ref}
               checked={f3.checked}
               onCheckedChange={() => f3.setChecked((prev) => !prev)}
-              className="border-2"
+              className="border-2 border-primary"
             />
           </Flex>
 
@@ -58,7 +58,7 @@ const GameTurns = () => {
               ref={f3.ref}
               checked={f4.checked}
               onCheckedChange={() => f4.setChecked((prev) => !prev)}
-              className="border-2"
+              className="border-2 border-primary"
             />
           </Flex>
 
@@ -71,7 +71,7 @@ const GameTurns = () => {
               ref={f4.ref}
               checked={f5.checked}
               onCheckedChange={() => f5.setChecked((prev) => !prev)}
-              className="border-2"
+              className="border-2 border-primary"
             />
           </Flex>
         </Flex>

@@ -12,6 +12,7 @@ import {
   SelectItem,
 } from '@/components/ui/select.tsx';
 import { Calendar, Clock, Ticket } from 'lucide-react';
+import { Label } from '@/components/ui/label.tsx';
 
 const UpcomingLotteriesContent = () => {
   const [selectedDay, setSelectedDay] = useState<string>('domingo');
@@ -40,9 +41,9 @@ const UpcomingLotteriesContent = () => {
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
       <HeaderSection title={'Quinielas a jugarse'} className={'w-full sticky top-0'} />
       <Flex>
-        <div className=" rounded-xl w-full  py-[24px] space-y-6">
-          <div className=" bg-[var(--bg-card)]  p-4 space-y-4">
-            <div className="bg-dark-light rounded-xl p-6 space-y-6">
+        <div className=" rounded-xl w-full overflow-hidden py-[24px] space-y-6">
+          <div className=" bg-[var(--bg-card)] rounded-xl p-4 space-y-4">
+            <div className="bg-dark-light rounded-xl space-y-6">
               <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
@@ -67,20 +68,20 @@ const UpcomingLotteriesContent = () => {
 
                 <div className="border border-dark-lighter rounded-lg p-4">
                   <Flex className={'gap-2 pb-4 items-center mb-8'}>
-                    <Clock className={'text-violet-500'} size={'20px'} />
+                    <Clock className={'text-primary'} size={'20px'} />
                     <p className="text-sm font-medium ">Turno Seleccionado</p>
                   </Flex>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {turnos.map((turno) => (
                       <div key={turno.id} className="flex items-center space-x-2">
-                        <Checkbox id={turno.id} />
-                        <label
+                        <Checkbox id={turno.id} className={'border-2 border-primary'} />
+                        <Label
                           htmlFor={turno.id}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
                           {turno.label}
-                        </label>
+                        </Label>
                       </div>
                     ))}
                   </div>
@@ -88,7 +89,7 @@ const UpcomingLotteriesContent = () => {
 
                 <div className="border border-dark-lighter rounded-lg p-4">
                   <Flex className={'gap-2 items-center mb-8 pb-4'}>
-                    <Ticket className={'text-violet-500'} size={'20px'} />
+                    <Ticket className={'text-primary'} size={'20px'} />
                     <p className="text-sm font-medium mp">Quinielas</p>
                   </Flex>
 
@@ -102,13 +103,16 @@ const UpcomingLotteriesContent = () => {
                                 key={`${rowIndex}-${index}`}
                                 className="flex items-center space-x-2"
                               >
-                                <Checkbox id={`quiniela-${rowIndex}-${index}`} />
-                                <label
+                                <Checkbox
+                                  id={`quiniela-${rowIndex}-${index}`}
+                                  className={'border-2 border-primary'}
+                                />
+                                <Label
                                   htmlFor={`quiniela-${rowIndex}-${index}`}
                                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
                                   {quiniela}
-                                </label>
+                                </Label>
                               </div>
                             )
                         )}

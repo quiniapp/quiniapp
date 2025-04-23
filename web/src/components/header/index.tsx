@@ -1,25 +1,26 @@
-import { useTheme } from '@/providers/theme-provider';
-import { Maximize, MinusIcon, Sun, Moon } from 'lucide-react';
+import {
+  //Maximize,
+  //MinusIcon,
+  //Sun,
+  //Moon,
+  UserIcon,
+} from 'lucide-react';
+import { FlexCol } from '@/components/flex';
 
 const Header = ({ title }: { title: string }) => {
-  const { theme, setTheme } = useTheme();
   return (
-    <div className="bg-rose-600 text-white h-10 flex justify-between items-center px-4">
+    <div className="bg-primary text-white h-[70px] flex justify-between items-center px-1">
       <h1 className="font-semibold">{title}</h1>
       <div className="flex gap-[16px]">
-        <button className="ml-2 hover:bg-red-600 p-1">
-          <MinusIcon size={16} />
-        </button>
-        <button className="ml-2 hover:bg-red-600 p-1">
-          <Maximize size={16} />
-        </button>
-        <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
-          <div className="flex">
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
+        <div className="flex items-center gap-3 text-muted">
+          <div className="w-8 h-8  rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+            <UserIcon size={20} className="text-gray-700" />
           </div>
-        </button>
+          <FlexCol className={'pr-4'}>
+            <div className="text-sm text-white font-semibold">Administrador</div>
+            <div className="text-xs text-white">(usuario 1)</div>
+          </FlexCol>
+        </div>
       </div>
     </div>
   );

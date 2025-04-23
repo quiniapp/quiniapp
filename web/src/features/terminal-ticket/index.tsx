@@ -16,7 +16,6 @@ export const TerminalTicketContent = () => {
       <FlexCol>
         <FlexCol>
           <TableTerminalTicket />
-
           <p> Cantidad de Tickets: 6</p>
         </FlexCol>
         <Flex className={'py-8 space-x-8 '}>

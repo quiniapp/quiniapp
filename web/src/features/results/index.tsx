@@ -1,19 +1,18 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { CalendarIcon, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
+
+import { Clock, PencilIcon, RefreshCw, SaveIcon, Ticket } from 'lucide-react';
 import { Flex } from '@/components/flex';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils.ts';
+
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
+import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 
 const ResultsContent = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
   const [resultados, setResultados] = useState<string[]>(Array(20).fill(''));
 
   const turnos = [
@@ -37,29 +36,10 @@ const ResultsContent = () => {
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Resultados'}>
         <Flex className="w-full items-center space-x-[56px] justify-end">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={'outline'}
-                className={cn(
-                  'w-[240px] justify-start text-left font-normal',
-                  !date && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, 'PPP') : <span>Seleccionar Fecha</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-                className={cn('p-3 pointer-events-auto')}
-              />
-            </PopoverContent>
-          </Popover>
+          <Flex className={'justify-end  w-full items-center space-x-[24px] '}>
+            <span className={'text-sm text-muted-foreground'}> Selecinar fecha</span>
+            <SelectDayToSearch />
+          </Flex>
           <Flex className={'gap-6'}>
             <Button variant="outline" className="flex items-center gap-2">
               <RefreshCw size={16} />
@@ -72,13 +52,17 @@ const ResultsContent = () => {
         </Flex>
       </HeaderSection>
       <div className=" rounded-xl   py-[24px] space-y-6">
-        <div className=" bg-[var(--bg-card)]  p-4 space-y-4">
+        <div className=" bg-[var(--bg-card)] rounded-xl  p-4 space-y-4">
           <div className="border border-dark-lighter rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-3">Turno</h3>
+            <Flex className={'gap-2 pb-4 items-center mb-8'}>
+              <Clock className={'text-primary'} size={'20px'} />
+              <p className="text-sm font-medium ">Turno </p>
+            </Flex>
+
             <Box className="grid grid-cols-3 gap-4">
               {turnos.map((turno) => (
                 <Flex key={turno.id} className="  items-center space-x-2">
-                  <Checkbox id={turno.id} className="border-4" />
+                  <Checkbox id={turno.id} className="border border-primary" />
                   <Label
                     htmlFor={turno.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -91,11 +75,14 @@ const ResultsContent = () => {
           </div>
 
           <div className="border border-dark-lighter rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-3">Quinielas</h3>
+            <Flex className={'gap-2 items-center mb-8 pb-4'}>
+              <Ticket className={'text-primary'} size={'20px'} />
+              <p className="text-sm font-medium mp">Quinielas</p>
+            </Flex>
             <Box className="grid grid-cols-3 gap-4">
               {quinielas.map((quiniela) => (
                 <Flex key={quiniela.id} className="  items-center space-x-2">
-                  <Checkbox id={quiniela.id} className="border-4" />
+                  <Checkbox id={quiniela.id} className="border border-primary" />
                   <Label
                     htmlFor={quiniela.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"

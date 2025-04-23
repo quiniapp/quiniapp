@@ -15,4 +15,5 @@ export enum ROUTES {
   LOGIN = '/login',
   LOTTERIES = '/upcoming-lotteries',
   CURRENT_ACCOUNT = '/current-account',
+  GROUPS = '/groups',
 }

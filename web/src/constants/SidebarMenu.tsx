@@ -80,7 +80,7 @@ const MENU_ITEMS: MENU_ITEM[] = [
       {
         id: 'Groups',
         name: 'Grupos',
-        route: ROUTES.USERS,
+        route: ROUTES.GROUPS,
         icon: <UsersIcon size={20} />,
       },
     ],

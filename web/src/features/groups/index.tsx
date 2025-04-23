@@ -1,13 +1,13 @@
 import HeaderSection from '@/components/header-section';
 import Box from '@/components/box';
 
-const SettingsContent = () => {
+const UserGroupsContent = () => {
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
-      <HeaderSection title={'Configuración'} />
-      Configuration Page
+      <HeaderSection title={'Grupos'} />
+      Grupos
     </Box>
   );
 };
 
-export default SettingsContent;
+export default UserGroupsContent;
