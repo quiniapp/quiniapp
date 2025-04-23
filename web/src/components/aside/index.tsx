@@ -14,7 +14,7 @@ import { Collapsible } from '@radix-ui/react-collapsible';
 import { CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronRight, Power } from 'lucide-react';
 import MENU_ITEMS from '@/constants/SidebarMenu';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils.ts';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button.tsx';
@@ -44,7 +44,9 @@ const Aside = () => {
   return (
     <Sidebar className="h-screen min-w-[260px]">
       <SidebarHeader className={'p-6'}>
-        <Logo />
+        <Link to={'/'}>
+          <Logo />
+        </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0">
         {MENU_ITEMS.map((item) => {

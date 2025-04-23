@@ -19,6 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
 import Logo from '@/components/logo';
+import { useIsMobile } from '@/hooks/use-mobile.ts';
 
 interface FormData {
   name: string;
@@ -34,6 +35,7 @@ const validationSchemaLogin = z.object({
 });
 
 const LoginContent = () => {
+  const  isMobile   = useIsMobile()
   const {
     control,
     handleSubmit,
@@ -79,10 +81,13 @@ const LoginContent = () => {
   },[])
 
   return (
-    <Flex className="h-screen">
-      <Flex className="flex-1 items-center justify-center w-full">
-        <img src={'/bg-login.svg'} alt={''} className={'w-[860px] h-[860px]'} />
-      </Flex>
+    <Flex className="h-screen flex-col md:flex-row">
+      { !isMobile && (
+        <Flex className="flex-1 items-center justify-center w-full hidden md:flex">
+          <img src={'/bg-login.svg'} alt={''} className={' w-[200px] md:w-[860px] md:h-[860px]'} />
+        </Flex>
+      ) }
+
       <Flex className="flex-1 justify-center items-center gap-4 border-l-2">
         <Card className="bg-transparent w-[480px]">
           <CardHeader>

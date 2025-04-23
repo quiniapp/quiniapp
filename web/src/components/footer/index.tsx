@@ -29,9 +29,9 @@ const Footer = () => {
   };
 
   return (
-    <div className="bg-[var(--primary-bg-content)] text-white px-2 py-4 border-t border-gray-700 flex justify-end px-8">
+    <div className="bg-[var(--primary-bg-content)] text-white  py-4 border-t border-gray-700 flex justify-end px-8">
       <div className="text-right">
-        <div className="text-2xl font-semibold text-muted">{formatTime(currentDateTime)}</div>
+        <div className="text-4xl font-semibold text-primary">{formatTime(currentDateTime)}</div>
         <div className="text-sm text-gray-400">{formatDate(currentDateTime)}</div>
       </div>
     </div>
