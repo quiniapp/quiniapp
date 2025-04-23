@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "patch-package",
-    "prepare": "husky install",
+    "prepare": "test -z \"$CI\" && husky install || echo 'Skipping husky install in CI'",
     "format": "prettier --write ."
   },
   "dependencies": {
