@@ -16,7 +16,7 @@ import {
 const HeaderPlayDetail = () => {
   return (
     <HeaderSection title={'Realizar Jugadas'}>
-      <Flex className={'h-[56px] items-center'}>
+      <Flex className={'h-[56px] items-center   justify-end w-full'}>
         <form>
           <Flex className={'gap-8'}>
             <Flex className={'items-center justify-center gap-4'}>

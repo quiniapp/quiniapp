@@ -20,6 +20,7 @@ import Layout from '@/components/layout';
 import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
 import CurrentAccountPage from '@/pages/current-account.tsx';
 import ProtectedRoute from '@/protected/protected-routes.tsx';
+import GroupsPage from '@/pages/groups.tsx';
 
 export const RoutesContent = [
   {
@@ -100,6 +101,11 @@ export const RoutesContent = [
         path: ROUTES.LOTTERIES,
         id: 'Lotteries',
         element: <UpcomingLotteriesPage />,
+      },
+      {
+        path: ROUTES.GROUPS,
+        id: 'Groups',
+        element: <GroupsPage />,
       },
     ],
   },

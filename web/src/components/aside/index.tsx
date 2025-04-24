@@ -12,21 +12,42 @@ import {
 
 import { Collapsible } from '@radix-ui/react-collapsible';
 import { CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronRight, UserIcon } from 'lucide-react';
+import { ChevronRight, Power } from 'lucide-react';
 import MENU_ITEMS from '@/constants/SidebarMenu';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils.ts';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button.tsx';
+import { Flex } from '@/components/flex';
+import Logo from '@/components/logo';
 
 const Aside = () => {
-  const navigate = useNavigate();
-
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  {
+    /*
+  <button className="ml-2 hover:bg-red-600 p-1">
+          <MinusIcon size={16} />
+        </button>
+        <button className="ml-2 hover:bg-red-600 p-1">
+          <Maximize size={16} />
+        </button>
+        */
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuth');
+    navigate('/login');
+  };
 
   return (
     <Sidebar className="h-screen min-w-[260px]">
-      <SidebarHeader className={'p-6'}>quiniapp</SidebarHeader>
+      <SidebarHeader className={'p-6'}>
+        <Link to={'/'}>
+          <Logo />
+        </Link>
+      </SidebarHeader>
       <SidebarContent className="gap-0">
         {MENU_ITEMS.map((item) => {
           const hasChildren = !!item.children?.length;
@@ -120,16 +141,13 @@ const Aside = () => {
         })}
       </SidebarContent>
 
-      <SidebarFooter>
-        <div className="flex items-center gap-3 text-muted">
-          <div className="w-8 h-8 !rounded-none bg-gray-300 flex items-center justify-center overflow-hidden">
-            <UserIcon size={20} className="text-gray-700" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold">Administrador</div>
-            <div className="text-xs text-gray-400">(usuario 1)</div>
-          </div>
-        </div>
+      <SidebarFooter className={'border-t-2'}>
+        <Button variant={'ghost'} onClick={handleLogout}>
+          <Flex className="items-center gap-2 h-[48px]  ">
+            Cerrar Sesión
+            <Power />
+          </Flex>
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );

@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/input.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { SearchIcon } from 'lucide-react';
+import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 
 const FormHeaderFilter = () => {
   return (
@@ -34,9 +35,9 @@ const FormHeaderFilter = () => {
             </Flex>
 
             <Flex className={'flex-1'}>
-              <FlexCol>
+              <FlexCol className={'w-full gap-3'}>
                 <TypographyMuted label={'Fecha'} />
-                <Input type={'date'} name={'Fecha'} />
+                <SelectDayToSearch />
               </FlexCol>
             </Flex>
             <Flex className={'flex-1'}>

@@ -1,11 +1,11 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from 'react-router-dom';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const isAuth = localStorage.getItem("isAuth");
+  const isAuth = localStorage.getItem('isAuth');
   const location = useLocation();
 
   if (!isAuth) {
