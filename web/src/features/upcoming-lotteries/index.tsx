@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm, Controller  } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import Box from '@/components/box';
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
@@ -12,14 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
-import { Calendar, Clock, Ticket } from 'lucide-react';
+import { Calendar, Clock, SaveIcon, Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label.tsx';
 import { Typography } from '@/components/typography';
 import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
+import HeaderTitleSection from '@/components/header-title-section';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.tsx';
 
 interface FormData {
   day: string;
-  turns: string[];
+  turns: string;
   quinielas: string[];
 }
 
@@ -28,7 +30,7 @@ const UpcomingLotteriesContent = () => {
   const { handleSubmit, control } = useForm<FormData>({
     defaultValues: {
       day: 'domingo',
-      turns: [],
+      turns: '',
       quinielas: [],
     },
   });
@@ -47,7 +49,7 @@ const UpcomingLotteriesContent = () => {
   const onSubmit = (data: FormData) => {
     setSavedData(data);
     console.log('Datos guardados:', data);
-   //!TODO @Get real data
+    //!TODO @Get real data
   };
 
   return (
@@ -92,32 +94,38 @@ const UpcomingLotteriesContent = () => {
                   </div>
                   <Box className={'grid grid-cols-2'}></Box>
                   <div className="border bg-[var(--bg-card)] rounded-lg px-4 py-8">
-                    <Flex className={'gap-2 pb-4 items-center mb-8'}>
-                      <Clock className={'text-primary'} size={'20px'} />
-                      <p className="text-sm font-medium ">Turno Seleccionado</p>
-                    </Flex>
+                    <HeaderTitleSection
+                      title={'Turno Seleccionado'}
+                      icon={<Clock size="24px" />}
+                      iconClassName="text-primary"
+                      variant={'lead'}
+                      className={'!mb-[36px]'}
+                    />
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className={'grid grid-cols-1 md:grid-cols-3 gap-4'}>
                       {MODALIDADES.map((turno) => (
                         <div key={turno.value} className="flex items-center space-x-2">
                           <Controller
                             name="turns"
                             control={control}
                             render={({ field }) => (
-                              <Checkbox
-                                id={turno.value}
-                                className={'border-2 border-primary'}
-                                checked={field.value.includes(turno.value)}
-                                onCheckedChange={(checked) => {
-                                  field.onChange(
-                                    checked
-                                      ? [...field.value, turno.value]
-                                      : field.value.filter((v) => v !== turno.value)
-                                  );
-                                }}
-                              />
+                              <RadioGroup
+
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <RadioGroupItem
+                                  {...field}
+                                  value={turno.value}
+                                  id={turno.value}
+                                  className={
+                                    'border-2 border-primary rounded-full aspect-square w-4 h-4'
+                                  }
+                                />
+                              </RadioGroup>
                             )}
                           />
+
                           <Label
                             htmlFor={turno.value}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -130,10 +138,13 @@ const UpcomingLotteriesContent = () => {
                   </div>
 
                   <div className="border bg-[var(--bg-card)] rounded-lg px-4 py-8">
-                    <Flex className={'gap-2 items-center mb-8 pb-4'}>
-                      <Ticket className={'text-primary'} size={'20px'} />
-                      <p className="text-sm font-medium mp">Quinielas</p>
-                    </Flex>
+                    <HeaderTitleSection
+                      title={'Quinielas'}
+                      icon={<Ticket size="24px" />}
+                      iconClassName="text-primary"
+                      variant={'lead'}
+                      className={'!mb-[36px]'}
+                    />
 
                     <div className="grid grid-cols-1 gap-4">
                       {quinielas.map((row, rowIndex) => (
@@ -177,7 +188,12 @@ const UpcomingLotteriesContent = () => {
                     </div>
                   </div>
                   <Flex>
-                    <Button type="submit" variant={'default'} className=" w-[200px]   hover:bg-dark text-white">
+                    <Button
+                      type="submit"
+                      variant={'default'}
+                      className=" w-[200px]   hover:bg-dark text-white"
+                    >
+                      <SaveIcon />
                       Guardar
                     </Button>
                   </Flex>
