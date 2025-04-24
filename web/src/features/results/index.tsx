@@ -1,28 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { Clock, PencilIcon, RefreshCw, SaveIcon, Ticket } from 'lucide-react';
+import { PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
 import { Flex } from '@/components/flex';
 import { Button } from '@/components/ui/button';
 
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
-import { Checkbox } from '@/components/ui/checkbox';
 
 import { Input } from '@/components/ui/input.tsx';
-import { Label } from '@/components/ui/label.tsx';
+
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
+import ResultShifts from '@/features/results/shifts.tsx';
+import QuiniChecks from '@/features/results/quini-check.tsx';
+import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
 
 const ResultsContent = () => {
-  const [resultados, setResultados] = useState<string[]>(Array(20).fill(''));
-
-  const turnos = [
-    { id: 'previa', label: 'previa(10:15)', time: '10:15' },
-    { id: 'primera', label: 'primera(12:0)', time: '12:00' },
-    { id: 'matutina', label: 'matutina(15:0)', time: '15:00' },
-    { id: 'vesp', label: 'vesp(18:0)', time: '18:00' },
-    { id: 'noche', label: 'noche(21:0)', time: '21:00' },
-    { id: 'turno5', label: 'Turno5', time: '' },
-  ];
+  const [results, setResults] = useState<string[]>(Array(20).fill(''));
+  const [selectedShift, setSelectedShift] = useState<string | null>(null);
+  const [selectedQuiniela, setSelectedQuiniela] = useState<string | null>(null);
 
   const quinielas = [
     { id: 'nacional', label: 'Nacional' },
@@ -31,6 +26,24 @@ const ResultsContent = () => {
     { id: 'entrerios', label: 'Entre Rios' },
     { id: 'cordoba', label: 'Cordoba' },
   ];
+  const handleShiftSelect = (shiftId: string) => {
+    setSelectedShift(shiftId);
+  };
+
+  const handleQuinielaSelect = (quinielaId: string) => {
+    setSelectedQuiniela(quinielaId);
+  };
+
+  useEffect(() => {
+    if (selectedShift && selectedQuiniela) {
+
+      const newResults = Array.from({ length: 20 }, () => Math.floor(Math.random() * 10000).toString().padStart(2, '0'));
+      setResults(newResults);
+    } else {
+
+      setResults(Array(20).fill(''));
+    }
+  }, [selectedShift, selectedQuiniela]);
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -52,49 +65,11 @@ const ResultsContent = () => {
         </Flex>
       </HeaderSection>
       <div className=" rounded-xl   py-[24px] space-y-6">
-        <div className=" bg-[var(--bg-card)] rounded-xl  p-4 space-y-4">
-          <div className="border border-dark-lighter rounded-lg p-4">
-            <Flex className={'gap-2 pb-4 items-center mb-8'}>
-              <Clock className={'text-primary'} size={'20px'} />
-              <p className="text-sm font-medium ">Turno </p>
-            </Flex>
+        <div className="  rounded-xl   space-y-6">
+          <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
+          <QuiniChecks quini={quinielas} onQuinielaSelect={handleQuinielaSelect} />
 
-            <Box className="grid grid-cols-3 gap-4">
-              {turnos.map((turno) => (
-                <Flex key={turno.id} className="  items-center space-x-2">
-                  <Checkbox id={turno.id} className="border border-primary" />
-                  <Label
-                    htmlFor={turno.id}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {turno.label}
-                  </Label>
-                </Flex>
-              ))}
-            </Box>
-          </div>
-
-          <div className="border border-dark-lighter rounded-lg p-4">
-            <Flex className={'gap-2 items-center mb-8 pb-4'}>
-              <Ticket className={'text-primary'} size={'20px'} />
-              <p className="text-sm font-medium mp">Quinielas</p>
-            </Flex>
-            <Box className="grid grid-cols-3 gap-4">
-              {quinielas.map((quiniela) => (
-                <Flex key={quiniela.id} className="  items-center space-x-2">
-                  <Checkbox id={quiniela.id} className="border border-primary" />
-                  <Label
-                    htmlFor={quiniela.id}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {quiniela.label}
-                  </Label>
-                </Flex>
-              ))}
-            </Box>
-          </div>
-
-          <div className="border border-dark-lighter rounded-lg p-4 pt-[56px]">
+          <div className="border border-dark-lighter bg-[var(--bg-card)] rounded-lg p-4 pt-[56px]">
             <h3 className="text-sm font-medium mb-4">Resultados</h3>
             <Box className="grid grid-cols-4 gap-6">
               {Array.from({ length: 20 }, (_, i) => (
@@ -102,28 +77,28 @@ const ResultsContent = () => {
                   <span className="text-sm font-medium w-6">{i + 1}</span>
                   <Input
                     type="text"
-                    value={resultados[i]}
+                    value={results[i]}
                     onChange={(e) => {
-                      const newResultados = [...resultados];
-                      newResultados[i] = e.target.value;
-                      setResultados(newResultados);
+                      const newResults = [...results];
+                      newResults[i] = e.target.value;
+                      setResults(newResults);
                     }}
                     className="w-full bg-[var(--bg-card)] border border-dark-lighter rounded px-2 py-1"
                   />
                 </div>
               ))}
             </Box>
-            <div className="flex justify-between mt-6 gap-4">
+            <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
               <Button
                 variant={'outline'}
-                className="w-1/2 bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium"
+                className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
               >
                 <PencilIcon /> Editar
               </Button>
-              <Button variant={'default'} className="w-1/2   text-white">
-                <SaveIcon /> Guardar Resultados
+              <Button variant={'default'} className=" w-full   text-white">
+                <SaveIcon /> Guardar Results
               </Button>
-            </div>
+            </Box>
           </div>
         </div>
       </div>

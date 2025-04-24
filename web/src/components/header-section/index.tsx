@@ -18,7 +18,7 @@ const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
         <span>
           <Layout className={'text-neutral-700'} />
         </span>
-        <p className={'text-lg font-medium '}>{title}</p>
+        <p className={'text-2xl font-medium '}>{title}</p>
       </Flex>
       <Flex className={''}>{children}</Flex>
     </Flex>
