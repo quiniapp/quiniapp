@@ -2,25 +2,26 @@ import { Index } from '@/pages';
 import NotFound from '@/pages/NotFound';
 
 // @Page
+import UsersPage from '@/pages/users';
+import ShiftsPage from '@/pages/shifts';
+import GroupsPage from '@/pages/groups';
+import ClientPage from '@/pages/clients';
+import ResultsPage from '@/pages/results';
+import ReportsPage from '@/pages/reports';
+import SettingsPage from '@/pages/settings';
+import UserListPage from '@/pages/user-list';
 import PlayDetailsPage from '@/pages/play-details';
 import PlaysAndHitsPage from '@/pages/plays-and-hits';
-import ShiftsPage from '@/pages/shifts';
 import { TerminalTicketPage } from '@/pages/terminal-ticket';
-import ResultsPage from '@/pages/results';
-import ClientPage from '@/pages/clients';
-import UsersPage from '@/pages/users';
 
 // @Types
 import { ROUTES } from '@/types/routes.type';
-import ReportsPage from '@/pages/reports';
-import SettingsPage from '@/pages/settings';
 import LoginPage from '@/features/login';
 import PlaysPage from '@/pages/plays.tsx';
 import Layout from '@/components/layout';
 import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
 import CurrentAccountPage from '@/pages/current-account.tsx';
 import ProtectedRoute from '@/protected/protected-routes.tsx';
-import GroupsPage from '@/pages/groups.tsx';
 
 export const RoutesContent = [
   {
@@ -86,6 +87,11 @@ export const RoutesContent = [
         path: ROUTES.USERS,
         id: 'Users',
         element: <UsersPage />,
+      },
+      {
+        path: ROUTES.USERS_List,
+        id: 'UsersList',
+        element: <UserListPage />,
       },
       {
         path: ROUTES.REPORTS,

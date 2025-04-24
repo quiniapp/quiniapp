@@ -13,7 +13,7 @@ const PlaysAndHitsTable = () => {
     <Table>
       <TableCaption>A list of your recent invoices.</TableCaption>
       <TableHeader>
-        <TableRow className={'bg-[var(--bg-card)] h-[56px]'}>
+        <TableRow className={'bg-[#06081322] px-6 h-[56px]'}>
           <TableHead className="w-[100px]">Juagada</TableHead>
           <TableHead>Monto</TableHead>
           <TableHead>Tipo</TableHead>
