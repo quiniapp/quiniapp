@@ -55,7 +55,6 @@ const PlayAndHitsSelect = () => {
                 <SelectItem value={'Todos'}> Todos</SelectItem>
                 {MODALIDADES.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
-                    {' '}
                     {item.label}
                   </SelectItem>
                 ))}

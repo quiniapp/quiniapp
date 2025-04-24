@@ -35,7 +35,7 @@ const validationSchemaLogin = z.object({
 });
 
 const LoginContent = () => {
-  const  isMobile   = useIsMobile()
+  const isMobile = useIsMobile();
   const {
     control,
     handleSubmit,
@@ -55,14 +55,17 @@ const LoginContent = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('https://quiniapp.onrender.com/api/private/user/7e5a3e6b-7a6c-4c53-9131-bcbe934c76c3', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer valid-token'
-        },
-        // body: JSON.stringify({ ... }) // Si tu endpoint espera un body, añadilo acá
-      });
+      const response = await fetch(
+        'https://quiniapp.onrender.com/api/private/user/7e5a3e6b-7a6c-4c53-9131-bcbe934c76c3',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer valid-token',
+          },
+          // body: JSON.stringify({ ... }) // Si tu endpoint espera un body, añadilo acá
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -76,23 +79,23 @@ const LoginContent = () => {
     }
   };
 
-  useEffect(()=> {
-    fetchUsers()
-  },[])
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   return (
     <Flex className="h-screen flex-col md:flex-row">
-      { !isMobile && (
+      {!isMobile && (
         <Flex className="flex-1 items-center justify-center w-full hidden md:flex">
           <img src={'/bg-login.svg'} alt={''} className={' w-[200px] md:w-[860px] md:h-[860px]'} />
         </Flex>
-      ) }
+      )}
 
       <Flex className="flex-1 justify-center items-center gap-4 border-l-2">
         <Card className="bg-transparent w-[480px]">
           <CardHeader>
             <Flex className={'pb-[56px]'}>
-             <Logo />
+              <Logo />
             </Flex>
             <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
             <CardDescription>Un nuevo día, nuevas oportunidades</CardDescription>

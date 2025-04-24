@@ -2,15 +2,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Flex, FlexCol } from '@/components/flex';
 import { useKeyboardCheckboxes } from '@/hooks/useHotkeyCheckbox.ts';
+import {  ClockIcon, TicketIcon } from 'lucide-react';
+
+import HeaderTitleSection from '@/components/header-title-section';
 
 const GameTurns = () => {
   const { f1, f2, f3, f4, f5 } = useKeyboardCheckboxes();
 
   return (
     <Flex className="flex-col space-y-8 flex-1">
-      <FlexCol className=" border-2 p-4">
-        <p className="text-lg">Turnos</p>
-        <Flex className="pt-8 space-x-4">
+      <FlexCol className=" border-2 px-4 py-6">
+
+        <HeaderTitleSection
+          title={'Turnos'}
+          icon={<ClockIcon size="24px" />}
+          iconClassName="text-primary"
+          variant={'large'}
+          className={'pb-2'}
+        />
+        <Flex className="pt-2 space-x-4">
           <Flex className="gap-2">
             <Label htmlFor="f1">
               La Previa <span className="text-neutral-400">[F1]</span>
@@ -77,7 +87,13 @@ const GameTurns = () => {
         </Flex>
       </FlexCol>
       <Flex className="flex-col border-2 p-4">
-        <p className="text-lg">Qunielas</p>
+        <HeaderTitleSection
+          title={'Quniela'}
+          icon={<TicketIcon size="24px" />}
+          iconClassName="text-primary"
+          variant={'large'}
+        />
+
       </Flex>
     </Flex>
   );

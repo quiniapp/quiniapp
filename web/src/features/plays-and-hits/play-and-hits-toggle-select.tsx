@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { EyeIcon, UsersIcon } from 'lucide-react';
+
 import { Flex, FlexCol } from '@/components/flex';
-import { TypographyMuted } from '@/components/ui/typography-muted';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import HeaderTitleSection from '@/components/header-title-section';
+
 
 interface PlayAndHitsToggleSelectOptions {
   filters: {
@@ -16,8 +19,15 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
 
   return (
     <Flex className={'space-x-5'}>
-      <FlexCol className={'flex-1 border bg-[var(--bg-card)] rounded-sm p-4 gap-3'}>
-        <TypographyMuted label={'Ver'} />
+      <FlexCol className={'flex-1 border bg-[var(--bg-card)] rounded-sm px-4 py-6 gap-3'}>
+        <HeaderTitleSection
+          title={'Ver'}
+          icon={<EyeIcon size="24px" />}
+          iconClassName="text-primary"
+          variant={'large'}
+          className={'!mb-[8px]'}
+        />
+
         <ToggleGroup
           type="single"
           value={viewMode}
@@ -41,8 +51,14 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
         </ToggleGroup>
       </FlexCol>
 
-      <FlexCol className={'flex-1 border bg-[var(--bg-card)] rounded-sm p-4 gap-3'}>
-        <TypographyMuted label={'Agrupado'} />
+      <FlexCol className={'flex-1 border bg-[var(--bg-card)] rounded-sm px-4 py-6 gap-3'}>
+        <HeaderTitleSection
+          title={'Agrupado'}
+          icon={<UsersIcon size="24px" />}
+          iconClassName="text-primary"
+          variant={'large'}
+          className={'!mb-[8px]'}
+        />
         <ToggleGroup
           type="single"
           value={groupMode}
