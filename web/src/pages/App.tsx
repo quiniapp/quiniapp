@@ -1,13 +1,15 @@
-import { BrowserRouter, useRoutes } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../styles/App.css';
 import { RoutesContent } from '../routes/route.tsx';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '../providers/theme-provider.tsx';
 
-const AppRoutes = () => {
-  return useRoutes(RoutesContent);
-};
+
+const router = createBrowserRouter(RoutesContent);
 
 function App() {
   const queryClient = new QueryClient();
@@ -16,12 +18,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <Toaster position="bottom-center" />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </ThemeProvider>
     </QueryClientProvider>
   );
 }
+
+
 
 export default App;

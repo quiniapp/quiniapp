@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select.tsx';
 import { Input } from '@/components/ui/input.tsx';
-import { Button } from '@/components/ui/button.tsx';
+import { Button } from '@/components/ui/button';
 import { SearchIcon } from 'lucide-react';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 

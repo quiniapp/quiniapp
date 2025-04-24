@@ -12,7 +12,7 @@ interface HeaderSectionProps {
 const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
   return (
     <Flex
-      className={`${cn(className)} items-center justify-between py-[16px] border-b min-h-[90px]`}
+      className={`${cn(className)} items-center justify-between py-[24px] border-b min-h-[90px]`}
     >
       <Flex className={' items-center gap-4'}>
         <span>
