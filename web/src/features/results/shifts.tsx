@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type Shift = {
   readonly id: string;
-  readonly value: string,
+  readonly value: string;
   readonly label: string;
   readonly time: string;
 };
@@ -30,18 +30,18 @@ const ResultShifts = ({ shifts, onShiftSelect }: ResultShiftsProps) => {
       />
       <RadioGroup onValueChange={onShiftSelect}>
         <Box className="grid grid-cols-3 gap-4">
-        {shifts.map((turno: Shift) => (
-          <Flex key={turno.id} className="  items-center space-x-4">
-            <RadioGroupItem id={turno.id} value={turno.value} className="border border-primary" />
-            <Label
-              htmlFor={turno.id}
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              {turno.label}
-            </Label>
-          </Flex>
-        ))}
-      </Box>
+          {shifts.map((turno: Shift) => (
+            <Flex key={turno.id} className="  items-center space-x-4">
+              <RadioGroupItem id={turno.id} value={turno.value} className="border border-primary" />
+              <Label
+                htmlFor={turno.id}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {turno.label}
+              </Label>
+            </Flex>
+          ))}
+        </Box>
       </RadioGroup>
     </Box>
   );

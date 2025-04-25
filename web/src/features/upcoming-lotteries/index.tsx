@@ -109,11 +109,7 @@ const UpcomingLotteriesContent = () => {
                             name="turns"
                             control={control}
                             render={({ field }) => (
-                              <RadioGroup
-
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
+                              <RadioGroup onValueChange={field.onChange} value={field.value}>
                                 <RadioGroupItem
                                   {...field}
                                   value={turno.value}

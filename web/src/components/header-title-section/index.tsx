@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils.ts';
 interface HeaderTitleSectionProps {
   title?: string;
   icon?: React.ReactNode;
-  variant?: TypographyVariant ;
+  variant?: TypographyVariant;
   className?: string;
   iconClassName?: string;
   titleClassName?: string;
@@ -17,7 +17,7 @@ interface HeaderTitleSectionProps {
 const HeaderTitleSection = ({
   title,
   icon,
-                              variant,
+  variant,
   className,
   iconClassName,
   titleClassName,

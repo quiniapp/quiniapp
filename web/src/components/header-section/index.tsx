@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Flex } from '@/components/flex';
 import { cn } from '@/lib/utils.ts';
-import { Layout } from 'lucide-react';
+import { Combine } from 'lucide-react';
 
 interface HeaderSectionProps {
   title?: string;
@@ -11,12 +11,10 @@ interface HeaderSectionProps {
 
 const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
   return (
-    <Flex
-      className={`${cn(className)} items-center justify-between py-[24px] border-b min-h-[90px]`}
-    >
+    <Flex className={`${cn(className)} items-center justify-between  border-b min-h-[120px]`}>
       <Flex className={' items-center gap-4'}>
         <span>
-          <Layout className={'text-neutral-700'} />
+          <Combine className={'text-primary'} />
         </span>
         <p className={'text-2xl font-medium '}>{title}</p>
       </Flex>

@@ -1,11 +1,42 @@
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { EditIcon, TrashIcon } from 'lucide-react';
 
 const mockUsers = [
-  { numero: "0", nombre: "gabriel", grupo: "Grupo", comision: "20", debe: "10", conexion: "", cuenta: "Cuenta Corriente" },
-  { numero: "11", nombre: "Mary(11)", grupo: "Grupo", comision: "20", debe: "10", conexion: "", cuenta: "Cuenta Corriente" },
-  { numero: "15", nombre: "Norma(15)", grupo: "Grupo", comision: "20", debe: "10", conexion: "", cuenta: "Cuenta Corriente" }
+  {
+    numero: '0',
+    nombre: 'gabriel',
+    grupo: 'Grupo',
+    comision: '20',
+    debe: '10',
+    conexion: '',
+    cuenta: 'Cuenta Corriente',
+  },
+  {
+    numero: '11',
+    nombre: 'Mary(11)',
+    grupo: 'Grupo',
+    comision: '20',
+    debe: '10',
+    conexion: '',
+    cuenta: 'Cuenta Corriente',
+  },
+  {
+    numero: '15',
+    nombre: 'Norma(15)',
+    grupo: 'Grupo',
+    comision: '20',
+    debe: '10',
+    conexion: '',
+    cuenta: 'Cuenta Corriente',
+  },
 ];
 
 const UsersTable = () => {

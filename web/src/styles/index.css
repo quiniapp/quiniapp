@@ -4,7 +4,7 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.141 0.005 285.823);
+  --background: #161A30;
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
@@ -12,6 +12,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: #007bff;
+  --primary-800: #151c47;
   --primary-foreground: oklch(0.969 0.016 293.756);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -42,15 +43,16 @@
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
+  --background: #161A30;
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
-  --card-foreground: #1b212d;
+  --card-foreground: #232B45;
   --bg-card-light: #1e222d88;
-  --bg-card: #0E111C;
+  --bg-card:  #1A2138;
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
   --primary: #007bff;
+  --primary-dark: #151c47;
   --primary-foreground: oklch(0.969 0.016 293.756);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -77,6 +79,9 @@
   --sidebar-ring: oklch(0.541 0.281 293.009);
   --text-muted: oklch(0.967 0.001 286.375);
   --bg-accen: #000;
+  --border-top: 16px 16px 0 0;
+  --bg-content: hsl(231 50% 5% / 1);
+  --rounded-form: 16px;
 }
 
 @layer base {
@@ -84,17 +89,27 @@
     border-color: var(--border);
   }
   body {
-    background-color: hsl(231 50% 5% / 1);
+    background-color: var(--background);
     color: var(--foreground);
   }
-  th, td{
+  th,
+  td {
     padding: 16px 16px !important;
   }
-  thead{
+  thead {
     background-color: var(--bg-card);
     height: 56px;
   }
+  fieldset{
+    border-color: var(--sidebar-border);
+    border-radius: 8px;
 
+  }
+  legend{
+  color: var(--muted-foreground);
+    font-size: 12px
+
+}
 
   ::-webkit-scrollbar {
     background-color: hsl(231 50% 5% / 1);
@@ -116,12 +131,25 @@
 }
 @layer base {
   button:not([disabled]),
-  [role="button"]:not([disabled]) {
+  [role='button']:not([disabled]) {
     cursor: pointer;
+  }
+
+  [data-slot='sidebar-container'] {
+    @apply z-50;
+  }
+}
+
+@media (max-width: 768px) {
+  [data-slot='sidebar-container'] {
+    display: block !important;
+    width: 100% !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
   }
 }
 html,
 body {
   height: 100%;
 }
-

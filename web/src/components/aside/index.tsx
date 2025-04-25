@@ -21,7 +21,11 @@ import { Button } from '@/components/ui/button.tsx';
 import { Flex } from '@/components/flex';
 import Logo from '@/components/logo';
 
-const Aside = () => {
+interface AsideProps {
+  isOpen?: boolean;
+}
+
+const Aside = ({ isOpen }: AsideProps) => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -42,7 +46,14 @@ const Aside = () => {
   };
 
   return (
-    <Sidebar className="h-screen min-w-[260px]">
+    <Sidebar
+      data-slot="sidebar-container"
+      className={cn(
+        'fixed top-0 left-0 z-40 h-screen transition-transform block md:block ',
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+        'w-64 bg-[--background] text-sidebar-foreground shadow-lg'
+      )}
+    >
       <SidebarHeader className={'p-6'}>
         <Link to={'/'}>
           <Logo />
@@ -92,7 +103,7 @@ const Aside = () => {
                               navigate(child.route);
                             }}
                             className={cn(
-                              'text-neutral-300 !rounded-none h-[48px] bg-[var(--bg-card)] cursor-pointer transition-colors',
+                              'text-neutral-300 !rounded-none h-[48px] bg-[--card-foreground] cursor-pointer transition-colors',
                               activeId === child.id && '!bg-primary'
                             )}
                             asChild
@@ -141,7 +152,7 @@ const Aside = () => {
         })}
       </SidebarContent>
 
-      <SidebarFooter className={'border-t-2'}>
+      <SidebarFooter className={'border-t-2 h-[100px] flex justify-center items-center'}>
         <Button variant={'ghost'} onClick={handleLogout}>
           <Flex className="items-center gap-2 h-[48px]  ">
             Cerrar Sesión

@@ -7,7 +7,7 @@ export function Typography({
   children,
   ...props
 }: {
-  variant:TypographyVariant;
+  variant: TypographyVariant;
   className?: string;
   children: React.ReactNode;
 } & React.HTMLAttributes<
