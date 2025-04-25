@@ -16,7 +16,7 @@ import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-searc
 const FormHeaderFilter = () => {
   return (
     <form>
-      <FlexCol className={' space-y-4 py-[24px]'}>
+      <FlexCol className={' space-y-4'}>
         <FlexCol className={'bg-bg-card border p-4 mb-4  space-y-6 '}>
           <Box className={'space-x-6 grid grid-cols-[repeat(3,1fr)]'}>
             <Flex className={'flex-1'}>

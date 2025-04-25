@@ -11,7 +11,7 @@ const FillOutATicket = () => {
     <Flex className={'flex-col xl:flex-row py-[36px] gap-[36px]'}>
       <Flex className={'flex-1 max-w-[380px] '}>
         <form className={'w-full '}>
-          <Flex className={'flex-col space-y-4 border px-4 pt-8 bg-[var(--bg-card)]'}>
+          <Flex className={'flex-col space-y-4 border px-4 pt-8 bg-[var(--bg-card)] rounded-[--rounded-form]'}>
             <Flex className={'flex-col space-y-3 '}>
               <Label htmlFor={'number'}> Numero </Label>
               <Input

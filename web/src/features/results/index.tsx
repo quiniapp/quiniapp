@@ -36,11 +36,13 @@ const ResultsContent = () => {
 
   useEffect(() => {
     if (selectedShift && selectedQuiniela) {
-
-      const newResults = Array.from({ length: 20 }, () => Math.floor(Math.random() * 10000).toString().padStart(2, '0'));
+      const newResults = Array.from({ length: 20 }, () =>
+        Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(2, '0')
+      );
       setResults(newResults);
     } else {
-
       setResults(Array(20).fill(''));
     }
   }, [selectedShift, selectedQuiniela]);

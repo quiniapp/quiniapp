@@ -5,7 +5,6 @@ import { Flex, FlexCol } from '@/components/flex';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import HeaderTitleSection from '@/components/header-title-section';
 
-
 interface PlayAndHitsToggleSelectOptions {
   filters: {
     view: 'jugadas' | 'aciertos';

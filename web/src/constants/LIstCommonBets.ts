@@ -48,13 +48,13 @@ export const QUINIELA_OPTIONS = {
   ],
 } as const;
 export const MODALIDADES = [
-  { id: 'previa', value: 'previa', label: 'Previa (10:15 hs)', time:'10:15'},
-  { id: 'matutina', value: 'matutina', label: 'Matutina (13:05 hs)', time:'13:05' },
-  { id: 'vespertina', value: 'vespertina', label: 'Vespertina (17:05 hs)', time:'17:05' },
-  { id: 'nocturna', value: 'nocturna', label: 'Nocturna (20:05 hs)', time:'20:05' },
-  { id: 'preferida', value: 'preferida', label: 'Preferida (21:35 hs)', time:'21:35' },
-  { id: 'revancha', value: 'revancha', label: 'Revancha (22:30 hs)', time:'22:30' },
-  { id: 'siempre_sale', value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)', time:'19:15' },
+  { id: 'previa', value: 'previa', label: 'Previa (10:15 hs)', time: '10:15' },
+  { id: 'matutina', value: 'matutina', label: 'Matutina (13:05 hs)', time: '13:05' },
+  { id: 'vespertina', value: 'vespertina', label: 'Vespertina (17:05 hs)', time: '17:05' },
+  { id: 'nocturna', value: 'nocturna', label: 'Nocturna (20:05 hs)', time: '20:05' },
+  { id: 'preferida', value: 'preferida', label: 'Preferida (21:35 hs)', time: '21:35' },
+  { id: 'revancha', value: 'revancha', label: 'Revancha (22:30 hs)', time: '22:30' },
+  { id: 'siempre_sale', value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)', time: '19:15' },
 ] as const;
 
 const PROVINCIAS = [

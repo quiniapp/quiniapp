@@ -12,6 +12,8 @@ export const TerminalTicketContent = () => {
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
+      <FlexCol className={'py-[36px]'}>
+
       <FormHeaderFilter />
       <FlexCol>
         <FlexCol>
@@ -37,6 +39,7 @@ export const TerminalTicketContent = () => {
         </Button>
         <Button variant={'outline'}> Cerrar </Button>
       </Flex>
+      </FlexCol>
     </Box>
   );
 };
