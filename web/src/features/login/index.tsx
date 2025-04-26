@@ -97,7 +97,7 @@ const LoginContent = () => {
             <Flex className={'pb-[56px]'}>
               <Logo />
             </Flex>
-            <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
+            <CardTitle className="text-2xl text-white">Iniciar Sesión</CardTitle>
             <CardDescription>Un nuevo día, nuevas oportunidades</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -108,14 +108,14 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label>Nombre</Label>
+                      <Label className={'text-white'}>Nombre</Label>
                       <Input {...field} type="text" placeholder="Nombre de usuario" />
                       {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
                     </Flex>
                   )}
                 />
                 <Flex className="flex-col space-y-4">
-                  <Label>Contraseña</Label>
+                  <Label className={'text-white'}>Contraseña</Label>
                   <Input type="password" placeholder="******" />
                 </Flex>
               </Flex>

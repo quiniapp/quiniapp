@@ -57,7 +57,7 @@ export const MODALIDADES = [
   { id: 'siempre_sale', value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)', time: '19:15' },
 ] as const;
 
-const PROVINCIAS = [
+export const PROVINCIAS = [
   'NAC',
   'PRO',
   'SFE',
@@ -88,3 +88,8 @@ export const QUINIELA_PROVINCIAS = PROVINCIAS.map((prov) => ({
   value: prov,
   label: prov,
 }));
+
+export type PROVINCE = {
+  label: string,
+    value: string
+}

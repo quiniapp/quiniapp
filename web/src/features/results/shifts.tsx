@@ -31,7 +31,7 @@ const ResultShifts = ({ shifts, onShiftSelect }: ResultShiftsProps) => {
       <RadioGroup onValueChange={onShiftSelect}>
         <Box className="grid grid-cols-3 gap-4">
           {shifts.map((turno: Shift) => (
-            <Flex key={turno.id} className="  items-center space-x-4">
+            <Flex key={turno.id} className=" h-[36px]  items-center space-x-4">
               <RadioGroupItem id={turno.id} value={turno.value} className="border border-primary" />
               <Label
                 htmlFor={turno.id}
