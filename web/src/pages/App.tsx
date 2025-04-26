@@ -4,6 +4,7 @@ import '../styles/App.css';
 import { RoutesContent } from '../routes/route.tsx';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '../providers/theme-provider.tsx';
+import { ModalProvider } from '@/providers/modal-provider.tsx';
 
 const router = createBrowserRouter(RoutesContent);
 
@@ -13,8 +14,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <Toaster position="bottom-center" />
+        <ModalProvider>
+          <Toaster position="bottom-center" />
         <RouterProvider router={router} />
+        </ModalProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

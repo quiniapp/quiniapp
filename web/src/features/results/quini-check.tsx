@@ -32,7 +32,7 @@ const QuiniChecks = ({ quini, onQuinielaSelect }: ResultQuinisProps) => {
         <RadioGroup onValueChange={onQuinielaSelect}>
           <Box className="grid grid-cols-3 gap-4">
             {quini.map((turno: Quini) => (
-              <Flex key={turno.id} className="  items-center space-x-4">
+              <Flex key={turno.id} className=" h-[36px] items-center space-x-4">
                 <RadioGroupItem value={turno.id} id={turno.id} className="border border-primary" />
                 <Label
                   htmlFor={turno.id}
