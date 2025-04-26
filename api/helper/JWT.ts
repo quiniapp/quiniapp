@@ -1,5 +1,5 @@
+import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from 'api/envs';
 import jwt from 'jsonwebtoken';
-import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '../envs';
 
 export class JWT {
   private static ACCESS_TOKEN_SECRET = ACCESS_TOKEN_SECRET;

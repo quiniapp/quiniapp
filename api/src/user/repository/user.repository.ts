@@ -1,4 +1,4 @@
-import { supabase } from '../../../database/db.connection';
+import { supabase } from 'api/database/db.connection';
 
 export class UserRepository {
   async getById(id: string) {
