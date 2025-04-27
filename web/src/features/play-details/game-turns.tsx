@@ -49,7 +49,6 @@ const GameTurns = () => {
         <HeaderTitleSection
           title={'Turnos'}
           icon={<ClockIcon size="24px" />}
-          iconClassName="text-primary"
           variant={'large'}
           className={'pb-2'}
         />
@@ -123,7 +122,6 @@ const GameTurns = () => {
         <HeaderTitleSection
           title={'Quniela'}
           icon={<TicketIcon size="24px" />}
-          iconClassName="text-primary"
           variant={'large'}
         />
         <PlayDetailGameTable />

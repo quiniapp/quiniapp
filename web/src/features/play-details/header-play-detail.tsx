@@ -25,7 +25,7 @@ const HeaderPlayDetail = () => {
                 <Repeat2Icon />
                 <Typography variant={'small'}>Repetir Ticker</Typography>
               </Button>
-              <Button type={'button'} className={'bg-[--primary-800]'}>
+              <Button type={'button'} variant={'outline'} >
                 <PrinterIcon />
                 <Typography variant={'small'}>Reimprimir Anterior</Typography>
               </Button>

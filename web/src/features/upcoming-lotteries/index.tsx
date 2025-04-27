@@ -97,7 +97,7 @@ const UpcomingLotteriesContent = () => {
                     <HeaderTitleSection
                       title={'Turno Seleccionado'}
                       icon={<Clock size="24px" />}
-                      iconClassName="text-primary"
+
                       variant={'lead'}
                       className={'!mb-[36px]'}
                     />
@@ -137,7 +137,6 @@ const UpcomingLotteriesContent = () => {
                     <HeaderTitleSection
                       title={'Quinielas'}
                       icon={<Ticket size="24px" />}
-                      iconClassName="text-primary"
                       variant={'lead'}
                       className={'!mb-[36px]'}
                     />

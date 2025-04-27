@@ -24,7 +24,6 @@ const ResultShifts = ({ shifts, onShiftSelect }: ResultShiftsProps) => {
       <HeaderTitleSection
         title={'Turno'}
         icon={<Clock size="24px" />}
-        iconClassName="text-primary"
         variant={'large'}
         className={'pb-2'}
       />
