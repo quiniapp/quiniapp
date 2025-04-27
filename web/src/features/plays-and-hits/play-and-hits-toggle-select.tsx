@@ -22,7 +22,6 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
         <HeaderTitleSection
           title={'Ver'}
           icon={<EyeIcon size="24px" />}
-          iconClassName="text-primary"
           variant={'large'}
           className={'!mb-[8px]'}
         />
@@ -54,7 +53,6 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
         <HeaderTitleSection
           title={'Agrupado'}
           icon={<UsersIcon size="24px" />}
-          iconClassName="text-primary"
           variant={'large'}
           className={'!mb-[8px]'}
         />

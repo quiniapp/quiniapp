@@ -24,7 +24,7 @@ const HeaderTitleSection = ({
 }: HeaderTitleSectionProps) => {
   return (
     <Flex className={`${cn(className)} gap-2  items-center mb-4`}>
-      {icon && <span className={iconClassName}>{icon}</span>}
+      {icon && <span className={`${iconClassName} text-[--text-secondary]`}>{icon}</span>}
       <Typography variant={variant || 'small'} className={titleClassName}>
         {title}
       </Typography>

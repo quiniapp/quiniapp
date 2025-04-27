@@ -72,9 +72,8 @@ const HeaderUserList = () => {
       <Button
         className={'!hover:cursor-pointer bg-[--primary-800]'}
         type={'button'}
-        variant={'default'}
+        variant={'outline'}
       >
-        {' '}
         Actualizar
       </Button>
     </Flex>

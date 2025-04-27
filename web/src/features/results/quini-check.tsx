@@ -24,7 +24,6 @@ const QuiniChecks = ({ quini, onQuinielaSelect }: ResultQuinisProps) => {
         <HeaderTitleSection
           title={'Quinielas'}
           icon={<Ticket size="24px" />}
-          iconClassName="text-primary"
           variant={'large'}
           className={'pb-2'}
         />

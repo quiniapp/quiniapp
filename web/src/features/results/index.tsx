@@ -67,7 +67,7 @@ const ResultsContent = () => {
           </Flex>
         </Flex>
       </HeaderSection>
-      <Box className=" grid grid-cols-2  gap-8 py-[36px]  ">
+      <Box className="grid-cols-1 md:grid-cols-2  gap-8 py-[36px]  ">
         <FlexCol className="  rounded-xl   space-y-6">
           <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
           <QuiniChecks quini={quinielas} onQuinielaSelect={handleQuinielaSelect} />
@@ -76,7 +76,6 @@ const ResultsContent = () => {
           <HeaderTitleSection
             title={'Resultados'}
             icon={<Clock size="24px" />}
-            iconClassName="text-primary"
             variant={'large'}
             className={'pb-2'}
           />
