@@ -56,7 +56,7 @@ const FilterSection = () => {
           <Input
             id={'employee_number'}
             type="text"
-            className="bg-[#2A3042] border border-gray-700 p-1 rounded text-sm w-28"
+            className="border bg-card-bg    rounded text-sm w-28"
             value={numDataEntry}
             onChange={(e) => setNumDataEntry(e.target.value)}
           />

@@ -81,11 +81,11 @@ const Aside = ({ isOpen }: AsideProps) => {
                   <CollapsibleTrigger asChild>
                     <SidebarGroupLabel
                       className={cn(
-                        'cursor-pointer flex items-center gap-2 h-[48px] px-3 !rounded-none transition-colors',
+                        'cursor-pointer !text-[14px] flex items-center gap-2 h-[36px] px-3 !rounded-none transition-colors',
                         isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                       )}
                     >
-                      <div className="flex items-center gap-2 !h-[48px]">
+                      <div className="flex items-center gap-2 !h-[36px]">
                         <span className="text-gray-200">{item.icon}</span>
                         <span>{item.name}</span>
                       </div>
@@ -103,12 +103,12 @@ const Aside = ({ isOpen }: AsideProps) => {
                               navigate(child.route);
                             }}
                             className={cn(
-                              'text-neutral-300 !rounded-none h-[48px] bg-[--card-foreground] cursor-pointer transition-colors',
+                              'text-neutral-300 !text-[14px] !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors',
                               activeId === child.id && '!bg-primary'
                             )}
                             asChild
                           >
-                            <a className="flex items-center gap-2 h-[48px] px-3 w-full">
+                            <a className="flex !text-[14px] items-center gap-2 h-[36px] px-3 w-full">
                               <span>{child.icon}</span>
                               <span>{child.name}</span>
                             </a>
@@ -135,12 +135,12 @@ const Aside = ({ isOpen }: AsideProps) => {
                       navigate(item.route);
                     }}
                     className={cn(
-                      'h-[48px] px-3 !rounded-none transition-colors cursor-pointer',
+                      'h-[36px] !text-[14px] px-3 !rounded-none transition-colors cursor-pointer',
                       isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                     )}
                     asChild
                   >
-                    <a className="flex items-center gap-2 h-[48px] w-full">
+                    <a className="flex items-center gap-2 h-[36px] !text-[14px] w-full">
                       <span>{item.icon}</span>
                       <span>{item.name}</span>
                     </a>
@@ -152,7 +152,7 @@ const Aside = ({ isOpen }: AsideProps) => {
         })}
       </SidebarContent>
 
-      <SidebarFooter className={'border-t-2 h-[100px] flex justify-center items-center'}>
+      <SidebarFooter className={'border-t-2 1400:h-[100px] h-[70px]   flex justify-center items-center'}>
         <Button variant={'ghost'} onClick={handleLogout}>
           <Flex className="items-center gap-2 h-[48px]  ">
             Cerrar Sesión

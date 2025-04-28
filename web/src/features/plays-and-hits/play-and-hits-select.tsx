@@ -17,7 +17,7 @@ const PlayAndHitsSelect = () => {
         <FlexCol className={'flex-1 gap-3'}>
           <TypographyMuted label={'Pasador'} />
           <Select>
-            <SelectTrigger className={'border w-full py-[24px] bg-[var(--bg-card)]'}>
+            <SelectTrigger className={'border w-full 1400:py-[24px] bg-[var(--bg-card)]'}>
               <SelectValue placeholder={'Todos'} />
             </SelectTrigger>
             <SelectContent>
@@ -30,7 +30,7 @@ const PlayAndHitsSelect = () => {
         <FlexCol className={'flex-1 gap-3'}>
           <TypographyMuted label={'Grupo'} />
           <Select>
-            <SelectTrigger className={'border w-full py-[24px] bg-[var(--bg-card)]'}>
+            <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
               <SelectValue placeholder={'Todos'} />
             </SelectTrigger>
             <SelectContent>
@@ -48,7 +48,7 @@ const PlayAndHitsSelect = () => {
           <FlexCol className={'flex-1 gap-3'}>
             <TypographyMuted label={'Turno'} />
             <Select>
-              <SelectTrigger className={'border w-full py-[24px] bg-[var(--bg-card)]'}>
+              <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
                 <SelectValue placeholder={'Todos'} />
               </SelectTrigger>
               <SelectContent>
@@ -66,7 +66,7 @@ const PlayAndHitsSelect = () => {
           <FlexCol className={'flex-1 gap-3'}>
             <TypographyMuted label={'Quniela'} />
             <Select>
-              <SelectTrigger className={'border w-full py-[24px] bg-[var(--bg-card)]'}>
+              <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
                 <SelectValue placeholder={'Todos'} />
               </SelectTrigger>
               <SelectContent>

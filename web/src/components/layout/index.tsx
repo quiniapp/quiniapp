@@ -31,9 +31,9 @@ const Layout = ({ classname }: LayoutProps) => {
           `flex flex-col gap-6 w-full transition-all duration-300 ease-in-out ${isOpen ? 'md:ml-64' : 'ml-0'}`
         )}
       >
-        <div className="grid grid-rows-[auto_1fr_auto] w-full overflow-hidden flex-1 border-[var(--isActive)] rounded-xl px-[24px] pt-[24px]">
+        <div className="grid grid-rows-[auto_1fr_auto] w-full overflow-hidden flex-1 border-[var(--isActive)]">
           <Header setIsOpen={toggleSidebar} />
-          <div className=" bg-[var(--primary-bg-content)]">
+          <div className=" px-[24px] bg-[var(--primary-bg-content)]">
             {isRouteLoading && (
               <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-[rgba(0,0,0,0.1)] z-10">
                 <p> cargando </p>

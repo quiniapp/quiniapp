@@ -23,7 +23,7 @@ const FormHeaderFilter = () => {
               <FlexCol className={'w-full gap-3'}>
                 <TypographyMuted label={'Pasador'} />
                 <Select>
-                  <SelectTrigger className={'border w-full py-[24px]'}>
+                  <SelectTrigger className={'border w-full '}>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -44,7 +44,7 @@ const FormHeaderFilter = () => {
               <FlexCol className={'w-full gap-3'}>
                 <TypographyMuted label={'Tickets'} />
                 <Select>
-                  <SelectTrigger className={'border w-full py-[24px]'}>
+                  <SelectTrigger className={'border w-full '}>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -59,7 +59,7 @@ const FormHeaderFilter = () => {
           <Box className={' space-x-6 grid grid-cols-[repeat(3,1fr)]'}>
             <FlexCol className={'w-full gap-3'}>
               <TypographyMuted label={'Buscar por numero de Ticket:'} />
-              <Input type={'number'} placeholder={''} className={'h-[48px]'} />
+              <Input type={'number'} placeholder={''}  />
             </FlexCol>
             <FlexCol className={'w-full gap-3 pt-[30px]'}>
               <Flex className={'gap-4'}>

@@ -14,6 +14,7 @@ import ResultShifts from '@/features/results/shifts.tsx';
 import QuiniChecks from '@/features/results/quini-check.tsx';
 import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
 import HeaderTitleSection from '@/components/header-title-section';
+import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 const ResultsContent = () => {
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
@@ -67,7 +68,7 @@ const ResultsContent = () => {
           </Flex>
         </Flex>
       </HeaderSection>
-      <Box className="grid-cols-1 md:grid-cols-2  gap-8 py-[36px]  ">
+      <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
         <FlexCol className="  rounded-xl   space-y-6">
           <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
           <QuiniChecks quini={quinielas} onQuinielaSelect={handleQuinielaSelect} />
@@ -75,14 +76,14 @@ const ResultsContent = () => {
         <div className=" ">
           <HeaderTitleSection
             title={'Resultados'}
-            icon={<Clock size="24px" />}
-            variant={'large'}
+            icon={<Clock size={useMediaQuery('(min-width: 1400px)') ? '24px' : '16px'} />}
+            variant={useMediaQuery('(min-width: 1400px)') ? 'large' : 'small'}
             className={'pb-2'}
           />
-          <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-[var(--bg-card)]">
+          <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
             {Array.from({ length: 20 }, (_, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-sm font-medium w-6">{i + 1}</span>
+                <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
                 <Input
                   type="text"
                   value={results[i]}
@@ -91,7 +92,7 @@ const ResultsContent = () => {
                     newResults[i] = e.target.value;
                     setResults(newResults);
                   }}
-                  className="w-full bg-[var(--bg-card)] border border-dark-lighter rounded px-2 py-1"
+                  className="w-full bg-card-foreground border border-dark-lighter rounded px-2 py-1"
                 />
               </div>
             ))}

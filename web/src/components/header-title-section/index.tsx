@@ -19,7 +19,7 @@ const HeaderTitleSection = ({
   icon,
   variant,
   className,
-  iconClassName,
+  iconClassName = '',
   titleClassName,
 }: HeaderTitleSectionProps) => {
   return (

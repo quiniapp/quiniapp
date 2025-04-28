@@ -18,7 +18,8 @@ const config: Config = {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
         primary: {
-          DEFAULT: 'var(--primary)',
+          DEFAULT: 'hsl(var(--primary))',
+          light: 'hsl(var(--primary) / 0.6)',
           foreground: 'var(--primary-foreground)',
         },
         secondary: {
@@ -42,7 +43,7 @@ const config: Config = {
           foreground: 'var(--popover-foreground)',
         },
         card: {
-          DEFAULT: 'var(--card)',
+          DEFAULT: 'var(--bg-card)',
           foreground: 'var(--card-foreground)',
           bg: 'var(--bg-card)',
         },
@@ -51,6 +52,9 @@ const config: Config = {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      screens: {
+        '1400': '1400px',
       },
     },
   },

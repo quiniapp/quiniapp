@@ -18,7 +18,7 @@ const PlaysAndHitsContent = () => {
           <SelectDayToSearch />
         </Flex>
       </HeaderSection>
-      <Flex className={'flex-col py-[36px] space-y-8'}>
+      <Flex className={'flex-col 1400:py-[36px] py-[16px] space-y-8'}>
         <FlexCol className={'space-y-8 '}>
           <PlayAndHitsBox />
           <Box className={'w-[200px]'}>
