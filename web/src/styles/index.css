@@ -4,14 +4,14 @@
 
 :root {
   --radius: 0.75rem;
-  --background: #161A30;
+  --background: #151933;
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
-  --bg-card: #2a262755;
+  --bg-card: #1C2340;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #007bff;
+  --primary: #3664FD;
   --primary-800: #151c47;
   --primary-foreground: oklch(0.969 0.016 293.756);
   --secondary: oklch(0.967 0.001 286.375);
@@ -44,15 +44,15 @@
 }
 
 .dark {
-  --background: #161A30;
+  --background: #151933;
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
   --card-foreground: #232B45;
   --bg-card-light: #1e222d88;
-  --bg-card:  #0063cc11;
+  --bg-card: #1C2340;
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #0063cc;
+  --primary: 226 98% 60%;
   --primary-dark: #151c47;
   --primary-foreground: oklch(0.969 0.016 293.756);
   --secondary: oklch(0.274 0.006 286.033);

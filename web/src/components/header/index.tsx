@@ -18,7 +18,7 @@ const Header = ({ setIsOpen }: HeaderProps) => {
   };
 
   return (
-    <div className="bg-primary text-white min-h-[70px] flex justify-between items-center px-1 rounded-[--border-top]">
+    <div className="bg-primary text-white min-h-[50px] flex justify-between items-center px-1 ">
       <div className="px-2 hover:cursor-pointer" onClick={handleToggle}>
         <LayoutIcon />
       </div>

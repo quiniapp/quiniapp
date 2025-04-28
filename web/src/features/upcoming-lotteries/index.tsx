@@ -18,6 +18,7 @@ import { Typography } from '@/components/typography';
 import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
 import HeaderTitleSection from '@/components/header-title-section';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.tsx';
+import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 interface FormData {
   day: string;
@@ -45,6 +46,7 @@ const UpcomingLotteriesContent = () => {
   ];
 
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const isLargeScreen = useMediaQuery('(min-width: 1400px)'); // 👈 importante!
 
   const onSubmit = (data: FormData) => {
     setSavedData(data);
@@ -54,55 +56,88 @@ const UpcomingLotteriesContent = () => {
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
-      <HeaderSection title={'Quinielas a jugarse'} className={'w-full sticky top-0'} />
+      <HeaderSection title={'Quinielas a jugarse'} className={'w-full sticky top-0'}>
+        <div className="flex flex-col gap-2">
+          {!isLargeScreen && (
+            <div className="space-y-4">
+
+              <Flex className={'flex-1 items-center gap-4'}>
+                <Typography variant={'p'}>Selecionar día</Typography>
+                <Flex className={'w-[200px]'}>
+                  <Controller
+                    name="day"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full bg-[var(--bg-card)] border-dark-lighter">
+                          <SelectValue placeholder="Seleccionar día" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dias.map((dia) => (
+                            <SelectItem key={dia.toLowerCase()} value={dia.toLowerCase()}>
+                              {dia}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Flex>
+              </Flex>
+            </div>
+          )}
+        </div>
+      </HeaderSection>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Flex>
-          <div className=" rounded-xl w-full overflow-hidden py-[24px] space-y-6">
-            <div className="  rounded-xl p-4 space-y-4">
+          <div className=" rounded-xl w-full overflow-hidden py-[16px] space-y-6">
+            <div className="rounded-xl p-4 space-y-4">
               <div className="bg-dark-light rounded-xl space-y-6">
                 <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                      <Flex className={'gap-2 items-center'}>
-                        <Calendar className={'text-primary'} size={'16px'} />
-                        <label className="text-md text-gray-200"> Día</label>
-                      </Flex>
-                      <Flex className={'flex-1 items-center gap-4'}>
-                        <Typography variant={'p'}>Selecionar día </Typography>
-                        <Flex className={'w-[200px]'}>
-                          <Controller
-                            name="day"
-                            control={control}
-                            render={({ field }) => (
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger className="w-full bg-[var(--bg-card)] border-dark-lighter">
-                                  <SelectValue placeholder="Seleccionar día" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {dias.map((dia) => (
-                                    <SelectItem key={dia.toLowerCase()} value={dia.toLowerCase()}>
-                                      {dia}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
+                  { useMediaQuery('(min-width: 1400px)') ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <Flex className={'gap-2 items-center'}>
+                          <Calendar className={'text-primary'} size={'16px'} />
+                          <label className="text-md text-gray-200"> Día</label>
                         </Flex>
-                      </Flex>
+                        <Flex className={'flex-1 items-center gap-4'}>
+                          <Typography variant={'p'}>Selecionar día </Typography>
+                          <Flex className={'w-[200px]'}>
+                            <Controller
+                              name="day"
+                              control={control}
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger className="w-full bg-[var(--bg-card)] border-dark-lighter">
+                                    <SelectValue placeholder="Seleccionar día" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {dias.map((dia) => (
+                                      <SelectItem key={dia.toLowerCase()} value={dia.toLowerCase()}>
+                                        {dia}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </Flex>
+                        </Flex>
+                      </div>
                     </div>
-                  </div>
-                  <Box className={'grid grid-cols-2'}></Box>
-                  <div className="border bg-[var(--bg-card)] rounded-lg px-4 py-8">
+                  ) : ('')}
+
+
+                  <div className="border bg-card rounded-lg px-4 py-4 1400:py-8">
                     <HeaderTitleSection
                       title={'Turno Seleccionado'}
-                      icon={<Clock size="24px" />}
-
-                      variant={'lead'}
+                      icon={<Clock size={useMediaQuery('(min-width: 1400px)') ? '24px' : '16px'} />}
+                      variant={useMediaQuery('(min-width: 1400px)') ? 'large' : 'small'}
                       className={'!mb-[36px]'}
                     />
 
-                    <div className={'grid grid-cols-1 md:grid-cols-3 gap-4'}>
+                    <div className={'grid grid-cols-1 md:grid-cols-4 gap-4'}>
                       {MODALIDADES.map((turno) => (
                         <div key={turno.value} className="flex items-center space-x-2">
                           <Controller
@@ -124,7 +159,7 @@ const UpcomingLotteriesContent = () => {
 
                           <Label
                             htmlFor={turno.value}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            className="1400:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             {turno.label}
                           </Label>
@@ -133,11 +168,13 @@ const UpcomingLotteriesContent = () => {
                     </div>
                   </div>
 
-                  <div className="border bg-[var(--bg-card)] rounded-lg px-4 py-8">
+                  <div className="border bg-card rounded-lg px-4 py-4 1400:py-8">
                     <HeaderTitleSection
                       title={'Quinielas'}
-                      icon={<Ticket size="24px" />}
-                      variant={'lead'}
+                      icon={
+                        <Ticket size={useMediaQuery('(min-width: 1400px)') ? '24px' : '16px'} />
+                      }
+                      variant={useMediaQuery('(min-width: 1400px)') ? 'large' : 'small'}
                       className={'!mb-[36px]'}
                     />
 
@@ -171,7 +208,7 @@ const UpcomingLotteriesContent = () => {
                                   />
                                   <Label
                                     htmlFor={`quiniela-${rowIndex}-${index}`}
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    className="1400:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                   >
                                     {quiniela}
                                   </Label>

@@ -1,36 +1,39 @@
-import { Flex } from '@/components/flex';
+import { Flex, FlexCol } from '@/components/flex';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { PlusIcon, TrashIcon } from 'lucide-react';
 
 import GameTurns from '@/features/play-details/game-turns.tsx';
-
 const FillOutATicket = () => {
   return (
-    <Flex className={'flex-col xl:flex-row py-[36px] gap-[36px]'}>
-      <Flex className={'flex-1 max-w-[380px] '}>
+    <FlexCol className={'py-[0px]'}>
+
+    <Flex className={'flex-col xl:flex-row py-[16px] 1400:py-[36px] gap-[16px]'}>
+      <Flex className={'flex-1 1400:max-w-[380px] max-w-[300px] '}>
         <form className={'w-full '}>
-          <Flex className={'flex-col space-y-4 border px-4 pt-8 bg-[var(--bg-card)] rounded-[--rounded-form]'}>
-            <Flex className={'flex-col space-y-3 '}>
-              <Label htmlFor={'number'}> Numero </Label>
-              <Input
-                id="number"
-                name={'ticket-number'}
-                type={'number'}
-                placeholder={'000000'}
-                className={'bg-[var(--bg-card)]'}
-              />
-            </Flex>
-            <Flex className={'flex-col space-y-3 '}>
-              <Label htmlFor={'amount'}> Monto </Label>
-              <Input
-                id="amount"
-                name={'ticket-amount'}
-                type={'number'}
-                placeholder={'000000'}
-                className={'bg-[var(--bg-card)]'}
-              />
+          <FlexCol className={'space-y-4 h-full border px-4 pt-8 bg-card rounded-[--rounded-form]'}>
+            <Flex className={'space-x-3'}>
+              <Flex className={'flex-col space-y-3 '}>
+                <Label htmlFor={'number'}> Numero </Label>
+                <Input
+                  id="number"
+                  name={'ticket-number'}
+                  type={'number'}
+                  placeholder={'000000'}
+                  className={'bg-[var(--bg-card)]'}
+                />
+              </Flex>
+              <Flex className={'flex-col space-y-3 '}>
+                <Label htmlFor={'amount'}> Monto </Label>
+                <Input
+                  id="amount"
+                  name={'ticket-amount'}
+                  type={'number'}
+                  placeholder={'000000'}
+                  className={'bg-[var(--bg-card)]'}
+                />
+              </Flex>
             </Flex>
             <Flex className={'flex-col space-y-3 '}>
               <Label htmlFor={'place'}> Ubicación </Label>
@@ -70,11 +73,12 @@ const FillOutATicket = () => {
                 <TrashIcon /> Borrar
               </Button>
             </Flex>
-          </Flex>
+          </FlexCol>
         </form>
       </Flex>
       <GameTurns />
     </Flex>
+    </FlexCol>
   );
 };
 

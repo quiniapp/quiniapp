@@ -9,7 +9,7 @@ import {
 
 const TableTerminalTicket = () => {
   return (
-    <div className={' overflow-y-scroll h-[300px] border mb-4'}>
+    <div className={' overflow-y-scroll 1400:h-[300px] h-[200px] border mb-4'}>
       <Table>
         <TableHeader className={'bg-card-bg !px-4'}>
           <TableRow>

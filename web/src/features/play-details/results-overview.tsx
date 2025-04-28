@@ -7,12 +7,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const ResultsOverview = () => {
   return (
-    <Flex className={'justify-between py-[24px] border-t-2'}>
+    <Flex className={'justify-between py-[16px] items-center border-t-2'}>
       <FlexCol>
         <Flex>Monto parcial</Flex>
         <Flex>Total</Flex>
       </FlexCol>
-      <Flex className={'space-x-[100px] '}>
+      <Flex className={'space-x-[100px] items-center '}>
         <FlexCol>
           <RadioGroup defaultValue="option-one">
             <Flex className=" items-center space-x-2">

@@ -31,7 +31,6 @@ const HeaderPlayDetail = () => {
               </Button>
               <Button type={'button'} className={''} variant={'outline'}>Cancelar Ticket </Button>
             </Box>
-
           </Flex>
 
       </Flex>
