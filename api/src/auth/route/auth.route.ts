@@ -24,7 +24,6 @@ export class AuthRouter {
   private loginHandler: RequestHandler = async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
-      console.log({ username, password });
 
       if (!username || !password) {
         const response: APIResponse<null> = {
