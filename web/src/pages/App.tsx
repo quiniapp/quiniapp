@@ -16,7 +16,7 @@ function App() {
       <ThemeProvider>
         <ModalProvider>
           <Toaster position="bottom-center" />
-        <RouterProvider router={router} />
+          <RouterProvider router={router} />
         </ModalProvider>
       </ThemeProvider>
     </QueryClientProvider>

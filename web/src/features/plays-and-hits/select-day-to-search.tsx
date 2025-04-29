@@ -8,7 +8,11 @@ import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar.tsx';
 import { useState } from 'react';
 
-export function SelectDayToSearch() {
+interface SelectDayToSearchProps {
+  className?: string
+}
+
+export function SelectDayToSearch({className}: SelectDayToSearchProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   return (
     <Popover>
@@ -17,7 +21,7 @@ export function SelectDayToSearch() {
           variant={'outline'}
           className={cn(
             'w-[240px] justify-start text-left font-normal',
-            !date && 'text-muted-foreground'
+            !date && 'text-muted-foreground', `${className}`
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

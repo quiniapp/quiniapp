@@ -152,7 +152,9 @@ const Aside = ({ isOpen }: AsideProps) => {
         })}
       </SidebarContent>
 
-      <SidebarFooter className={'border-t-2 1400:h-[100px] h-[70px]   flex justify-center items-center'}>
+      <SidebarFooter
+        className={'border-t-2 1440:h-[100px] h-[70px]   flex justify-center items-center'}
+      >
         <Button variant={'ghost'} onClick={handleLogout}>
           <Flex className="items-center gap-2 h-[48px]  ">
             Cerrar Sesión

@@ -53,7 +53,7 @@ const UsersTable = () => {
             <TableHead className="text-cyan">Conexion</TableHead>
             <TableHead className="text-cyan">Cuenta</TableHead>
             <TableHead className="text-cyan">Editar</TableHead>
-            <TableHead className="flex justify-center">Eliminar</TableHead>
+            <TableHead className="">Eliminar</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

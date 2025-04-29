@@ -21,15 +21,12 @@ export const QuinielaFieldset = ({ legend, namePrefix }: QuinielaFieldsetProps) 
   };
 
   const toggleOne = (id: string) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((val) => val !== id) : [...prev, id]
-    );
+    setSelected((prev) => (prev.includes(id) ? prev.filter((val) => val !== id) : [...prev, id]));
   };
 
   const isChecked = (id: string) => selected.includes(id);
 
-  const allSelected =
-    selected.length === QUINIELA_PROVINCIAS.length;
+  const allSelected = selected.length === QUINIELA_PROVINCIAS.length;
 
   return (
     <Fieldset legend={legend}>
@@ -54,7 +51,14 @@ export const QuinielaFieldset = ({ legend, namePrefix }: QuinielaFieldsetProps) 
                 checked={isChecked(inputId)}
                 onCheckedChange={() => toggleOne(inputId)}
               />
-              <Label htmlFor={inputId} className={'w-full hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out'}>{province.label}</Label>
+              <Label
+                htmlFor={inputId}
+                className={
+                  'w-full hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out'
+                }
+              >
+                {province.label}
+              </Label>
             </Flex>
           );
         })}

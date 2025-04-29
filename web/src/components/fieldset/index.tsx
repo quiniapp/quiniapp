@@ -9,9 +9,7 @@ export const Fieldset = ({ legend, children, className = '', ...props }: Fieldse
   return (
     <fieldset className={`border px-4 py-4 rounded-md ${className}`} {...props}>
       {legend && (
-        <legend className="text-sm font-medium px-2 text-muted-foreground">
-          {legend}
-        </legend>
+        <legend className="text-sm font-medium px-2 text-muted-foreground">{legend}</legend>
       )}
       {children}
     </fieldset>
