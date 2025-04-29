@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Request, RequestHandler, Response, Router } from 'express';
 import { AuthController } from '../controller/auth.controller';
 import { z } from 'zod';
 import { APIResponse } from '@helper/response/api_response.response';
@@ -16,42 +16,72 @@ export class AuthRouter {
     this.setupPublicRoutes();
     this.setupPrivateRoutes();
   }
-
   private setupPublicRoutes() {
-    this.publicRouter.post('/login', (req, res) => {
-      try {
-        const { username, password } = req.body;
-
-        if (!username || !password) {
-          const response: APIResponse<null> = {
-            error: {
-              error: ERROR_TYPE.BAD_REQUEST,
-              message: ERROR_MESSAGE.BAD_REQUEST,
-            },
-          };
-          res.status(400).json(response);
-        }
-        const result = loginSchema.safeParse({ username, password });
-        if (!result.success) {
-          const response: APIResponse<null> = {
-            error: {
-              error: ERROR_TYPE.BAD_REQUEST,
-              message: String(result.error.errors),
-            },
-          };
-          res.status(400).json(response);
-        }
-
-        const loginResponse = this.controller.login({ username, password });
-
-        res.json(loginResponse);
-      } catch (error) {
-        res
-          .status(500)
-          .json({ error: { error: error, message: ERROR_MESSAGE.INTERNAL_SERVER_ERROR } });
-      }
-    });
+    this.publicRouter.post('/login', this.loginHandler);
   }
+
+  // Definís el handler afuera:
+  private loginHandler: RequestHandler = async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      console.log({ username, password });
+
+      if (!username || !password) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: ERROR_MESSAGE.BAD_REQUEST,
+          },
+        };
+        res.status(400).json(response); // <-- SIN return
+        return;
+      }
+
+      const result = loginSchema.safeParse({ username, password });
+      if (!result.success) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: String(result.error.message),
+          },
+        };
+        res.status(400).json(response); // <-- SIN return
+        return;
+      }
+
+      const loginResponse = await this.controller.login({ username, password });
+      res.status(200).json(loginResponse); // <-- SIN return
+    } catch (error) {
+      console.error('Login route error', error);
+
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
 
   private setupPrivateRoutes() {
     this.privateRouter.post('/logout', (req, res) => {
