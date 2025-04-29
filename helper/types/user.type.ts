@@ -23,6 +23,7 @@ interface BaseUserEntityBack {
   password: string;
   user_salt: string;
   token: string;
+  refresh_token:string;
   disabled: boolean;
   created_at: string;
   edited_at: string;
@@ -54,7 +55,7 @@ export type IUserEntityBack = OwnerOrAdminUserEntityBack | CashierUserEntityBack
 
 export type IBaseUserEntityFront = Omit<
   BaseUserEntityBack,
-  'password' | 'disabled' | 'user_salt' | 'created_at' | 'deleted_at' | 'edited_at'
+  'password' | 'user_salt' | 'created_at' | 'deleted_at' | 'edited_at' | 'refresh_token'
 >;
 
 // Usuario tipo OWNER o ADMIN
