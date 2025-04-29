@@ -29,36 +29,46 @@ const RepeatTicketModal = ({ isOpen, title, onClose }: BasicModalProps) => {
             <Typography variant={'small'}> Ticket N°: </Typography>
           </Flex>
           <Input type={'text'} placeholder={'1234567'} />
-          <Button type={'button'} className={'bg-black border'}> <SearchIcon /> Buscar</Button>
+          <Button type={'button'} className={'bg-black border'}>
+            {' '}
+            <SearchIcon /> Buscar
+          </Button>
         </Box>
         <Box className={'grid grid-cols-3 py-6 gap-8'}>
           <FlexCol className={'gap-8'}>
             <QuinielaFieldset legend={'Turno 1'} namePrefix={'tone'} />
             <QuinielaFieldset legend={'Verpertina (18:05 hs)'} namePrefix={'vep-1'} />
-            <Button variant={'outline'} type={'button'} className={'  flex justify-center'}>Selecionar todas</Button>
+            <Button variant={'outline'} type={'button'} className={'  flex justify-center'}>
+              Selecionar todas
+            </Button>
           </FlexCol>
 
           <FlexCol className={'gap-8'}>
             <QuinielaFieldset legend={'Primera (12:05 hs)'} namePrefix={'prime'} />
             <QuinielaFieldset legend={'Noche (21:05 hs)'} namePrefix={'noite-1'} />
-            <Button variant={'outline'} type={'button'} className={' flex justify-center'}>Modificar monto</Button>
+            <Button variant={'outline'} type={'button'} className={' flex justify-center'}>
+              Modificar monto
+            </Button>
           </FlexCol>
           <FlexCol className={'gap-8'}>
             <QuinielaFieldset legend={'Matutina (15:05 hs'} namePrefix={'matu'} />
             <QuinielaFieldset legend={'Turno 6'} namePrefix={'turn-6'} />
-            <Button variant={'outline'} type={'reset'} className={'   flex justify-center'}>Quitar todaso</Button>
+            <Button variant={'outline'} type={'reset'} className={'   flex justify-center'}>
+              Quitar todaso
+            </Button>
           </FlexCol>
         </Box>
         <Box className={'grid grid-cols-[2fr_1fr] items-center'}>
           <Box>Monto total: </Box>
           <Flex className={'space-x-10'}>
             <Box>
-              <Button variant={'default'} >
-                AGREGAR JUGADAS
-              </Button>
+              <Button variant={'default'}>AGREGAR JUGADAS</Button>
             </Box>
             <Box>
-              <Button variant={'outline'} className={'bg-black'}> CANCELAR</Button>
+              <Button variant={'outline'} className={'bg-black'}>
+                {' '}
+                CANCELAR
+              </Button>
             </Box>
           </Flex>
         </Box>

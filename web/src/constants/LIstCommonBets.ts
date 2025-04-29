@@ -90,6 +90,6 @@ export const QUINIELA_PROVINCIAS = PROVINCIAS.map((prov) => ({
 }));
 
 export type PROVINCE = {
-  label: string,
-    value: string
-}
+  label: string;
+  value: string;
+};

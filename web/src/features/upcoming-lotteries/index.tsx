@@ -46,7 +46,7 @@ const UpcomingLotteriesContent = () => {
   ];
 
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const isLargeScreen = useMediaQuery('(min-width: 1400px)'); // 👈 importante!
+  const isLargeScreen = useMediaQuery('(min-width: 1440px)'); // 👈 importante!
 
   const onSubmit = (data: FormData) => {
     setSavedData(data);
@@ -60,7 +60,6 @@ const UpcomingLotteriesContent = () => {
         <div className="flex flex-col gap-2">
           {!isLargeScreen && (
             <div className="space-y-4">
-
               <Flex className={'flex-1 items-center gap-4'}>
                 <Typography variant={'p'}>Selecionar día</Typography>
                 <Flex className={'w-[200px]'}>
@@ -94,7 +93,7 @@ const UpcomingLotteriesContent = () => {
             <div className="rounded-xl p-4 space-y-4">
               <div className="bg-dark-light rounded-xl space-y-6">
                 <div className="space-y-6">
-                  { useMediaQuery('(min-width: 1400px)') ? (
+                  {useMediaQuery('(min-width: 1440px)') ? (
                     <div className="space-y-4">
                       <div className="flex flex-col gap-2">
                         <Flex className={'gap-2 items-center'}>
@@ -126,14 +125,15 @@ const UpcomingLotteriesContent = () => {
                         </Flex>
                       </div>
                     </div>
-                  ) : ('')}
+                  ) : (
+                    ''
+                  )}
 
-
-                  <div className="border bg-card rounded-lg px-4 py-4 1400:py-8">
+                  <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
                     <HeaderTitleSection
                       title={'Turno Seleccionado'}
-                      icon={<Clock size={useMediaQuery('(min-width: 1400px)') ? '24px' : '16px'} />}
-                      variant={useMediaQuery('(min-width: 1400px)') ? 'large' : 'small'}
+                      icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
+                      variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
                       className={'!mb-[36px]'}
                     />
 
@@ -159,7 +159,7 @@ const UpcomingLotteriesContent = () => {
 
                           <Label
                             htmlFor={turno.value}
-                            className="1400:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            className="1440:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             {turno.label}
                           </Label>
@@ -168,13 +168,13 @@ const UpcomingLotteriesContent = () => {
                     </div>
                   </div>
 
-                  <div className="border bg-card rounded-lg px-4 py-4 1400:py-8">
+                  <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
                     <HeaderTitleSection
                       title={'Quinielas'}
                       icon={
-                        <Ticket size={useMediaQuery('(min-width: 1400px)') ? '24px' : '16px'} />
+                        <Ticket size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />
                       }
-                      variant={useMediaQuery('(min-width: 1400px)') ? 'large' : 'small'}
+                      variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
                       className={'!mb-[36px]'}
                     />
 
@@ -208,7 +208,7 @@ const UpcomingLotteriesContent = () => {
                                   />
                                   <Label
                                     htmlFor={`quiniela-${rowIndex}-${index}`}
-                                    className="1400:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    className="1440:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                   >
                                     {quiniela}
                                   </Label>

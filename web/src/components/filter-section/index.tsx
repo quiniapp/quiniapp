@@ -1,8 +1,14 @@
 import { useState } from 'react';
-import {   Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label.tsx';
 import { Flex } from '@/components/flex';
 import Box from '@/components/box';
@@ -28,7 +34,8 @@ const FilterSection = () => {
         </div>
       )}
 
-      <Box className={`${isMobile && !isFilterExpanded ? 'hidden' : 'flex'}  flex-col md:flex-row flex-wrap gap-[36px] items-start md:items-center`}
+      <Box
+        className={`${isMobile && !isFilterExpanded ? 'hidden' : 'flex'}  flex-col md:flex-row flex-wrap gap-[36px] items-start md:items-center`}
       >
         <div className="flex items-center">
           <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
@@ -44,15 +51,17 @@ const FilterSection = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Todos">Todos</SelectItem>
-              <SelectItem value="Group 1">Group 1</SelectItem>
-              <SelectItem value="Group 2">Group 2</SelectItem>
+                <SelectItem value="Group 1">Group 1</SelectItem>
+                <SelectItem value="Group 2">Group 2</SelectItem>
               </SelectContent>
             </Select>
           </Box>
         </Flex>
 
         <Flex className="items-center">
-          <Label htmlFor={'employee_number'} className="text-sm mr-2 text-muted-foreground">Nro Pasador:</Label>
+          <Label htmlFor={'employee_number'} className="text-sm mr-2 text-muted-foreground">
+            Nro Pasador:
+          </Label>
           <Input
             id={'employee_number'}
             type="text"
@@ -61,7 +70,6 @@ const FilterSection = () => {
             onChange={(e) => setNumDataEntry(e.target.value)}
           />
         </Flex>
-
       </Box>
     </Box>
   );

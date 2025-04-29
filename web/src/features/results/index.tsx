@@ -19,7 +19,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 const ResultsContent = () => {
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
   const [selectedShift, setSelectedShift] = useState<string | null>(null);
-  const [selectedQuiniela, setSelectedQuiniela] = useState<string | null>(null);
+  const [selectedLottery, setSelectedLottery] = useState<string | null>(null);
+  const [onEdit, setOnEdit] = useState(true);
 
   const quinielas = [
     { id: 'nacional', label: 'Nacional' },
@@ -32,12 +33,12 @@ const ResultsContent = () => {
     setSelectedShift(shiftId);
   };
 
-  const handleQuinielaSelect = (quinielaId: string) => {
-    setSelectedQuiniela(quinielaId);
+  const handleLotterySelect = (quinielaId: string) => {
+    setSelectedLottery(quinielaId);
   };
 
   useEffect(() => {
-    if (selectedShift && selectedQuiniela) {
+    if (selectedShift && selectedLottery) {
       const newResults = Array.from({ length: 20 }, () =>
         Math.floor(Math.random() * 10000)
           .toString()
@@ -47,7 +48,7 @@ const ResultsContent = () => {
     } else {
       setResults(Array(20).fill(''));
     }
-  }, [selectedShift, selectedQuiniela]);
+  }, [selectedShift, selectedLottery]);
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -71,13 +72,13 @@ const ResultsContent = () => {
       <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
         <FlexCol className="  rounded-xl   space-y-6">
           <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
-          <QuiniChecks quini={quinielas} onQuinielaSelect={handleQuinielaSelect} />
+          <QuiniChecks quini={quinielas} onLotterySelect={handleLotterySelect} />
         </FlexCol>
         <div className=" ">
           <HeaderTitleSection
             title={'Resultados'}
-            icon={<Clock size={useMediaQuery('(min-width: 1400px)') ? '24px' : '16px'} />}
-            variant={useMediaQuery('(min-width: 1400px)') ? 'large' : 'small'}
+            icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
+            variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
             className={'pb-2'}
           />
           <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
@@ -92,6 +93,7 @@ const ResultsContent = () => {
                     newResults[i] = e.target.value;
                     setResults(newResults);
                   }}
+                  disabled={onEdit}
                   className="w-full bg-card-foreground border border-dark-lighter rounded px-2 py-1"
                 />
               </div>
@@ -101,6 +103,7 @@ const ResultsContent = () => {
             <Button
               variant={'outline'}
               className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
+              onClick={() => setOnEdit(!onEdit)}
             >
               <PencilIcon /> Editar
             </Button>

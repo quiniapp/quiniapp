@@ -1,4 +1,3 @@
-
 import Box from '@/components/box';
 import FilterSection from '@/components/filter-section';
 import CurrentAccountTable from '@/features/agent-commission/current-account-table';

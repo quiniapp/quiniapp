@@ -10,6 +10,7 @@ const PlayDetailsContent = () => {
       <HeaderPlayDetail />
       <FillOutATicket />
       <ResultsOverview />
+
     </Box>
   );
 };

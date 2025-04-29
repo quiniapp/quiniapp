@@ -1,4 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils.ts';
 
 interface BasicModalProps {
@@ -7,12 +15,19 @@ interface BasicModalProps {
   description?: string;
   onClose: () => void;
   className?: string;
-  isCloseButton?: boolean
+  isCloseButton?: boolean;
   children?: React.ReactNode;
-
 }
 
-const Modal  = ({ isOpen, title, description, onClose, children, className, isCloseButton=false }: BasicModalProps) => {
+const Modal = ({
+  isOpen,
+  title,
+  description,
+  onClose,
+  children,
+  className,
+  isCloseButton = false,
+}: BasicModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className={cn(className)}>
@@ -20,10 +35,8 @@ const Modal  = ({ isOpen, title, description, onClose, children, className, isCl
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <div className="py-4 ">
-          {children}
-        </div>
-        {isCloseButton &&(
+        <div className="py-4 ">{children}</div>
+        {isCloseButton && (
           <DialogFooter>
             <DialogClose asChild>
               <button className="px-4 py-2   rounded" onClick={onClose}>
@@ -32,7 +45,6 @@ const Modal  = ({ isOpen, title, description, onClose, children, className, isCl
             </DialogClose>
           </DialogFooter>
         )}
-
       </DialogContent>
     </Dialog>
   );

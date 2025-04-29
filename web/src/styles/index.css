@@ -8,10 +8,10 @@
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
-  --bg-card: #1C2340;
+  --bg-card: #1c2340;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #3664FD;
+  --primary: #3664fd;
   --primary-800: #151c47;
   --primary-foreground: oklch(0.969 0.016 293.756);
   --secondary: oklch(0.967 0.001 286.375);
@@ -40,16 +40,16 @@
 
   --isActive: oklch(0.606 0.25 292.717);
   --text-muted: oklch(0.967 0.001 286.375);
-  --text-secondary: #41DBC3;
+  --text-secondary: #41dbc3;
 }
 
 .dark {
   --background: #151933;
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
-  --card-foreground: #232B45;
+  --card-foreground: #232b45;
   --bg-card-light: #1e222d88;
-  --bg-card: #1C2340;
+  --bg-card: #1c2340;
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
   --primary: 226 98% 60%;
@@ -79,7 +79,7 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.541 0.281 293.009);
   --text-muted: oklch(0.967 0.001 286.375);
-  --text-secondary: #41DBC3;
+  --text-secondary: #41dbc3;
   --bg-accen: #000;
   --border-top: 16px 16px 0 0;
   --bg-content: hsl(231 50% 5% / 1);
@@ -96,22 +96,20 @@
   }
   th,
   td {
-    padding: 16px 16px !important;
+    padding: 8px 8px !important;
   }
   thead {
     background-color: var(--bg-card);
-    height: 56px;
+    height: 36px;
   }
-  fieldset{
+  fieldset {
     border-color: var(--sidebar-border);
     border-radius: 8px;
-
   }
-  legend{
-  color: var(--muted-foreground);
-    font-size: 12px
-
-}
+  legend {
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
 
   ::-webkit-scrollbar {
     background-color: hsl(231 50% 5% / 1);

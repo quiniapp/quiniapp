@@ -1,5 +1,5 @@
 import { Flex, FlexCol } from '@/components/flex';
-import Box from '@/components/box';
+
 import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
 import {
   Select,
@@ -12,16 +12,17 @@ import { Input } from '@/components/ui/input.tsx';
 import { Button } from '@/components/ui/button';
 import { SearchIcon } from 'lucide-react';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
+import { Fieldset } from '@/components/fieldset';
+import Box from '@/components/box';
 
 const FormHeaderFilter = () => {
   return (
     <form>
-      <FlexCol className={' space-y-4'}>
-        <FlexCol className={'bg-bg-card border p-4 mb-4  space-y-6 '}>
-          <Box className={'space-x-6 grid grid-cols-[repeat(3,1fr)]'}>
-            <Flex className={'flex-1'}>
-              <FlexCol className={'w-full gap-3'}>
-                <TypographyMuted label={'Pasador'} />
+      <Flex className={' space-y-4'}>
+        <FlexCol className={'  mb-4 1440:gap-6  gap-2 '}>
+          <Fieldset legend={'Pasador:'} className={'w-full gap-3'}>
+            <FlexCol className={'space-y-4'}>
+              <Flex className={' gap-3'}>
                 <Select>
                   <SelectTrigger className={'border w-full '}>
                     <SelectValue placeholder="Todos" />
@@ -31,37 +32,39 @@ const FormHeaderFilter = () => {
                     <SelectItem value="pasador">pasador</SelectItem>
                   </SelectContent>
                 </Select>
-              </FlexCol>
-            </Flex>
-
-            <Flex className={'flex-1'}>
-              <FlexCol className={'w-full gap-3'}>
-                <TypographyMuted label={'Fecha'} />
-                <SelectDayToSearch />
-              </FlexCol>
-            </Flex>
-            <Flex className={'flex-1'}>
-              <FlexCol className={'w-full gap-3'}>
-                <TypographyMuted label={'Tickets'} />
-                <Select>
-                  <SelectTrigger className={'border w-full '}>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Todos">Todos</SelectItem>
-                    <SelectItem value="pasador">pasador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FlexCol>
-            </Flex>
-          </Box>
-
-          <Box className={' space-x-6 grid grid-cols-[repeat(3,1fr)]'}>
-            <FlexCol className={'w-full gap-3'}>
-              <TypographyMuted label={'Buscar por numero de Ticket:'} />
-              <Input type={'number'} placeholder={''}  />
+              </Flex>
+              <Flex className={'flex-1 gap-2 '}>
+                <Flex className={'items-center gap-3'}>
+                  <Box>
+                    <TypographyMuted label={'Fecha'} />
+                  </Box>
+                  <Box className={'w-[200px] overflow-hidden'}>
+                    <SelectDayToSearch className={'!w-[200px]'} />
+                  </Box>
+                </Flex>
+                <Flex className={'w-[150px]'}>
+                  <Flex className={'w-full items-center gap-3'}>
+                    <Box>
+                      <TypographyMuted label={'Tickets'} />
+                    </Box>
+                    <Select>
+                      <SelectTrigger className={'border w-full '}>
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Todos">Todos</SelectItem>
+                        <SelectItem value="pasador">pasador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Flex>
+                </Flex>
+              </Flex>
             </FlexCol>
-            <FlexCol className={'w-full gap-3 pt-[30px]'}>
+          </Fieldset>
+
+          <Fieldset legend={'Buscar por número de Ticket:'} className={'w-full gap-3'}>
+            <Flex className={'gap-4'}>
+              <Input type={'number'} placeholder={''} />
               <Flex className={'gap-4'}>
                 <Button type={'button'} className={'!px-6'}>
                   <SearchIcon /> Buscar
@@ -70,10 +73,10 @@ const FormHeaderFilter = () => {
                   Limpiar
                 </Button>
               </Flex>
-            </FlexCol>
-          </Box>
+            </Flex>
+          </Fieldset>
         </FlexCol>
-      </FlexCol>
+      </Flex>
     </form>
   );
 };

@@ -5,47 +5,15 @@ import { useKeyboardCheckboxes } from '@/hooks/useHotkeyCheckbox.ts';
 import { ClockIcon, TicketIcon } from 'lucide-react';
 
 import HeaderTitleSection from '@/components/header-title-section';
-
-import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
 import Box from '@/components/box';
-import { Input } from '@/components/ui/input.tsx';
-import {
-  Select,
-  SelectContent,
-  SelectGroup, SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select.tsx';
+
 
 const GameTurns = () => {
   const { f1, f2, f3, f4, f5 } = useKeyboardCheckboxes();
 
   return (
-    <FlexCol className="flex-col 1400:space-y-6 space-y-3 flex-1">
-      <Flex className={'w-full   gap-4'}>
-        <Flex className={'items-center justify-center gap-4'}>
-          <Label htmlFor={'user'}> Usuario</Label>
-          <Input type={'text'} id={'user'} name={'user'} className={'max-w-[100px]'} />
-        </Flex>
-        <Flex className={'items-center justify-center gap-4'}>
-          <Select>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Fruits</SelectLabel>
-                <SelectItem value="apple">Select 1</SelectItem>
-                <SelectItem value="banana">Select +</SelectItem>
-                <SelectItem value="blueberry">Select +</SelectItem>
-                <SelectItem value="grapes">Select +</SelectItem>
-                <SelectItem value="pineapple">Select +</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Flex>
-      </Flex>
+    <FlexCol className="flex-col 1440:space-y-6 space-y-3 flex-1">
+
       <FlexCol className=" border-2 px-4 py-4 rounded-[--rounded-form]">
         <HeaderTitleSection title={'Turnos'} icon={<ClockIcon size="16px" />} variant={'small'} />
         <Box className="pt-2 grid grid-cols-5 gap-[12px] ">
@@ -113,9 +81,9 @@ const GameTurns = () => {
           </Flex>
         </Box>
       </FlexCol>
-      <FlexCol className="min-h-[280px] border-2 p-4 rounded-[--rounded-form]">
+      <FlexCol className=" border-2 p-4 rounded-[--rounded-form]">
         <HeaderTitleSection title={'Quniela'} icon={<TicketIcon size="16px" />} variant={'small'} />
-        <PlayDetailGameTable />
+
       </FlexCol>
     </FlexCol>
   );

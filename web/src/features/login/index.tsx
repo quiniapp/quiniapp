@@ -29,8 +29,8 @@ const validationSchemaLogin = z.object({
   name: z
     .string()
     .min(1, 'El nombre es obligatorio')
-    .refine((val) => val === 'agustin', {
-      message: 'El usuario debe ser "agustin"',
+    .refine((val) => val === 'agustin' || 'pedro', {
+      message: 'El Usuario o contraseña no son correctas"',
     }),
 });
 
@@ -50,6 +50,11 @@ const LoginContent = () => {
   const onSubmit = async (data: FormData) => {
     console.log(data);
     localStorage.setItem('isAuth', JSON.stringify({ name: data.name }));
+    if (data?.name === 'agustin') {
+      localStorage.setItem('role', 'superadmin');
+    } else {
+      localStorage.setItem('role', 'pasador');
+    }
     navigate('/');
   };
 

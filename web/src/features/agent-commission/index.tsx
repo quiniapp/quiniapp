@@ -9,8 +9,8 @@ const CurrentAccountContent = () => {
       <HeaderSection title={'Cuenta Corriente'}>
         <Box className={'grid grid-cols-3 gap-4'}>
           <Button> Exportar Diario</Button>
-        <Button variant={'outline'}> Exportar Liquidación </Button>
-        <Button variant={'outline'}> Actualizar </Button>
+          <Button variant={'outline'}> Exportar Liquidación </Button>
+          <Button variant={'outline'}> Actualizar </Button>
         </Box>
       </HeaderSection>
 

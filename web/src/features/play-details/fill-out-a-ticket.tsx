@@ -5,16 +5,17 @@ import { Button } from '@/components/ui/button.tsx';
 import { PlusIcon, TrashIcon } from 'lucide-react';
 
 import GameTurns from '@/features/play-details/game-turns.tsx';
+import Box from '@/components/box';
+import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
+
 const FillOutATicket = () => {
   return (
     <FlexCol className={'py-[0px]'}>
-
-    <Flex className={'flex-col xl:flex-row py-[16px] 1400:py-[36px] gap-[16px]'}>
-      <Flex className={'flex-1 1400:max-w-[380px] max-w-[300px] '}>
-        <form className={'w-full '}>
-          <FlexCol className={'space-y-4 h-full border px-4 pt-8 bg-card rounded-[--rounded-form]'}>
-            <Flex className={'space-x-3'}>
-              <Flex className={'flex-col space-y-3 '}>
+      <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>
+        <Flex className={'flex-1 1440:max-w-[380px] max-w-[300px] '}>
+          <form className={'w-full'}>
+            <FlexCol className={'space-y-2 h-auto border p-4 bg-card rounded-[--rounded-form]'}>
+              <Box className={'grid grid-cols-2 items-center justify-end '}>
                 <Label htmlFor={'number'}> Numero </Label>
                 <Input
                   id="number"
@@ -23,8 +24,8 @@ const FillOutATicket = () => {
                   placeholder={'000000'}
                   className={'bg-[var(--bg-card)]'}
                 />
-              </Flex>
-              <Flex className={'flex-col space-y-3 '}>
+              </Box>
+              <Box className={'grid grid-cols-2 items-center  '}>
                 <Label htmlFor={'amount'}> Monto </Label>
                 <Input
                   id="amount"
@@ -33,51 +34,51 @@ const FillOutATicket = () => {
                   placeholder={'000000'}
                   className={'bg-[var(--bg-card)]'}
                 />
+              </Box>
+              <Box className={'grid grid-cols-2 items-center  '}>
+                <Label htmlFor={'place'}> Ubicación </Label>
+                <Input
+                  id="place"
+                  name={'ticket-place'}
+                  type={'number'}
+                  placeholder={'000'}
+                  className={'bg-[var(--bg-card)]'}
+                />
+              </Box>
+              <Box className={'grid grid-cols-2 items-center  '}>
+                <Label htmlFor={'with'}> Con </Label>
+                <Input
+                  id="with"
+                  name={'ticket-with'}
+                  type={'number'}
+                  placeholder={'000'}
+                  className={'bg-[var(--bg-card)]'}
+                />
+              </Box>
+              <Box className={'grid grid-cols-2 items-center  '}>
+                <Label htmlFor={'position'}> Posición </Label>
+                <Input
+                  id="position"
+                  name={'ticket-position'}
+                  type={'number'}
+                  placeholder={'000'}
+                  className={'bg-[var(--bg-card)]'}
+                />
+              </Box>
+              <Flex className={' gap-4 pt-[24px]'}>
+                <Button type={'button'} className={'flex-1'}>
+                  <PlusIcon /> Agregar
+                </Button>
+                <Button type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
+                  <TrashIcon /> Borrar
+                </Button>
               </Flex>
-            </Flex>
-            <Flex className={'flex-col space-y-3 '}>
-              <Label htmlFor={'place'}> Ubicación </Label>
-              <Input
-                id="place"
-                name={'ticket-place'}
-                type={'number'}
-                placeholder={'000'}
-                className={'bg-[var(--bg-card)]'}
-              />
-            </Flex>
-            <Flex className={'flex-col space-y-3 '}>
-              <Label htmlFor={'with'}> Con </Label>
-              <Input
-                id="with"
-                name={'ticket-with'}
-                type={'number'}
-                placeholder={'000'}
-                className={'bg-[var(--bg-card)]'}
-              />
-            </Flex>
-            <Flex className={'flex-col space-y-3 '}>
-              <Label htmlFor={'position'}> Posición </Label>
-              <Input
-                id="position"
-                name={'ticket-position'}
-                type={'number'}
-                placeholder={'000'}
-                className={'bg-[var(--bg-card)]'}
-              />
-            </Flex>
-            <Flex className={' gap-4 py-[24px]'}>
-              <Button type={'button'} className={'flex-1'}>
-                <PlusIcon /> Agregar
-              </Button>
-              <Button type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
-                <TrashIcon /> Borrar
-              </Button>
-            </Flex>
-          </FlexCol>
-        </form>
+            </FlexCol>
+          </form>
+        </Flex>
+        <GameTurns />
       </Flex>
-      <GameTurns />
-    </Flex>
+      <PlayDetailGameTable />
     </FlexCol>
   );
 };
