@@ -86,6 +86,10 @@ export class AuthRouter {
     this.privateRouter.post('/logout', (req, res) => {
       return this.controller.logout(req, res);
     });
+    this.privateRouter.post('/refresh', (req, res) => {
+      console.log(req, res);
+      return;
+    });
   }
 }
 

@@ -1,15 +1,9 @@
-import {
-  IBaseUserEntityFront,
-  IUserEntityBack,
-  IUserEntityFront,
-  USER_TYPE,
-} from '@helper/types/user.type';
+import { IUserEntityBack, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 
 export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
-  const baseUser: IBaseUserEntityFront = {
+  const base = {
     user_id: user.user_id,
     number: user.number,
-    user_type: user.user_type,
     name: user.name,
     last_name: user.last_name,
     address: user.address,
@@ -22,23 +16,19 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
 
   if (user.user_type === USER_TYPE.CASHIER) {
     return {
-      ...baseUser,
-      user_type: USER_TYPE.CASHIER,
+      ...base,
       group_id: user.group_id,
-      cashier_number: user.cashier_number,
+      user_type: USER_TYPE.CASHIER,
       cashier_type: user.cashier_type,
       fee: user.fee,
       fee_plus: user.fee_plus,
     };
   }
 
+  // Para OWNER o ADMIN
   return {
-    ...baseUser,
-    user_type: user.user_type, // OWNER o ADMIN
+    ...base,
+    user_type: user.user_type,
     group_id: user.group_id,
-    cashier_number: null,
-    cashier_type: null,
-    fee: null,
-    fee_plus: null,
   };
 };

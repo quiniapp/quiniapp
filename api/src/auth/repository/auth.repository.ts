@@ -23,4 +23,21 @@ export class AuthRepository {
   }
 
   async logout() {}
+
+  async getUserByRefreshToken(tokenPayload: { user_id: string; username: string }) {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('user_id', tokenPayload.user_id)
+        .eq('username', tokenPayload.username)
+        .single();
+
+      if (!data) throw new Error(ERROR_MESSAGE.USER_NOT_FOUND);
+      return data;
+    } catch (error) {
+      console.error(error);
+      throw new Error(ERROR_MESSAGE.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

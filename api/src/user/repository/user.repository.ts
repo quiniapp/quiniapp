@@ -1,3 +1,4 @@
+import { IUserEntityBack } from '@helper/types/user.type';
 import { supabase } from 'api/database/db.connection';
 
 export class UserRepository {
@@ -15,8 +16,8 @@ export class UserRepository {
     return data;
   }
 
-  async create(payload: any) {
-    const { data, error } = await supabase.from('users').insert(payload).select().single();
+  async create(newUser: IUserEntityBack) {
+    const { data, error } = await supabase.from('users').insert(newUser).select().single();
 
     if (error) throw error;
     return data;

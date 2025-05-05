@@ -5,7 +5,7 @@ import { IUserEntityBack, IUserEntityFront } from '@helper/types/user.type';
 import { AuthRepository } from '../repository/auth.repository';
 import { IAuthLogin } from '@helper/types/auth.type';
 import bcrypt from 'bcryptjs';
-import { parseUser } from 'api/helper/parseUser';
+import { parseUser } from 'api/src/user/helper/parseUser';
 export class AuthController {
   private repository = new AuthRepository();
 
@@ -15,10 +15,12 @@ export class AuthController {
       const user: IUserEntityBack = await this.repository.login({ ...props });
       console.log(user);
       // 👇 Comparamos el password ingresado con el guardado
-      const isPasswordValid = await bcrypt.compare(props.password, user.password);
+      if (user.password) {
+        const isPasswordValid = await bcrypt.compare(props.password, user.password);
 
-      if (!isPasswordValid) {
-        throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
+        if (!isPasswordValid) {
+          throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
+        }
       }
       return parseUser(user);
     } catch (error) {

@@ -1,19 +1,65 @@
+import { APIResponse } from '@helper/response/api_response.response';
+import { ITokenPayload } from '@helper/types/auth.type';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { ACCESS_TOKEN_SECRET } from 'api/envs';
 import { Request, Response, NextFunction } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+
+declare module 'express' {
+  export interface Request {
+    user?: ITokenPayload;
+  }
+}
 
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
+  const authToken = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Token de autenticación faltante o malformado' });
+  if (!authToken) {
+    const response: APIResponse<null> = {
+      error: {
+        error: ERROR_TYPE.TOKEN_ERROR,
+        message: ERROR_MESSAGE.TOKEN_ERROR,
+      },
+    };
+    res.status(400).json(response);
     return;
   }
 
-  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(authToken, ACCESS_TOKEN_SECRET) as JwtPayload;
 
-  if (!token || token !== 'valid-token') {
-    res.status(403).json({ error: 'Token inválido' });
+    // opcional: validar campos requeridos
+    if (!decoded.user_id || !decoded.user_type) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.TOKEN_ERROR,
+          message: ERROR_MESSAGE.TOKEN_ERROR,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    // Guardamos los datos en req
+    req.user = {
+      user_id: decoded.user_id,
+      user_type: decoded.user_type,
+      name: decoded.name,
+      number: decoded.number,
+      username: decoded.username,
+      cashier_type: decoded?.cashier_type,
+    };
+
+    next();
+  } catch (err) {
+    console.error(err);
+    const response: APIResponse<null> = {
+      error: {
+        error: ERROR_TYPE.TOKEN_ERROR,
+        message: ERROR_MESSAGE.TOKEN_ERROR,
+      },
+    };
+    res.status(401).json(response);
     return;
   }
-
-  next();
 };
