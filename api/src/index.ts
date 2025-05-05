@@ -1,13 +1,9 @@
-import 'dotenv/config';
-
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan'; // <--- import morgan
 import { isAuthenticated } from '../middlewares/auth.middleware';
 import privateRouter, { publicRouter } from './router';
-
-const PORT = process.env.PORT || 3000;
-const URL = process.env.URL || 'http://localhost';
+import { PORT, URL } from 'api/envs';
 
 const app = express();
 

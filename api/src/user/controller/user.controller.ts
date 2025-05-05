@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { UserRepository } from '../repository/user.repository';
+import { INewUserEntity } from '@helper/request/user.response';
+import { IUserEntityFront } from '@helper/types/user.type';
+import { parseUser } from '../helper/parseUser';
 
 export class UserController {
   private repository = new UserRepository();
@@ -23,13 +26,18 @@ export class UserController {
     }
   };
 
-  create = async (req: Request, res: Response) => {
+  create = async (newUser: INewUserEntity): Promise<IUserEntityFront> => {
     try {
-      const body = req.body;
-      const result = await this.repository.create(body);
-      res.status(201).json(result);
+      const result = await this.repository.create(newUser);
+
+      return parseUser(result);
     } catch (error) {
-      res.status(500).json({ error: 'Error creating user', details: error });
+      if (error instanceof Error) {
+        console.error('Creation error:', error.message);
+
+        throw error; // o volver a lanzar para que la capa superior lo maneje
+      }
+      throw new Error('Unknown error during user creation');
     }
   };
 
