@@ -48,16 +48,16 @@ export const QUINIELA_OPTIONS = {
   ],
 } as const;
 export const MODALIDADES = [
-  { value: 'previa', label: 'Previa (10:15 hs)' },
-  { value: 'matutina', label: 'Matutina (13:05 hs)' },
-  { value: 'vespertina', label: 'Vespertina (17:05 hs)' },
-  { value: 'nocturna', label: 'Nocturna (20:05 hs)' },
-  { value: 'preferida', label: 'Preferida (21:35 hs)' },
-  { value: 'revancha', label: 'Revancha (22:30 hs)' },
-  { value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)' },
+  { id: 'previa', value: 'previa', label: 'Previa (10:15 hs)', time: '10:15' },
+  { id: 'matutina', value: 'matutina', label: 'Matutina (13:05 hs)', time: '13:05' },
+  { id: 'vespertina', value: 'vespertina', label: 'Vespertina (17:05 hs)', time: '17:05' },
+  { id: 'nocturna', value: 'nocturna', label: 'Nocturna (20:05 hs)', time: '20:05' },
+  { id: 'preferida', value: 'preferida', label: 'Preferida (21:35 hs)', time: '21:35' },
+  { id: 'revancha', value: 'revancha', label: 'Revancha (22:30 hs)', time: '22:30' },
+  { id: 'siempre_sale', value: 'siempre_sale', label: 'Siempre Sale (19:15 hs)', time: '19:15' },
 ] as const;
 
-const PROVINCIAS = [
+export const PROVINCIAS = [
   'NAC',
   'PRO',
   'SFE',
@@ -88,3 +88,8 @@ export const QUINIELA_PROVINCIAS = PROVINCIAS.map((prov) => ({
   value: prov,
   label: prov,
 }));
+
+export type PROVINCE = {
+  label: string;
+  value: string;
+};

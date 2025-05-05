@@ -13,12 +13,14 @@ const PlaysAndHitsContent = () => {
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Juagadas'} className={'w-full'}>
-        <SelectDayToSearch />
+        <Flex className={'justify-end  w-full items-center space-x-[24px] '}>
+          <span className={'text-sm text-muted-foreground'}> Selecinar fecha</span>
+          <SelectDayToSearch />
+        </Flex>
       </HeaderSection>
-      <Flex className={'flex-col space-y-8'}>
-        <FlexCol className={'space-y-4 py-[24px]'}>
+      <Flex className={'flex-col 1440:py-[36px] py-[16px] space-y-8'}>
+        <FlexCol className={'space-y-8 '}>
           <PlayAndHitsBox />
-
           <Box className={'w-[200px]'}>
             <Button className={'w-full'}>
               <Search /> Buscar

@@ -13,7 +13,7 @@ const PlaysAndHitsTable = () => {
     <Table>
       <TableCaption>A list of your recent invoices.</TableCaption>
       <TableHeader>
-        <TableRow>
+        <TableRow className={'bg-[#06081322] px-6 h-[56px]'}>
           <TableHead className="w-[100px]">Juagada</TableHead>
           <TableHead>Monto</TableHead>
           <TableHead>Tipo</TableHead>
@@ -36,7 +36,7 @@ const PlaysAndHitsTable = () => {
           <TableCell>$250.00</TableCell>
           <TableCell>$250.00</TableCell>
           <TableCell>$250.00</TableCell>
-        </TableRow>{' '}
+        </TableRow>
         <TableRow>
           <TableCell className="font-medium">INV001</TableCell>
           <TableCell>Paid</TableCell>

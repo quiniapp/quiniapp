@@ -12,21 +12,53 @@ import {
 
 import { Collapsible } from '@radix-ui/react-collapsible';
 import { CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronRight, UserIcon } from 'lucide-react';
+import { ChevronRight, Power } from 'lucide-react';
 import MENU_ITEMS from '@/constants/SidebarMenu';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils.ts';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button.tsx';
+import { Flex } from '@/components/flex';
+import Logo from '@/components/logo';
 
-const Aside = () => {
-  const navigate = useNavigate();
+interface AsideProps {
+  isOpen?: boolean;
+}
 
+const Aside = ({ isOpen }: AsideProps) => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  {
+    /*
+  <button className="ml-2 hover:bg-red-600 p-1">
+          <MinusIcon size={16} />
+        </button>
+        <button className="ml-2 hover:bg-red-600 p-1">
+          <Maximize size={16} />
+        </button>
+        */
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuth');
+    navigate('/login');
+  };
 
   return (
-    <Sidebar className="h-screen min-w-[260px]">
-      <SidebarHeader className={'p-6'}>quiniapp</SidebarHeader>
+    <Sidebar
+      data-slot="sidebar-container"
+      className={cn(
+        'fixed top-0 left-0 z-40 h-screen transition-transform block md:block ',
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+        'w-64 bg-[--background] text-sidebar-foreground shadow-lg'
+      )}
+    >
+      <SidebarHeader className={'p-6'}>
+        <Link to={'/'}>
+          <Logo />
+        </Link>
+      </SidebarHeader>
       <SidebarContent className="gap-0">
         {MENU_ITEMS.map((item) => {
           const hasChildren = !!item.children?.length;
@@ -49,11 +81,11 @@ const Aside = () => {
                   <CollapsibleTrigger asChild>
                     <SidebarGroupLabel
                       className={cn(
-                        'cursor-pointer flex items-center gap-2 h-[48px] px-3 !rounded-none transition-colors',
+                        'cursor-pointer !text-[14px] flex items-center gap-2 h-[36px] px-3 !rounded-none transition-colors',
                         isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                       )}
                     >
-                      <div className="flex items-center gap-2 !h-[48px]">
+                      <div className="flex items-center gap-2 !h-[36px]">
                         <span className="text-gray-200">{item.icon}</span>
                         <span>{item.name}</span>
                       </div>
@@ -71,12 +103,12 @@ const Aside = () => {
                               navigate(child.route);
                             }}
                             className={cn(
-                              'text-neutral-300 !rounded-none h-[48px] bg-[var(--bg-card)] cursor-pointer transition-colors',
+                              'text-neutral-300 !text-[14px] !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors',
                               activeId === child.id && '!bg-primary'
                             )}
                             asChild
                           >
-                            <a className="flex items-center gap-2 h-[48px] px-3 w-full">
+                            <a className="flex !text-[14px] items-center gap-2 h-[36px] px-3 w-full">
                               <span>{child.icon}</span>
                               <span>{child.name}</span>
                             </a>
@@ -103,12 +135,12 @@ const Aside = () => {
                       navigate(item.route);
                     }}
                     className={cn(
-                      'h-[48px] px-3 !rounded-none transition-colors cursor-pointer',
+                      'h-[36px] !text-[14px] px-3 !rounded-none transition-colors cursor-pointer',
                       isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                     )}
                     asChild
                   >
-                    <a className="flex items-center gap-2 h-[48px] w-full">
+                    <a className="flex items-center gap-2 h-[36px] !text-[14px] w-full">
                       <span>{item.icon}</span>
                       <span>{item.name}</span>
                     </a>
@@ -120,16 +152,15 @@ const Aside = () => {
         })}
       </SidebarContent>
 
-      <SidebarFooter>
-        <div className="flex items-center gap-3 text-muted">
-          <div className="w-8 h-8 !rounded-none bg-gray-300 flex items-center justify-center overflow-hidden">
-            <UserIcon size={20} className="text-gray-700" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold">Administrador</div>
-            <div className="text-xs text-gray-400">(usuario 1)</div>
-          </div>
-        </div>
+      <SidebarFooter
+        className={'border-t-2 1440:h-[100px] h-[70px]   flex justify-center items-center'}
+      >
+        <Button variant={'ghost'} onClick={handleLogout}>
+          <Flex className="items-center gap-2 h-[48px]  ">
+            Cerrar Sesión
+            <Power />
+          </Flex>
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );

@@ -10,9 +10,11 @@ export enum ROUTES {
   AGENT_COMMISSION = '/agent-commission',
   SHIFTS = '/shifts',
   USERS = '/users',
+  USERS_List = '/user-list',
   REPORTS = '/reports',
   SETTINGS = '/settings',
   LOGIN = '/login',
   LOTTERIES = '/upcoming-lotteries',
   CURRENT_ACCOUNT = '/current-account',
+  GROUPS = '/groups',
 }
