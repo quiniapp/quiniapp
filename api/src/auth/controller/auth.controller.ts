@@ -4,7 +4,7 @@ import { ERROR_MESSAGE } from '@helper/types/errors.type';
 import { IUserEntityBack, IUserEntityFront } from '@helper/types/user.type';
 import { AuthRepository } from '../repository/auth.repository';
 import { IAuthLogin } from '@helper/types/auth.type';
-import bcrypt from 'bcryptjs';
+// import bcrypt from 'bcryptjs';
 import { parseUser } from 'api/src/user/helper/parseUser';
 export class AuthController {
   private repository = new AuthRepository();
@@ -16,8 +16,8 @@ export class AuthController {
       console.log(user);
       // 👇 Comparamos el password ingresado con el guardado
       if (user.password) {
-        const isPasswordValid = await bcrypt.compare(props.password, user.password);
-
+        // const isPasswordValid = await bcrypt.compare(props.password, user.password);
+        const isPasswordValid = props.password === user.password;
         if (!isPasswordValid) {
           throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
         }
