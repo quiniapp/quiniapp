@@ -26,35 +26,32 @@ export class UserRouter {
   }
 
   private newUserhandler: RequestHandler = async (req: Request, res: Response) => {
+    const { newUser }: { newUser: INewUserEntity } = req.body;
+    if (newUser.user_type === USER_TYPE.OWNER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    const result = newUserSchema.safeParse(newUser);
+    if (!result.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: String(result.error.message),
+        },
+      };
+      res.status(400).json(response); // <-- SIN return
+
+      return;
+    }
     try {
-      const { newUser }: { newUser: INewUserEntity } = req.body;
-
-      if (newUser.user_type === USER_TYPE.OWNER) {
-        const response: APIResponse<undefined> = {
-          error: {
-            error: ERROR_TYPE.FORBIDDEN,
-            message: ERROR_MESSAGE.FORBIDDEN,
-          },
-        };
-        res.status(403).json(response);
-        return;
-      }
-
-      const result = newUserSchema.safeParse(newUser);
-      if (!result.success) {
-        const response: APIResponse<undefined> = {
-          error: {
-            error: ERROR_TYPE.BAD_REQUEST,
-            message: String(result.error.message),
-          },
-        };
-        res.status(400).json(response); // <-- SIN return
-
-        return;
-      }
-
       const user = await this.controller.create(newUser);
-      if (!user) {
+      /*   if (!user) {
         const response: APIResponse<undefined> = {
           error: {
             error: ERROR_TYPE.AUTH_ERROR,
@@ -63,10 +60,10 @@ export class UserRouter {
         };
         res.status(500).json(response);
         return;
-      }
+      } */
       const response: APIResponse<IUserEntityFront> = {
         data: {
-          user: user,
+          user: user!,
         },
       };
 
