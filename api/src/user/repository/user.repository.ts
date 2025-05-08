@@ -18,9 +18,7 @@ export class UserRepository {
   }
 
   async create(newUser: IUserEntityBack) {
-    console.log('postgresNewUser', newUser);
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
-    console.log('postres', { data, error });
     if (error) throw error;
     return data;
   }

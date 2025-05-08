@@ -39,11 +39,11 @@ export class UserController {
       }
 
       if (user.cashier_type !== CASHIER_TYPE.STREET) {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: user.email!,
           password: newUser.password,
         });
-        console.log('data', data);
+
         if (error) {
           throw new Error(error.message);
         }
@@ -52,9 +52,8 @@ export class UserController {
 
       return parseUser(result);
     } catch (error) {
+      console.error('Creation error:', error);
       if (error instanceof PostgrestError) {
-        console.error('Creation error:', error.message);
-
         throw new Error(error.message); // o volver a lanzar para que la capa superior lo maneje
       }
     }

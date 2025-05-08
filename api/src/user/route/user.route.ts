@@ -30,7 +30,7 @@ export class UserRouter {
       const { newUser }: { newUser: INewUserEntity } = req.body;
 
       if (newUser.user_type === USER_TYPE.OWNER) {
-        const response: APIResponse<null> = {
+        const response: APIResponse<undefined> = {
           error: {
             error: ERROR_TYPE.FORBIDDEN,
             message: ERROR_MESSAGE.FORBIDDEN,
@@ -42,7 +42,7 @@ export class UserRouter {
 
       const result = newUserSchema.safeParse(newUser);
       if (!result.success) {
-        const response: APIResponse<null> = {
+        const response: APIResponse<undefined> = {
           error: {
             error: ERROR_TYPE.BAD_REQUEST,
             message: String(result.error.message),
@@ -55,7 +55,7 @@ export class UserRouter {
 
       const user = await this.controller.create(newUser);
       if (!user) {
-        const response: APIResponse<null> = {
+        const response: APIResponse<undefined> = {
           error: {
             error: ERROR_TYPE.AUTH_ERROR,
             message: ERROR_MESSAGE.AUTH_ERROR,
@@ -72,6 +72,7 @@ export class UserRouter {
 
       res.status(200).json(response);
     } catch (error) {
+      console.error(error);
       if (error instanceof Error) {
         let statusCode = 500;
         if (
@@ -90,14 +91,6 @@ export class UserRouter {
         res.status(statusCode).json(response);
         return;
       }
-
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
-        },
-      };
-      res.status(500).json(response);
     }
   };
 }
