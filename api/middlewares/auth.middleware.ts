@@ -1,6 +1,7 @@
 import { APIResponse } from '@helper/response/api_response.response';
 import { ITokenPayload } from '@helper/types/auth.type';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+// import { supabase } from 'api/database/db.connection';
 import { ACCESS_TOKEN_SECRET } from 'api/envs';
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
@@ -63,3 +64,35 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
     return;
   }
 };
+/* 
+export const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
+  const supabaseServerClient = createMiddlewareSupabaseClient({ req, res }, supabase);
+
+  const {
+    data: { user },
+    error,
+  } = await supabaseServerClient.auth.getUser();
+
+  if (!user || error) {
+    const response: APIResponse<null> = {
+      error: {
+        error: ERROR_TYPE.TOKEN_ERROR,
+        message: ERROR_MESSAGE.TOKEN_ERROR,
+      },
+    };
+    return res.status(401).json(response);
+  }
+
+  // Adjuntamos el usuario al request para usarlo luego
+  req.user = {
+    user_id: user.id,
+    user_type: user.user_metadata?.user_type,
+    name: user.user_metadata?.name,
+    number: user.user_metadata?.number,
+    username: user.user_metadata?.username,
+    cashier_type: user.user_metadata?.cashier_type,
+  };
+
+  return next();
+};
+ */

@@ -3,6 +3,9 @@ import { AuthController } from '../controller/auth.controller';
 import { z } from 'zod';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { IUserEntityFront } from '@helper/types/user.type';
+import { supabase } from 'api/database/db.connection';
+import { generateEmail } from 'api/helper/generateEmail';
 
 export class AuthRouter {
   public publicRouter: Router;
@@ -25,17 +28,6 @@ export class AuthRouter {
     try {
       const { username, password } = req.body;
 
-      if (!username || !password) {
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.BAD_REQUEST,
-            message: ERROR_MESSAGE.BAD_REQUEST,
-          },
-        };
-        res.status(400).json(response); // <-- SIN return
-        return;
-      }
-
       const result = loginSchema.safeParse({ username, password });
       if (!result.success) {
         const response: APIResponse<null> = {
@@ -45,11 +37,27 @@ export class AuthRouter {
           },
         };
         res.status(400).json(response); // <-- SIN return
+
         return;
       }
 
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: generateEmail(username),
+        password: password,
+      });
+
+      console.log('login', { data, error });
+      if (error) {
+        throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
+      }
+      res.cookie('access_token', data.session.access_token, { httpOnly: true });
       const loginResponse = await this.controller.login({ username, password });
-      res.status(200).json(loginResponse); // <-- SIN return
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user: loginResponse,
+        },
+      };
+      res.status(200).json(response); // <-- SIN return
     } catch (error) {
       console.error('Login route error', error);
 
@@ -83,7 +91,8 @@ export class AuthRouter {
   };
 
   private setupPrivateRoutes() {
-    this.privateRouter.post('/logout', (req, res) => {
+    this.privateRouter.post('/logout', (req: Request, res) => {
+      // const { user } = req;
       return this.controller.logout(req, res);
     });
     this.privateRouter.post('/refresh', (req, res) => {

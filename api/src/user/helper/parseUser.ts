@@ -5,19 +5,18 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
     user_id: user.user_id,
     number: user.number,
     name: user.name,
-    last_name: user.last_name,
-    address: user.address,
-    phone: user.phone,
-    email: user.email,
-    username: user.username,
-    token: user.token,
     disabled: user.disabled,
+    username: user?.username,
+    last_name: user?.last_name,
+    address: user?.address,
+    phone: user?.phone,
+    email: user?.email,
+    group_id: user?.group_id,
   };
 
   if (user.user_type === USER_TYPE.CASHIER) {
     return {
       ...base,
-      group_id: user.group_id,
       user_type: USER_TYPE.CASHIER,
       cashier_type: user.cashier_type,
       fee: user.fee,
@@ -29,6 +28,5 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
   return {
     ...base,
     user_type: user.user_type,
-    group_id: user.group_id,
   };
 };
