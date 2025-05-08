@@ -1,7 +1,12 @@
 import { ERROR_TYPE } from '../types/errors.type';
 
 export type APIResponse<T> =
-  | { data: T; error?: undefined }
+  | {
+      data: {
+        [key: string]: T;
+      };
+      error?: undefined;
+    }
   | { data?: undefined; error: ErrorResponse };
 
 export interface ErrorResponse {
