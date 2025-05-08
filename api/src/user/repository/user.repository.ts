@@ -12,14 +12,13 @@ export class UserRepository {
 
   async getAll() {
     const { data, error } = await supabase.from('users').select('*');
-
     if (error) throw error;
     return data;
   }
 
   async create(newUser: IUserEntityBack) {
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
