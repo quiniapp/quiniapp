@@ -1,27 +1,26 @@
 // src/controllers/auth.controller.ts
 import { Request, Response } from 'express';
-import { ERROR_MESSAGE } from '@helper/types/errors.type';
+// import { ERROR_MESSAGE } from '@helper/types/errors.type';
 import { IUserEntityBack, IUserEntityFront } from '@helper/types/user.type';
 import { AuthRepository } from '../repository/auth.repository';
 import { IAuthLogin } from '@helper/types/auth.type';
 // import bcrypt from 'bcryptjs';
 import { parseUser } from 'api/src/user/helper/parseUser';
+import { supabase } from 'api/database/db.connection';
+import { generateEmail } from 'api/helper/generateEmail';
 export class AuthController {
   private repository = new AuthRepository();
 
   login = async (props: IAuthLogin): Promise<IUserEntityFront> => {
     try {
-      console.log('controller');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: generateEmail(props.username),
+        password: props.password,
+      });
+      console.log('loginController', { data, error });
       const user: IUserEntityBack = await this.repository.login({ ...props });
       console.log(user);
       // 👇 Comparamos el password ingresado con el guardado
-      if (user.password) {
-        // const isPasswordValid = await bcrypt.compare(props.password, user.password);
-        const isPasswordValid = props.password === user.password;
-        if (!isPasswordValid) {
-          throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
-        }
-      }
       return parseUser(user);
     } catch (error) {
       if (error instanceof Error) {

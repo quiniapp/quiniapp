@@ -40,4 +40,21 @@ export class AuthRepository {
       throw new Error(ERROR_MESSAGE.INTERNAL_SERVER_ERROR);
     }
   }
+  async updateTokens(user_id: string, accessToken: string, refreshToken: string) {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          token: accessToken,
+          refresh_token: refreshToken,
+          edited_at: new Date().toISOString(),
+        })
+        .eq('user_id', user_id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
+      throw new Error(ERROR_MESSAGE.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

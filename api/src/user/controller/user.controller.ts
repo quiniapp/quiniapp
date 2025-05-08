@@ -1,8 +1,12 @@
 import { Request, Response } from 'express';
 import { UserRepository } from '../repository/user.repository';
 import { INewUserEntity } from '@helper/request/user.response';
-import { IUserEntityFront } from '@helper/types/user.type';
+import { CASHIER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
+import { buildUserForDB } from '../helper/userBase';
+import { ERROR_MESSAGE } from '@helper/types/errors.type';
+import { supabase } from 'api/database/db.connection';
+import { PostgrestError } from '@supabase/supabase-js';
 
 export class UserController {
   private repository = new UserRepository();
@@ -26,18 +30,33 @@ export class UserController {
     }
   };
 
-  create = async (newUser: INewUserEntity): Promise<IUserEntityFront> => {
+  create = async (newUser: INewUserEntity): Promise<IUserEntityFront | undefined> => {
     try {
-      const result = await this.repository.create(newUser);
+      const user = await buildUserForDB(newUser);
+
+      if (!user) {
+        throw new Error(ERROR_MESSAGE.BAD_REQUEST);
+      }
+
+      if (user.cashier_type !== CASHIER_TYPE.STREET) {
+        const { data, error } = await supabase.auth.signUp({
+          email: user.email!,
+          password: newUser.password,
+        });
+        console.log('data', data);
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
+      const result = await this.repository.create(user);
 
       return parseUser(result);
     } catch (error) {
-      if (error instanceof Error) {
+      if (error instanceof PostgrestError) {
         console.error('Creation error:', error.message);
 
-        throw error; // o volver a lanzar para que la capa superior lo maneje
+        throw new Error(error.message); // o volver a lanzar para que la capa superior lo maneje
       }
-      throw new Error('Unknown error during user creation');
     }
   };
 
