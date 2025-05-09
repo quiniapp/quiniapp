@@ -7,5 +7,4 @@ export const URL = ENVIROMENT === 'DEVELOPMENT' ? process.env.URL : 'http://loca
 export const SUPABASE_URL = process.env.SUPABASE_URL!;
 export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET!;
-export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET!;
+export const JWT_SECRET = process.env.JWT_SECRET!;
