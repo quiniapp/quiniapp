@@ -51,16 +51,7 @@ export class UserRouter {
     }
     try {
       const user = await this.controller.create(newUser);
-      /*   if (!user) {
-        const response: APIResponse<undefined> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: ERROR_MESSAGE.AUTH_ERROR,
-          },
-        };
-        res.status(500).json(response);
-        return;
-      } */
+
       const response: APIResponse<IUserEntityFront> = {
         data: {
           user: user!,
