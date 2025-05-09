@@ -40,4 +40,9 @@ export class AuthController {
     }
     return true;
   };
+
+  refresh = async (props: IAuthLogout) => {
+    console.log(props);
+    return;
+  };
 }
