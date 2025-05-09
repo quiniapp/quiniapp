@@ -23,6 +23,13 @@ export class AuthRouter {
     this.publicRouter.post('/login', this.loginHandler);
   }
 
+  private setupPrivateRoutes() {
+    this.privateRouter.post('/logout', this.logoutHandler);
+    this.privateRouter.post('/refresh', (req, res) => {
+      console.log(req, res);
+      return;
+    });
+  }
   // Definís el handler afuera:
   private loginHandler: RequestHandler = async (req: Request, res: Response) => {
     try {
@@ -46,7 +53,6 @@ export class AuthRouter {
         password: password,
       });
 
-      console.log('login', { data, error });
       if (error) {
         throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
       }
@@ -90,16 +96,56 @@ export class AuthRouter {
     }
   };
 
-  private setupPrivateRoutes() {
-    this.privateRouter.post('/logout', (req: Request, res) => {
-      // const { user } = req;
-      return this.controller.logout(req, res);
-    });
-    this.privateRouter.post('/refresh', (req, res) => {
-      console.log(req, res);
-      return;
-    });
-  }
+  private logoutHandler: RequestHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.TOKEN_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+    try {
+      const result = await this.controller.logout(user!);
+      const response: APIResponse<boolean> = {
+        data: {
+          data: result,
+        },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Login route error', error);
+
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
 }
 
 export const loginSchema = z.object({
@@ -109,5 +155,5 @@ export const loginSchema = z.object({
 
 export const logoutSchema = z.object({
   username: z.string().min(1, 'Username is required'),
-  token: z.string().min(1, 'Password is required'),
+  token: z.string().min(1, 'Token is required'),
 });

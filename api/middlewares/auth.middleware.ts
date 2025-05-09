@@ -15,7 +15,7 @@ export const isAuthenticated = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const authToken = req.headers.authorization;
+  const authToken = req.headers.authorization?.split(' ')[1];
 
   if (!authToken) {
     const response: APIResponse<null> = {
@@ -32,11 +32,12 @@ export const isAuthenticated = async (
     const decoded = verifyAccessToken(authToken);
     req.user = {
       user_id: decoded.sub,
+      token: authToken,
     };
 
     next();
   } catch (err) {
-    console.error(err);
+    console.error('authMiddleware', err);
     const response: APIResponse<null> = {
       error: {
         error: ERROR_TYPE.TOKEN_ERROR,
