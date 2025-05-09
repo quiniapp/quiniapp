@@ -1,10 +1,6 @@
-// src/controllers/auth.controller.ts
-import { Request, Response } from 'express';
-// import { ERROR_MESSAGE } from '@helper/types/errors.type';
 import { IUserEntityBack, IUserEntityFront } from '@helper/types/user.type';
 import { AuthRepository } from '../repository/auth.repository';
-import { IAuthLogin } from '@helper/types/auth.type';
-// import bcrypt from 'bcryptjs';
+import { IAuthLogin, IAuthLogout } from '@helper/types/auth.type';
 import { parseUser } from 'api/src/user/helper/parseUser';
 import { supabase } from 'api/database/db.connection';
 import { generateEmail } from 'api/helper/generateEmail';
@@ -13,14 +9,16 @@ export class AuthController {
 
   login = async (props: IAuthLogin): Promise<IUserEntityFront> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: generateEmail(props.username),
         password: props.password,
       });
-      console.log('loginController', { data, error });
+      if (error) {
+        console.error(error);
+        throw new Error(error.message);
+      }
       const user: IUserEntityBack = await this.repository.login({ ...props });
-      console.log(user);
-      // 👇 Comparamos el password ingresado con el guardado
+
       return parseUser(user);
     } catch (error) {
       if (error instanceof Error) {
@@ -32,8 +30,14 @@ export class AuthController {
     }
   };
 
-  logout = (req: Request, res: Response) => {
+  logout = async (props: IAuthLogout) => {
     // TODO: Invalidar token o limpiar sesión
-    res.status(200).json({ message: 'Logout endpoint' });
+    const { error } = await supabase.auth.admin.signOut(props.token);
+
+    if (error) {
+      console.error(error.message);
+      throw new Error(error.message);
+    }
+    return true;
   };
 }
