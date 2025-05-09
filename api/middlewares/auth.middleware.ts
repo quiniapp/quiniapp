@@ -1,7 +1,8 @@
 import { APIResponse } from '@helper/response/api_response.response';
 import { ITokenPayload } from '@helper/types/auth.type';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
-import { verifyAccessToken } from 'api/helper/JWT';
+import { IUserEntityFront } from '@helper/types/user.type';
+import { verifyUserToken } from 'api/helper/JWT';
 import { Request, Response, NextFunction } from 'express';
 
 declare module 'express' {
@@ -16,6 +17,7 @@ export const isAuthenticated = async (
   next: NextFunction
 ): Promise<void> => {
   const authToken = req.headers.authorization?.split(' ')[1];
+  const userToken = req.headers.usertoken as string;
 
   if (!authToken) {
     const response: APIResponse<null> = {
@@ -29,9 +31,9 @@ export const isAuthenticated = async (
   }
 
   try {
-    const decoded = verifyAccessToken(authToken);
+    const userDecoded = verifyUserToken(userToken);
     req.user = {
-      user_id: decoded.sub,
+      user: userDecoded as unknown as IUserEntityFront,
       token: authToken,
     };
 
