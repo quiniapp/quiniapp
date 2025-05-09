@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { LotteryRepository } from '../repository/lottery.repository';
+import { INewLotteryEntity } from '@helper/request/lottery.response';
+import { lotteryBase } from '../helper/lotteryBase';
+import { parseLottery } from '../helper/parseLottery';
 
 export class LotteryController {
   private repository = new LotteryRepository();
@@ -23,13 +26,14 @@ export class LotteryController {
     }
   };
 
-  create = async (req: Request, res: Response) => {
+  create = async (props: INewLotteryEntity) => {
+    const newLottery = lotteryBase(props);
     try {
-      const body = req.body;
-      const result = await this.repository.create(body);
-      res.status(201).json(result);
+      const result = await this.repository.create(newLottery);
+      return parseLottery(result);
     } catch (error) {
-      res.status(500).json({ error: 'Error creating Lottery', details: error });
+      console.error('Creation error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 

@@ -1,5 +1,7 @@
+import { IUserEntityFront } from './user.type';
+
 export interface ITokenPayload {
-  user_id: string;
+  user: IUserEntityFront;
   token: string;
 }
 export interface IAuthLogin {

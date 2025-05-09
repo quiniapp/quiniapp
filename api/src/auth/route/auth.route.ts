@@ -6,6 +6,7 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront } from '@helper/types/user.type';
 import { supabase } from 'api/database/db.connection';
 import { generateEmail } from 'api/helper/generateEmail';
+import { signUserToken } from 'api/helper/JWT';
 
 export class AuthRouter {
   public publicRouter: Router;
@@ -63,6 +64,7 @@ export class AuthRouter {
           user: loginResponse,
         },
       };
+      res.cookie('user_token', signUserToken(loginResponse), { httpOnly: true });
       res.status(200).json(response); // <-- SIN return
     } catch (error) {
       console.error('Login route error', error);
@@ -97,8 +99,9 @@ export class AuthRouter {
   };
 
   private logoutHandler: RequestHandler = async (req: Request, res: Response) => {
-    const user = req.user;
-    if (!user) {
+    const { user, token } = req.user!;
+
+    if (!token) {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.TOKEN_ERROR,
@@ -108,7 +111,7 @@ export class AuthRouter {
       res.status(500).json(response);
     }
     try {
-      const result = await this.controller.logout(user!);
+      const result = await this.controller.logout({ token: token, user_id: user.user_id! });
       const response: APIResponse<boolean> = {
         data: {
           data: result,
