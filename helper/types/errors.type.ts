@@ -11,6 +11,7 @@ export enum ERROR_TYPE {
   CASHIER_NUMBER_IS_REQUIRED,
   FORBIDDEN,
   TOKEN_ERROR,
+  NEW_USER_REQUIRED,
 }
 
 export const ERROR_MESSAGE = {
@@ -26,4 +27,5 @@ export const ERROR_MESSAGE = {
   FORBIDDEN: 'Esa acción no se puede realizar',
   TOKEN_ERROR: 'Token inválido o incompleto',
   AUTH_ERROR: 'Ocurrió un error al crear el usuario',
+  NEW_USER_REQUIRED: 'El nuevo ususario es requerido',
 };

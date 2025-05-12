@@ -27,7 +27,17 @@ export class UserRouter {
 
   private newUserhandler: RequestHandler = async (req: Request, res: Response) => {
     const { newUser }: { newUser: INewUserEntity } = req.body;
-    if (newUser.user_type === USER_TYPE.OWNER) {
+    if (!newUser) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.NEW_USER_REQUIRED,
+          message: ERROR_MESSAGE.NEW_USER_REQUIRED,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (newUser?.user_type === USER_TYPE.OWNER) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.FORBIDDEN,
