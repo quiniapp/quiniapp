@@ -37,4 +37,4 @@ const ownerOrAdminSchema = baseSchema.extend({
 });
 
 // Unión final
-export const newUserSchema = z.union([cashierStreetSchema, cashierPCSchema, ownerOrAdminSchema]);
+export const UserSchema = z.union([cashierStreetSchema, cashierPCSchema, ownerOrAdminSchema]);

@@ -12,6 +12,8 @@ export enum ERROR_TYPE {
   FORBIDDEN,
   TOKEN_ERROR,
   NEW_USER_REQUIRED,
+  ID_REQUIRED,
+  INVALID_ID,
 }
 
 export const ERROR_MESSAGE = {
@@ -28,4 +30,6 @@ export const ERROR_MESSAGE = {
   TOKEN_ERROR: 'Token inválido o incompleto',
   AUTH_ERROR: 'Ocurrió un error al crear el usuario',
   NEW_USER_REQUIRED: 'El nuevo ususario es requerido',
+  ID_REQUIRED: 'El ID es requerido',
+  INVALID_ID: 'El ID no es válido',
 };

@@ -1,18 +1,19 @@
 import { IUpdateUserEntity } from '@helper/request/user.response';
 import { IUserEntityBack } from '@helper/types/user.type';
 import { supabase } from 'api/database/db.connection';
+import dayjs from 'dayjs';
 
 export class UserRepository {
   async getById(id: string) {
     const { data, error } = await supabase.from('users').select('*').eq('user_id', id).single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
   async getAll() {
     const { data, error } = await supabase.from('users').select('*');
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
@@ -30,13 +31,19 @@ export class UserRepository {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
   async delete(id: string) {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-
-    if (error) throw error;
+    const timestamp = dayjs().toISOString();
+    const { data, error } = await supabase
+      .from('users')
+      .update({ deleted_at: timestamp })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.details);
+    return data;
   }
 }

@@ -7,7 +7,7 @@ export const verifyAccessToken = (token: string): JwtPayload => {
   return jwt.verify(token, JWT_SECRET_SUPABASE) as JwtPayload;
 };
 
-export const signUserToken = (payload: IUserEntityFront, options: SignOptions): string => {
+export const signUserToken = (payload: IUserEntityFront, options?: SignOptions): string => {
   return jwt.sign(payload, JWT_SECRET_USER, options);
 };
 

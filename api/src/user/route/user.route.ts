@@ -4,7 +4,8 @@ import { INewUserEntity } from '@helper/request/user.response';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { newUserSchema } from '../helper/schemaValidators';
+import { UserSchema } from '../helper/schemaValidators';
+import { validateUUID } from 'api/helper/validateUUID';
 
 export class UserRouter {
   public router: Router;
@@ -18,11 +19,11 @@ export class UserRouter {
   }
 
   private setupRoutes() {
-    this.router.get('/:id', this.controller.get);
-    this.router.get('/', this.controller.getAll);
+    this.router.get('/:id', this.getUserHandler);
+    this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
-    this.router.put('/:id', this.controller.update);
-    this.router.delete('/:id', this.controller.delete);
+    this.router.put('/:id', this.updateUserHandler);
+    this.router.delete('/:id', this.deleteUserHandler);
   }
 
   private newUserhandler: RequestHandler = async (req: Request, res: Response) => {
@@ -47,7 +48,7 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
-    const result = newUserSchema.safeParse(newUser);
+    const result = UserSchema.safeParse(newUser);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
@@ -88,6 +89,270 @@ export class UserRouter {
         };
         res.status(statusCode).json(response);
         return;
+      }
+    }
+  };
+
+  private getUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: user_id } = req.params;
+    const { user } = req;
+    if (!user_id) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.ID_REQUIRED,
+          message: ERROR_MESSAGE.ID_REQUIRED,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    const isValid = validateUUID.safeParse({ user_id });
+    if (!isValid.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.INVALID_ID,
+          message: ERROR_MESSAGE.INVALID_ID,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    try {
+      const user = await this.controller.get({ user_id });
+      if (!user) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.USER_NOT_FOUND,
+            message: ERROR_MESSAGE.USER_NOT_FOUND,
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private getAllUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    try {
+      const users = await this.controller.getAll();
+      const response: APIResponse<IUserEntityFront[]> = {
+        data: {
+          users,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private updateUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: user_id } = req.params;
+    const { updateUser } = req.body;
+    const { user } = req;
+    if (!user_id || !updateUser) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    const isValid = validateUUID.safeParse({ user_id });
+    if (!isValid.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.INVALID_ID,
+          message: ERROR_MESSAGE.INVALID_ID,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    const result = UserSchema.safeParse(updateUser);
+    if (!result.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: String(result.error.message),
+        },
+      };
+      res.status(400).json(response); // <-- SIN return
+
+      return;
+    }
+    try {
+      const user = await this.controller.update(user_id, { ...updateUser });
+
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private deleteUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: user_id } = req.params;
+    const { user } = req;
+    if (!user_id) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    const isValid = validateUUID.safeParse({ user_id });
+    if (!isValid.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.INVALID_ID,
+          message: ERROR_MESSAGE.INVALID_ID,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    try {
+      const user = await this.controller.delete({ user_id });
+
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      {
+        if (error instanceof Error) {
+          let statusCode = 500;
+          if (
+            error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+            error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+          ) {
+            statusCode = 401;
+          }
+
+          const response: APIResponse<null> = {
+            error: {
+              error: ERROR_TYPE.AUTH_ERROR,
+              message: error.message,
+            },
+          };
+          res.status(statusCode).json(response);
+          return;
+        }
       }
     }
   };
