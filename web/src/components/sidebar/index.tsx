@@ -1,6 +1,7 @@
-import MENU_ITEMS from '@/constants/SidebarMenu';
 import { UserIcon } from 'lucide-react';
+
 import SidebarItem from '@/components/sidebar/sidebar-item.tsx';
+import MENU_ITEMS from '@/constants/SidebarMenu';
 
 const Sidebar = () => {
   return (

@@ -1,3 +1,6 @@
+import { EditIcon, TrashIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableHeader,
@@ -6,8 +9,6 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { EditIcon, TrashIcon } from 'lucide-react';
 
 const mockUsers = [
   {
@@ -49,7 +50,7 @@ const UsersTable = () => {
             <TableHead className="text-cyan">Nombre</TableHead>
             <TableHead className="text-cyan">Grupo</TableHead>
             <TableHead className="text-cyan">Comision</TableHead>
-            <TableHead className="text-cyan">Debe</TableHead>
+            <TableHead className="text-cyan">Deje</TableHead>
             <TableHead className="text-cyan">Conexion</TableHead>
             <TableHead className="text-cyan">Cuenta</TableHead>
             <TableHead className="text-cyan">Editar</TableHead>

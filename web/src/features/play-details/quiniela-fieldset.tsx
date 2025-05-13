@@ -1,9 +1,10 @@
 import { useState } from 'react';
+
+import Box from '@/components/box';
 import { Fieldset } from '@/components/fieldset';
 import { Flex, FlexCol } from '@/components/flex';
-import Box from '@/components/box';
-import { Label } from '@/components/ui/label.tsx';
 import { Checkbox } from '@/components/ui/checkbox.tsx';
+import { Label } from '@/components/ui/label.tsx';
 import { PROVINCE, QUINIELA_PROVINCIAS } from '@/constants/LIstCommonBets.ts';
 
 interface QuinielaFieldsetProps {

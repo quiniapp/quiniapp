@@ -1,7 +1,13 @@
-import { Controller, useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { BanIcon, SaveIcon } from 'lucide-react';
+import { Controller, useForm, Resolver } from 'react-hook-form';
 
+import Box from '@/components/box';
+import { Flex, FlexCol } from '@/components/flex';
+import { Typography } from '@/components/typography';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label.tsx';
 import {
   Select,
   SelectContent,
@@ -9,14 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Flex, FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button';
-import { BanIcon, SaveIcon } from 'lucide-react';
-import { Label } from '@/components/ui/label.tsx';
-import { Typography } from '@/components/typography';
-import Box from '@/components/box';
-import { addNewUserSchema } from '@/validations/useAddNewUser.validation.ts';
 import { AddNewUserFormValues } from '@/types/user.type.ts';
+import { addNewUserSchema } from '@/validations/useAddNewUser.validation.ts';
 
 export default function UserListAddNewUserForm() {
   const {

@@ -1,7 +1,6 @@
 import { FlexCol } from '@/components/flex';
-
-import PlayAndHitsToggleSelect from '@/features/plays-and-hits/play-and-hits-toggle-select.tsx';
 import PlayAndHitsSelect from '@/features/plays-and-hits/play-and-hits-select.tsx';
+import PlayAndHitsToggleSelect from '@/features/plays-and-hits/play-and-hits-toggle-select.tsx';
 
 const PlayAndHitsBox = () => {
   return (

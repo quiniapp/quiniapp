@@ -1,4 +1,3 @@
-import { IUpdateUserEntity } from '@helper/request/user.response';
 import { IUserEntityBack } from '@helper/types/user.type';
 import { supabase } from 'api/database/db.connection';
 import dayjs from 'dayjs';
@@ -19,11 +18,12 @@ export class UserRepository {
 
   async create(newUser: IUserEntityBack) {
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
-    if (error) throw new Error(error.details);
+
+    if (error) throw error;
     return data;
   }
 
-  async update(id: string, payload: IUpdateUserEntity) {
+  async update(id: string, payload: any) {
     const { data, error } = await supabase
       .from('users')
       .update(payload)

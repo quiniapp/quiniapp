@@ -1,11 +1,10 @@
-import { Flex } from '@/components/flex';
 import { Ticket } from 'lucide-react';
-import { Label } from '@/components/ui/label.tsx';
-
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import Box from '@/components/box';
+import { Flex } from '@/components/flex';
 import HeaderTitleSection from '@/components/header-title-section';
+import { Label } from '@/components/ui/label.tsx';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 type Quini = {

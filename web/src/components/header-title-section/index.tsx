@@ -2,8 +2,8 @@ import React from 'react';
 
 import { Flex } from '@/components/flex';
 import { Typography } from '@/components/typography';
-import { TypographyVariant } from '@/types/typography.type.ts';
 import { cn } from '@/lib/utils.ts';
+import { TypographyVariant } from '@/types/typography.type.ts';
 
 interface HeaderTitleSectionProps {
   title?: string;

@@ -28,6 +28,7 @@ export const ERROR_MESSAGE = {
   CASHIER_NUMBER_IS_REQUIRED: 'El número de cajero es requerido',
   FORBIDDEN: 'Esa acción no se puede realizar',
   TOKEN_ERROR: 'Token inválido o incompleto',
+
   AUTH_ERROR: 'Ocurrió un error al crear el usuario',
   NEW_USER_REQUIRED: 'El nuevo ususario es requerido',
   ID_REQUIRED: 'El ID es requerido',

@@ -1,6 +1,13 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { LogInIcon } from 'lucide-react';
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+
+import { z } from 'zod';
+
 import { Flex } from '@/components/flex';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import Logo from '@/components/logo';
+import { Button } from '@/components/ui/button.tsx';
 import {
   Card,
   CardContent,
@@ -9,29 +16,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button.tsx';
-import { LogInIcon } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
-import { usePlatform } from '@/hooks/use-platform.ts';
-import { useNavigate } from 'react-router-dom';
-import { zodResolver } from '@hookform/resolvers/zod';
-
-import { z } from 'zod';
-import { useEffect } from 'react';
-import Logo from '@/components/logo';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile.ts';
+import { usePlatform } from '@/hooks/use-platform.ts';
+import { useLogin } from '@/features/auth/auth'; // Importa el hook useLogin
 
 interface FormData {
-  name: string;
+  username: string;
+  password: string;
 }
 
 const validationSchemaLogin = z.object({
-  name: z
-    .string()
-    .min(1, 'El nombre es obligatorio')
-    .refine((val) => val === 'agustin' || 'pedro', {
-      message: 'El Usuario o contraseña no son correctas"',
-    }),
+  username: z.string().min(1, 'El nombre es obligatorio'),
+  password: z.string().min(1, 'La contraseña es obligatoria'),
 });
 
 const LoginContent = () => {
@@ -45,17 +43,20 @@ const LoginContent = () => {
   });
 
   const platform = usePlatform();
-  const navigate = useNavigate();
+
+  const { mutateAsync: loginMutationAsync, isPending, isError, error  } = useLogin();
 
   const onSubmit = async (data: FormData) => {
-    console.log(data);
-    localStorage.setItem('isAuth', JSON.stringify({ name: data.name }));
-    if (data?.name === 'agustin') {
-      localStorage.setItem('role', 'superadmin');
-    } else {
-      localStorage.setItem('role', 'pasador');
+
+    try {
+      await loginMutationAsync({username: data.username, password: data.password });
+
+    } catch (error) {
+      console.error('Error en el login:', error);
+      // El error ya se está manejando en el onError del useMutation,
+      // pero podrías agregar lógica adicional aquí si es necesario.
+
     }
-    navigate('/');
   };
 
   const fetchUsers = async () => {
@@ -77,7 +78,8 @@ const LoginContent = () => {
       }
 
       const data = await response.json();
-      console.log(data);
+      console.log('data---->', data);
+
       return data;
     } catch (error) {
       console.error('Error al obtener usuarios:', error);
@@ -109,25 +111,35 @@ const LoginContent = () => {
             <CardContent>
               <Flex className="flex-col space-y-6 pt-4">
                 <Controller
-                  name="name"
+                  name="username"
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
                       <Label className={'text-white'}>Nombre</Label>
                       <Input {...field} type="text" placeholder="Nombre de usuario" />
-                      {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+                      {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
                     </Flex>
                   )}
                 />
-                <Flex className="flex-col space-y-4">
-                  <Label className={'text-white'}>Contraseña</Label>
-                  <Input type="password" placeholder="******" />
-                </Flex>
+                <Controller
+                  name="password"
+                  control={control}
+                  render={({ field }) => (
+                    <Flex className="flex-col space-y-4">
+                      <Label className={'text-white'}>Contraseña</Label>
+                      <Input {...field} type="password" placeholder="******" />
+                      {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+                    </Flex>
+                  )}
+                />
+                {isError && (
+                  <p className="text-red-500 text-sm">Error: {error?.message}</p>
+                )}
               </Flex>
             </CardContent>
             <CardFooter className="justify-between pt-[48px]">
-              <Button className="flex-1">
-                <LogInIcon /> Iniciar Sesión
+              <Button className="flex-1" type="submit" disabled={isPending}>
+                <LogInIcon /> {isPending ? 'Iniciando Sesión...' : 'Iniciar Sesión'}
               </Button>
               {platform === 'desktop' && <Button variant="outline">Cancelar</Button>}
             </CardFooter>

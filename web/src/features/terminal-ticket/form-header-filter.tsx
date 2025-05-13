@@ -1,6 +1,10 @@
-import { Flex, FlexCol } from '@/components/flex';
+import { SearchIcon } from 'lucide-react';
 
-import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
+import Box from '@/components/box';
+import { Fieldset } from '@/components/fieldset';
+import { Flex, FlexCol } from '@/components/flex';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input.tsx';
 import {
   Select,
   SelectContent,
@@ -8,12 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
-import { Input } from '@/components/ui/input.tsx';
-import { Button } from '@/components/ui/button';
-import { SearchIcon } from 'lucide-react';
+import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
-import { Fieldset } from '@/components/fieldset';
-import Box from '@/components/box';
 
 const FormHeaderFilter = () => {
   return (

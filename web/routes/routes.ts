@@ -1,10 +1,13 @@
-const BASE = '/api';
+import { BACKEND_URL, ENVIRONMENT } from '@/env.ts';
+
+const URL = ENVIRONMENT === 'develop' ? 'http://localhost:3000': BACKEND_URL
+const BASE = `${URL}/api`;
 const PRIVATE = `${BASE}/private`;
 
-const routes = {
+export const ROUTES = {
   auth: {
-    login: `${BASE}/login`,
-    logout: `${PRIVATE}/logout`,
+    login: `${BASE}/auth/login`,
+    logout: `${PRIVATE}/auth/logout`,
   },
   user: {
     base: `${PRIVATE}/user`,

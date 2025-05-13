@@ -1,3 +1,5 @@
+import { FlexCol } from '@/components/flex';
+import { Typography } from '@/components/typography';
 import {
   Table,
   TableBody,
@@ -6,8 +8,6 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
-import { Typography } from '@/components/typography';
-import { FlexCol } from '@/components/flex';
 
 const PlayDetailGameTable = () => {
   const tablePlays = [];

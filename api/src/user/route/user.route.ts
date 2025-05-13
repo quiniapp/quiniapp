@@ -71,7 +71,6 @@ export class UserRouter {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error(error);
       if (error instanceof Error) {
         let statusCode = 500;
         if (

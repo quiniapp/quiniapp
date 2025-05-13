@@ -1,11 +1,11 @@
 import { TicketX } from 'lucide-react';
 
-import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
-
 import Box from '@/components/box';
-import { Button } from '@/components/ui/button';
 import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
+import { Typography } from '@/components/typography';
+import { Button } from '@/components/ui/button';
+import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
 import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket.tsx';
 import TerminalTicketPlayTable from '@/features/terminal-ticket/termina-ticket-play-table.tsx';
 import TerminalTicketMatchesTable from '@/features/terminal-ticket/terminal-ticket-matches-table.tsx';
@@ -21,7 +21,7 @@ export const TerminalTicketContent = () => {
         <FlexCol>
           <FlexCol>
             <TableTerminalTicket />
-            <p> Cantidad de Tickets: 6</p>
+            <Typography className={'text-xs'} variant={'p'}> Cantidad de Tickets: 6</Typography>
           </FlexCol>
 
         </FlexCol>
