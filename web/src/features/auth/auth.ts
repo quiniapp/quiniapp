@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { APIResponse } from '../../../../helper/response/api_response.response.ts';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type.ts';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../../helper/routes/routes.ts';
+import { ROUTES } from '../../../routes/routes.ts';
 
 interface FormData {
   username?: string;
@@ -33,7 +33,6 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: login,
     onSuccess: (data: APIResponse<IUserEntityFront>) => {
-      console.log('data -->', data.data)
 
       localStorage.setItem('user', JSON.stringify(data?.data?.user.username));
 

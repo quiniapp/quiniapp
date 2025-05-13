@@ -1,4 +1,6 @@
-const URL = 'http://localhost:3000'
+import { BACKEND_URL, ENVIRONMENT } from '@/env.ts';
+
+const URL = ENVIRONMENT === 'develop' ? 'http://localhost:3000': BACKEND_URL
 const BASE = `${URL}/api`;
 const PRIVATE = `${BASE}/private`;
 

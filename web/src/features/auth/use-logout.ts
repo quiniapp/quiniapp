@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../../helper/routes/routes.ts';
+import { ROUTES } from '../../../routes/routes.ts';
+
 
 const logout = async () => {
   const response = await fetch(ROUTES.auth.logout, {
     method: 'POST',
-    credentials: 'include', // <-- clave para que mande cookies
+    credentials: 'include',
   });
 
   if (!response.ok) {
