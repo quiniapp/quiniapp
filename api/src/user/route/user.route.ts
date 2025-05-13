@@ -3,8 +3,8 @@ import { UserController } from '../controller/user.controller';
 import { INewUserEntity } from '@helper/request/user.response';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
-import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { newUserSchema } from '../helper/schemaValidators';
+import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type';
+import { z } from 'zod';
 
 export class UserRouter {
   public router: Router;
@@ -26,41 +26,57 @@ export class UserRouter {
   }
 
   private newUserhandler: RequestHandler = async (req: Request, res: Response) => {
-    const { newUser }: { newUser: INewUserEntity } = req.body;
-    if (newUser.user_type === USER_TYPE.OWNER) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
-    const result = newUserSchema.safeParse(newUser);
-    if (!result.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: String(result.error.message),
-        },
-      };
-      res.status(400).json(response); // <-- SIN return
-
-      return;
-    }
     try {
-      const user = await this.controller.create(newUser);
+      const { newUser }: { newUser: INewUserEntity } = req.body;
+      if (newUser.user_type === USER_TYPE.OWNER) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.FORBIDDEN,
+            message: ERROR_MESSAGE.FORBIDDEN,
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
 
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user: user!,
-        },
-      };
+      if (!newUser.name) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.NAME_IS_REQUIRED,
+            message: ERROR_MESSAGE.NAME_IS_REQUIRED,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+      if (!newUser.number) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.CASHIER_NUMBER_IS_REQUIRED,
+            message: ERROR_MESSAGE.CASHIER_NUMBER_IS_REQUIRED,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+      if (
+        !(newUser.user_type === USER_TYPE.CASHIER && newUser.cashier_type === CASHIER_TYPE.STREET)
+      ) {
+        if (!newUser.username) {
+          const response: APIResponse<null> = {
+            error: {
+              error: ERROR_TYPE.USERNAME_IS_REQUIRED,
+              message: ERROR_MESSAGE.USERNAME_IS_REQUIRED,
+            },
+          };
+          res.status(400).json(response);
+          return;
+        }
+      }
 
-      res.status(200).json(response);
+      const user = this.controller.create(newUser);
+      res.status(200).json(user);
     } catch (error) {
-      console.error(error);
       if (error instanceof Error) {
         let statusCode = 500;
         if (
@@ -79,6 +95,31 @@ export class UserRouter {
         res.status(statusCode).json(response);
         return;
       }
+
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
     }
   };
 }
+
+export const newUserCashierSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+export const updateCashierSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  token: z.string().min(1, 'Password is required'),
+});
+export const newUserSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+export const updateUserSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  token: z.string().min(1, 'Password is required'),
+});

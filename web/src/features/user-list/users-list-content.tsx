@@ -1,6 +1,6 @@
+import Box from '@/components/box';
 import UsersTable from '@/features/user-list/user-table.tsx';
 
-import Box from '@/components/box';
 
 const UsersListContent = () => {
   return (

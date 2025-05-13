@@ -1,13 +1,14 @@
+import { useState } from 'react';
 import { Outlet, useNavigation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 
-import Header from '../header';
+
 import Footer from '../footer';
+import Header from '../header';
+
 import Aside from '@/components/aside';
 import { SidebarProvider } from '@/components/ui/sidebar.tsx';
-import { useState } from 'react';
-
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
+import { cn } from '@/lib/utils';
 
 interface LayoutProps {
   classname?: string;

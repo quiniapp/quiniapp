@@ -1,12 +1,13 @@
-import Modal from '@/components/modals/custom-modal.tsx';
+import { SearchIcon } from 'lucide-react';
+
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
+import Modal from '@/components/modals/custom-modal.tsx';
+import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
-import { Typography } from '@/components/typography';
-
 import { QuinielaFieldset } from '@/features/play-details/quiniela-fieldset.tsx';
-import { SearchIcon } from 'lucide-react';
+
 
 interface BasicModalProps {
   isOpen: boolean;

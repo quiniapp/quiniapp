@@ -1,12 +1,12 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx';
-import { Button } from '@/components/ui/button.tsx';
-import { cn } from '@/lib/utils.ts';
-import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-import { Calendar } from '@/components/ui/calendar.tsx';
+import { CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
+
+import { Button } from '@/components/ui/button.tsx';
+import { Calendar } from '@/components/ui/calendar.tsx';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx';
+import { cn } from '@/lib/utils.ts';
 
 interface SelectDayToSearchProps {
   className?: string

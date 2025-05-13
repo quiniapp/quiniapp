@@ -1,3 +1,6 @@
+import Box from '@/components/box';
+import { FlexCol } from '@/components/flex';
+import { Typography } from '@/components/typography';
 import {
   Table,
   TableBody,
@@ -7,9 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FlexCol } from '@/components/flex';
-import { Typography } from '@/components/typography';
-import Box from '@/components/box';
 
 const CurrentAccountTable = () => {
   const DATA = [];

@@ -32,16 +32,16 @@ export const buildUserForDB = async (user: INewUserEntity): Promise<IUserEntityB
     email: user?.cashier_type === CASHIER_TYPE.STREET ? null : generateEmail(user.username!),
     ...(user?.user_type === USER_TYPE.CASHIER
       ? {
-          user_type: USER_TYPE.CASHIER,
-          cashier_type: user.cashier_type!,
-          fee: user?.fee!,
-          fee_plus: user?.fee_plus!,
-        }
+        user_type: USER_TYPE.CASHIER,
+        cashier_type: user.cashier_type!,
+        fee: user?.fee!,
+        fee_plus: user?.fee_plus!,
+      }
       : {
-          user_type: user.user_type,
-          cashier_type: null,
-          fee: null,
-          fee_plus: null,
-        }),
+        user_type: user.user_type,
+        cashier_type: null,
+        fee: null,
+        fee_plus: null,
+      }),
   };
 };

@@ -20,6 +20,7 @@ export class AuthRouter {
     this.setupPublicRoutes();
     this.setupPrivateRoutes();
   }
+
   private setupPublicRoutes() {
     this.publicRouter.post('/login', this.loginHandler);
   }
@@ -31,6 +32,7 @@ export class AuthRouter {
       return;
     });
   }
+
   // Definís el handler afuera:
   private loginHandler: RequestHandler = async (req: Request, res: Response) => {
     try {
@@ -57,14 +59,22 @@ export class AuthRouter {
       if (error) {
         throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
       }
-      res.cookie('access_token', data.session.access_token, { httpOnly: true });
+      res.cookie('access_token', data.session.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
       const loginResponse = await this.controller.login({ username, password });
       const response: APIResponse<IUserEntityFront> = {
         data: {
           user: loginResponse,
         },
       };
-      res.cookie('user_token', signUserToken(loginResponse), { httpOnly: true });
+      res.cookie('user_token', signUserToken(loginResponse), {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
       res.status(200).json(response); // <-- SIN return
     } catch (error) {
       console.error('Login route error', error);
@@ -117,6 +127,17 @@ export class AuthRouter {
           data: result,
         },
       };
+      res.clearCookie('access_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,
+      });
+
+      res.clearCookie('user_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,
+      });
       res.status(200).json(response);
     } catch (error) {
       console.error('Login route error', error);

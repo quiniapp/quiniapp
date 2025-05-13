@@ -1,9 +1,10 @@
-import HeaderSection from '@/components/header-section';
+import { UsersIcon, Users2Icon } from 'lucide-react';
+
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button.tsx';
-import { UsersIcon, Users2Icon } from 'lucide-react';
+import HeaderSection from '@/components/header-section';
 import HeaderTitleSection from '@/components/header-title-section';
+import { Button } from '@/components/ui/button.tsx';
 import { Table, TableBody, TableHead, TableHeader } from '@/components/ui/table.tsx';
 
 const UserGroupsContent = () => {

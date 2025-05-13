@@ -1,27 +1,27 @@
+import Layout from '@/components/layout';
+import LoginPage from '@/features/login';
 import { Index } from '@/pages';
+import ClientPage from '@/pages/clients';
+import CurrentAccountPage from '@/pages/current-account.tsx';
+import GroupsPage from '@/pages/groups';
 import NotFound from '@/pages/NotFound';
 
 // @Page
-import UsersPage from '@/pages/users';
-import ShiftsPage from '@/pages/shifts';
-import GroupsPage from '@/pages/groups';
-import ClientPage from '@/pages/clients';
-import ResultsPage from '@/pages/results';
-import ReportsPage from '@/pages/reports';
-import SettingsPage from '@/pages/settings';
 import UserListPage from '@/pages/user-list';
 import PlayDetailsPage from '@/pages/play-details';
 import PlaysAndHitsPage from '@/pages/plays-and-hits';
 import { TerminalTicketPage } from '@/pages/terminal-ticket';
 
 // @Types
-import { ROUTES } from '@/types/routes.type';
-import LoginPage from '@/features/login';
-import PlaysPage from '@/pages/plays.tsx';
-import Layout from '@/components/layout';
-import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
-import CurrentAccountPage from '@/pages/current-account.tsx';
 import ProtectedRoute from '@/protected/protected-routes.tsx';
+import { ROUTES } from '@/types/routes.type';
+import PlaysPage from '@/pages/plays.tsx';
+import ReportsPage from '@/pages/reports';
+import ResultsPage from '@/pages/results';
+import SettingsPage from '@/pages/settings';
+import ShiftsPage from '@/pages/shifts';
+import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
+import UsersPage from '@/pages/users';
 
 export const RoutesContent = [
   {

@@ -1,10 +1,16 @@
+import { Calendar, Clock, SaveIcon, Ticket } from 'lucide-react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+
 import Box from '@/components/box';
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
+import HeaderTitleSection from '@/components/header-title-section';
+import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button.tsx';
 import { Checkbox } from '@/components/ui/checkbox.tsx';
+import { Label } from '@/components/ui/label.tsx';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.tsx';
 import {
   Select,
   SelectContent,
@@ -12,12 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
-import { Calendar, Clock, SaveIcon, Ticket } from 'lucide-react';
-import { Label } from '@/components/ui/label.tsx';
-import { Typography } from '@/components/typography';
 import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
-import HeaderTitleSection from '@/components/header-title-section';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.tsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 interface FormData {

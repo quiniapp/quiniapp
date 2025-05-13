@@ -1,19 +1,16 @@
+import { Clock, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Clock, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
-import { Flex, FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button';
-
 import Box from '@/components/box';
+import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
-
-import { Input } from '@/components/ui/input.tsx';
-
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
-import ResultShifts from '@/features/results/shifts.tsx';
-import QuiniChecks from '@/features/results/quini-check.tsx';
-import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
 import HeaderTitleSection from '@/components/header-title-section';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input.tsx';
+import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
+import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
+import QuiniChecks from '@/features/results/quini-check.tsx';
+import ResultShifts from '@/features/results/shifts.tsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 const ResultsContent = () => {
@@ -52,23 +49,22 @@ const ResultsContent = () => {
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
-      <HeaderSection title={'Resultados'}>
-        <Flex className="w-full items-center space-x-[56px] justify-end">
-          <Flex className={'justify-end  w-full items-center space-x-[24px] '}>
-            <span className={'text-sm text-muted-foreground'}> Selecinar fecha</span>
-            <SelectDayToSearch />
-          </Flex>
-          <Flex className={'gap-6'}>
-            <Button variant="outline" className="flex items-center gap-2">
-              <RefreshCw size={16} />
-              Actualizar
-            </Button>
-            <Button variant={'success'} className="  hover:bg-green-700 text-white">
-              Generar Ganadores
-            </Button>
-          </Flex>
+      <HeaderSection title={'Resultados'} />
+      <Flex className="w-full items-center space-x-[36px] max-h-[60px] justify-between">
+        <Flex className={'   w-full items-center space-x-[24px] '}>
+          <span className={'text-sm text-muted-foreground'}> Selecinar fecha</span>
+          <SelectDayToSearch />
         </Flex>
-      </HeaderSection>
+        <Flex className={'gap-6'}>
+          <Button variant="outline" className="flex items-center gap-2">
+            <RefreshCw size={16} />
+            Actualizar
+          </Button>
+          <Button variant={'success'} className="  hover:bg-green-700 text-white">
+            Generar Ganadores
+          </Button>
+        </Flex>
+      </Flex>
       <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
         <FlexCol className="  rounded-xl   space-y-6">
           <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />

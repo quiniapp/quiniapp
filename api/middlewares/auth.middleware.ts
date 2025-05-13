@@ -16,8 +16,9 @@ export const isAuthenticated = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const authToken = req.headers.authorization?.split(' ')[1];
-  const userToken = req.headers.usertoken as string;
+  const authToken = req.cookies.access_token;
+  const userToken = req.cookies.user_token;
+
 
   if (!authToken) {
     const response: APIResponse<null> = {

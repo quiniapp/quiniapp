@@ -2,8 +2,8 @@ import { Clock } from 'lucide-react';
 
 import Box from '@/components/box';
 import { Flex } from '@/components/flex';
-import { Label } from '@/components/ui/label';
 import HeaderTitleSection from '@/components/header-title-section';
+import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 

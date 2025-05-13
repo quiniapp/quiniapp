@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "patch-package",
     "prepare": "test -z \"$CI\" && husky install || echo 'Skipping husky install in CI'",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "lint": "eslint 'src/**/*.{ts,tsx,js,jsx}'",
+    "lint:fix": "eslint 'src/**/*.{ts,tsx,js,jsx}' --fix",
+    "format:imports": "eslint 'src/**/*.{ts,tsx}' --fix --rule 'import/order: [error]'"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -54,7 +56,9 @@
     "@vitejs/plugin-react-swc": "^3.8.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.25.1",
-    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-import-resolver-typescript": "^4.3.4",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
     "husky": "8",
