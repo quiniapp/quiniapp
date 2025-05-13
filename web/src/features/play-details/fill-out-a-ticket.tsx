@@ -9,9 +9,7 @@ import GameTurns from '@/features/play-details/game-turns.tsx';
 import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
 import { useForm } from 'react-hook-form';
 
-interface FillOutATicketProps {
 
-}
 
 const FillOutATicket = () => {
   const {} = useForm()
