@@ -1,13 +1,14 @@
-const BASE = '/api';
+const URL = 'http://localhost:3000'
+const BASE = `${URL}/api`;
 const PRIVATE = `${BASE}/private`;
 
-const routes = {
+export const ROUTES = {
   auth: {
     login: `${BASE}/auth/login`,
-    logout: `${PRIVATE}/logout,
+    logout: `${PRIVATE}/auth/logout`,
   },
   user: {
-    base: ${PRIVATE}/user`,
+    base: `${PRIVATE}/user`,
     id: (id: string) => `${PRIVATE}/user/${id}`,
   },
   bet: {

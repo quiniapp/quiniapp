@@ -6,8 +6,9 @@ import {
   UserIcon,
   UsersIcon,
 } from 'lucide-react';
-import { ROUTES } from '@/types/routes.type';
+
 import { MENU_ITEM } from '@/types/menu-item.tsx';
+import { ROUTES } from '@/types/routes.type';
 
 const MENU_ITEMS: MENU_ITEM[] = [
   {

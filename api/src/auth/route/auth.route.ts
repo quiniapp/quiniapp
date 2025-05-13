@@ -1,7 +1,178 @@
-import { Router } from 'express';
-import { login, logout } from '../controller/auth.controller';
+import { Request, RequestHandler, Response, Router } from 'express';
+import { AuthController } from '../controller/auth.controller';
+import { z } from 'zod';
+import { APIResponse } from '@helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { IUserEntityFront } from '@helper/types/user.type';
+import { supabase } from 'api/database/db.connection';
+import { generateEmail } from 'api/helper/generateEmail';
+import { signUserToken } from 'api/helper/JWT';
 
-const router = Router();
+export class AuthRouter {
+  public publicRouter: Router;
+  public privateRouter: Router;
+  private controller: AuthController;
 
-export const authPublickRoute = router.post('/login', login); // pública;
-export const authPrivateRoute = router.post('logout', logout); //privada
+  constructor() {
+    this.publicRouter = Router();
+    this.privateRouter = Router();
+    this.controller = new AuthController();
+    this.setupPublicRoutes();
+    this.setupPrivateRoutes();
+  }
+
+  private setupPublicRoutes() {
+    this.publicRouter.post('/login', this.loginHandler);
+  }
+
+  private setupPrivateRoutes() {
+    this.privateRouter.post('/logout', this.logoutHandler);
+    this.privateRouter.post('/refresh', (req, res) => {
+      console.log(req, res);
+      return;
+    });
+  }
+
+  // Definís el handler afuera:
+  private loginHandler: RequestHandler = async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+
+      const result = loginSchema.safeParse({ username, password });
+      if (!result.success) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: String(result.error.message),
+          },
+        };
+        res.status(400).json(response); // <-- SIN return
+
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: generateEmail(username),
+        password: password,
+      });
+
+      if (error) {
+        throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
+      }
+      res.cookie('access_token', data.session.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+      const loginResponse = await this.controller.login({ username, password });
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user: loginResponse,
+        },
+      };
+      res.cookie('user_token', signUserToken(loginResponse), {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+      res.status(200).json(response); // <-- SIN return
+    } catch (error) {
+      console.error('Login route error', error);
+
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  private logoutHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user, token } = req.user!;
+
+    if (!token) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.TOKEN_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+    try {
+      const result = await this.controller.logout({ token: token, user_id: user.user_id! });
+      const response: APIResponse<boolean> = {
+        data: {
+          data: result,
+        },
+      };
+      res.clearCookie('access_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,
+      });
+
+      res.clearCookie('user_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,
+      });
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Login route error', error);
+
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
+}
+
+export const loginSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});

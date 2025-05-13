@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+
 import { ROUTES } from '@/types/routes.type.ts';
 
 export type MENU_ITEM = {

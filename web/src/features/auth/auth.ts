@@ -1,27 +1,23 @@
 
 import { useMutation } from '@tanstack/react-query';
+import { APIResponse } from '../../../../helper/response/api_response.response.ts';
+import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type.ts';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../../../helper/routes/routes.ts';
 
 interface FormData {
-  email?: string;
+  username?: string;
   password?: string;
 }
 
-interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    email: string;
-    role?: 'superadmin' | 'pasador';
-  };
-}
-
-const login = async (data: FormData): Promise<LoginResponse> => {
-  const response = await fetch('http://localhost:3000/api/auth/login', {
+const login = async (data: FormData): Promise<APIResponse<IUserEntityFront>> => {
+  const response = await fetch(ROUTES.auth.login, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
+    credentials: 'include',
   });
 console.log(response)
   if (!response.ok) {
@@ -33,19 +29,22 @@ console.log(response)
 };
 
 export const useLogin = () => {
+  const   navigate = useNavigate()
   return useMutation({
     mutationFn: login,
-    onSuccess: (data) => {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    onSuccess: (data: APIResponse<IUserEntityFront>) => {
+      console.log('data -->', data.data)
 
-      if (data.user?.role === 'superadmin') {
-        localStorage.setItem('role', 'superadmin');
+      localStorage.setItem('user', JSON.stringify(data?.data?.user.username));
+
+      localStorage.setItem('isAuth', 'true');
+      navigate('/');
+      if (data?.data?.user?.user_type === USER_TYPE.ADMIN) {
+        localStorage.setItem('role', `${USER_TYPE.ADMIN}`);
       } else {
-        localStorage.setItem('role', 'pasador');
+        localStorage.setItem('role', `${USER_TYPE.CASHIER}`);
       }
-      console.log(data)
-      // Ya no navegamos aquí
+
       return data;
     },
     onError: (error: Error) => {

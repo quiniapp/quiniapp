@@ -98,6 +98,10 @@
   td {
     padding: 8px 8px !important;
   }
+
+  tr:nth-child(even) {
+    background-color: #007bff11;
+  }
   thead {
     background-color: var(--bg-card);
     height: 36px;
@@ -108,7 +112,7 @@
   }
   legend {
     color: var(--muted-foreground);
-    font-size: 12px;
+    font-size: 10px;
   }
 
   ::-webkit-scrollbar {

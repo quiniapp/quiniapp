@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { EyeIcon, UsersIcon } from 'lucide-react';
+import { useState } from 'react';
 
 import { Flex, FlexCol } from '@/components/flex';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import HeaderTitleSection from '@/components/header-title-section';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 interface PlayAndHitsToggleSelectOptions {

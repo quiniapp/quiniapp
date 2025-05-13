@@ -1,14 +1,20 @@
-import { Flex, FlexCol } from '@/components/flex';
-import { Input } from '@/components/ui/input.tsx';
-import { Label } from '@/components/ui/label.tsx';
-import { Button } from '@/components/ui/button.tsx';
 import { PlusIcon, TrashIcon } from 'lucide-react';
 
-import GameTurns from '@/features/play-details/game-turns.tsx';
 import Box from '@/components/box';
+import { Flex, FlexCol } from '@/components/flex';
+import { Button } from '@/components/ui/button.tsx';
+import { Input } from '@/components/ui/input.tsx';
+import { Label } from '@/components/ui/label.tsx';
+import GameTurns from '@/features/play-details/game-turns.tsx';
 import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
+import { useForm } from 'react-hook-form';
+
+interface FillOutATicketProps {
+
+}
 
 const FillOutATicket = () => {
+  const {} = useForm()
   return (
     <FlexCol className={'py-[0px]'}>
       <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>

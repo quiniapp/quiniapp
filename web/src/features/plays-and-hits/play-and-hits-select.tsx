@@ -1,6 +1,4 @@
 import { Flex, FlexCol } from '@/components/flex';
-
-import { TypographyMuted } from '@/components/ui/typography-muted';
 import {
   Select,
   SelectContent,
@@ -8,6 +6,7 @@ import {
   SelectValue,
   SelectTrigger,
 } from '@/components/ui/select';
+import { TypographyMuted } from '@/components/ui/typography-muted';
 import { MODALIDADES, QUINIELA_PROVINCIAS } from '@/constants/LIstCommonBets.ts';
 
 const PlayAndHitsSelect = () => {

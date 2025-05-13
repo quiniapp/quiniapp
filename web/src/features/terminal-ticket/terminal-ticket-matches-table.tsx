@@ -2,10 +2,10 @@ import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@
 
 
 const TerminalTicketMatchesTable = () => {
-  return (
-    <Table>
+  return (<div className="border mb-4">
+    <Table className="min-w-full table-fixed">
       <TableHeader>
-        <TableRow>
+        <TableRow className={'bg-card-bg'}>
           <TableHead>Jugada</TableHead>
           <TableHead>Monto</TableHead>
           <TableHead>Quiniela</TableHead>
@@ -15,27 +15,26 @@ const TerminalTicketMatchesTable = () => {
           <TableHead>Monto</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
-        <TableRow>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-        </TableRow><TableRow>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-          <TableCell>1</TableCell>
-        </TableRow>
-      </TableBody>
     </Table>
-  );
+      <div className="overflow-y-auto h-[120px] 1440:h-[300px]">
+        <Table className="min-w-full table-fixed">
+        <TableBody>
+          {Array.from({ length: 20 }).map((_, idx) => (
+            <TableRow key={idx} className={''}>
+              <TableCell>1</TableCell>
+              <TableCell>1</TableCell>
+              <TableCell>1</TableCell>
+              <TableCell>1</TableCell>
+              <TableCell>1</TableCell>
+              <TableCell>1</TableCell>
+              <TableCell>1</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+        </Table>
+      </div>
+  </div>
+);
 };
 
 export default TerminalTicketMatchesTable;

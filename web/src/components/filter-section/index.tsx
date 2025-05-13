@@ -1,7 +1,10 @@
-import { useState } from 'react';
 import { Filter } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useState } from 'react';
+
+import Box from '@/components/box';
+import { Flex } from '@/components/flex';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label.tsx';
 import {
   Select,
   SelectContent,
@@ -9,10 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label.tsx';
-import { Flex } from '@/components/flex';
-import Box from '@/components/box';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FilterSection = () => {
   //const [date, setDate] = useState('25/3/2025');

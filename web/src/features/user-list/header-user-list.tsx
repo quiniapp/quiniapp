@@ -1,15 +1,9 @@
-import { Flex } from '@/components/flex';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import { Typography } from '@/components/typography';
+import { XIcon } from 'lucide-react';
 import { useState } from 'react';
 
+import { Flex } from '@/components/flex';
+import { Typography } from '@/components/typography';
+import { Button } from '@/components/ui/button';
 import {
   Drawer,
   DrawerClose,
@@ -19,8 +13,15 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import UserListAddNewUserForm from '@/features/user-list/user-list-form.tsx';
-import { XIcon } from 'lucide-react';
+
 
 const HeaderUserList = () => {
   const [open, setOpen] = useState(false);

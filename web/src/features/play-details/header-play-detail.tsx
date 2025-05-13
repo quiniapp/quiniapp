@@ -1,17 +1,13 @@
-import { Flex } from '@/components/flex';
-
-import HeaderSection from '@/components/header-section';
-
-import Box from '@/components/box';
-import { Button } from '@/components/ui/button';
-import { Typography } from '@/components/typography';
 import { PrinterIcon, Repeat2Icon } from 'lucide-react';
 
-
+import Box from '@/components/box';
+import { Flex } from '@/components/flex';
+import HeaderSection from '@/components/header-section';
 import RepeatTicketModal from '@/components/modals/repeat-ticket-modal.tsx';
-import { useModalContext } from '@/providers/modal-provider'
-import { Label } from '@/components/ui/label.tsx';
+import { Typography } from '@/components/typography';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input.tsx';
+import { Label } from '@/components/ui/label.tsx';
 import {
   Select,
   SelectContent,
@@ -20,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
+import { useModalContext } from '@/providers/modal-provider'
 
 
 const HeaderPlayDetail = () => {

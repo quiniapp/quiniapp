@@ -1,3 +1,13 @@
+
+import { Collapsible } from '@radix-ui/react-collapsible';
+import { ChevronRight, Power } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+
+import { Flex } from '@/components/flex';
+import Logo from '@/components/logo';
+import { Button } from '@/components/ui/button.tsx';
+import { CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Sidebar,
   SidebarContent,
@@ -9,17 +19,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-
-import { Collapsible } from '@radix-ui/react-collapsible';
-import { CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronRight, Power } from 'lucide-react';
 import MENU_ITEMS from '@/constants/SidebarMenu';
-import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils.ts';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button.tsx';
-import { Flex } from '@/components/flex';
-import Logo from '@/components/logo';
+import { useLogout } from '@/features/auth/use-logout.ts';
 
 interface AsideProps {
   isOpen?: boolean;
@@ -29,6 +31,11 @@ const Aside = ({ isOpen }: AsideProps) => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { mutate: logoutMutation, isPending: isLoggingOut, isError: logoutError,   } = useLogout();
+
+  const handleLogoutClick = () => {
+    logoutMutation();
+  };
   {
     /*
   <button className="ml-2 hover:bg-red-600 p-1">
@@ -40,10 +47,6 @@ const Aside = ({ isOpen }: AsideProps) => {
         */
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAuth');
-    navigate('/login');
-  };
 
   return (
     <Sidebar
@@ -155,12 +158,14 @@ const Aside = ({ isOpen }: AsideProps) => {
       <SidebarFooter
         className={'border-t-2 1440:h-[100px] h-[70px]   flex justify-center items-center'}
       >
-        <Button variant={'ghost'} onClick={handleLogout}>
+        <Button variant={'ghost'} onClick={handleLogoutClick} disabled={isLoggingOut}>
           <Flex className="items-center gap-2 h-[48px]  ">
-            Cerrar Sesión
+            {isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}
             <Power />
           </Flex>
         </Button>
+        {logoutError && <p style={{ color: 'red' }}>Error al cerrar sesión:  </p>}
+
       </SidebarFooter>
     </Sidebar>
   );

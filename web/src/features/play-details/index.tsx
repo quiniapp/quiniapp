@@ -1,7 +1,6 @@
 import Box from '@/components/box';
-
-import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
 import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
+import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
 import ResultsOverview from '@/features/play-details/results-overview.tsx';
 
 const PlayDetailsContent = () => {

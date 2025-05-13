@@ -1,5 +1,5 @@
-import HeaderSection from '@/components/header-section';
 import Box from '@/components/box';
+import HeaderSection from '@/components/header-section';
 
 const SettingsContent = () => {
   return (

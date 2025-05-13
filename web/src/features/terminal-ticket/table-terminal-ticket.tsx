@@ -24,7 +24,7 @@ const TableTerminalTicket = () => {
         <Table className="min-w-full table-fixed">
           <TableBody>
             {Array.from({ length: 20 }).map((_, idx) => (
-              <TableRow key={idx}>
+              <TableRow key={idx} className={' '}>
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>Pasador {idx + 1}</TableCell>
                 <TableCell>${(idx + 1) * 100}</TableCell>

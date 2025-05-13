@@ -1,42 +1,47 @@
+import { ILotteryEntityBack } from '@helper/types/lottery.type';
 import { supabase } from '../../../database/db.connection';
 
 export class LotteryRepository {
   async getById(id: string) {
-    const { data, error } = await supabase.from('lottery').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('*')
+      .eq('lottery_id', id)
+      .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
   async getAll() {
-    const { data, error } = await supabase.from('lottery').select('*');
+    const { data, error } = await supabase.from('lotteries').select('*');
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
-  async create(payload: any) {
-    const { data, error } = await supabase.from('lottery').insert(payload).select().single();
+  async create(payload: ILotteryEntityBack) {
+    const { data, error } = await supabase.from('lotteries').insert(payload).select().single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
   async update(id: string, payload: any) {
     const { data, error } = await supabase
-      .from('lottery')
+      .from('lotteries')
       .update(payload)
-      .eq('id', id)
+      .eq('lottery_id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
     return data;
   }
 
   async delete(id: string) {
-    const { error } = await supabase.from('lottery').delete().eq('id', id);
+    const { error } = await supabase.from('lottery').delete().eq('lottery_id', id);
 
-    if (error) throw error;
+    if (error) throw new Error(error.details);
   }
 }

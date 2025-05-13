@@ -1,7 +1,7 @@
-import { Flex, FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button.tsx';
 import { Trash2Icon, TimerReset } from 'lucide-react';
 
+import { Flex, FlexCol } from '@/components/flex';
+import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
