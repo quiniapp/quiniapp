@@ -8,7 +8,7 @@ export type INewUserEntity = Omit<
 };
 
 export type IUpdateUserEntity = Partial<Omit<IUserEntityBack, 'user_id'>>;
-export type IDelenteUserEntity = Pick<IUserEntityBack, 'user_id'>;
+export type IDeleteUserEntity = Pick<IUserEntityBack, 'user_id'>;
 export type IGetUserEntity = Partial<
   Pick<IUserEntityBack, 'user_id' | 'username' | 'number' | 'name'>
 >;

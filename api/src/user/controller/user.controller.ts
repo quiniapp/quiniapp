@@ -1,6 +1,10 @@
-import { Request, Response } from 'express';
 import { UserRepository } from '../repository/user.repository';
-import { INewUserEntity } from '@helper/request/user.response';
+import {
+  IDeleteUserEntity,
+  IGetUserEntity,
+  INewUserEntity,
+  IUpdateUserEntity,
+} from '@helper/request/user.response';
 import { CASHIER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
 import { buildUserForDB } from '../helper/userBase';
@@ -8,25 +12,6 @@ import { supabase } from 'api/database/db.connection';
 
 export class UserController {
   private repository = new UserRepository();
-
-  get = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const result = await this.repository.getById(id);
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: 'Error retrieving user', details: error });
-    }
-  };
-
-  getAll = async (req: Request, res: Response) => {
-    try {
-      const result = await this.repository.getAll();
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: 'Error retrieving users', details: error });
-    }
-  };
 
   create = async (newUser: INewUserEntity): Promise<IUserEntityFront> => {
     const user = await buildUserForDB(newUser);
@@ -40,7 +25,7 @@ export class UserController {
 
         if (error) {
           await this.repository.delete(result.user_id);
-          console.error('Supabase auth error:', error);
+          console.error('Supabase creation error:', error);
           throw new Error(error.message);
         }
       }
@@ -51,25 +36,44 @@ export class UserController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-
-  update = async (req: Request, res: Response) => {
+  get = async (props: IGetUserEntity): Promise<IUserEntityFront> => {
     try {
-      const { id } = req.params;
-      const body = req.body;
-      const result = await this.repository.update(id, body);
-      res.json(result);
+      const result = await this.repository.getById(props.user_id!);
+
+      return parseUser(result);
     } catch (error) {
-      res.status(500).json({ error: 'Error updating user', details: error });
+      console.error('Get error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 
-  delete = async (req: Request, res: Response) => {
+  getAll = async (): Promise<IUserEntityFront[]> => {
     try {
-      const { id } = req.params;
-      await this.repository.delete(id);
-      res.json({ message: 'Deleted successfully' });
+      const result = await this.repository.getAll();
+      return result.map((user) => parseUser(user));
     } catch (error) {
-      res.status(500).json({ error: 'Error deleting user', details: error });
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  update = async (user_id: string, props: IUpdateUserEntity): Promise<IUserEntityFront> => {
+    try {
+      const result = await this.repository.update(user_id, props);
+      return parseUser(result);
+    } catch (error) {
+      console.error('pdate error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  delete = async (props: IDeleteUserEntity) => {
+    try {
+      const response = await this.repository.delete(props.user_id);
+      return parseUser(response);
+    } catch (error) {
+      console.error('Delete error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 }

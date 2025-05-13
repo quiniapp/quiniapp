@@ -3,8 +3,9 @@ import { UserController } from '../controller/user.controller';
 import { INewUserEntity } from '@helper/request/user.response';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
-import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type';
-import { z } from 'zod';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { UserSchema } from '../helper/schemaValidators';
+import { validateUUID } from 'api/helper/validateUUID';
 
 export class UserRouter {
   public router: Router;
@@ -18,64 +19,57 @@ export class UserRouter {
   }
 
   private setupRoutes() {
-    this.router.get('/:id', this.controller.get);
-    this.router.get('/', this.controller.getAll);
+    this.router.get('/:id', this.getUserHandler);
+    this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
-    this.router.put('/:id', this.controller.update);
-    this.router.delete('/:id', this.controller.delete);
+    this.router.put('/:id', this.updateUserHandler);
+    this.router.delete('/:id', this.deleteUserHandler);
   }
 
   private newUserhandler: RequestHandler = async (req: Request, res: Response) => {
+    const { newUser }: { newUser: INewUserEntity } = req.body;
+    if (!newUser) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.NEW_USER_REQUIRED,
+          message: ERROR_MESSAGE.NEW_USER_REQUIRED,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (newUser?.user_type === USER_TYPE.OWNER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    const result = UserSchema.safeParse(newUser);
+    if (!result.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: String(result.error.message),
+        },
+      };
+      res.status(400).json(response); // <-- SIN return
+
+      return;
+    }
     try {
-      const { newUser }: { newUser: INewUserEntity } = req.body;
-      if (newUser.user_type === USER_TYPE.OWNER) {
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.FORBIDDEN,
-            message: ERROR_MESSAGE.FORBIDDEN,
-          },
-        };
-        res.status(403).json(response);
-        return;
-      }
+      const user = await this.controller.create(newUser);
 
-      if (!newUser.name) {
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.NAME_IS_REQUIRED,
-            message: ERROR_MESSAGE.NAME_IS_REQUIRED,
-          },
-        };
-        res.status(400).json(response);
-        return;
-      }
-      if (!newUser.number) {
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.CASHIER_NUMBER_IS_REQUIRED,
-            message: ERROR_MESSAGE.CASHIER_NUMBER_IS_REQUIRED,
-          },
-        };
-        res.status(400).json(response);
-        return;
-      }
-      if (
-        !(newUser.user_type === USER_TYPE.CASHIER && newUser.cashier_type === CASHIER_TYPE.STREET)
-      ) {
-        if (!newUser.username) {
-          const response: APIResponse<null> = {
-            error: {
-              error: ERROR_TYPE.USERNAME_IS_REQUIRED,
-              message: ERROR_MESSAGE.USERNAME_IS_REQUIRED,
-            },
-          };
-          res.status(400).json(response);
-          return;
-        }
-      }
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user: user!,
+        },
+      };
 
-      const user = this.controller.create(newUser);
-      res.status(200).json(user);
+      res.status(200).json(response);
     } catch (error) {
       if (error instanceof Error) {
         let statusCode = 500;
@@ -95,31 +89,270 @@ export class UserRouter {
         res.status(statusCode).json(response);
         return;
       }
+    }
+  };
 
-      const response: APIResponse<null> = {
+  private getUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: user_id } = req.params;
+    const { user } = req;
+    if (!user_id) {
+      const response: APIResponse<undefined> = {
         error: {
-          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
+          error: ERROR_TYPE.ID_REQUIRED,
+          message: ERROR_MESSAGE.ID_REQUIRED,
         },
       };
-      res.status(500).json(response);
+      res.status(403).json(response);
+      return;
+    }
+    const isValid = validateUUID.safeParse({ user_id });
+    if (!isValid.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.INVALID_ID,
+          message: ERROR_MESSAGE.INVALID_ID,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    try {
+      const user = await this.controller.get({ user_id });
+      if (!user) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.USER_NOT_FOUND,
+            message: ERROR_MESSAGE.USER_NOT_FOUND,
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private getAllUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    try {
+      const users = await this.controller.getAll();
+      const response: APIResponse<IUserEntityFront[]> = {
+        data: {
+          users,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private updateUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: user_id } = req.params;
+    const { updateUser } = req.body;
+    const { user } = req;
+    if (!user_id || !updateUser) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    const isValid = validateUUID.safeParse({ user_id });
+    if (!isValid.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.INVALID_ID,
+          message: ERROR_MESSAGE.INVALID_ID,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    const result = UserSchema.safeParse(updateUser);
+    if (!result.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: String(result.error.message),
+        },
+      };
+      res.status(400).json(response); // <-- SIN return
+
+      return;
+    }
+    try {
+      const user = await this.controller.update(user_id, { ...updateUser });
+
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private deleteUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: user_id } = req.params;
+    const { user } = req;
+    if (!user_id) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    const isValid = validateUUID.safeParse({ user_id });
+    if (!isValid.success) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.INVALID_ID,
+          message: ERROR_MESSAGE.INVALID_ID,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    try {
+      const user = await this.controller.delete({ user_id });
+
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      {
+        if (error instanceof Error) {
+          let statusCode = 500;
+          if (
+            error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+            error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+          ) {
+            statusCode = 401;
+          }
+
+          const response: APIResponse<null> = {
+            error: {
+              error: ERROR_TYPE.AUTH_ERROR,
+              message: error.message,
+            },
+          };
+          res.status(statusCode).json(response);
+          return;
+        }
+      }
     }
   };
 }
-
-export const newUserCashierSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
-});
-export const updateCashierSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  token: z.string().min(1, 'Password is required'),
-});
-export const newUserSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
-});
-export const updateUserSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  token: z.string().min(1, 'Password is required'),
-});

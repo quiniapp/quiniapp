@@ -12,7 +12,7 @@ export enum CASHIER_TYPE {
 
 // Base común para todos los usuarios
 interface BaseUserEntityBack {
-  user_id?: string;
+  user_id: string;
   number: number;
   user_type: USER_TYPE;
   name: string;

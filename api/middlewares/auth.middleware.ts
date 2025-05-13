@@ -19,7 +19,6 @@ export const isAuthenticated = async (
   const authToken = req.cookies.access_token;
   const userToken = req.cookies.user_token;
 
-
   if (!authToken) {
     const response: APIResponse<null> = {
       error: {
