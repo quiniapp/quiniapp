@@ -60,6 +60,21 @@ export class UserController {
   update = async (user_id: string, props: IUpdateUserEntity): Promise<IUserEntityFront> => {
     try {
       const result = await this.repository.update(user_id, props);
+
+      // TO DO: validar el password despues
+      // if (user.cashier_type !== CASHIER_TYPE.STREET) {
+      //   const { error } = await supabase.auth.signUp({
+      //     email: user.email!,
+      //     password: newUser.password,
+      //   });
+
+      //   if (error) {
+      //     await this.repository.delete(result.user_id);
+      //     console.error('Supabase creation error:', error);
+      //     throw new Error(error.message);
+      //   }
+      // }
+
       return parseUser(result);
     } catch (error) {
       console.error('pdate error:', error);

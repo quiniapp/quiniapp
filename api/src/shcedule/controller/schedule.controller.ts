@@ -1,56 +1,83 @@
-import { Request, Response } from 'express';
 import { ScheduleRepository } from '../repository/schedule.repository';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import {
+  IDeleteScheduleEntity,
+  IGetScheduleEntity,
+  INewScheduleEntity,
+  IUpdateScheduleEntity,
+} from '@helper/request/schedule.response';
+import { scheduleBase } from '../helper/scheduleBase';
+import { parseSchedule } from '../helper/parseSchedule';
+import dayjs from 'dayjs';
+import { USER_TYPE } from '@helper/types/user.type';
 
 export class ScheduleController {
   private repository = new ScheduleRepository();
 
-  get = async (req: Request, res: Response) => {
+  create = async (props: INewScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
-      const { id } = req.params;
-      const result = await this.repository.getById(id);
-      res.json(result);
+      const newSchedule = scheduleBase(props);
+      const schedule = await this.repository.create(newSchedule);
+      return parseSchedule(schedule, true);
     } catch (error) {
-      res.status(500).json({ error: 'Error retrieving Schedule', details: error });
+      console.error('Creation error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 
-  getAll = async (req: Request, res: Response) => {
+  get = async (props: IGetScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
-      const result = await this.repository.getAll();
-      res.json(result);
+      const schedule = await this.repository.getById(props.schedule_id);
+
+      const now = dayjs();
+      const scheduleTime = dayjs(schedule.time, 'HH:mm');
+
+      const active = now.isBefore(scheduleTime, 'minute');
+      return parseSchedule(schedule, active);
     } catch (error) {
-      res.status(500).json({ error: 'Error retrieving Schedules', details: error });
+      console.error('Get error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 
-  create = async (req: Request, res: Response) => {
+  getAll = async (user_type: USER_TYPE): Promise<IScheduleEntityFront[]> => {
     try {
-      const body = req.body;
-      const result = await this.repository.create(body);
-      res.status(201).json(result);
+      const schedules = await this.repository.getAll();
+      if (user_type === USER_TYPE.CASHIER) {
+        return schedules.map((schedule) => {
+          const now = dayjs();
+          const scheduleTime = dayjs(schedule.time, 'HH:mm');
+
+          const active = now.isBefore(scheduleTime, 'minute');
+
+          return parseSchedule(schedule, active);
+        });
+      }
+      return schedules.map((schedule) => {
+        return parseSchedule(schedule, true);
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Error creating Schedule', details: error });
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 
-  update = async (req: Request, res: Response) => {
+  update = async (id: string, props: IUpdateScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
-      const { id } = req.params;
-      const body = req.body;
-      const result = await this.repository.update(id, body);
-      res.json(result);
+      const schedule = await this.repository.update(id, props);
+      return parseSchedule(schedule, true);
     } catch (error) {
-      res.status(500).json({ error: 'Error updating Schedule', details: error });
+      console.error('Update error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-
-  delete = async (req: Request, res: Response) => {
+  delete = async (props: IDeleteScheduleEntity) => {
     try {
-      const { id } = req.params;
-      await this.repository.delete(id);
-      res.json({ message: 'Deleted successfully' });
+      await this.repository.delete(props.schedule_id);
+      return;
     } catch (error) {
-      res.status(500).json({ error: 'Error deleting Schedule', details: error });
+      console.error('Delete error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 }

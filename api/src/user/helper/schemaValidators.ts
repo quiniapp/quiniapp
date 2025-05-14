@@ -38,3 +38,35 @@ const ownerOrAdminSchema = baseSchema.extend({
 
 // Unión final
 export const UserSchema = z.union([cashierStreetSchema, cashierPCSchema, ownerOrAdminSchema]);
+
+const updateBaseSchema = z.object({
+  name: z.string().min(1).optional(),
+});
+
+// Schema para CASHIER con cashier_type: STREET
+const updateCashierStreetSchema = updateBaseSchema.extend({
+  fee: z.number().optional(),
+  fee_plus: z.number().optional(),
+});
+
+// Schema para CASHIER con cashier_type: PC
+const updateCashierPCSchema = updateBaseSchema.extend({
+  fee: z.number().optional(),
+  fee_plus: z.number().optional(),
+  password: z.string().min(1, 'Password is required').optional(),
+});
+
+// Schema para OWNER o ADMIN
+const updateOwnerOrAdminSchema = updateBaseSchema.extend({
+  cashier_type: z.null().optional(),
+  fee: z.null().optional(),
+  fee_plus: z.null().optional(),
+  password: z.string().min(1, 'Password is required').optional(),
+});
+
+// Unión final
+export const updateUserSchema = z.union([
+  updateCashierStreetSchema,
+  updateCashierPCSchema,
+  updateOwnerOrAdminSchema,
+]);
