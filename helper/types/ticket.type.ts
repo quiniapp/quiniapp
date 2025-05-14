@@ -1,6 +1,5 @@
 export interface ITicketEntityBack {
   ticket_id: string;
-  cashier_id: string;
   user_id: string | null;
   ticket_number: number;
   date: string;

@@ -4,7 +4,7 @@ import { INewUserEntity } from '@helper/request/user.response';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { UserSchema } from '../helper/schemaValidators';
+import { updateUserSchema, UserSchema } from '../helper/schemaValidators';
 import { validateUUID } from 'api/helper/validateUUID';
 
 export class UserRouter {
@@ -244,7 +244,7 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
-    const result = UserSchema.safeParse(updateUser);
+    const result = updateUserSchema.safeParse(updateUser);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
