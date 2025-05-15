@@ -54,98 +54,101 @@ export default function UserListAddNewUserForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={'w-full   py-4 space-y-4 '}>
       <Flex className={'w-full  py-8 px-6 rounded-lg overflow-hidden'}>
-        <FlexCol className={'w-full space-y-8'}>
+        <FlexCol className={'w-full space-y-4'}>
           <fieldset className={'border px-4 py-4 flex flex-col gap-4'}>
             <legend className={' px-4'}> Datos Aplicación</legend>
-            <Box className={'gap-[24px] p-[12px] grid grid-cols-3'}>
-              <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="pinNumber">Número de usuario</Label>
-                <Controller
-                  name="pinNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input id={'pinNumber'} type={'number'} placeholder="Ej: 344223" {...field} />
-                  )}
-                />
-                {errors.pinNumber && <p className="text-red-600">{errors.pinNumber.message}</p>}
-              </FlexCol>
-              <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="pinType">Tipo de pasador</Label>
-                <Controller
-                  name="pinType"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full border-dark-lighter">
-                        <SelectValue placeholder="Seleccione uno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={'option1'}>Opción 1</SelectItem>
-                        <SelectItem value={'option2'}>Opción 2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.pinType && <p className="text-red-600">{errors.pinType.message}</p>}
-              </FlexCol>
-              <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="group">Grupo</Label>
-                <Controller
-                  name="group"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full border-dark-lighter">
-                        <SelectValue placeholder="Seleccione uno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={'groupA'}>Grupo A</SelectItem>
-                        <SelectItem value={'groupB'}>Grupo B</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.group && <p className="text-red-600">{errors.group.message}</p>}
-              </FlexCol>
+            <Box className={'gap-[24px] p-[8px] grid grid-cols-[2fr_auto] items-center'}>
+              <Box className={'gap-[24px] p-[12px] grid grid-cols-3'}>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="pinNumber">Número de usuario</Label>
+                  <Controller
+                    name="pinNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <Input id={'pinNumber'} type={'number'} placeholder="Ej: 344223" {...field} />
+                    )}
+                  />
+                  {errors.pinNumber && <p className="text-red-600">{errors.pinNumber.message}</p>}
+                </FlexCol>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="pinType">Tipo de pasador</Label>
+                  <Controller
+                    name="pinType"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full border-dark-lighter">
+                          <SelectValue placeholder="Seleccione uno" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={'option1'}>Opción 1</SelectItem>
+                          <SelectItem value={'option2'}>Opción 2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.pinType && <p className="text-red-600">{errors.pinType.message}</p>}
+                </FlexCol>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="group">Grupo</Label>
+                  <Controller
+                    name="group"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full border-dark-lighter">
+                          <SelectValue placeholder="Seleccione uno" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={'groupA'}>Grupo A</SelectItem>
+                          <SelectItem value={'groupB'}>Grupo B</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.group && <p className="text-red-600">{errors.group.message}</p>}
+                </FlexCol>
+              </Box>
+              <Box className={'gap-[24px] px-[12px] grid grid-cols-2'}>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="commission">Comisión (%)</Label>
+                  <Controller
+                    name="commission"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="commission"
+                        type="number"
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)} // 👈 clave
+                        placeholder="0"
+                      />
+                    )}
+                  />
+                </FlexCol>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="spread">Deje (%)</Label>
+                  <Controller
+                    name="spread"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="spread"
+                        type="number"
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)} // 👈 clave
+                        placeholder="0"
+                      />
+                    )}
+                  />
+                </FlexCol>
+              </Box>
             </Box>
-            <Box className={'gap-[24px] px-[12px] grid grid-cols-2'}>
-              <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="commission">Comisión (%)</Label>
-                <Controller
-                  name="commission"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      id="commission"
-                      type="number"
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)} // 👈 clave
-                      placeholder="0"
-                    />
-                  )}
-                />
-              </FlexCol>
-              <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="spread">Deje (%)</Label>
-                <Controller
-                  name="spread"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      id="spread"
-                      type="number"
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)} // 👈 clave
-                      placeholder="0"
-                    />
-                  )}
-                />
-              </FlexCol>
-            </Box>
+
           </fieldset>
           <fieldset className={'border px-4 py-4'}>
             <legend className={' px-4'}> Datos Personales</legend>
-            <FlexCol className={'p-[12px] space-y-8'}>
+            <FlexCol className={'p-[12px] space-y-6'}>
               <Flex className={'gap-[24px]'}>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="name">Nombre</Label>
@@ -167,18 +170,19 @@ export default function UserListAddNewUserForm() {
                   />
                   {errors.lastName && <p className="text-red-600">{errors.lastName.message}</p>}
                 </FlexCol>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="address">Dirección</Label>
+                  <Controller
+                    name="address"
+                    control={control}
+                    render={({ field }) => (
+                      <Input id={'address'} placeholder="Av. Siempre viva 742" {...field} />
+                    )}
+                  />
+                  {errors.address && <p className="text-red-600">{errors.address.message}</p>}
+                </FlexCol>
               </Flex>
-              <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="address">Dirección</Label>
-                <Controller
-                  name="address"
-                  control={control}
-                  render={({ field }) => (
-                    <Input id={'address'} placeholder="Av. Siempre viva 742" {...field} />
-                  )}
-                />
-                {errors.address && <p className="text-red-600">{errors.address.message}</p>}
-              </FlexCol>
+
               <Flex className={'gap-[24px] '}>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="phone">Teléfono</Label>
@@ -213,7 +217,7 @@ export default function UserListAddNewUserForm() {
 
           <fieldset className={'border px-4 py-4'}>
             <legend className={' px-4'}> Datos Inicio de sesion</legend>
-            <FlexCol className={'p-[12px]space-y-4  '}>
+            <Flex className={' space-x-4  '}>
               <FlexCol className={'w-full space-y-4'}>
                 <Label htmlFor="user">Usuario</Label>
                 <Controller
@@ -234,7 +238,7 @@ export default function UserListAddNewUserForm() {
                 />
                 {errors.password && <p className="text-red-600">{errors.password.message}</p>}
               </FlexCol>
-            </FlexCol>
+            </Flex>
           </fieldset>
         </FlexCol>
       </Flex>

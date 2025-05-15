@@ -20,7 +20,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile.ts';
 import { usePlatform } from '@/hooks/use-platform.ts';
-import { useLogin } from '@/features/auth/auth'; // Importa el hook useLogin
+import { useLogin } from '@/features/auth/auth';
+import { ROUTES } from '../../../routes/routes.ts'; // Importa el hook useLogin
 
 interface FormData {
   username: string;
@@ -61,13 +62,12 @@ const LoginContent = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(
-        'https://quiniapp.onrender.com/api/private/user/7e5a3e6b-7a6c-4c53-9131-bcbe934c76c3',
+      const response = await fetch(ROUTES.user.base,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer valid-token',
+
           },
           // body: JSON.stringify({ ... }) // Si tu endpoint espera un body, añadilo acá
         }

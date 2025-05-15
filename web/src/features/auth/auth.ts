@@ -1,9 +1,9 @@
 
+import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+import { ROUTES } from '../../../routes/routes.ts';
 import { APIResponse } from '../../../../helper/response/api_response.response.ts';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type.ts';
-import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../routes/routes.ts';
 
 interface FormData {
   username?: string;
