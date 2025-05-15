@@ -9,8 +9,20 @@ import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
 import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket.tsx';
 import TerminalTicketPlayTable from '@/features/terminal-ticket/termina-ticket-play-table.tsx';
 import TerminalTicketMatchesTable from '@/features/terminal-ticket/terminal-ticket-matches-table.tsx';
+import { useTickets } from '@/hooks/useTickets.ts';
+import { useBets } from '@/hooks/useBets.ts';
+import { useLotteries } from '@/hooks/useLotteries.ts';
+import { useSchedules } from '@/hooks/useSchedules.ts';
 
 export const TerminalTicketContent = () => {
+
+  const { data } = useTickets()
+  const {data:bet } = useBets()
+  const {data: lottery} = useLotteries()
+  const { data: schedule } = useSchedules();
+  console.log({ 'data':data, 'bet':bet, 'lottery':lottery, 'schedule': schedule })
+
+
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />

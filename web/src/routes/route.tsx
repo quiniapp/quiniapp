@@ -22,6 +22,7 @@ import SettingsPage from '@/pages/settings';
 import ShiftsPage from '@/pages/shifts';
 import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
 import UsersPage from '@/pages/users';
+import NewUserPage from '@/pages/new-user.tsx';
 
 export const RoutesContent = [
   {
@@ -113,6 +114,11 @@ export const RoutesContent = [
         id: 'Groups',
         element: <GroupsPage />,
       },
+      {
+        path: ROUTES.NEW_USER,
+        id:'New_User',
+        element: <NewUserPage />
+      }
     ],
   },
   {

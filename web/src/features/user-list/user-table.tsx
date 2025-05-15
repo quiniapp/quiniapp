@@ -9,38 +9,24 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { useEffect } from 'react';
+import { useUsers } from '@/hooks/useUsers.ts';
+import { Users } from '@/types/user.type.ts';
 
-const mockUsers = [
-  {
-    numero: '0',
-    nombre: 'gabriel',
-    grupo: 'Grupo',
-    comision: '20',
-    debe: '10',
-    conexion: '',
-    cuenta: 'Cuenta Corriente',
-  },
-  {
-    numero: '11',
-    nombre: 'Mary(11)',
-    grupo: 'Grupo',
-    comision: '20',
-    debe: '10',
-    conexion: '',
-    cuenta: 'Cuenta Corriente',
-  },
-  {
-    numero: '15',
-    nombre: 'Norma(15)',
-    grupo: 'Grupo',
-    comision: '20',
-    debe: '10',
-    conexion: '',
-    cuenta: 'Cuenta Corriente',
-  },
-];
+
 
 const UsersTable = () => {
+
+  const { data, isLoading, error } = useUsers();
+
+  useEffect(() => {
+    if (data) {
+      console.log('Usuarios del backend:', data?.data);
+    }
+  }, [data]);
+
+  if (isLoading) return <div>Cargando...</div>;
+  if (error) return <div>Error al obtener usuarios</div>;
   return (
     <div className="border border-dark-lighter rounded-lg overflow-hidden w-full">
       <Table>
@@ -58,15 +44,16 @@ const UsersTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockUsers.map((user) => (
-            <TableRow key={user.numero} className="hover:bg-dark-lighter/50">
-              <TableCell>{user.numero}</TableCell>
-              <TableCell>{user.nombre}</TableCell>
-              <TableCell>{user.grupo}</TableCell>
-              <TableCell>{user.comision}</TableCell>
-              <TableCell>{user.debe}</TableCell>
-              <TableCell>{user.conexion}</TableCell>
-              <TableCell>{user.cuenta}</TableCell>
+          {data?.data?.users?.map((user: Users) => (
+            <TableRow key={user.number} className="hover:bg-dark-lighter/50">
+              <TableCell>{user.number}</TableCell>
+              <TableCell>{user.name}</TableCell>
+              <TableCell>{user.group_id}</TableCell>
+              <TableCell>{user.fee}</TableCell>
+              <TableCell>{user.fee_plus}</TableCell>
+              <TableCell>{user.address
+              }</TableCell>
+              <TableCell>{user.account}</TableCell>
               <TableCell>
                 <Button variant="ghost" className="hover:text-cyan" size={'icon'}>
                   <EditIcon />
