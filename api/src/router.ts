@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { UserRouter } from './user/route/user.route';
 import { AuthRouter } from './auth/route/auth.route';
 import { LotteryRouter } from './lottery/route/lottery.route';
+import { ScheduleRouter } from './shcedule/route/schedule.route';
+import { TicketRouter } from './ticket/route/ticket.route';
 
 const router = Router();
 const authRouter = new AuthRouter();
@@ -13,6 +15,8 @@ export const publicRouter = router.use('/auth', authRouter.publicRouter);
 router.use('/auth', authRouter.privateRouter);
 router.use('/user', new UserRouter().router);
 router.use('/lottery', new LotteryRouter().router);
+router.use('/schedule', new ScheduleRouter().router);
+router.use('/ticket', new TicketRouter().router);
 router.use('/test', (req, res) => {
   res.send('ok');
 });
