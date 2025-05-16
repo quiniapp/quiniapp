@@ -37,9 +37,9 @@ const PlayDetailGameTable = () => {
           <TableHead className="text-right">Jugada en</TableHead>
         </TableRow>
       </TableHeader>
-        <TableBody>{tablePlays.length === 0 ? <NoPlaysFound /> : <div>tabla</div>}</TableBody>
+      <TableBody>{tablePlays.length === 0 ? <NoPlaysFound /> : <div>tabla</div>}</TableBody>
     </Table>
-);
+  );
 };
 
 export default PlayDetailGameTable;

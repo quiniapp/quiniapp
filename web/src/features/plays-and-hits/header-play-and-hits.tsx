@@ -1,5 +1,4 @@
-
-import { Flex} from '@/components/flex';
+import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 

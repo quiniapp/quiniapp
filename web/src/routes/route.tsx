@@ -116,9 +116,9 @@ export const RoutesContent = [
       },
       {
         path: ROUTES.NEW_USER,
-        id:'New_User',
-        element: <NewUserPage />
-      }
+        id: 'New_User',
+        element: <NewUserPage />,
+      },
     ],
   },
   {

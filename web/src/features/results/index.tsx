@@ -50,65 +50,67 @@ const ResultsContent = () => {
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Resultados'} />
-      <Flex className="w-full items-center space-x-[36px] max-h-[60px] justify-between">
-        <Flex className={'   w-full items-center space-x-[24px] '}>
-          <span className={'text-sm text-muted-foreground'}> Selecinar fecha</span>
-          <SelectDayToSearch />
-        </Flex>
-        <Flex className={'gap-6'}>
-          <Button variant="outline" className="flex items-center gap-2">
-            <RefreshCw size={16} />
-            Actualizar
-          </Button>
-          <Button variant={'success'} className="  hover:bg-green-700 text-white">
-            Generar Ganadores
-          </Button>
-        </Flex>
-      </Flex>
-      <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
-        <FlexCol className="  rounded-xl   space-y-6">
-          <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
-          <QuiniChecks quini={quinielas} onLotterySelect={handleLotterySelect} />
-        </FlexCol>
-        <div className=" ">
-          <HeaderTitleSection
-            title={'Resultados'}
-            icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-            variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
-            className={'pb-2'}
-          />
-          <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
-            {Array.from({ length: 20 }, (_, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
-                <Input
-                  type="text"
-                  value={results[i]}
-                  onChange={(e) => {
-                    const newResults = [...results];
-                    newResults[i] = e.target.value;
-                    setResults(newResults);
-                  }}
-                  disabled={onEdit}
-                  className="w-full bg-card-foreground border border-dark-lighter rounded px-2 py-1"
-                />
-              </div>
-            ))}
-          </Box>
-          <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
-            <Button
-              variant={'outline'}
-              className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
-              onClick={() => setOnEdit(!onEdit)}
-            >
-              <PencilIcon /> Editar
+      <FlexCol className="w-full items-center space-x-[36px] max-h-[60px] justify-between">
+        <Flex className="w-full  mt-8 items-center space-x-[36px] max-h-[60px] justify-between">
+          <Flex className={'  w-full items-center space-x-[24px] '}>
+            <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
+            <SelectDayToSearch />
+          </Flex>
+          <Flex className={'gap-6'}>
+            <Button variant="outline" className="flex items-center gap-2">
+              <RefreshCw size={16} />
+              Actualizar
             </Button>
-            <Button variant={'default'} className=" w-full   text-white">
-              <SaveIcon /> Guardar Results
+            <Button variant={'success'} className="  hover:bg-green-700 text-white">
+              Generar Ganadores
             </Button>
-          </Box>
-        </div>
-      </Box>
+          </Flex>
+        </Flex>
+        <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
+          <FlexCol className="  rounded-xl   space-y-6">
+            <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
+            <QuiniChecks quini={quinielas} onLotterySelect={handleLotterySelect} />
+          </FlexCol>
+          <div className=" ">
+            <HeaderTitleSection
+              title={'Resultados'}
+              icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
+              variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
+              className={'pb-2'}
+            />
+            <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
+              {Array.from({ length: 20 }, (_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
+                  <Input
+                    type="text"
+                    value={results[i]}
+                    onChange={(e) => {
+                      const newResults = [...results];
+                      newResults[i] = e.target.value;
+                      setResults(newResults);
+                    }}
+                    disabled={onEdit}
+                    className="w-full bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1"
+                  />
+                </div>
+              ))}
+            </Box>
+            <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
+              <Button
+                variant={'outline'}
+                className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
+                onClick={() => setOnEdit(!onEdit)}
+              >
+                <PencilIcon /> Editar
+              </Button>
+              <Button variant={'default'} className=" w-full   text-white">
+                <SaveIcon /> Guardar Results
+              </Button>
+            </Box>
+          </div>
+        </Box>
+      </FlexCol>
     </Box>
   );
 };

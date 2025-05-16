@@ -10,5 +10,4 @@ const fetchBets = async () => {
   return res.json();
 };
 
-export const useBets = () =>
-  useQuery({ queryKey: ['bets'], queryFn: fetchBets });
+export const useBets = () => useQuery({ queryKey: ['bets'], queryFn: fetchBets });

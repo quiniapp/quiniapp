@@ -9,10 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils.ts';
 
 interface SelectDayToSearchProps {
-  className?: string
+  className?: string;
 }
 
-export function SelectDayToSearch({className}: SelectDayToSearchProps) {
+export function SelectDayToSearch({ className }: SelectDayToSearchProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   return (
     <Popover>
@@ -21,7 +21,8 @@ export function SelectDayToSearch({className}: SelectDayToSearchProps) {
           variant={'outline'}
           className={cn(
             'w-[240px] justify-start text-left font-normal',
-            !date && 'text-muted-foreground', `${className}`
+            !date && 'text-muted-foreground',
+            `${className}`
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

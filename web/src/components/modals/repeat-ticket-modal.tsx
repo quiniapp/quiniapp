@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { QuinielaFieldset } from '@/features/play-details/quiniela-fieldset.tsx';
 
-
 interface BasicModalProps {
   isOpen: boolean;
   title: string;

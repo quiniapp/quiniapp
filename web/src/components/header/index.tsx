@@ -2,12 +2,14 @@ import { LayoutIcon, UserIcon } from 'lucide-react';
 
 import { FlexCol } from '@/components/flex';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useSessionStore } from '@/stores/sessionStore.ts';
 
 interface HeaderProps {
   setIsOpen: (isOpen: (prev: boolean) => boolean) => void;
 }
 
 const Header = ({ setIsOpen }: HeaderProps) => {
+  const { user } = useSessionStore()
   const { toggleSidebar, isMobile } = useSidebar();
 
   const handleToggle = () => {
@@ -30,8 +32,8 @@ const Header = ({ setIsOpen }: HeaderProps) => {
             <UserIcon size={20} className="text-gray-700" />
           </div>
           <FlexCol className="pr-4">
-            <div className="text-sm text-white font-semibold">Administrador</div>
-            <div className="text-xs text-white">(usuario 1)</div>
+            <div className="text-sm text-white font-semibold uppercase">{`${user?.username}`}</div>
+            <div className="text-xs text-white">({`${user?.user_type}`})</div>
           </FlexCol>
         </div>
       </div>

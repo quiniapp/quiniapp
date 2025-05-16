@@ -1,7 +1,6 @@
 import Box from '@/components/box';
 import UsersTable from '@/features/user-list/user-table.tsx';
 
-
 const UsersListContent = () => {
   return (
     <Box className={'rounded-xl w-full overflow-hidden py-[24px] space-x-8 grid grid-cols-12'}>

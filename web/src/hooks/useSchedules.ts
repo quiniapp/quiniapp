@@ -10,5 +10,4 @@ const fetchSchedules = async () => {
   return res.json();
 };
 
-export const useSchedules = () =>
-  useQuery({ queryKey: ['schedules'], queryFn: fetchSchedules });
+export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: fetchSchedules });

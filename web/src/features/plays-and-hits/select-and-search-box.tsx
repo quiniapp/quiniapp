@@ -1,12 +1,12 @@
 // Librerías de terceros
-import { Search } from 'lucide-react'
+import { Search } from 'lucide-react';
 
 // Componentes internos
-import Box from '@/components/box'
-import { Flex, FlexCol } from '@/components/flex'
-import { Button } from '@/components/ui/button'
-import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box'
-import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table'
+import Box from '@/components/box';
+import { Flex, FlexCol } from '@/components/flex';
+import { Button } from '@/components/ui/button';
+import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box';
+import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table';
 
 const SelectAndSearchBox = () => {
   return (

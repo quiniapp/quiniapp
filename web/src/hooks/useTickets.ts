@@ -10,5 +10,4 @@ const fetchTickets = async () => {
   return res.json();
 };
 
-export const useTickets = () =>
-  useQuery({ queryKey: ['tickets'], queryFn: fetchTickets });
+export const useTickets = () => useQuery({ queryKey: ['tickets'], queryFn: fetchTickets });

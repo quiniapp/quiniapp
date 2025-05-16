@@ -8,9 +8,8 @@ import HeaderSection from '@/components/header-section';
 import HeaderTitleSection from '@/components/header-title-section';
 import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button.tsx';
-import { Checkbox } from '@/components/ui/checkbox.tsx';
-import { Label } from '@/components/ui/label.tsx';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.tsx';
+//import { Checkbox } from '@/components/ui/checkbox.tsx';
+
 import {
   Select,
   SelectContent,
@@ -18,8 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
-import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
-import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
+
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useLotteries } from '@/hooks/useLotteries';
+import { useSchedules } from '@/hooks/useSchedules';
+import { LotteryCheckboxList } from '@/features/upcoming-lotteries/lottery-checkbox-list';
+import { ScheduleRadioGroup } from '@/features/upcoming-lotteries/schedules-list.tsx';
 
 interface FormData {
   day: string;
@@ -37,17 +40,20 @@ const UpcomingLotteriesContent = () => {
     },
   });
 
-  const quinielas = [
-    ['Nacional', 'Entre Rios', 'Santiago', 'Salta'],
-    ['Provincia', 'Mendoza', 'Jujuy', 'Chaco'],
-    ['Santa Fe', 'Corrientes', 'Neuquen', 'Tucuman'],
-    ['Montevideo', 'Cordoba', 'San Luis', 'Chubut'],
-    ['Formosa', 'Misiones', 'Catamarca', 'San Juan'],
-    ['Indefinida 1', 'Indefinida 2', '', ''],
-  ];
+  const { data } = useLotteries();
+  const { data: schedulesData } = useSchedules();
+  const lottery = data?.data?.lottery ?? [];
+  const schedules = schedulesData?.data?.schedule ?? [];
+
+  console.log({
+    'lottery': lottery,
+    'schedule': schedules
+  })
+
+
 
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const isLargeScreen = useMediaQuery('(min-width: 1440px)'); // 👈 importante!
+  const isLargeScreen = useMediaQuery('(min-width: 1440px)');
 
   const onSubmit = (data: FormData) => {
     setSavedData(data);
@@ -138,35 +144,11 @@ const UpcomingLotteriesContent = () => {
                       className={'!mb-[36px]'}
                     />
 
-                    <div className={'grid grid-cols-1 md:grid-cols-4 gap-4'}>
-                      {MODALIDADES.map((turno) => (
-                        <div key={turno.value} className="flex items-center space-x-2">
-                          <Controller
-                            name="turns"
-                            control={control}
-                            render={({ field }) => (
-                              <RadioGroup onValueChange={field.onChange} value={field.value}>
-                                <RadioGroupItem
-                                  {...field}
-                                  value={turno.value}
-                                  id={turno.value}
-                                  className={
-                                    'border-2 border-primary rounded-full aspect-square w-4 h-4'
-                                  }
-                                />
-                              </RadioGroup>
-                            )}
-                          />
-
-                          <Label
-                            htmlFor={turno.value}
-                            className="1440:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {turno.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                    <ScheduleRadioGroup<FormData>
+                      schedules={schedules}
+                      control={control}
+                      name="turns"
+                    />
                   </div>
 
                   <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
@@ -179,46 +161,11 @@ const UpcomingLotteriesContent = () => {
                       className={'!mb-[36px]'}
                     />
 
-                    <div className="grid grid-cols-1 gap-4">
-                      {quinielas.map((row, rowIndex) => (
-                        <div key={rowIndex} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {row.map(
-                            (quiniela, index) =>
-                              quiniela && (
-                                <div
-                                  key={`${rowIndex}-${index}`}
-                                  className="flex items-center space-x-2"
-                                >
-                                  <Controller
-                                    name="quinielas"
-                                    control={control}
-                                    render={({ field }) => (
-                                      <Checkbox
-                                        id={`quiniela-${rowIndex}-${index}`}
-                                        className={'border-2 border-primary'}
-                                        checked={field.value.includes(quiniela)}
-                                        onCheckedChange={(checked) => {
-                                          field.onChange(
-                                            checked
-                                              ? [...field.value, quiniela]
-                                              : field.value.filter((v) => v !== quiniela)
-                                          );
-                                        }}
-                                      />
-                                    )}
-                                  />
-                                  <Label
-                                    htmlFor={`quiniela-${rowIndex}-${index}`}
-                                    className="1440:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                  >
-                                    {quiniela}
-                                  </Label>
-                                </div>
-                              )
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    <LotteryCheckboxList<FormData>
+                      lottery={lottery ?? []}
+                      control={control}
+                      name="quinielas"
+                    />
                   </div>
                   <Flex>
                     <Button
