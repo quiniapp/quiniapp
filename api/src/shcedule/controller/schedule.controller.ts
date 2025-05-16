@@ -1,5 +1,5 @@
 import { ScheduleRepository } from '../repository/schedule.repository';
-import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { IScheduleEntityBack, IScheduleEntityFront } from '@helper/types/schedule.type';
 import {
   IDeleteScheduleEntity,
   IGetScheduleEntity,
@@ -42,16 +42,18 @@ export class ScheduleController {
 
   getAll = async (user_type: USER_TYPE): Promise<IScheduleEntityFront[]> => {
     try {
-      const schedules = await this.repository.getAll();
+      const schedules: IScheduleEntityBack[] = await this.repository.getAll();
       if (user_type === USER_TYPE.CASHIER) {
-        return schedules.map((schedule) => {
-          const now = dayjs();
-          const scheduleTime = dayjs(schedule.time, 'HH:mm');
+        const now = dayjs();
+        const arr: IScheduleEntityFront[] = [];
+
+        for (let i = 0; i < schedules.length; i++) {
+          const scheduleTime = dayjs(schedules[i].time, 'HH:mm');
 
           const active = now.isBefore(scheduleTime, 'minute');
-
-          return parseSchedule(schedule, active);
-        });
+          if (active) arr.push(parseSchedule(schedules[i], true));
+        }
+        return arr;
       }
       return schedules.map((schedule) => {
         return parseSchedule(schedule, true);
