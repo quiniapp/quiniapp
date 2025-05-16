@@ -8,7 +8,6 @@ import {
 } from '@helper/request/schedule.response';
 import { scheduleBase } from '../helper/scheduleBase';
 import { parseSchedule } from '../helper/parseSchedule';
-import dayjs from 'dayjs';
 import { USER_TYPE } from '@helper/types/user.type';
 
 export class ScheduleController {
@@ -18,7 +17,7 @@ export class ScheduleController {
     try {
       const newSchedule = scheduleBase(props);
       const schedule = await this.repository.create(newSchedule);
-      return parseSchedule(schedule, true);
+      return parseSchedule(schedule);
     } catch (error) {
       console.error('Creation error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -28,12 +27,7 @@ export class ScheduleController {
   get = async (props: IGetScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
       const schedule = await this.repository.getById(props.schedule_id);
-
-      const now = dayjs();
-      const scheduleTime = dayjs(schedule.time, 'HH:mm');
-
-      const active = now.isBefore(scheduleTime, 'minute');
-      return parseSchedule(schedule, active);
+      return parseSchedule(schedule);
     } catch (error) {
       console.error('Get error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -42,21 +36,10 @@ export class ScheduleController {
 
   getAll = async (user_type: USER_TYPE): Promise<IScheduleEntityFront[]> => {
     try {
-      const schedules: IScheduleEntityBack[] = await this.repository.getAll();
-      if (user_type === USER_TYPE.CASHIER) {
-        const now = dayjs();
-        const arr: IScheduleEntityFront[] = [];
+      const schedules: IScheduleEntityBack[] = await this.repository.getAll(user_type);
 
-        for (let i = 0; i < schedules.length; i++) {
-          const scheduleTime = dayjs(schedules[i].time, 'HH:mm');
-
-          const active = now.isBefore(scheduleTime, 'minute');
-          if (active) arr.push(parseSchedule(schedules[i], true));
-        }
-        return arr;
-      }
       return schedules.map((schedule) => {
-        return parseSchedule(schedule, true);
+        return parseSchedule(schedule);
       });
     } catch (error) {
       console.error('GetAll error:', error);
@@ -67,7 +50,7 @@ export class ScheduleController {
   update = async (id: string, props: IUpdateScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
       const schedule = await this.repository.update(id, props);
-      return parseSchedule(schedule, true);
+      return parseSchedule(schedule);
     } catch (error) {
       console.error('Update error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
