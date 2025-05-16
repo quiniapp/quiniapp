@@ -5,7 +5,6 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { updateUserSchema, UserSchema } from '../helper/schemaValidators';
-import { validateUUID } from 'api/helper/validateUUID';
 
 export class UserRouter {
   public router: Router;
@@ -105,17 +104,7 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
-    const isValid = validateUUID.safeParse({ user_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {
@@ -233,17 +222,6 @@ export class UserRouter {
       return;
     }
 
-    const isValid = validateUUID.safeParse({ user_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
     const result = updateUserSchema.safeParse(updateUser);
     if (!result.success) {
       const response: APIResponse<undefined> = {
@@ -301,17 +279,6 @@ export class UserRouter {
       return;
     }
 
-    const isValid = validateUUID.safeParse({ user_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {

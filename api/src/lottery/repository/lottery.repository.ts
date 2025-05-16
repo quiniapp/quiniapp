@@ -1,5 +1,6 @@
 import { ILotteryEntityBack } from '@helper/types/lottery.type';
 import { supabase } from '../../../database/db.connection';
+import { USER_TYPE } from '@helper/types/user.type';
 
 export class LotteryRepository {
   async getById(id: string) {
@@ -13,9 +14,13 @@ export class LotteryRepository {
     return data;
   }
 
-  async getAll() {
-    const { data, error } = await supabase.from('lotteries').select('*');
+  async getAll(user_type: USER_TYPE) {
+    let query = supabase.from('lotteries').select('*');
 
+    if (user_type === USER_TYPE.CASHIER) {
+      query = query.eq('active', true);
+    }
+    const { data, error } = await query;
     if (error) throw new Error(error.details);
     return data;
   }

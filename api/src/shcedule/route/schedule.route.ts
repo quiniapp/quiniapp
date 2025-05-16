@@ -3,7 +3,6 @@ import { ScheduleController } from '../controller/schedule.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
-import { validateUUID } from 'api/helper/validateUUID';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ScheduleSchema } from '../helper/scheduleSchema';
 
@@ -143,18 +142,6 @@ export class ScheduleRouter {
       return;
     }
 
-    const isValid = validateUUID.safeParse({ schedule_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
-
     const result = ScheduleSchema.safeParse(updateSchedule);
     if (!result.success) {
       const response: APIResponse<undefined> = {
@@ -213,17 +200,6 @@ export class ScheduleRouter {
       return;
     }
 
-    const isValid = validateUUID.safeParse({ schedule_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
     try {
       await this.controller.delete({ schedule_id });
       res.status(200);
