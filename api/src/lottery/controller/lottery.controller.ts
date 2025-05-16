@@ -8,6 +8,7 @@ import {
 import { lotteryBase } from '../helper/lotteryBase';
 import { parseLottery } from '../helper/parseLottery';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { USER_TYPE } from '@helper/types/user.type';
 
 export class LotteryController {
   private repository = new LotteryRepository();
@@ -32,9 +33,9 @@ export class LotteryController {
     }
   };
 
-  getAll = async (): Promise<ILotteryEntityFront[]> => {
+  getAll = async (user_type: USER_TYPE): Promise<ILotteryEntityFront[]> => {
     try {
-      const lotterys = await this.repository.getAll();
+      const lotterys = await this.repository.getAll(user_type);
 
       return lotterys.map((lottery) => {
         return parseLottery(lottery);
