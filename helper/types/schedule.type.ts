@@ -6,6 +6,4 @@ export interface IScheduleEntityBack {
   edited_at: string;
 }
 
-export type IScheduleEntityFront = Omit<IScheduleEntityBack, 'created_at' | 'edited_at'> & {
-  active: boolean;
-};
+export type IScheduleEntityFront = Omit<IScheduleEntityBack, 'created_at' | 'edited_at'>;
