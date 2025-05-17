@@ -17,10 +17,10 @@ export interface IBetEntityBack {
   bet_id: string;
   bet_type: BET_TYPE;
   ticket_id: string;
-  user_id: string | null;
-  number: number | number[];
+  user_id: string;
+  number: number;
   amount: number;
-  place: number;
+  place: PLACE_TYPE;
   with: number;
   position: number;
   date: string;
