@@ -2,7 +2,7 @@ import { IScheduleEntityBack } from '@helper/types/schedule.type';
 
 export type INewScheduleEntity = Pick<IScheduleEntityBack, 'name' | 'time'>;
 
-export type IUpdateScheduleEntity = INewScheduleEntity;
+export type IUpdateScheduleEntity = Partial<Pick<IScheduleEntityBack, 'name' | 'time'>>;
 
 export type IDeleteScheduleEntity = Pick<IScheduleEntityBack, 'schedule_id'>;
 

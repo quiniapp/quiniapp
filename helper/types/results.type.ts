@@ -1,4 +1,8 @@
-export interface ILotteryResultsEntityBack {
+import { ILotteryEntityBack, ILotteryEntityFront } from './lottery.type';
+import { IScheduleEntityBack, IScheduleEntityFront } from './schedule.type';
+
+// Base sin relaciones
+export interface IResultsBase {
   results_id: string;
   date: string;
   results: number[];
@@ -9,7 +13,17 @@ export interface ILotteryResultsEntityBack {
   deleted_at: string | null;
 }
 
-export type IBetEntityFront = Omit<
-  ILotteryResultsEntityBack,
-  'created_at' | 'edited_at' | 'deleted_at'
->;
+// Versión back con joins
+export interface IResultsEntityBack extends IResultsBase {
+  lottery: ILotteryEntityBack;
+  schedule: IScheduleEntityBack;
+}
+
+// Versión front
+export type IResultsEntityFront = Omit<
+  IResultsBase,
+  'deleted_at' | 'edited_at' | 'created_at' | 'lottery_id' | 'schedule_id'
+> & {
+  lottery: ILotteryEntityFront;
+  schedule: IScheduleEntityFront;
+};

@@ -5,6 +5,7 @@ export interface ITicketEntityBack {
   date: string;
   paid: boolean;
   winner: boolean;
+  total: number;
   created_at: string;
   deleted_at: string | null;
 }
