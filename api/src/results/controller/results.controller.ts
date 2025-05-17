@@ -16,6 +16,7 @@ export class ResultsController {
     try {
       const newResults = resultsBase(props);
       const results = await this.repository.create(newResults);
+      console.log(results);
       return parseResults(results);
     } catch (error) {
       console.error('Creation error:', error);

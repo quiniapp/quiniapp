@@ -4,7 +4,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { IResultsEntityFront } from '@helper/types/results.type';
-import { resultsSchema } from '../helper/resultsSchema';
+import { editResultsSchema, newResultsSchema } from '../helper/resultsSchema';
 
 export class ResultsRouter {
   public router: Router;
@@ -38,7 +38,7 @@ export class ResultsRouter {
       return;
     }
 
-    const result = resultsSchema.safeParse(newResults);
+    const result = newResultsSchema.safeParse(newResults);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
@@ -187,7 +187,7 @@ export class ResultsRouter {
       return;
     }
 
-    const result = resultsSchema.safeParse(updateResults);
+    const result = editResultsSchema.safeParse(updateResults);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
