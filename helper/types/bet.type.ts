@@ -4,6 +4,7 @@ export enum BET_TYPE {
   TERN = 'TERN',
   QUATERN = 'QUATERN',
   BORRATINA = 'BORRATINA',
+  REDOUBLE = 'REDOUBLE',
 }
 
 export enum PLACE_TYPE {
@@ -21,8 +22,8 @@ export interface IBetEntityBack {
   number: number;
   amount: number;
   place: PLACE_TYPE;
-  with: number;
-  position: number;
+  with: number | null;
+  position: PLACE_TYPE | null;
   date: string;
   winner: boolean;
   paid: boolean;
