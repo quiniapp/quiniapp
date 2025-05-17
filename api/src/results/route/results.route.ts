@@ -149,49 +149,7 @@ export class ResultsRouter {
       }
     }
   };
-  private getAllResultsHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
-    if (!user || !user?.user) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
-    try {
-      const results = await this.controller.getAll();
-      const response: APIResponse<IResultsEntityFront[]> = {
-        data: {
-          results,
-        },
-      };
-      res.status(200).json(response);
-      return;
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
 
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
-    }
-  };
   private updateResultsHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: results_id } = req.params;
@@ -219,7 +177,6 @@ export class ResultsRouter {
 
       return;
     }
-
     try {
       const results = await this.controller.update(results_id, updateResults);
       const response: APIResponse<IResultsEntityFront> = {

@@ -100,9 +100,18 @@ export class ResultsRepository {
       .from('results')
       .update(payload)
       .eq('results_id', id)
-      .select()
+      .select(
+        `
+    *,
+    lottery:lottery_id (
+      *
+    ),
+    schedule:schedule_id (
+      *
+    )
+  `
+      )
       .single();
-
     if (error) throw new Error(error.details);
     return data;
   }
