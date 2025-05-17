@@ -1,6 +1,5 @@
-import { USER_TYPE } from '@helper/types/user.type';
 import { supabase } from '../../../database/db.connection';
-import dayjs from 'dayjs';
+import { IGetResultsEntity } from '@helper/request/results.response';
 
 export class ResultsRepository {
   async create(payload: any) {
@@ -37,34 +36,58 @@ export class ResultsRepository {
       .select(
         `
     *,
-    lotteries:lottery_id (
+    lottery:lottery_id (
       *
     ),
-    schedules:schedule_id (
+    schedule:schedule_id (
       *
     )
   `
       )
-      .eq('id', id)
+      .eq('results_id', id)
       .single();
 
     if (error) throw new Error(error.details);
     return data;
   }
-  async get(id: string) {
-    const { data, error } = await supabase.from('results').select('*').eq('id', id).single();
+  async get(props: IGetResultsEntity) {
+    const { data, error } = await supabase
+      .from('results')
+      .select(
+        `
+    *,
+    lottery:lottery_id (
+      *
+    ),
+    schedule:schedule_id (
+      *
+    )
+  `
+      )
+      .eq('schedule_id', props.schedule_id)
+      .eq('lottery_id', props.lottery_id)
+      .eq('date', props.date)
+      .single();
 
     if (error) throw new Error(error.details);
     return data;
   }
 
-  async getAll(user_type: USER_TYPE) {
-    let query = supabase.from('results').select('*').order('time', { ascending: true });
-
-    if (user_type === USER_TYPE.CASHIER) {
-      const now = dayjs().format('HH:mm:ss'); // ej. "13:45:00"
-      query = query.gt('time', now);
-    }
+  async getAll() {
+    let query = supabase
+      .from('results')
+      .select(
+        `
+    *,
+    lottery:lottery_id (
+      *
+    ),
+    schedule:schedule_id (
+      *
+    )
+  `
+      )
+      .order('date', { ascending: true });
 
     const { data, error } = await query;
 
@@ -76,7 +99,7 @@ export class ResultsRepository {
     const { data, error } = await supabase
       .from('results')
       .update(payload)
-      .eq('id', id)
+      .eq('results_id', id)
       .select()
       .single();
 

@@ -1,5 +1,4 @@
 import { parseResults } from '../helper/parseResults';
-import { USER_TYPE } from '@helper/types/user.type';
 import { ResultsRepository } from '../repository/results.repository';
 import { IResultsEntityBack, IResultsEntityFront } from '@helper/types/results.type';
 import {
@@ -16,7 +15,7 @@ export class ResultsController {
     try {
       const newResults = resultsBase(props);
       const results = await this.repository.create(newResults);
-      console.log(results);
+
       return parseResults(results);
     } catch (error) {
       console.error('Creation error:', error);
@@ -24,27 +23,21 @@ export class ResultsController {
     }
   };
 
-  getById = async (props: IGetResultsEntity): Promise<IResultsEntityFront> => {
-    try {
-      const results = await this.repository.getById(props.results_id);
-      return parseResults(results);
-    } catch (error) {
-      console.error('Get error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
-  };
   get = async (props: IGetResultsEntity): Promise<IResultsEntityFront> => {
+    let results;
     try {
-      const results = await this.repository.getById(props.results_id);
+      if (props?.results_id) {
+        results = await this.repository.getById(props.results_id);
+      } else results = await this.repository.get(props);
       return parseResults(results);
     } catch (error) {
       console.error('Get error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  getAll = async (user_type: USER_TYPE): Promise<IResultsEntityFront[]> => {
+  getAll = async (): Promise<IResultsEntityFront[]> => {
     try {
-      const resultss: IResultsEntityBack[] = await this.repository.getAll(user_type);
+      const resultss: IResultsEntityBack[] = await this.repository.getAll();
 
       return resultss.map((results) => {
         return parseResults(results);

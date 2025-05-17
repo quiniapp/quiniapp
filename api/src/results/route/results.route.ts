@@ -4,7 +4,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { IResultsEntityFront } from '@helper/types/results.type';
-import { editResultsSchema, newResultsSchema } from '../helper/resultsSchema';
+import { editResultsSchema, getResultsSchema, newResultsSchema } from '../helper/resultsSchema';
 
 export class ResultsRouter {
   public router: Router;
@@ -18,8 +18,7 @@ export class ResultsRouter {
   }
 
   private setupRoutes() {
-    this.router.get('/:id', this.getResultsHandler);
-    this.router.get('/', this.getAllResultsHandler);
+    this.router.get('/', this.getResultsHandler);
     this.router.post('/', this.newResultshandler);
     this.router.put('/:id', this.updateResultsHandler);
   }
@@ -84,10 +83,7 @@ export class ResultsRouter {
   };
   private getResultsHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const results_id = req.query.results_id as string;
-    const date = req.query.date as string;
-    const lottery_id = req.query.lottery_id as string;
-    const schedule_id = req.query.schedule_id as string;
+
     if (!user || !user?.user) {
       const response: APIResponse<undefined> = {
         error: {
@@ -99,6 +95,30 @@ export class ResultsRouter {
       return;
     }
     try {
+      if (Object.keys(req.query).length === 0) {
+        const results = await this.controller.getAll();
+        const response: APIResponse<IResultsEntityFront[]> = {
+          data: {
+            results,
+          },
+        };
+        res.status(200).json(response);
+        return;
+      }
+      const parsed = getResultsSchema.safeParse(req.query);
+
+      if (!parsed.success) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: String(parsed.error.message),
+          },
+        };
+        res.status(400).json(response); // <-- SIN return
+
+        return;
+      }
+      const { results_id, date, lottery_id, schedule_id } = parsed.data;
       const results = await this.controller.get({ results_id, date, lottery_id, schedule_id });
       const response: APIResponse<IResultsEntityFront> = {
         data: {
@@ -142,7 +162,7 @@ export class ResultsRouter {
       return;
     }
     try {
-      const results = await this.controller.getAll(user?.user?.user_type);
+      const results = await this.controller.getAll();
       const response: APIResponse<IResultsEntityFront[]> = {
         data: {
           results,

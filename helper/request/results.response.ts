@@ -9,7 +9,6 @@ export type IUpdateResultsEntity = Partial<
 
 export type IDeleteResultsEntity = Pick<IResultsEntityBack, 'results_id'>;
 
-export type IGetResultsEntity = Pick<
-  IResultsEntityBack,
-  'results_id' | 'date' | 'lottery_id' | 'schedule_id'
+export type IGetResultsEntity = Partial<
+  Pick<IResultsEntityBack, 'results_id' | 'date' | 'lottery_id' | 'schedule_id'>
 >;
