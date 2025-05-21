@@ -8,10 +8,10 @@ export enum BET_TYPE {
 }
 
 export enum PLACE_TYPE {
-  HEAD = 1,
-  FIVE = 5,
-  TEN = 10,
-  TWENTY = 20,
+  HEAD = 'HEAD',
+  FIVE = 'FIVE',
+  TEN = 'TEN',
+  TWENTY = 'TWENTY',
 }
 
 export interface IBetEntityBack {
@@ -19,10 +19,10 @@ export interface IBetEntityBack {
   bet_type: BET_TYPE;
   ticket_id: string;
   user_id: string;
-  number: number;
+  number: string;
   amount: number;
   place: PLACE_TYPE;
-  with: number | null;
+  with: string | null;
   position: PLACE_TYPE | null;
   date: string;
   winner: boolean;

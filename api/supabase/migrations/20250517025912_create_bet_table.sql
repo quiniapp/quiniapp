@@ -21,10 +21,10 @@ CREATE TABLE bets (
     bet_type bet_type_enum NOT NULL,
     ticket_id UUID NOT NULL,
     user_id UUID,
-    number INTEGER NOT NULL,
+    number TEXT NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
     place place_type_enum NOT NULL,
-    "with" INTEGER DEFAULT NULL,
+    "with" TEXT DEFAULT NULL,
     position place_type_enum DEFAULT NULL,
     date DATE NOT NULL,
     winner BOOLEAN NOT NULL DEFAULT false,
@@ -36,29 +36,37 @@ CREATE TABLE bets (
     deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
 
     -- ✅ Validaciones
+    CONSTRAINT chk_number_allowed_lengths
+      CHECK (char_length(number) IN (1, 2, 3, 4, 8)),
+
+ CONSTRAINT chk_borratina_number_with_length
     CHECK (
-        char_length(number::text) IN (4, 8)
+        bet_type != 'BORRATINA' OR char_length(number) = 8
     ),
 
-    CHECK (
-        bet_type != 'BORRATINA' OR char_length(number::text) = 8
-    ),
-
+ CONSTRAINT chk_redouble_number_with_length
+      CHECK (
+        bet_type != 'REDOUBLE' OR 
+        (char_length(number) = 2 AND char_length("with") = 2)
+      ),
     -- ✅ Validaciones place y position
-    CHECK (
-        (position IS NULL) OR  -- position puede ser nulo, o...
-        (
-            (position = 'FIVE' AND place IN ('HEAD', 'FIVE')) OR
-            (position = 'TEN' AND place IN ('HEAD','FIVE',  'TEN')) OR
-            (position = 'TWENTY' AND place IN ('HEAD','FIVE',  'TEN', 'TWENTY'))
+    CONSTRAINT chk_position_valid_for_place
+      CHECK (
+        position IS NULL OR (
+          (position = 'FIVE' AND place IN ('HEAD', 'FIVE')) OR
+          (position = 'TEN' AND place IN ('HEAD','FIVE','TEN')) OR
+          (position = 'TWENTY' AND place IN ('HEAD','FIVE','TEN','TWENTY'))
         )
-    ),
-    CHECK (
+      ),    
+      CONSTRAINT chk_with_and_position_dependency
+      CHECK (
         ("with" IS NULL AND position IS NULL) OR ("with" IS NOT NULL AND position IS NOT NULL)
-    ),
-    CHECK (
+      ),
+
+    CONSTRAINT chk_redouble_requires_with_position
+      CHECK (
         ("with" IS NULL AND position IS NULL) OR (bet_type = 'REDOUBLE')
-    ),
+      ),
 
     -- 🔗 Relaciones
     CONSTRAINT fk_bet_ticket FOREIGN KEY (ticket_id)
