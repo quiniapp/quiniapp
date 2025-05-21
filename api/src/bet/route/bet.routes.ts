@@ -1,13 +1,22 @@
 import { Router } from 'express';
 import { BetController } from '../controller/bet.controller';
 
-const router = Router();
-const controller = new BetController();
+export class BetRouter {
+  public router: Router;
 
-router.get(`/bet/:id`, controller.get);
-router.get(`/bet`, controller.getAll);
-router.post(`/bet`, controller.create);
-router.put(`/bet/:id`, controller.update);
-router.delete(`/bet/:id`, controller.delete);
+  private controller: BetController;
 
-export default router;
+  constructor() {
+    this.router = Router();
+    this.controller = new BetController();
+    this.setupRoutes();
+  }
+
+  private setupRoutes() {
+    this.router.get('/:id', this.controller.get);
+    this.router.get('/', this.controller.getAll);
+    this.router.post('/', this.controller.create);
+    this.router.put('/:id', this.controller.update);
+    this.router.delete('/:id', this.controller.delete);
+  }
+}

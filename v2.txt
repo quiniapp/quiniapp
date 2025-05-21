@@ -1,0 +1,6 @@
+Para la v2
+    Editar horarios, habilitar horarios, agregar horarios
+    Editar loterias, agregar loterias
+    Habilitar horarios para quinielas de forma independiente, tabla intermedia
+    Grupos para usuarios, crear grupos, editarlos
+    Owner, SuperAdmin, Admin, Cashier
