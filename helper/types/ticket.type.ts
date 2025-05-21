@@ -12,4 +12,4 @@ export interface ITicketEntityBack {
   deleted_by: string | null;
 }
 
-export type IBetEntityFront = Omit<ITicketEntityBack, 'created_at' | 'deleted_at'>;
+export type IBetEntityFront = Omit<ITicketEntityBack, 'created_at' | 'deleted_at' | 'edited_at'>;
