@@ -1,42 +1,55 @@
+import dayjs from 'dayjs';
 import { supabase } from '../../../database/db.connection';
+import { IDeleteTicketEntity } from '@helper/request/ticket.response';
 
 export class TicketRepository {
-  async getById(id: string) {
-    const { data, error } = await supabase.from('ticket').select('*').eq('id', id).single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async getAll() {
-    const { data, error } = await supabase.from('ticket').select('*');
-
-    if (error) throw error;
-    return data;
-  }
-
   async create(payload: any) {
-    const { data, error } = await supabase.from('ticket').insert(payload).select().single();
+    const { data, error } = await supabase.from('tickets').insert(payload).select().single();
 
     if (error) throw error;
     return data;
   }
 
-  async update(id: string, payload: any) {
+  async getById(id: string) {
+    const { data, error } = await supabase.from('tickets').select('*').eq('id', id).single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getByNumber(ticket_number: number) {
     const { data, error } = await supabase
-      .from('ticket')
-      .update(payload)
-      .eq('id', id)
-      .select()
+      .from('tickets')
+      .select('*')
+      .eq('ticket_number', ticket_number)
       .single();
 
     if (error) throw error;
     return data;
   }
+  async getAll(user_id?: string) {
+    let query = supabase.from('tickets').select('*').eq('deleted_at', null);
 
-  async delete(id: string) {
-    const { error } = await supabase.from('ticket').delete().eq('id', id);
+    if (user_id !== undefined) {
+      query = query.eq('user_id', user_id);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
+    return data;
+  }
+
+  async delete(props: IDeleteTicketEntity) {
+    const timestamp = dayjs().toISOString();
+    const { data, error } = await supabase
+      .from('tickets')
+      .update({ deleted_at: timestamp, deleted_by: props.user_id })
+      .eq('id', props.ticket_id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
   }
 }

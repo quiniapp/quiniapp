@@ -2,8 +2,8 @@ import { Request, RequestHandler, Response, Router } from 'express';
 import { TicketController } from '../controller/ticket.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
-import { USER_TYPE } from '@helper/types/user.type';
-
+import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { newTicketSchema } from '../helper/schemaValidator';
 
 export class TicketRouter {
   public router: Router;
@@ -17,30 +17,41 @@ export class TicketRouter {
   private setupRoutes() {
     // this.router.get('/:id', this.controller.get);
     this.router.get('/', this.getAllTicketHandler);
+    this.router.get('/:id', this.getTicketHandler);
     this.router.post('/', this.newTicketHandler);
-    this.router.put('/:id', this.updateTicketHandler);
     this.router.delete('/:id', this.deleteTicketHandler);
   }
 
   private newTicketHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { name } = req.body;
-    const user = req.user;
-    if (!name || typeof name !== 'string') {
+    const { newTicket } = req.body;
+    const { user } = req;
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+    if (!newTicket) {
       const response: APIResponse<undefined> = {
         error: {
-          error: ERROR_TYPE.NAME_IS_REQUIRED,
-          message: ERROR_MESSAGE.NAME_IS_REQUIRED,
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
         },
       };
       res.status(400).json(response); // <-- SIN return
 
       return;
     }
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    const result = newTicketSchema.safeParse(newTicket);
+    if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: String(result.error.message),
         },
       };
       res.status(400).json(response); // <-- SIN return
@@ -48,7 +59,7 @@ export class TicketRouter {
       return;
     }
     try {
-      const ticket = await this.controller.create({ name });
+      const ticket = await this.controller.create(newTicket);
       const response: APIResponse<ITicketEntityFront> = {
         data: {
           ticket: ticket,
@@ -78,8 +89,10 @@ export class TicketRouter {
     }
   };
 
-  private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
+  private getTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const { id: ticket_id } = req.params;
+    const { ticket_number } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -92,7 +105,60 @@ export class TicketRouter {
     }
 
     try {
-      const ticket = await this.controller.getAll(user?.user.user_type);
+      const ticket = await this.controller.get({
+        ticket_id,
+        ...(ticket_number && { ticket_number: +ticket_number }),
+      });
+
+      const response: APIResponse<ITicketEntityFront> = {
+        data: {
+          ticket,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    try {
+      const ticket = await this.controller.getAll({
+        user_type: user.user.user_type,
+        user_id: user.user.user_id,
+      });
+
       const response: APIResponse<ITicketEntityFront[]> = {
         data: {
           ticket,
@@ -122,8 +188,7 @@ export class TicketRouter {
       }
     }
   };
-
-  private updateTicketHandler: RequestHandler = async (req: Request, res: Response) => {
+  /*   private updateTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: ticket_id } = req.params;
     const { updateTicket } = req.body;
@@ -181,23 +246,27 @@ export class TicketRouter {
         return;
       }
     }
-  };
+  }; */
+
   private deleteTicketHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
     const { id: ticket_id } = req.params;
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
-      const response: APIResponse<undefined> = {
+    const { user } = req;
+    if (!user?.user) {
+      const response: APIResponse<null> = {
         error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
         },
       };
-      res.status(403).json(response);
+      res.status(500).json(response);
       return;
     }
-
     try {
-      await this.controller.delete({ ticket_id });
+      await this.controller.delete({
+        ticket_id,
+        user_type: user?.user?.user_type,
+        user_id: user.user.user_id,
+      });
       res.status(200);
     } catch (error) {
       console.error(error);
@@ -222,4 +291,3 @@ export class TicketRouter {
     }
   };
 }
-
