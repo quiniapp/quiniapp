@@ -11,7 +11,11 @@ export class TicketRepository {
   }
 
   async getById(id: string) {
-    const { data, error } = await supabase.from('tickets').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*, bets(*)')
+      .eq('id', id)
+      .single();
 
     if (error) throw error;
     return data;
@@ -20,7 +24,7 @@ export class TicketRepository {
   async getByNumber(ticket_number: number) {
     const { data, error } = await supabase
       .from('tickets')
-      .select('*')
+      .select('*, bets(*)')
       .eq('ticket_number', ticket_number)
       .single();
 
@@ -28,7 +32,7 @@ export class TicketRepository {
     return data;
   }
   async getAll(user_id?: string) {
-    let query = supabase.from('tickets').select('*').eq('deleted_at', null);
+    let query = supabase.from('tickets').select('*, bets(*)').eq('deleted_at', null);
 
     if (user_id !== undefined) {
       query = query.eq('user_id', user_id);
