@@ -7,15 +7,15 @@ import { betBase } from 'api/src/bet/helper/betBase';
 export const ticketBase = (ticket: INewTicketEntity): ITicketEntityBack => {
   const timestamp = dayjs().toISOString();
   const ticket_id = uuidv4();
-  const ticket_number = +dayjs().format('YYYYMMDDHHmmssSSSS');
+  const ticket_number = +dayjs().format('YYYYMMDDHHmmssSSS');
 
   const total = ticket.bets.reduce((prev, curr) => prev + curr.amount, 0);
 
   return {
     ...ticket,
-    ticket_id,
-    total,
-    ticket_number,
+    ticket_id: ticket_id,
+    total: total,
+    ticket_number: ticket_number,
     bets: ticket.bets.map((bet) => betBase(bet, ticket_id)),
     winner: false,
     paid: false,

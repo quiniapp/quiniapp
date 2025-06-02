@@ -1,9 +1,9 @@
 import { INewBetEntity } from '@helper/request/bet.response';
-import { IBetEntityBack } from '@helper/types/bet.type';
+import { IBetEntityBase } from '@helper/types/bet.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 
-export const betBase = (bet: INewBetEntity, ticket_id: string): IBetEntityBack => {
+export const betBase = (bet: INewBetEntity, ticket_id: string): IBetEntityBase => {
   const timestamp = dayjs().toISOString();
   return {
     ...bet,

@@ -1,4 +1,6 @@
 import { IBetEntityBack, IBetEntityFront } from '@helper/types/bet.type';
+import { parseLottery } from 'api/src/lottery/helper/parseLottery';
+import { parseSchedule } from 'api/src/shcedule/helper/parseSchedule';
 
 export const parseBet = (bet: IBetEntityBack): IBetEntityFront => {
   return {
@@ -16,5 +18,7 @@ export const parseBet = (bet: IBetEntityBack): IBetEntityFront => {
     user_id: bet.user_id,
     winner: bet.winner,
     with: bet.with,
+    schedule: bet?.schedule && parseSchedule(bet.schedule),
+    lottery: bet?.lottery && parseLottery(bet.lottery),
   };
 };

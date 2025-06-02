@@ -1,11 +1,14 @@
 import dayjs from 'dayjs';
 import { supabase } from '../../../database/db.connection';
 import { IDeleteTicketEntity } from '@helper/request/ticket.response';
+import { ITicketEntityBack } from '@helper/types/ticket.type';
 
 export class TicketRepository {
-  async create(payload: any) {
-    const { data, error } = await supabase.from('tickets').insert(payload).select().single();
-
+  async create(ticket: ITicketEntityBack) {
+    const { data, error } = await supabase.rpc('create_ticket_with_bets', {
+      ticket: ticket,
+      bets: ticket.bets,
+    });
     if (error) throw error;
     return data;
   }

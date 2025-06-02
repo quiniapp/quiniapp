@@ -1,3 +1,6 @@
+import { ILotteryEntityBack, ILotteryEntityFront } from './lottery.type';
+import { IScheduleEntityBack, IScheduleEntityFront } from './schedule.type';
+
 export enum BET_TYPE {
   ONE = 'ONE',
   DOUBLE = 'DOUBLE',
@@ -14,7 +17,7 @@ export enum PLACE_TYPE {
   TWENTY = 'TWENTY',
 }
 
-export interface IBetEntityBack {
+export interface IBetEntityBase {
   bet_id: string;
   bet_type: BET_TYPE;
   ticket_id: string;
@@ -34,4 +37,12 @@ export interface IBetEntityBack {
   deleted_at: string | null;
 }
 
-export type IBetEntityFront = Omit<IBetEntityBack, 'created_at' | 'edited_at' | 'deleted_at'>;
+export interface IBetEntityBack extends IBetEntityBase {
+  lottery: ILotteryEntityBack;
+  schedule: IScheduleEntityBack;
+}
+
+export type IBetEntityFront = Omit<IBetEntityBase, 'created_at' | 'edited_at' | 'deleted_at'> & {
+  lottery: ILotteryEntityFront;
+  schedule: IScheduleEntityFront;
+};
