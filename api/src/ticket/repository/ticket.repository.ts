@@ -1,42 +1,62 @@
+import dayjs from 'dayjs';
 import { supabase } from '../../../database/db.connection';
+import { IDeleteTicketEntity } from '@helper/request/ticket.response';
+import { ITicketEntityBack } from '@helper/types/ticket.type';
 
 export class TicketRepository {
+  async create(ticket: ITicketEntityBack) {
+    const { data, error } = await supabase.rpc('create_ticket_with_bets', {
+      ticket: ticket,
+      bets: ticket.bets,
+    });
+    if (error) throw error;
+    return data;
+  }
+
   async getById(id: string) {
-    const { data, error } = await supabase.from('ticket').select('*').eq('id', id).single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async getAll() {
-    const { data, error } = await supabase.from('ticket').select('*');
-
-    if (error) throw error;
-    return data;
-  }
-
-  async create(payload: any) {
-    const { data, error } = await supabase.from('ticket').insert(payload).select().single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async update(id: string, payload: any) {
     const { data, error } = await supabase
-      .from('ticket')
-      .update(payload)
+      .from('tickets')
+      .select('*, bets(*)')
       .eq('id', id)
-      .select()
       .single();
 
     if (error) throw error;
     return data;
   }
 
-  async delete(id: string) {
-    const { error } = await supabase.from('ticket').delete().eq('id', id);
+  async getByNumber(ticket_number: number) {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*, bets(*)')
+      .eq('ticket_number', ticket_number)
+      .single();
 
     if (error) throw error;
+    return data;
+  }
+  async getAll(user_id?: string) {
+    let query = supabase.from('tickets').select('*, bets(*)').eq('deleted_at', null);
+
+    if (user_id !== undefined) {
+      query = query.eq('user_id', user_id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(props: IDeleteTicketEntity) {
+    const timestamp = dayjs().toISOString();
+    const { data, error } = await supabase
+      .from('tickets')
+      .update({ deleted_at: timestamp, deleted_by: props.user_id })
+      .eq('id', props.ticket_id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
   }
 }

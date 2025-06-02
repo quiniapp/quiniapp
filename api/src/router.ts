@@ -5,6 +5,7 @@ import { LotteryRouter } from './lottery/route/lottery.route';
 import { ScheduleRouter } from './shcedule/route/schedule.route';
 import { TicketRouter } from './ticket/route/ticket.route';
 import { ResultsRouter } from './results/route/results.route';
+import { BetRouter } from './bet/route/bet.routes';
 
 const router = Router();
 const authRouter = new AuthRouter();
@@ -17,8 +18,12 @@ router.use('/auth', authRouter.privateRouter);
 router.use('/user', new UserRouter().router);
 router.use('/lottery', new LotteryRouter().router);
 router.use('/schedule', new ScheduleRouter().router);
-router.use('/ticket', new TicketRouter().router);
 router.use('/results', new ResultsRouter().router);
+router.use('/ticket', new TicketRouter().router);
+router.use('/bet', new BetRouter().router);
+router.use('/winners', (req, res) => {
+  res.send('winners');
+});
 router.use('/test', (req, res) => {
   res.send('ok');
 });

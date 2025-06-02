@@ -1,0 +1,25 @@
+import { IBetEntityBack } from '@helper/types/bet.type';
+import { ITicketEntityBase, ITicketEntityFront } from '@helper/types/ticket.type';
+import { parseBet } from 'api/src/bet/helper/parseBet';
+
+export const parseTicket = ({
+  ticket,
+  bets,
+}: {
+  ticket: ITicketEntityBase;
+  bets: IBetEntityBack[];
+}): ITicketEntityFront => {
+  bets.map((b) => console.log(b));
+  return {
+    bets: bets.map((bet) => parseBet(bet)),
+    date: ticket.date,
+    deleted_by: ticket.deleted_by,
+    paid: ticket.paid,
+    ticket_id: ticket.ticket_id,
+    ticket_number: ticket.ticket_number,
+    total: ticket.total,
+    user_id: ticket.user_id,
+    user_name: ticket.user_name,
+    winner: ticket.winner,
+  };
+};
