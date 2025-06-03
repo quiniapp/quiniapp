@@ -1,56 +1,70 @@
-import { Request, Response } from 'express';
 import { TicketRepository } from '../repository/ticket.repository';
+import {
+  IDeleteTicketEntity,
+  IGetAllTicketEntity,
+  IGetTicketEntity,
+  INewTicketEntity,
+} from '@helper/request/ticket.response';
+import { ticketBase } from '../helper/ticketBase';
+import { parseTicket } from '../helper/parseTicket';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { USER_TYPE } from '@helper/types/user.type';
+import dayjs from 'dayjs';
+import { ERROR_MESSAGE } from '@helper/types/errors.type';
 
 export class TicketController {
   private repository = new TicketRepository();
 
-  get = async (req: Request, res: Response) => {
+  create = async (props: INewTicketEntity) => {
+    const newTicket = ticketBase(props);
     try {
-      const { id } = req.params;
-      const result = await this.repository.getById(id);
-      res.json(result);
+      const result = await this.repository.create(newTicket);
+      return parseTicket(result);
     } catch (error) {
-      res.status(500).json({ error: 'Error retrieving Ticket', details: error });
+      console.error('Creation error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+  get = async (props: IGetTicketEntity): Promise<ITicketEntityFront> => {
+    try {
+      const ticket = await this.repository.getById(props?.ticket_id ?? '');
+      return parseTicket(ticket);
+    } catch (error) {
+      console.error('Get error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 
-  getAll = async (req: Request, res: Response) => {
+  getAll = async (props: IGetAllTicketEntity): Promise<ITicketEntityFront[]> => {
+    let tickets;
     try {
-      const result = await this.repository.getAll();
-      res.json(result);
+      if (props.user_type === USER_TYPE.CASHIER) {
+        tickets = await this.repository.getAll(props.user_id);
+      } else {
+        tickets = await this.repository.getAll();
+      }
+      return tickets.map((ticket) => {
+        return parseTicket(ticket);
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Error retrieving Tickets', details: error });
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 
-  create = async (req: Request, res: Response) => {
+  delete = async (props: IDeleteTicketEntity) => {
     try {
-      const body = req.body;
-      const result = await this.repository.create(body);
-      res.status(201).json(result);
-    } catch (error) {
-      res.status(500).json({ error: 'Error creating Ticket', details: error });
-    }
-  };
+      const ticket = await this.repository.getById(props.ticket_id);
+      if (props.user_type === USER_TYPE.CASHIER) {
+        if (dayjs().diff(ticket.created_at, 'minutes') > 2)
+          throw new Error(ERROR_MESSAGE.INVALID_DELETE_TIME);
+      }
 
-  update = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const body = req.body;
-      const result = await this.repository.update(id, body);
-      res.json(result);
+      await this.repository.delete(props);
+      return;
     } catch (error) {
-      res.status(500).json({ error: 'Error updating Ticket', details: error });
-    }
-  };
-
-  delete = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      await this.repository.delete(id);
-      res.json({ message: 'Deleted successfully' });
-    } catch (error) {
-      res.status(500).json({ error: 'Error deleting Ticket', details: error });
+      console.error('Delete error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
 }

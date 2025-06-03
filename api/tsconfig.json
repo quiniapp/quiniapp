@@ -9,5 +9,5 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "middlewares", "helper", "../helper", "*.ts", "database"]
+  "include": ["src", "middlewares", "helper", "../helper", "*.ts", "database", "../helper/types/results.type.ts"]
 }

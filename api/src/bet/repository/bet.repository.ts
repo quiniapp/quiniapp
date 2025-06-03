@@ -16,6 +16,7 @@ export class BetRepository {
   }
 
   async create(payload: any) {
+    //validar hora
     const { data, error } = await supabase.from('bet').insert(payload).select().single();
 
     if (error) throw error;

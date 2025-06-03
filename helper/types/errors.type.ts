@@ -33,4 +33,6 @@ export const ERROR_MESSAGE = {
   NEW_USER_REQUIRED: 'El nuevo ususario es requerido',
   ID_REQUIRED: 'El ID es requerido',
   INVALID_ID: 'El ID no es válido',
+
+  INVALID_DELETE_TIME: 'Pasaron más de 2 minutos desde la creación',
 };

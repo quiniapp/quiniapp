@@ -5,7 +5,6 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { validateUUID } from 'api/helper/validateUUID';
 import { updateLotterySchema } from '../helper/lotterySchema';
 
 export class LotteryRouter {
@@ -82,8 +81,20 @@ export class LotteryRouter {
   };
 
   private getAllLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
     try {
-      const lottery = await this.controller.getAll();
+      const lottery = await this.controller.getAll(user?.user.user_type);
       const response: APIResponse<ILotteryEntityFront[]> = {
         data: {
           lottery,
@@ -123,18 +134,6 @@ export class LotteryRouter {
         error: {
           error: ERROR_TYPE.FORBIDDEN,
           message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
-
-    const isValid = validateUUID.safeParse({ lottery_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
         },
       };
       res.status(403).json(response);
@@ -199,17 +198,6 @@ export class LotteryRouter {
       return;
     }
 
-    const isValid = validateUUID.safeParse({ lottery_id });
-    if (!isValid.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.INVALID_ID,
-          message: ERROR_MESSAGE.INVALID_ID,
-        },
-      };
-      res.status(403).json(response);
-      return;
-    }
     try {
       await this.controller.delete({ lottery_id });
       res.status(200);
