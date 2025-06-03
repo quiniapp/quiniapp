@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useNavigation } from 'react-router-dom';
 
-
 import Footer from '../footer';
 import Header from '../header';
 
@@ -35,7 +34,7 @@ const Layout = ({ classname }: LayoutProps) => {
         )}
       >
         <div className="grid  grid-rows-[1fr_auto] 1440:grid-rows-[auto_1fr_auto] w-full overflow-hidden flex-1 border-[var(--isActive)]">
-          { useMediaQuery('(min-width: 1440px)') &&   <Header setIsOpen={toggleSidebar} /> }
+          {useMediaQuery('(min-width: 1440px)') && <Header setIsOpen={toggleSidebar} />}
 
           <div className=" px-[24px] bg-[var(--primary-bg-content)]">
             {isRouteLoading && (

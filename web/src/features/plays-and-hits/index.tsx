@@ -1,4 +1,4 @@
-import {Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';

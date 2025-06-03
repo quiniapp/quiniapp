@@ -1,13 +1,14 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { LogInIcon } from 'lucide-react';
 import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-
 import { z } from 'zod';
+import { useNavigate } from 'react-router-dom'; // Importa el hook useLogin
+import { useForm, Controller } from 'react-hook-form';
+import { LogInIcon } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+
 
 import { Flex } from '@/components/flex';
 import Logo from '@/components/logo';
-import { Button } from '@/components/ui/button.tsx';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -18,10 +19,12 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useIsMobile } from '@/hooks/use-mobile.ts';
-import { usePlatform } from '@/hooks/use-platform.ts';
-import { useLogin } from '@/features/auth/auth';
-import { ROUTES } from '../../../routes/routes.ts'; // Importa el hook useLogin
+import { useIsMobile } from '@/hooks/use-mobile';
+import { usePlatform } from '@/hooks/use-platform';
+
+import { ROUTES } from '../../../routes/routes';
+import { useLoginMutation } from '@/hooks/useLogin';
+import { useSessionStore } from '@/stores/sessionStore';
 
 interface FormData {
   username: string;
@@ -34,6 +37,8 @@ const validationSchemaLogin = z.object({
 });
 
 const LoginContent = () => {
+  const isAuth = useSessionStore((state) => state.isAuth);
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const {
     control,
@@ -45,33 +50,28 @@ const LoginContent = () => {
 
   const platform = usePlatform();
 
-  const { mutateAsync: loginMutationAsync, isPending, isError, error  } = useLogin();
+
+  const { mutateAsync: loginMutationAsync, isPending, isError, error } = useLoginMutation();
 
   const onSubmit = async (data: FormData) => {
-
     try {
-      await loginMutationAsync({username: data.username, password: data.password });
-
+      await loginMutationAsync({ username: data.username, password: data.password });
     } catch (error) {
       console.error('Error en el login:', error);
       // El error ya se está manejando en el onError del useMutation,
       // pero podrías agregar lógica adicional aquí si es necesario.
-
     }
   };
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(ROUTES.user.base,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-
-          },
-          // body: JSON.stringify({ ... }) // Si tu endpoint espera un body, añadilo acá
-        }
-      );
+      const response = await fetch(ROUTES.user.base, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // body: JSON.stringify({ ... }) // Si tu endpoint espera un body, añadilo acá
+      });
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -87,9 +87,16 @@ const LoginContent = () => {
   };
 
   useEffect(() => {
+    if (isAuth) {
+      navigate('/', { replace: true });  
+    }
+  }, [isAuth]);
+  
+  useEffect(() => {
     fetchUsers();
   }, []);
 
+  
   return (
     <Flex className="h-screen flex-col md:flex-row">
       {!isMobile && (
@@ -117,7 +124,9 @@ const LoginContent = () => {
                     <Flex className="flex-col space-y-4">
                       <Label className={'text-white'}>Nombre</Label>
                       <Input {...field} type="text" placeholder="Nombre de usuario" />
-                      {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
+                      {errors.username && (
+                        <p className="text-red-500 text-sm">{errors.username.message}</p>
+                      )}
                     </Flex>
                   )}
                 />
@@ -128,13 +137,13 @@ const LoginContent = () => {
                     <Flex className="flex-col space-y-4">
                       <Label className={'text-white'}>Contraseña</Label>
                       <Input {...field} type="password" placeholder="******" />
-                      {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+                      {errors.password && (
+                        <p className="text-red-500 text-sm">{errors.password.message}</p>
+                      )}
                     </Flex>
                   )}
                 />
-                {isError && (
-                  <p className="text-red-500 text-sm">Error: {error?.message}</p>
-                )}
+                {isError && <p className="text-red-500 text-sm">Error: {error?.message}</p>}
               </Flex>
             </CardContent>
             <CardFooter className="justify-between pt-[48px]">

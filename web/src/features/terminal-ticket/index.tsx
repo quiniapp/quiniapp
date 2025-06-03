@@ -15,29 +15,26 @@ import { useLotteries } from '@/hooks/useLotteries.ts';
 import { useSchedules } from '@/hooks/useSchedules.ts';
 
 export const TerminalTicketContent = () => {
-
-  const { data } = useTickets()
-  const {data:bet } = useBets()
-  const {data: lottery} = useLotteries()
+  const { data } = useTickets();
+  const { data: bet } = useBets();
+  const { data: lottery } = useLotteries();
   const { data: schedule } = useSchedules();
-  console.log({ 'data':data, 'bet':bet, 'lottery':lottery, 'schedule': schedule })
-
+  console.log({ data: data, bet: bet, lottery: lottery, schedule: schedule });
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-[16px]'}>
         <Flex className={'gap-8'}>
-
-        <FormHeaderFilter />
-        <FlexCol>
+          <FormHeaderFilter />
           <FlexCol>
-            <TableTerminalTicket />
-            <Typography className={'text-xs'} variant={'p'}> Cantidad de Tickets: 6</Typography>
+            <FlexCol>
+              <TableTerminalTicket />
+              <Typography className={'text-xs'} variant={'p'}>
+                Cantidad de Tickets: 6
+              </Typography>
+            </FlexCol>
           </FlexCol>
-
-        </FlexCol>
-
         </Flex>
         <Flex className={'1440:py-8 py-3 space-x-8 '}>
           <FlexCol className={'flex-1  space-y-4'}>

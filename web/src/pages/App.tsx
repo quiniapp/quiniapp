@@ -8,12 +8,13 @@ import { ThemeProvider } from '../providers/theme-provider.tsx';
 import { RoutesContent } from '../routes/route.tsx';
 
 import { ModalProvider } from '@/providers/modal-provider.tsx';
+import { useSessionStore } from '@/stores/sessionStore.ts';
 
 const router = createBrowserRouter(RoutesContent);
 
 function App() {
   const queryClient = new QueryClient();
-
+  console.log('Zustand role', useSessionStore.getState().role);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

@@ -9,23 +9,17 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { useEffect } from 'react';
+
 import { useUsers } from '@/hooks/useUsers.ts';
 import { Users } from '@/types/user.type.ts';
-
-
+import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 
 const UsersTable = () => {
-
   const { data, isLoading, error } = useUsers();
 
-  useEffect(() => {
-    if (data) {
-      console.log('Usuarios del backend:', data?.data);
-    }
-  }, [data]);
 
-  if (isLoading) return <div>Cargando...</div>;
+
+  if (isLoading) return <SkeletonList />;
   if (error) return <div>Error al obtener usuarios</div>;
   return (
     <div className="border border-dark-lighter rounded-lg overflow-hidden w-full">
@@ -51,8 +45,7 @@ const UsersTable = () => {
               <TableCell>{user.group_id}</TableCell>
               <TableCell>{user.fee}</TableCell>
               <TableCell>{user.fee_plus}</TableCell>
-              <TableCell>{user.address
-              }</TableCell>
+              <TableCell>{user.address}</TableCell>
               <TableCell>{user.account}</TableCell>
               <TableCell>
                 <Button variant="ghost" className="hover:text-cyan" size={'icon'}>

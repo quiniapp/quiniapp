@@ -1,4 +1,3 @@
-
 import { Collapsible } from '@radix-ui/react-collapsible';
 import { ChevronRight, Power } from 'lucide-react';
 import { useState } from 'react';
@@ -21,7 +20,11 @@ import {
 } from '@/components/ui/sidebar';
 import MENU_ITEMS from '@/constants/SidebarMenu';
 import { cn } from '@/lib/utils.ts';
-import { useLogout } from '@/features/auth/use-logout.ts';
+import { useLogout } from '@/features/auth/use-logout';
+
+import { useSessionStore } from '@/stores/sessionStore';
+import { filterMenuItemsByRole  } from '@/utils/menu-access.ts';
+import { MENU_ITEM } from '@/types/menu-item.tsx';
 
 interface AsideProps {
   isOpen?: boolean;
@@ -31,8 +34,9 @@ const Aside = ({ isOpen }: AsideProps) => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { mutate: logoutMutation, isPending: isLoggingOut, isError: logoutError,   } = useLogout();
-
+  const { mutate: logoutMutation, isPending: isLoggingOut, isError: logoutError } = useLogout();
+  const role = useSessionStore(state => state.role);
+  const visibleMenu = filterMenuItemsByRole(role, MENU_ITEMS);
   const handleLogoutClick = () => {
     logoutMutation();
   };
@@ -63,7 +67,7 @@ const Aside = ({ isOpen }: AsideProps) => {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0">
-        {MENU_ITEMS.map((item) => {
+        {visibleMenu.map((item: MENU_ITEM) => {
           const hasChildren = !!item.children?.length;
 
           if (hasChildren) {
@@ -164,8 +168,7 @@ const Aside = ({ isOpen }: AsideProps) => {
             <Power />
           </Flex>
         </Button>
-        {logoutError && <p style={{ color: 'red' }}>Error al cerrar sesión:  </p>}
-
+        {logoutError && <p style={{ color: 'red' }}>Error al cerrar sesión: </p>}
       </SidebarFooter>
     </Sidebar>
   );

@@ -10,7 +10,7 @@ export enum CASHIER_TYPE {
   STREET = 'STREET',
 }
 
-// Base común para todos los usuarios
+
 interface BaseUserEntityBack {
   user_id: string;
   number: number;

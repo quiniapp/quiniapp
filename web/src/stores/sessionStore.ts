@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type.ts';
-
+import { persist } from 'zustand/middleware';
+import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type';
 
 interface SessionState {
   isAuth: boolean;
@@ -10,22 +10,29 @@ interface SessionState {
   logout: () => void;
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
-  isAuth: false,
-  user: null,
-  role: null,
-
-  setSession: (user) =>
-    set({
-      isAuth: true,
-      user,
-      role: user.user_type,
-    }),
-
-  logout: () =>
-    set({
+export const useSessionStore = create<SessionState>()(
+  persist(
+    (set) => ({
       isAuth: false,
       user: null,
       role: null,
+
+      setSession: (user) =>
+        set({
+          isAuth: true,
+          user,
+          role: user.user_type,
+        }),
+
+      logout: () =>
+        set({
+          isAuth: false,
+          user: null,
+          role: null,
+        }),
     }),
-}));
+    {
+      name: 'auth-store',
+    }
+  )
+);

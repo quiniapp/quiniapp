@@ -10,5 +10,4 @@ const fetchWinners = async () => {
   return res.json();
 };
 
-export const useWinners = () =>
-  useQuery({ queryKey: ['winners'], queryFn: fetchWinners });
+export const useWinners = () => useQuery({ queryKey: ['winners'], queryFn: fetchWinners });
