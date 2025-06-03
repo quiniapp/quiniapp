@@ -9,6 +9,7 @@ export interface ITicketEntityBase {
   paid: boolean;
   winner: boolean;
   total: number;
+  total_price: number;
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;

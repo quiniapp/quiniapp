@@ -34,6 +34,7 @@ export interface IBetEntityBase {
   schedule_id: string;
   created_at: string;
   edited_at: string;
+  price: number;
   deleted_at: string | null;
 }
 
