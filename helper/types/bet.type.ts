@@ -39,8 +39,8 @@ export interface IBetEntityBase {
 }
 
 export interface IBetEntityBack extends IBetEntityBase {
-  lottery: ILotteryEntityBack;
-  schedule: IScheduleEntityBack;
+  lotteries: ILotteryEntityBack;
+  schedules: IScheduleEntityBack;
 }
 
 export type IBetEntityFront = Omit<IBetEntityBase, 'created_at' | 'edited_at' | 'deleted_at'> & {

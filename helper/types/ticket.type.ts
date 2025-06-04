@@ -1,4 +1,4 @@
-import { IBetEntityBack, IBetEntityBase, IBetEntityFront } from './bet.type';
+import { IBetEntityBack, IBetEntityFront } from './bet.type';
 
 export interface ITicketEntityBase {
   ticket_id: string;
@@ -16,7 +16,7 @@ export interface ITicketEntityBase {
 }
 
 export interface ITicketEntityBack extends ITicketEntityBase {
-  bets: IBetEntityBase[];
+  bets: IBetEntityBack[];
 }
 
 export type ITicketEntityFront = Omit<
