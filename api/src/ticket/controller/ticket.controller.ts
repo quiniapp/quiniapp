@@ -43,6 +43,7 @@ export class TicketController {
       } else {
         tickets = await this.repository.getAll();
       }
+      console.log('controller ticket', tickets);
       return tickets.map((ticket) => {
         return parseTicket(ticket);
       });

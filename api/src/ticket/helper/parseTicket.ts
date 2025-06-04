@@ -9,7 +9,7 @@ export const parseTicket = ({
   ticket: ITicketEntityBase;
   bets: IBetEntityBack[];
 }): ITicketEntityFront => {
-  bets.map((b) => console.log(b));
+  bets.map((b) => console.log('parse', b));
   return {
     bets: bets.map((bet) => parseBet(bet)),
     date: ticket.date,
@@ -21,5 +21,6 @@ export const parseTicket = ({
     user_id: ticket.user_id,
     user_name: ticket.user_name,
     winner: ticket.winner,
+    total_prize: ticket.total_prize,
   };
 };
