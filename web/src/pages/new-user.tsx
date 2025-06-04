@@ -1,10 +1,7 @@
 import NewUserContent from '@/features/new-user';
 
-
 const NewUserPage = () => {
-  return (
-    <NewUserContent />
-  );
+  return <NewUserContent />;
 };
 
 export default NewUserPage;

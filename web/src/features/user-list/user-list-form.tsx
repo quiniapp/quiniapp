@@ -144,7 +144,6 @@ export default function UserListAddNewUserForm() {
                 </FlexCol>
               </Box>
             </Box>
-
           </fieldset>
           <fieldset className={'border px-4 py-4'}>
             <legend className={' px-4'}> Datos Personales</legend>

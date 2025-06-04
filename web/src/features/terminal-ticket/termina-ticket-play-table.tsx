@@ -1,6 +1,5 @@
 import { Table, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 
-
 const TerminalTicketPlayTable = () => {
   return (
     <Table>

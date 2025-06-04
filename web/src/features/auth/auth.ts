@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { ROUTES } from '../../../routes/routes.ts';
@@ -19,7 +18,7 @@ const login = async (data: FormData): Promise<APIResponse<IUserEntityFront>> => 
     body: JSON.stringify(data),
     credentials: 'include',
   });
-console.log(response)
+  console.log(response);
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData?.message || 'Login failed');
@@ -29,11 +28,10 @@ console.log(response)
 };
 
 export const useLogin = () => {
-  const   navigate = useNavigate()
+  const navigate = useNavigate();
   return useMutation({
     mutationFn: login,
     onSuccess: (data: APIResponse<IUserEntityFront>) => {
-
       localStorage.setItem('user', JSON.stringify(data?.data?.user.username));
 
       localStorage.setItem('isAuth', 'true');

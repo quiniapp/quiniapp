@@ -29,5 +29,5 @@ export interface Users {
   username: string;
   fee: number;
   fee_plus: number;
-  account?: string
+  account?: string;
 }

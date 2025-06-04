@@ -1,18 +1,20 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-
-
-import { useSessionStore } from '../stores/sessionStore';
-import { APIResponse } from '../../../helper/response/api_response.response.ts';
-import { IUserEntityFront } from '../../../helper/types/user.type.ts';
-import { ROUTES } from '../../routes/routes.ts';
+import { useSessionStore } from '@/stores/sessionStore';
+// Components
+import { ROUTES } from '../../routes/routes';
+// Helpers
+import { IUserEntityFront } from '../../../helper/types/user.type';
+import { APIResponse } from '../../../helper/response/api_response.response';
 
 interface FormData {
   username?: string;
   password?: string;
 }
 
-const loginRequest = async (data: FormData): Promise<APIResponse<IUserEntityFront>> => {
+const loginRequest = async (
+  data: FormData
+): Promise<APIResponse<{ user: IUserEntityFront }>> => {
   const response = await fetch(ROUTES.auth.login, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,13 +32,14 @@ const loginRequest = async (data: FormData): Promise<APIResponse<IUserEntityFron
 
 export const useLoginMutation = () => {
   const navigate = useNavigate();
-  const setSession = useSessionStore((state) => state.setSession);
+  const setSession = useSessionStore((s) => s.setSession);
 
   return useMutation({
     mutationFn: loginRequest,
-    onSuccess: (data) => {
-      if (data?.data?.user) {
-        setSession(data.data.user);
+    onSuccess: ({ data }) => {
+      if (data?.user) {
+        // @ts-ignore
+        setSession(data?.user);
         navigate('/');
       }
     },

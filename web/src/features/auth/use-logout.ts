@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../routes/routes.ts';
-
+import { ROUTES } from '../../../routes/routes';
+import { useSessionStore } from '@/stores/sessionStore';
 
 const logout = async () => {
   const response = await fetch(ROUTES.auth.logout, {
@@ -17,7 +17,6 @@ const logout = async () => {
   return response.json();
 };
 
-
 export const useLogout = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -25,17 +24,12 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      // Si solo usás cookies, podés eliminar esto
-      localStorage.removeItem('isAuth');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('role');
-
+      useSessionStore.getState().logout();
       queryClient.clear();
       navigate('/login');
     },
     onError: (error: Error) => {
-      console.error('Error al cerrar sesión:', error.message);
+      console.error('Logout error:', error.message);
     },
   });
 };

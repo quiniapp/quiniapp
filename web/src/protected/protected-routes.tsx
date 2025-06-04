@@ -1,11 +1,12 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import { useSessionStore } from '@/stores/sessionStore';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const isAuth = localStorage.getItem('isAuth');
+  const isAuth = useSessionStore((state) => state.isAuth);
   const location = useLocation();
 
   if (!isAuth) {

@@ -10,5 +10,4 @@ const fetchLotteries = async () => {
   return res.json();
 };
 
-export const useLotteries = () =>
-  useQuery({ queryKey: ['lotteries'], queryFn: fetchLotteries });
+export const useLotteries = () => useQuery({ queryKey: ['lotteries'], queryFn: fetchLotteries });
