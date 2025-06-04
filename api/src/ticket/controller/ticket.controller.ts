@@ -19,7 +19,6 @@ export class TicketController {
     const newTicket = ticketBase(props);
     try {
       const result = await this.repository.create(newTicket);
-      console.log('result', result);
       return parseTicket(result);
     } catch (error) {
       console.error('Creation error:', error);

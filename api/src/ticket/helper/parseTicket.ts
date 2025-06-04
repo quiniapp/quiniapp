@@ -1,17 +1,11 @@
-import { IBetEntityBack } from '@helper/types/bet.type';
-import { ITicketEntityBase, ITicketEntityFront } from '@helper/types/ticket.type';
+import { ITicketEntityBack, ITicketEntityFront } from '@helper/types/ticket.type';
 import { parseBet } from 'api/src/bet/helper/parseBet';
 
-export const parseTicket = ({
-  ticket,
-  bets,
-}: {
-  ticket: ITicketEntityBase;
-  bets: IBetEntityBack[];
-}): ITicketEntityFront => {
-  bets.map((b) => console.log('parse', b));
+export const parseTicket = (ticket: ITicketEntityBack): ITicketEntityFront => {
   return {
-    bets: bets.map((bet) => parseBet(bet)),
+    bets: ticket.bets.map((bet) => {
+      return parseBet(bet);
+    }),
     date: ticket.date,
     deleted_by: ticket.deleted_by,
     paid: ticket.paid,
