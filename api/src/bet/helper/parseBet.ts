@@ -3,6 +3,7 @@ import { parseLottery } from 'api/src/lottery/helper/parseLottery';
 import { parseSchedule } from 'api/src/shcedule/helper/parseSchedule';
 
 export const parseBet = (bet: IBetEntityBack): IBetEntityFront => {
+  console.log('parseBet', bet);
   return {
     amount: bet.amount,
     bet_id: bet.bet_id,
@@ -19,7 +20,7 @@ export const parseBet = (bet: IBetEntityBack): IBetEntityFront => {
     winner: bet.winner,
     with: bet.with,
     prize: bet.prize,
-    schedule: bet?.schedule && parseSchedule(bet.schedule),
-    lottery: bet?.lottery && parseLottery(bet.lottery),
+    schedule: bet?.schedules && parseSchedule(bet.schedules),
+    lottery: bet?.lotteries && parseLottery(bet.lotteries),
   };
 };

@@ -40,7 +40,7 @@ export class TicketRepository {
     let query = supabase
       .from('tickets')
       .select('*, bets(*, lotteries(*), schedules(*))')
-      // .is('deleted_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (user_id !== undefined) {
@@ -48,7 +48,6 @@ export class TicketRepository {
     }
 
     const { data, error } = await query;
-    console.log('error', error);
     if (error) throw error;
     return data;
   }
