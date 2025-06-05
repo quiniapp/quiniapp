@@ -1,4 +1,4 @@
-// ✅ SessionInitializer.tsx
+/*
 import { useEffect } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSessionStore } from '@/stores/sessionStore';
@@ -12,9 +12,10 @@ export const SessionInitializer = () => {
     if (isSuccess && data?.data?.user) {
       setSession(data.data.user);
     } else if (isError) {
-      markInitialized(); // usuario no logueado o error → igual continuar
+      markInitialized();
     }
   }, [isSuccess, isError, data]);
 
   return null;
 };
+*/
