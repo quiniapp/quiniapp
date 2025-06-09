@@ -14,5 +14,6 @@ export const betBase = (bet: INewBetEntity, ticket_id: string): IBetEntityBase =
     deleted_at: null,
     created_at: timestamp,
     edited_at: timestamp,
+    prize: 0,
   };
 };

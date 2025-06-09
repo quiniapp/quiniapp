@@ -34,12 +34,13 @@ export interface IBetEntityBase {
   schedule_id: string;
   created_at: string;
   edited_at: string;
+  prize: number;
   deleted_at: string | null;
 }
 
 export interface IBetEntityBack extends IBetEntityBase {
-  lottery: ILotteryEntityBack;
-  schedule: IScheduleEntityBack;
+  lotteries: ILotteryEntityBack;
+  schedules: IScheduleEntityBack;
 }
 
 export type IBetEntityFront = Omit<IBetEntityBase, 'created_at' | 'edited_at' | 'deleted_at'> & {

@@ -22,5 +22,6 @@ export const ticketBase = (ticket: INewTicketEntity): ITicketEntityBack => {
     deleted_at: null,
     created_at: timestamp,
     deleted_by: null,
+    total_prize: 0,
   };
 };
