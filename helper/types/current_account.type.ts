@@ -10,6 +10,7 @@ export interface ICurrentAccountEntityBack {
   subtotal: number;
   previous_balance: number;
   collections: number;
+  paid: number;
   total: number;
   drag: number;
   leave: number;
