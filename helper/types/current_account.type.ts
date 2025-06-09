@@ -1,9 +1,10 @@
 export interface ICurrentAccountEntityBack {
   current_account_id: string;
-  user_id: string | null;
-  cashier_id: string | null;
-  group_id: string;
-  pass: string;
+  user_id: string;
+  user_name: string;
+  user_number: number;
+  // group_id: string;
+  pass: number;
   successes: number;
   claims: number;
   subtotal: number;
