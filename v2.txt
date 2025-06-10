@@ -5,4 +5,4 @@ Para la v2
     Grupos para usuarios, crear grupos, editarlos
     Owner, SuperAdmin, Admin, Cashier
 
-    En liquidacion permitir editar pase, reclamos, aciertos, pase, cobro, arrastre, solo con una clave unica =! a la que inicia sesion
+    En liquidacion permitir editar pase, reclamos, aciertos, pase, cobro, arrastre

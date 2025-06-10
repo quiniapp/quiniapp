@@ -1,4 +1,4 @@
-import { newBetSchema } from 'api/src/bet/helper/schemaValidator';
+import { newBetSchema } from '@helper/schemas/bet.schema';
 import { z } from 'zod';
 
 export const newTicketSchema = z.object({
