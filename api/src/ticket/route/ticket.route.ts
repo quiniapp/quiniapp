@@ -3,7 +3,7 @@ import { TicketController } from '../controller/ticket.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { newTicketSchema } from '../helper/schemaValidator';
+import { newTicketSchema } from '@helper/schemas/ticket.schema';
 
 export class TicketRouter {
   public router: Router;

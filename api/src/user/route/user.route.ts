@@ -4,7 +4,7 @@ import { INewUserEntity } from '@helper/request/user.response';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { updateUserSchema, UserSchema } from '../helper/schemaValidators';
+import { updateUserSchema, UserSchema } from '@helper/schemas/user.schema';
 
 export class UserRouter {
   public router: Router;

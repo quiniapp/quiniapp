@@ -4,7 +4,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { ScheduleSchema } from '../helper/scheduleSchema';
+import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 
 export class ScheduleRouter {
   public router: Router;
@@ -39,7 +39,7 @@ export class ScheduleRouter {
       return;
     }
 
-    const result = ScheduleSchema.safeParse(newSchedule);
+    const result = newScheduleSchema.safeParse(newSchedule);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
@@ -142,7 +142,7 @@ export class ScheduleRouter {
       return;
     }
 
-    const result = ScheduleSchema.safeParse(updateSchedule);
+    const result = updateScheduleSchema.safeParse(updateSchedule);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
