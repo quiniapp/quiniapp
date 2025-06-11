@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { supabase } from '../../../database/db.connection';
 import { IGetResultsEntity } from '@helper/request/results.response';
 
@@ -96,9 +97,10 @@ export class ResultsRepository {
   }
 
   async update(id: string, payload: any) {
+    const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('results')
-      .update(payload)
+      .update({ ...payload, edited_at: timestamp })
       .eq('results_id', id)
       .select(
         `
