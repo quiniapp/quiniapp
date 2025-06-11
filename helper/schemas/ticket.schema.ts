@@ -1,4 +1,5 @@
-import { newBetSchema } from '@helper/schemas/bet.schema';
+//import { newBetSchema } from '@helper/schemas/bet.schema';
+import { newBetSchema } from './bet.schema';
 import { z } from 'zod';
 
 export const newTicketSchema = z.object({
