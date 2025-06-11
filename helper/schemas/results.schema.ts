@@ -1,5 +1,5 @@
+import { dateRegex } from '@helper/functions/dateRegex';
 import { z } from 'zod';
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 export const newResultsSchema = z.object({
   results: z
     .array(z.number().int().min(1000).max(9999))

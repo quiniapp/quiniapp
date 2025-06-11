@@ -1,3 +1,4 @@
+import { dateRegex } from '@helper/functions/dateRegex';
 import { BET_TYPE, PLACE_TYPE } from '@helper/types/bet.type';
 import { z } from 'zod';
 
@@ -10,7 +11,12 @@ export const newBetSchema = z
     place: z.nativeEnum(PLACE_TYPE),
     with: z.string().nullable().optional(),
     position: z.nativeEnum(PLACE_TYPE).nullable().optional(),
-    date: z.string(), // podrías refinar con dayjs si querés
+    date: z
+      .string()
+      .regex(dateRegex, { message: 'Formato inválido YYYY-MM-DD' })
+      .refine((date) => !isNaN(Date.parse(date)), {
+        message: 'La fecha no es válida',
+      }), // podrías refinar con dayjs si querés
     lottery_id: z.string().uuid(),
     schedule_id: z.string().uuid(),
   })
