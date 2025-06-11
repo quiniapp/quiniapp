@@ -34,9 +34,10 @@ export class LotteryRepository {
   }
 
   async update(id: string, payload: any) {
+    const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('lotteries')
-      .update(payload)
+      .update({ ...payload, deleted_at: timestamp })
       .eq('lottery_id', id)
       .select()
       .single();

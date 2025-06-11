@@ -24,12 +24,14 @@ export class CurrentAccountRepository {
     return data;
   }
 
-  async updateCurrentAccountHandler(props: IUpdateCurrentAccountEntity) {
+  async updateCurrentAccountHandler(
+    current_account_id: string,
+    props: IUpdateCurrentAccountEntity
+  ) {
     const timestamp = dayjs().toISOString();
-    const { current_account_id, ...rest } = props;
     const { data, error } = await supabase
       .from('current_accounts')
-      .update({ ...rest, edited_at: timestamp })
+      .update({ ...props, edited_at: timestamp })
       .eq('current_account_id', current_account_id)
       .select('* , user(*)')
       .single();

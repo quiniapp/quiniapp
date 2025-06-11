@@ -44,7 +44,9 @@ export class CurrentAccountController {
     props: IUpdateCurrentAccountEntity
   ): Promise<ICurrentAccountEntityFront> => {
     try {
-      const currentAccount = await this.repository.updateCurrentAccountHandler(props);
+      const currentAccount = await this.repository.updateCurrentAccountHandler(current_account_id, {
+        ...props,
+      });
 
       return parseCurrentAccount(currentAccount);
     } catch (error) {
