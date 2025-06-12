@@ -1,5 +1,5 @@
-# Logs
-logs
+# Logs y archivos de depuración
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,24 +7,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules/*
-dist
-dist-ssr
+# Directorios de dependencias y construcción
+node_modules/
+dist/
+dist-ssr/
+
+# Archivos de configuración local (variables de entorno, etc.)
+.env
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea/*
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.expo
-.idea
-*.idea/
- ../.idea/
+# Archivos y directorios de editores/IDEs
+.vscode/
+!.vscode/extensions.json # Mantener este archivo para compartir recomendaciones de extensiones VS Code
+.idea/ # Ignorar la carpeta .idea para IntelliJ IDEA / WebStorm
+.DS_Store # Archivos de metadatos de macOS
+*.sw? # Archivos swap de Vim
 
- .env
+# Si usas Expo
+.expo/
+
+# Si tu proyecto usa archivos de bloqueo específicos para Bun y pnpm
+bun.lockb
+pnpm-lock.yaml
+
+# Patrones adicionales que quizás no necesites para un proyecto de JS/TS,
+# pero no hacen daño si están ahí (más comunes en proyectos .NET/Visual Studio)
+# *.suo
+# *.ntvs*
+# *.njsproj
+# *.sln
