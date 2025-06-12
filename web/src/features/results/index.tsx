@@ -54,7 +54,7 @@ const ResultsContent = () => {
         <Flex className="w-full  mt-8 items-center space-x-[36px] max-h-[60px] justify-between">
           <Flex className={'  w-full items-center space-x-[24px] '}>
             <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
-            <SelectDayToSearch />
+            <SelectDayToSearch onDayChange={() => {}} />
           </Flex>
           <Flex className={'gap-6'}>
             <Button variant="outline" className="flex items-center gap-2">
