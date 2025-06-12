@@ -10,9 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useCurrentAccounts } from '@/hooks/useCurrentAccount.ts';
+import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 
 const CurrentAccountTable = () => {
-  const DATA = [];
+  const { data, isPending, isLoading} =  useCurrentAccounts()
+  console.log('current account',data)
+  const DATA = data || [];
+
   return (
     <Box className={'py-[36px]'}>
       <Table className={'overflow-hidden  rounded-[16px_16px_0_0] '}>
@@ -33,15 +38,19 @@ const CurrentAccountTable = () => {
           <TableHead> Grupo </TableHead>
         </TableHeader>
         <TableBody className={'border'}>
+
           {DATA.length === 0 ? (
             <TableRow>
               <TableCell colSpan={14} className={' text-center'}>
-                <FlexCol className={' w-full items-center justify-center gap-3 py-8 '}>
-                  <Typography variant={'large'}>No se encontraron Datos</Typography>
-                  <Typography variant={'small'} className={'font-light text-muted-foreground'}>
-                    Por favor realice una nueva búsqueda
-                  </Typography>
-                </FlexCol>
+                  { isLoading || isPending ? <SkeletonList /> : (
+                    <FlexCol className={' w-full items-center justify-center gap-3 py-8 '}>
+                      <Typography variant={'large'}> No se encontraron Datos </Typography>
+                      <Typography variant={'small'} className={'font-light text-muted-foreground'}>
+                        Por favor realice una nueva búsqueda
+                      </Typography>
+                    </FlexCol>
+                  ) }
+
               </TableCell>
             </TableRow>
           ) : (

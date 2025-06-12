@@ -32,9 +32,10 @@ export class ScheduleRepository {
   }
 
   async update(id: string, payload: any) {
+    const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('schedules')
-      .update(payload)
+      .update({ ...payload, edited_at: timestamp })
       .eq('id', id)
       .select()
       .single();

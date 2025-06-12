@@ -33,4 +33,8 @@ export const ROUTES = {
     base: `${PRIVATE}/winners`,
     id: (id: string) => `${PRIVATE}/winners/${id}`,
   },
+  current_account: {
+    base: `${PRIVATE}/current_account`,
+    id: (id: string) => `${PRIVATE}/current_account/${id}`,
+  }
 };

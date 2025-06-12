@@ -24,9 +24,10 @@ export class UserRepository {
   }
 
   async update(id: string, payload: any) {
+    const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')
-      .update(payload)
+      .update({ ...payload, edited_at: timestamp })
       .eq('id', id)
       .select()
       .single();

@@ -19,4 +19,7 @@ export interface ICurrentAccountEntityBack {
   edited_at: string;
 }
 
-export type IBetEntityFront = Omit<ICurrentAccountEntityBack, 'created_at' | 'edited_at'>;
+export type ICurrentAccountEntityFront = Omit<
+  ICurrentAccountEntityBack,
+  'created_at' | 'edited_at'
+>;
