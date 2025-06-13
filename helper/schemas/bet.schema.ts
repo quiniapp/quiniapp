@@ -1,6 +1,6 @@
-import { dateRegex } from '@helper/functions/dateRegex';
-import { BET_TYPE, PLACE_TYPE } from '@helper/types/bet.type';
+import { BET_TYPE, PLACE_TYPE } from '../types/bet.type';
 import { z } from 'zod';
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 export const newBetSchema = z
   .object({
@@ -16,7 +16,7 @@ export const newBetSchema = z
       .regex(dateRegex, { message: 'Formato inválido YYYY-MM-DD' })
       .refine((date) => !isNaN(Date.parse(date)), {
         message: 'La fecha no es válida',
-      }), // podrías refinar con dayjs si querés
+      }),
     lottery_id: z.string().uuid(),
     schedule_id: z.string().uuid(),
   })

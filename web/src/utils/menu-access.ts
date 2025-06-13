@@ -11,7 +11,7 @@ export const filterMenuItemsByRole = (
   if (role === USER_TYPE.ADMIN || role === USER_TYPE.SUPERADMIN) {
     return items; // ve todo
   }
-  console.log(items)
+
 
   return items.filter((item) => PUBLIC_MENU_IDS.includes(item.id));
 };

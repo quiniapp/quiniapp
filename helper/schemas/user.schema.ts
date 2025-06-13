@@ -1,4 +1,4 @@
-import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type';
+import { CASHIER_TYPE, USER_TYPE } from '../types/user.type';
 import { z } from 'zod';
 
 // Base común a todos
