@@ -3,16 +3,17 @@ import { supabase } from '../../../database/db.connection';
 import dayjs from 'dayjs';
 
 export class CurrentAccountRepository {
-  async calculateCurrentAccountHandler() {
-    const { data, error } = await supabase.rpc('calculate_current_account');
+  async calculateCurrentAccountHandler(date: string) {
+    const { data, error } = await supabase.rpc('calculate_current_account', { date });
     if (error) throw error;
     return data;
   }
 
-  async getAllCurrentAccountHandler(user_id?: string) {
+  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
     let query = supabase
       .from('current_accounts')
       .select('* , user(*)')
+      .eq('date', date)
       .order('created_at', { ascending: false });
 
     if (user_id !== undefined) {

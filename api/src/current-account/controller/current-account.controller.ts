@@ -10,9 +10,9 @@ import { parseCurrentAccount } from '../helper/parseCurrentAccount';
 export class CurrentAccountController {
   private repository = new CurrentAccountRepository();
 
-  calculateCurrentAccountHandler = async () => {
+  calculateCurrentAccountHandler = async (date: string) => {
     try {
-      const result = await this.repository.calculateCurrentAccountHandler();
+      const result = await this.repository.calculateCurrentAccountHandler(date);
       return parseCurrentAccount(result);
     } catch (error) {
       console.error('Creation error:', error);
@@ -26,9 +26,12 @@ export class CurrentAccountController {
     let currentaccounts;
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
-        currentaccounts = await this.repository.getAllCurrentAccountHandler(props.user_id);
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          user_id: props.user_id,
+          date: props.date,
+        });
       } else {
-        currentaccounts = await this.repository.getAllCurrentAccountHandler();
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({ date: props.date });
       }
 
       return currentaccounts.map((currentaccount) => {

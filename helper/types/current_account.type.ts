@@ -13,10 +13,14 @@ export interface ICurrentAccountEntityBack {
   paid: number;
   total: number;
   drag: number;
-  leave: number;
+  leave: number; //deje
   date: string;
   created_at: string;
   edited_at: string;
+  cashier_commission: number;
+  bills: number;
+  revenue: number; //deja
+  previous_drag: number;
 }
 
 export type ICurrentAccountEntityFront = Omit<
