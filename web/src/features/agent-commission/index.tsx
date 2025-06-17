@@ -3,9 +3,7 @@ import HeaderSection from '@/components/header-section';
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
 import { Button } from '@/components/ui/button.tsx';
 
-
 const CurrentAccountContent = () => {
-
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>

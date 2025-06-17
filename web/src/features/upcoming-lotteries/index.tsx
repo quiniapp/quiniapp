@@ -46,11 +46,9 @@ const UpcomingLotteriesContent = () => {
   const schedules = schedulesData?.data?.schedule ?? [];
 
   console.log({
-    'lottery': lottery,
-    'schedule': schedules
-  })
-
-
+    lottery: lottery,
+    schedule: schedules,
+  });
 
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const isLargeScreen = useMediaQuery('(min-width: 1440px)');

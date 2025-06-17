@@ -17,8 +17,6 @@ import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 const UsersTable = () => {
   const { data, isLoading, error } = useUsers();
 
-
-
   if (isLoading) return <SkeletonList />;
   if (error) return <div>Error al obtener usuarios</div>;
   return (

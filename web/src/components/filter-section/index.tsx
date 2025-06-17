@@ -24,13 +24,13 @@ interface FilterSectionProps {
 }
 
 const FilterSection = ({
-                         date,
-                         onDateChange,
-                         group,
-                         onGroupChange,
-                         employeeNumber,
-                         onEmployeeNumberChange,
-                       }: FilterSectionProps) => {
+  date,
+  onDateChange,
+  group,
+  onGroupChange,
+  employeeNumber,
+  onEmployeeNumberChange,
+}: FilterSectionProps) => {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const isMobile = useIsMobile();
 
@@ -49,16 +49,13 @@ const FilterSection = ({
       )}
 
       <Box
-        className={`${isMobile && !isFilterExpanded
-          ? 'hidden'
-          : 'flex'} flex-col md:flex-row flex-wrap gap-[36px] items-start md:items-center`}
+        className={`${
+          isMobile && !isFilterExpanded ? 'hidden' : 'flex'
+        } flex-col md:flex-row flex-wrap gap-[36px] items-start md:items-center`}
       >
         <div className="flex items-center">
           <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
-          <SelectDayToSearch
-            selectedDay={date}
-            onDayChange={onDateChange}
-          />
+          <SelectDayToSearch selectedDay={date} onDayChange={onDateChange} />
         </div>
 
         <Flex className="flex items-center">

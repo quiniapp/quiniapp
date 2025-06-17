@@ -68,3 +68,4 @@ export interface CashierUserEntityFront extends IBaseUserEntityFront {
 }
 
 export type IUserEntityFront = OwnerOrAdminUserEntityFront | CashierUserEntityFront;
+

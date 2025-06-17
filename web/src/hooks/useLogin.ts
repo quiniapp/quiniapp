@@ -12,9 +12,7 @@ interface FormData {
   password?: string;
 }
 
-const loginRequest = async (
-  data: FormData
-): Promise<APIResponse<{ user: IUserEntityFront }>> => {
+const loginRequest = async (data: FormData): Promise<APIResponse<{ user: IUserEntityFront }>> => {
   const response = await fetch(ROUTES.auth.login, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

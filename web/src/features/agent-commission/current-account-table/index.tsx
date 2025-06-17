@@ -14,11 +14,7 @@ import SkeletonList from '@/components/skeletons/skeleton-list';
 import { Button } from '@/components/ui/button';
 import { CurrentAccountTableProps } from '@/types/current-account.type.ts';
 
-
-
 const CurrentAccountTable = ({ data, totals, isLoading, isPending }: CurrentAccountTableProps) => {
-
-
   return (
     <Box className="py-[36px]">
       <Table className="overflow-hidden rounded-[16px_16px_0_0]">
@@ -48,7 +44,7 @@ const CurrentAccountTable = ({ data, totals, isLoading, isPending }: CurrentAcco
                 <SkeletonList />
               </TableCell>
             </TableRow>
-          ) : data.length === 0 ? (
+          ) : data?.length === 0 ? (
             <TableRow>
               <TableCell colSpan={14} className="text-center">
                 <FlexCol className="w-full items-center justify-center gap-3 py-8">
@@ -60,11 +56,12 @@ const CurrentAccountTable = ({ data, totals, isLoading, isPending }: CurrentAcco
               </TableCell>
             </TableRow>
           ) : (
-            data.map((account: any) => (
+            data?.map((account: any) => (
               <TableRow key={account.current_account_id}>
-
                 <TableCell>
-                  <Button variant="outline" size="sm">Liquidar</Button>
+                  <Button variant="outline" size="sm">
+                    Liquidar
+                  </Button>
                 </TableCell>
                 <TableCell>{account.user_number}</TableCell>
                 <TableCell>{account.user_name}</TableCell>

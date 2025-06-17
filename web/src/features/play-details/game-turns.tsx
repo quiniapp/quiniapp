@@ -29,7 +29,6 @@ const GameTurns = () => {
           {lottery.map((lot: LotteryType) => (
             <LotteryCheckboxList key={lot.lottery_id} lottery={lot} />
           ))}
-
         </Box>
       </FlexCol>
     </FlexCol>

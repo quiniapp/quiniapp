@@ -16,7 +16,12 @@
     "lib": ["dom", "esnext"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": ["./src/*"],
+      "@helper/*": ["../helper/*"]
+    },
+    "include": [
+      "src",
+      "../helper"
+    ]
   }
 }

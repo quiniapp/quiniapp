@@ -7,7 +7,7 @@ import { Flex, FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label.tsx';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -15,8 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AddNewUserFormValues } from '@/types/user.type.ts';
-import { addNewUserSchema } from '@/validations/useAddNewUser.validation.ts';
+// @Helpers
+
+
+import type { INewUserEntityForm } from '@/types/user.type';
+
+// @Hooks
+import { useAddNewUser } from '@/hooks/useAddNewUser';
+
+import { toast } from 'react-hot-toast';
+import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type'
+import { UserSchema } from '@helper/schemas/user.schema';
+
 
 export default function UserListAddNewUserForm() {
   const {
@@ -24,27 +34,38 @@ export default function UserListAddNewUserForm() {
     control,
     reset,
     formState: { errors },
-  } = useForm<AddNewUserFormValues>({
-    resolver: zodResolver(addNewUserSchema) as Resolver<AddNewUserFormValues>,
+  } = useForm<INewUserEntityForm>({
+    resolver: zodResolver(UserSchema) as Resolver<INewUserEntityForm>,
     mode: 'onBlur',
     defaultValues: {
-      pinNumber: '',
-      pinType: '',
-      group: '',
+      number: 0,
       name: '',
-      lastName: '',
-      address: '',
-      phone: '',
-      email: '',
-      user: '',
+      user_type: USER_TYPE.CASHIER,
+      cashier_type: CASHIER_TYPE.PC,
+      fee: undefined,
+      fee_plus: undefined,
+      username: '',
       password: '',
-      commission: 0,
-      spread: 0,
+      group_id: '',
+      last_name: '',
+      address: '',
+      phone: undefined,
+      email: '',
     },
   });
 
-  const onSubmit = (values: AddNewUserFormValues) => {
-    console.log(values);
+  const { mutate: addUser, isPending } = useAddNewUser({
+    onSuccess: () => {
+      toast.success('✅ Usuario creado correctamente');
+      reset();
+    },
+    onError: (error: any) => {
+      toast.error(`❌ Error: ${error.message}`);
+    },
+  });
+
+  const onSubmit = (data: INewUserEntityForm) => {
+    addUser(data);
   };
 
   const useResetForm = () => {
@@ -60,20 +81,30 @@ export default function UserListAddNewUserForm() {
             <Box className={'gap-[24px] p-[8px] grid grid-cols-[2fr_auto] items-center'}>
               <Box className={'gap-[24px] p-[12px] grid grid-cols-3'}>
                 <FlexCol className={'w-full space-y-4'}>
-                  <Label htmlFor="pinNumber">Número de usuario</Label>
+                  <Label htmlFor="number">Número de usuario</Label>
                   <Controller
-                    name="pinNumber"
+                    name="number"
                     control={control}
-                    render={({ field }) => (
-                      <Input id={'pinNumber'} type={'number'} placeholder="Ej: 344223" {...field} />
+                    render={({ field: { onChange, value, ...rest } }) => (
+                      <Input
+                        id="number"
+                        type="number"
+                        placeholder="Ej: 344223"
+                        value={value ?? ''}
+                        onChange={(e) => {
+                          const parsed = e.target.value === '' ? null : Number(e.target.value);
+                          onChange(parsed);
+                        }}
+                        {...rest}
+                      />
                     )}
                   />
-                  {errors.pinNumber && <p className="text-red-600">{errors.pinNumber.message}</p>}
+                  {errors.number && <p className="text-red-600">{errors.number.message}</p>}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
-                  <Label htmlFor="pinType">Tipo de pasador</Label>
+                  <Label htmlFor="user_type">Tipo de usuario</Label>
                   <Controller
-                    name="pinType"
+                    name="user_type"
                     control={control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
@@ -81,14 +112,36 @@ export default function UserListAddNewUserForm() {
                           <SelectValue placeholder="Seleccione uno" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={'option1'}>Opción 1</SelectItem>
-                          <SelectItem value={'option2'}>Opción 2</SelectItem>
+                          <SelectItem value={USER_TYPE.ADMIN}>Admin</SelectItem>
+                          <SelectItem value={USER_TYPE.CASHIER}>Cajero </SelectItem>
                         </SelectContent>
                       </Select>
                     )}
                   />
-                  {errors.pinType && <p className="text-red-600">{errors.pinType.message}</p>}
+                  {errors.user_type && <p className="text-red-600">{errors.user_type.message}</p>}
                 </FlexCol>
+                <FlexCol className={'w-full space-y-4'}>
+                  <Label htmlFor="cashier_type">Tipo de pasador</Label>
+                  <Controller
+                    name="cashier_type"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full border-dark-lighter">
+                          <SelectValue placeholder="Seleccione uno" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={CASHIER_TYPE.STREET}>Calle</SelectItem>
+                          <SelectItem value={CASHIER_TYPE.PC}>PC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.cashier_type && (
+                    <p className="text-red-600">{errors.cashier_type.message}</p>
+                  )}
+                </FlexCol>
+                {/*
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="group">Grupo</Label>
                   <Controller
@@ -108,35 +161,36 @@ export default function UserListAddNewUserForm() {
                   />
                   {errors.group && <p className="text-red-600">{errors.group.message}</p>}
                 </FlexCol>
+                */}
               </Box>
               <Box className={'gap-[24px] px-[12px] grid grid-cols-2'}>
                 <FlexCol className={'w-full space-y-4'}>
-                  <Label htmlFor="commission">Comisión (%)</Label>
+                  <Label htmlFor="fee">Comisión (%)</Label>
                   <Controller
-                    name="commission"
+                    name="fee"
                     control={control}
                     render={({ field }) => (
                       <Input
                         {...field}
-                        id="commission"
+                        id="fee"
                         type="number"
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)} // 👈 clave
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
                         placeholder="0"
                       />
                     )}
                   />
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
-                  <Label htmlFor="spread">Deje (%)</Label>
+                  <Label htmlFor="fee_plus">Deje (%)</Label>
                   <Controller
-                    name="spread"
+                    name="fee_plus"
                     control={control}
                     render={({ field }) => (
                       <Input
                         {...field}
-                        id="spread"
+                        id="fee_plus"
                         type="number"
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)} // 👈 clave
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
                         placeholder="0"
                       />
                     )}
@@ -159,15 +213,15 @@ export default function UserListAddNewUserForm() {
                   {errors.name && <p className="text-red-600">{errors.name.message}</p>}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
-                  <Label htmlFor="lastName">Apellido</Label>
+                  <Label htmlFor="last_name">Apellido</Label>
                   <Controller
-                    name="lastName"
+                    name="last_name"
                     control={control}
                     render={({ field }) => (
-                      <Input id={'lastName'} placeholder="Gonzalez" {...field} />
+                      <Input id={'last_name'} placeholder="Gonzalez" {...field} />
                     )}
                   />
-                  {errors.lastName && <p className="text-red-600">{errors.lastName.message}</p>}
+                  {errors.last_name && <p className="text-red-600">{errors.last_name.message}</p>}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="address">Dirección</Label>
@@ -218,13 +272,15 @@ export default function UserListAddNewUserForm() {
             <legend className={' px-4'}> Datos Inicio de sesion</legend>
             <Flex className={' space-x-4  '}>
               <FlexCol className={'w-full space-y-4'}>
-                <Label htmlFor="user">Usuario</Label>
+                <Label htmlFor="username">Usuario</Label>
                 <Controller
-                  name="user"
+                  name="username"
                   control={control}
-                  render={({ field }) => <Input id={'user'} placeholder="juancarlos" {...field} />}
+                  render={({ field }) => (
+                    <Input id={'username'} placeholder="juancarlos" {...field} />
+                  )}
                 />
-                {errors.user && <p className="text-red-600">{errors.user.message}</p>}
+                {errors.username && <p className="text-red-600">{errors.username.message}</p>}
               </FlexCol>
               <FlexCol className={'w-full space-y-4'}>
                 <Label htmlFor="password">Contraseña</Label>
@@ -246,7 +302,9 @@ export default function UserListAddNewUserForm() {
         <Button type="submit" className={'hover:cursor-pointer hover:bg-[--primary-800]'}>
           <Flex className={'items-center gap-4'}>
             <SaveIcon />
-            <Typography variant={'small'}> Guardar Nuevo Usuario</Typography>
+            <Typography variant={'small'}>
+              {isPending ? 'Guardando' : 'Guardar Nuevo Usuario'}
+            </Typography>
           </Flex>
         </Button>
         <Button

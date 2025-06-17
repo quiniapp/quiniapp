@@ -1,19 +1,19 @@
-
 import { useMemo } from 'react';
 import { useCurrentAccounts } from '@/hooks/useCurrentAccount';
-import  type { ICurrentAccountEntityFront, Totals, FilterParams } from '@/types/current-account.type';
-
-
+import type {
+  ICurrentAccountEntityFront,
+  Totals,
+  FilterParams,
+} from '@/types/current-account.type';
 
 export function useCurrentAccountTableLogic(filters: FilterParams = {}) {
   const { data, isPending, isLoading } = useCurrentAccounts();
 
-  console.log('--->', data.data)
+  console.log('--->', data?.data);
 
   const rawData: ICurrentAccountEntityFront[] = Array.isArray(data?.data?.mockCurrentAccounts)
     ? data.data.mockCurrentAccounts
     : [];
-
 
   const DATA = useMemo(() => {
     return rawData.filter((item) => {
@@ -22,10 +22,7 @@ export function useCurrentAccountTableLogic(filters: FilterParams = {}) {
       // Filter by group if provided (assuming item.group exists)
       //if (filters.group && filters.group !== 'Todos' && item.group !== filters.group) return false;
       // Filter by employee number substring
-      if (
-        filters.employeeNumber &&
-        !item.user_number.toString().includes(filters.employeeNumber)
-      ) {
+      if (filters.employeeNumber && !item.user_number.toString().includes(filters.employeeNumber)) {
         return false;
       }
       return true;
