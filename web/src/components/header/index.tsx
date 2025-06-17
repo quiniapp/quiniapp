@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 const Header = ({ setIsOpen }: HeaderProps) => {
-  const { user } = useSessionStore()
+  const { user } = useSessionStore();
   const { toggleSidebar, isMobile } = useSidebar();
 
   const handleToggle = () => {

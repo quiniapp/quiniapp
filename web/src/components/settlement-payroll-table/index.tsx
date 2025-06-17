@@ -9,8 +9,11 @@ const SettlementPayrollTable = () => {
   const [group, setGroup] = useState<string>('Todos');
   const [employeeNumber, setEmployeeNumber] = useState<string>('');
 
-  const { DATA, totals, isLoading, isPending } =
-    useCurrentAccountTableLogic({ date, group, employeeNumber });
+  const { DATA, totals, isLoading, isPending } = useCurrentAccountTableLogic({
+    date,
+    group,
+    employeeNumber,
+  });
 
   return (
     <Box className="overflow-auto bg-[var(--primary-bg-content)] py-[24px] text-white">

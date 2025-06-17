@@ -36,5 +36,5 @@ export const ROUTES = {
   current_account: {
     base: `${PRIVATE}/current_account`,
     id: (id: string) => `${PRIVATE}/current_account/${id}`,
-  }
+  },
 };

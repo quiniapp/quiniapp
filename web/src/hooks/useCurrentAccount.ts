@@ -10,4 +10,5 @@ const fetchCurrentAccount = async () => {
   return res.json();
 };
 
-export const useCurrentAccounts = () => useQuery({ queryKey: ['current_account'], queryFn: fetchCurrentAccount });
+export const useCurrentAccounts = () =>
+  useQuery({ queryKey: ['current_account'], queryFn: fetchCurrentAccount });

@@ -12,7 +12,7 @@ import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 
 const FillOutATicket = () => {
   const {} = useForm();
-  const isEnabled  = useIsButtonEnabled()
+  const isEnabled = useIsButtonEnabled();
   return (
     <FlexCol className={'py-[0px]'}>
       <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>
@@ -70,7 +70,11 @@ const FillOutATicket = () => {
                 />
               </Box>
               <Flex className={' gap-4 pt-[24px]'}>
-                <Button type={'button'} className={'flex-1 disabled:bg-pink-50'} disabled={!isEnabled}>
+                <Button
+                  type={'button'}
+                  className={'flex-1 disabled:bg-pink-50'}
+                  disabled={!isEnabled}
+                >
                   <PlusIcon /> Agregar
                 </Button>
                 <Button type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>

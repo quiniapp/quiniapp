@@ -5,7 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { LogInIcon } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-
 import { Flex } from '@/components/flex';
 import Logo from '@/components/logo';
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,6 @@ const LoginContent = () => {
 
   const platform = usePlatform();
 
-
   const { mutateAsync: loginMutationAsync, isPending, isError, error } = useLoginMutation();
 
   const onSubmit = async (data: FormData) => {
@@ -88,15 +86,14 @@ const LoginContent = () => {
 
   useEffect(() => {
     if (isAuth) {
-      navigate('/', { replace: true });  
+      navigate('/', { replace: true });
     }
   }, [isAuth]);
-  
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  
   return (
     <Flex className="h-screen flex-col md:flex-row">
       {!isMobile && (
