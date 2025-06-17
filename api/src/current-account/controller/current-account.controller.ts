@@ -4,7 +4,10 @@ import {
   IUpdateCurrentAccountEntity,
 } from '@helper/request/current_account.response';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
-import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import {
+  ICurrentAccountEntityBack,
+  ICurrentAccountEntityFront,
+} from '@helper/types/current_account.type';
 import { parseCurrentAccount } from '../helper/parseCurrentAccount';
 
 export class CurrentAccountController {
@@ -12,8 +15,9 @@ export class CurrentAccountController {
 
   calculateCurrentAccountHandler = async (date: string) => {
     try {
-      const result = await this.repository.calculateCurrentAccountHandler(date);
-      return parseCurrentAccount(result);
+      const results = await this.repository.calculateCurrentAccountHandler(date);
+      console.log('result', results);
+      return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
     } catch (error) {
       console.error('Creation error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

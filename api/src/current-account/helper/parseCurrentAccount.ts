@@ -22,5 +22,9 @@ export const parseCurrentAccount = (
     drag: currentAccount.drag,
     leave: currentAccount.leave,
     date: currentAccount.date,
+    bills: currentAccount.bills,
+    cashier_commission: currentAccount.cashier_commission,
+    previous_drag: currentAccount.previous_drag,
+    revenue: currentAccount.revenue,
   };
 };
