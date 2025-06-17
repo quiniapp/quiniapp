@@ -16,14 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 // @Helpers
-import { UserSchema } from 'helper/schemas/user.schema';
-import { CASHIER_TYPE, USER_TYPE } from 'helper/types/user.type';
+
+
 import type { INewUserEntityForm } from '@/types/user.type';
 
 // @Hooks
 import { useAddNewUser } from '@/hooks/useAddNewUser';
 
 import { toast } from 'react-hot-toast';
+import { UserSchema } from '@helper/schemas/user.schema';
+import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type'
 
 export default function UserListAddNewUserForm() {
   const {
