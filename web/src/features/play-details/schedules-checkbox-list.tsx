@@ -17,11 +17,12 @@ interface SchedulesProps {
 
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
+  setSchedules: (id: string) => void;
 }
 
 const KEY_LABELS = ['F1', 'F2', 'F3', 'F4', 'F5'];
 
-const ScheduleCheckboxList = ({ schedules }: SchedulesCheckboxListProps) => {
+const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxListProps) => {
   const { f1, f2, f3, f4, f5 } = useKeyboardCheckboxes();
 
   const keyboardMap = [f1, f2, f3, f4, f5];
@@ -45,7 +46,10 @@ const ScheduleCheckboxList = ({ schedules }: SchedulesCheckboxListProps) => {
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
                 checked={keyHandler.checked}
-                onCheckedChange={() => keyHandler.setChecked((prev) => !prev)}
+                onClick={() => {
+                  keyHandler.setChecked((prev) => !prev);
+                  setSchedules(schedule.schedule_id);
+                }}
                 className="border-2 border-primary"
               />
             </Flex>

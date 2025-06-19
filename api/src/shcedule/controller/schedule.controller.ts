@@ -1,14 +1,14 @@
 import { ScheduleRepository } from '../repository/schedule.repository';
-import { IScheduleEntityBack, IScheduleEntityFront } from '@helper/types/schedule.type';
+import { IScheduleEntityBack, IScheduleEntityFront } from 'helper/types/schedule.type';
 import {
   IDeleteScheduleEntity,
   IGetScheduleEntity,
   INewScheduleEntity,
   IUpdateScheduleEntity,
-} from '@helper/request/schedule.response';
+} from 'helper/request/schedule.response';
 import { scheduleBase } from '../helper/scheduleBase';
 import { parseSchedule } from '../helper/parseSchedule';
-import { USER_TYPE } from '@helper/types/user.type';
+import { USER_TYPE } from 'helper/types/user.type';
 
 export class ScheduleController {
   private repository = new ScheduleRepository();

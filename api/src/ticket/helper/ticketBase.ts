@@ -1,5 +1,5 @@
-import { INewTicketEntity } from '@helper/request/ticket.response';
-import { ITicketEntityBack } from '@helper/types/ticket.type';
+import { INewTicketEntity } from 'helper/request/ticket.response';
+import { ITicketEntityBack } from 'helper/types/ticket.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';

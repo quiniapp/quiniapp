@@ -1,4 +1,4 @@
-import { IUserEntityBack } from '@helper/types/user.type';
+import { IUserEntityBack } from 'helper/types/user.type';
 import { supabase } from 'api/database/db.connection';
 import dayjs from 'dayjs';
 

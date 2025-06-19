@@ -7,11 +7,122 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
 import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
-import { useForm } from 'react-hook-form';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
+import { INewBetEntity } from '../../../../helper/request/bet.response';
+import { BET_TYPE, PLACE_TYPE } from '../../../../helper/types/bet.type';
+import { useState } from 'react';
+import { useSessionStore } from '@/stores/sessionStore';
+import dayjs from 'dayjs';
+export interface IBetForm {
+  number?: string;
+  amount?: number;
+  place?: PLACE_TYPE;
+  with?: string | null;
+  position?: PLACE_TYPE | null;
+}
+
+const betTypeDictionary = (length?: number, redouble?: boolean) => {
+  switch (length) {
+    case 10:
+      return BET_TYPE.BORRATINA;
+      break;
+    case 4:
+      return BET_TYPE.QUATERN;
+      break;
+    case 3:
+      return BET_TYPE.TERN;
+      break;
+    case 2:
+      if (length === 2 && redouble) return BET_TYPE.REDOUBLE;
+      return BET_TYPE.DOUBLE;
+      break;
+    case 1:
+      return BET_TYPE.ONE;
+      break;
+  }
+};
 
 const FillOutATicket = () => {
-  const {} = useForm();
+  const { user } = useSessionStore();
+  const [bets, setBets] = useState<INewBetEntity[]>([]);
+  const [lotteries, setLotteries] = useState<string[]>([]);
+  const [schedules, setSchedules] = useState<string[]>([]);
+  const [bet, setBet] = useState<IBetForm>({
+    number: undefined,
+    amount: undefined,
+    place: PLACE_TYPE.HEAD,
+    with: null,
+    position: null,
+  });
+  const handleSchedules = (id: string) => {
+    setSchedules((prev) => {
+      if (prev.includes(id)) return prev.filter((sch) => sch !== id);
+      else return [...prev, id];
+    });
+  };
+  const handleLotteries = (id: string) => {
+    setLotteries((prev) => {
+      if (prev.includes(id)) return prev.filter((lot) => lot !== id);
+      else return [...prev, id];
+    });
+  };
+
+  const handleBet = (key: string, value: string | number) => {
+    setBet((prev) => {
+      if (key === 'place' || key === 'position') {
+        if (value === '1') {
+          return { ...prev, [key]: PLACE_TYPE.HEAD };
+        }
+        if (value === '5' || !value) {
+          return { ...prev, [key]: PLACE_TYPE.FIVE };
+        }
+        if (value === '10' || !value) {
+          return { ...prev, [key]: PLACE_TYPE.TEN };
+        }
+        if (value === '20' || !value) {
+          return { ...prev, [key]: PLACE_TYPE.TWENTY };
+        }
+      }
+
+      return { ...prev, [key]: value };
+    });
+  };
+
+  const handleCreateBet = () => {
+    const date = dayjs().format('DD-MM-YYYY');
+
+    const lotterySchedule = lotteries
+      .map((lot) => {
+        return schedules.map((sch) => {
+          return {
+            schedule_id: sch,
+            lottery_id: lot,
+          };
+        });
+      })
+      .flat();
+    setBets((prev) => {
+      const newBet = lotterySchedule.map((lotSched) => {
+        return {
+          ...lotSched,
+          number: bet.number,
+          amount: bet.amount,
+          place: bet.place,
+          with: bet.with,
+          position: bet.position,
+          bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length),
+          date: date,
+          user_id: user?.user_id,
+        } as INewBetEntity;
+      });
+      console.log('newBet', newBet);
+
+      return [...prev, ...newBet];
+    });
+  };
+  console.log(bets);
+
+
   const isEnabled = useIsButtonEnabled();
   return (
     <FlexCol className={'py-[0px]'}>
@@ -24,9 +135,10 @@ const FillOutATicket = () => {
                 <Input
                   id="number"
                   name={'ticket-number'}
-                  type={'number'}
-                  placeholder={'000000'}
+                  type={'string'}
+                  placeholder={'0000'}
                   className={'bg-[var(--bg-card)]'}
+                  onChange={(e) => handleBet('number', e.target.value)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
@@ -37,6 +149,7 @@ const FillOutATicket = () => {
                   type={'number'}
                   placeholder={'000000'}
                   className={'bg-[var(--bg-card)]'}
+                  onChange={(e) => handleBet('amount', e.target.value)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
@@ -45,8 +158,9 @@ const FillOutATicket = () => {
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
-                  placeholder={'000'}
+                  placeholder={'1, 5, 10, 20'}
                   className={'bg-[var(--bg-card)]'}
+                  onChange={(e) => handleBet('place', e.target.value)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
@@ -55,8 +169,9 @@ const FillOutATicket = () => {
                   id="with"
                   name={'ticket-with'}
                   type={'number'}
-                  placeholder={'000'}
+                  placeholder={'00'}
                   className={'bg-[var(--bg-card)]'}
+                  onChange={(e) => handleBet('with', e.target.value)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
@@ -67,6 +182,7 @@ const FillOutATicket = () => {
                   type={'number'}
                   placeholder={'000'}
                   className={'bg-[var(--bg-card)]'}
+                  onChange={(e) => handleBet('position', e.target.value)}
                 />
               </Box>
               <Flex className={' gap-4 pt-[24px]'}>
@@ -74,6 +190,7 @@ const FillOutATicket = () => {
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}
                   disabled={!isEnabled}
+                  onClick={() => handleCreateBet()}
                 >
                   <PlusIcon /> Agregar
                 </Button>
@@ -84,9 +201,9 @@ const FillOutATicket = () => {
             </FlexCol>
           </form>
         </Flex>
-        <GameTurns />
+        <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
-      <PlayDetailGameTable />
+      <PlayDetailGameTable bets={bets}/>
     </FlexCol>
   );
 };

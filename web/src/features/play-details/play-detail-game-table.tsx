@@ -8,9 +8,10 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
+import { INewBetEntity } from '../../../../helper/request/bet.response';
 
-const PlayDetailGameTable = () => {
-  const tablePlays = [];
+const PlayDetailGameTable = ({bets}:{bets:INewBetEntity[]}) => {
+
 
   const NoPlaysFound = () => (
     <TableRow>
@@ -37,7 +38,7 @@ const PlayDetailGameTable = () => {
           <TableHead className="text-right">Jugada en</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>{tablePlays.length === 0 ? <NoPlaysFound /> : <div>tabla</div>}</TableBody>
+      <TableBody>{bets.length === 0 ? <NoPlaysFound /> : <div>tabla</div>}</TableBody>
     </Table>
   );
 };

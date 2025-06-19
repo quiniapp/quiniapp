@@ -1,5 +1,5 @@
-import { IAuthLogin } from '@helper/types/auth.type';
-import { ERROR_MESSAGE } from '@helper/types/errors.type';
+import { IAuthLogin } from 'helper/types/auth.type';
+import { ERROR_MESSAGE } from 'helper/types/errors.type';
 import { supabase } from 'api/database/db.connection';
 
 export class AuthRepository {

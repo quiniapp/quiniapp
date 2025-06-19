@@ -1,8 +1,8 @@
-import { dateRegex } from '@helper/functions/dateRegex';
 import { z } from 'zod';
+import { dateRegex } from '../functions/dateRegex';
 export const newResultsSchema = z.object({
   results: z
-    .array(z.number().int().min(1000).max(9999))
+    .array(z.string().regex(/^\d{4}$/, { message: 'Debe tener exactamente 4 dígitos' }))
     .length(20, { message: 'Debe haber exactamente 20 números de 4 cifras' }),
   lottery_id: z.string(),
   schedule_id: z.string(),
@@ -17,7 +17,7 @@ export const newResultsSchema = z.object({
 
 export const editResultsSchema = z.object({
   results: z
-    .array(z.number().int().min(1000).max(9999))
+    .array(z.string().regex(/^\d{4}$/, { message: 'Debe tener exactamente 4 dígitos' }))
     .length(20, { message: 'Debe haber exactamente 20 números de 4 cifras' })
     .optional(),
   lottery_id: z.string().optional(),

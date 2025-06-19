@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { supabase } from '../../../database/db.connection';
-import { IGetResultsEntity } from '@helper/request/results.response';
+import { IGetResultsEntity } from 'helper/request/results.response';
 
 export class ResultsRepository {
   async create(payload: any) {

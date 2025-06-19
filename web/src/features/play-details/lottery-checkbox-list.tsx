@@ -5,18 +5,19 @@ import { LotteryType } from '@/types/lottery.type.ts';
 
 interface LotteryCheckboxListProps {
   lottery: LotteryType;
+  setLotteries: (id: string) => void;
 }
 
-const LotteryCheckboxList = ({ lottery }: LotteryCheckboxListProps) => {
+const LotteryCheckboxList = ({ lottery, setLotteries }: LotteryCheckboxListProps) => {
   return (
     <Flex className="items-center gap-2">
       <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
         {lottery.name}
       </Label>
-      <Checkbox
+      <Checkbox 
         id={lottery.lottery_id}
-        checked={lottery.active}
         className="border-2 border-primary"
+        onClick={()=>setLotteries(lottery.lottery_id)}
       />
     </Flex>
   );

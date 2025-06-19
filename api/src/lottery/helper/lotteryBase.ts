@@ -1,5 +1,5 @@
-import { INewLotteryEntity } from '@helper/request/lottery.response';
-import { ILotteryEntityBack } from '@helper/types/lottery.type';
+import { INewLotteryEntity } from 'helper/request/lottery.response';
+import { ILotteryEntityBack } from 'helper/types/lottery.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 
