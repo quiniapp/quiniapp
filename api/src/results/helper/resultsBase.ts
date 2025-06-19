@@ -1,5 +1,5 @@
-import { INewResultsEntity } from '@helper/request/results.response';
-import { IResultsBase } from '@helper/types/results.type';
+import { INewResultsEntity } from 'helper/request/results.response';
+import { IResultsBase } from 'helper/types/results.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 

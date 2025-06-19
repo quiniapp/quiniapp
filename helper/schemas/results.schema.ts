@@ -1,5 +1,5 @@
-import { dateRegex } from '@helper/functions/dateRegex';
 import { z } from 'zod';
+import { dateRegex } from '../functions/dateRegex';
 export const newResultsSchema = z.object({
   results: z
     .array(z.number().int().min(1000).max(9999))

@@ -1,4 +1,4 @@
-import { IResultsEntityBack, IResultsEntityFront } from '@helper/types/results.type';
+import { IResultsEntityBack, IResultsEntityFront } from 'helper/types/results.type';
 import { parseLottery } from 'api/src/lottery/helper/parseLottery';
 import { parseSchedule } from 'api/src/shcedule/helper/parseSchedule';
 

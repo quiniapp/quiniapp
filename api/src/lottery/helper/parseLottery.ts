@@ -1,4 +1,4 @@
-import { ILotteryEntityBack, ILotteryEntityFront } from '@helper/types/lottery.type';
+import { ILotteryEntityBack, ILotteryEntityFront } from 'helper/types/lottery.type';
 
 export const parseLottery = (lottery: ILotteryEntityBack): ILotteryEntityFront => {
   return {

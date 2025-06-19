@@ -1,9 +1,9 @@
 import { Request, RequestHandler, Response, Router } from 'express';
-import { APIResponse } from '@helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { APIResponse } from 'helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
-import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
-import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
+import { ICurrentAccountEntityFront } from 'helper/types/current_account.type';
+import { updateCurrentAccountSchema } from 'helper/schemas/current_account.schema';
 
 const mockCurrentAccounts: ICurrentAccountEntityFront[] = [
   {

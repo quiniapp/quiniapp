@@ -1,4 +1,4 @@
-import { USER_TYPE } from '@helper/types/user.type';
+import { USER_TYPE } from 'helper/types/user.type';
 import { supabase } from '../../../database/db.connection';
 import dayjs from 'dayjs';
 

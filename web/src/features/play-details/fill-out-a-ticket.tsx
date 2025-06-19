@@ -203,7 +203,7 @@ const FillOutATicket = () => {
         </Flex>
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
-      <PlayDetailGameTable />
+      <PlayDetailGameTable bets={bets}/>
     </FlexCol>
   );
 };

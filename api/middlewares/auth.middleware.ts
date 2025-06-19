@@ -1,9 +1,9 @@
-import { APIResponse } from '@helper/response/api_response.response';
-import { ITokenPayload } from '@helper/types/auth.type';
-import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
-import { IUserEntityFront } from '@helper/types/user.type';
 import { verifyUserToken } from 'api/helper/JWT';
 import { Request, Response, NextFunction } from 'express';
+import { APIResponse } from 'helper/response/api_response.response';
+import { ITokenPayload } from 'helper/types/auth.type';
+import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
+import { IUserEntityFront } from 'helper/types/user.type';
 
 declare module 'express' {
   export interface Request {
