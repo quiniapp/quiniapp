@@ -19,9 +19,9 @@
       "@/*": ["./src/*"],
       "@helper/*": ["../helper/*"]
     },
-    "include": [
-      "src",
-      "../helper"
-    ]
-  }
+  },
+  "include": [
+    "src",
+    "../helper"
+  ]
 }
