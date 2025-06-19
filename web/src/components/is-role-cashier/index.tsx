@@ -1,4 +1,4 @@
-import { USER_TYPE } from 'helper/types/user.type';
+import { USER_TYPE } from '../../../helper/types/user.type.ts';
 
 
 interface IsRoleCashierProps {

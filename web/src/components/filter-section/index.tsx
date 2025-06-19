@@ -15,7 +15,8 @@ import {
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSessionStore } from '@/stores/sessionStore';
-import { USER_TYPE } from 'helper/types/user.type';
+import { USER_TYPE } from '../../../helper/types/user.type.ts';
+
 
 
 interface FilterSectionProps {
