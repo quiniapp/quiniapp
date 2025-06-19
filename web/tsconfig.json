@@ -6,6 +6,10 @@
     }
   ],
   "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
     "moduleResolution": "node16",
     "module": "esnext",
     "types": ["tailwindcss"],
@@ -19,9 +23,9 @@
       "@/*": ["./src/*"],
       "@helper/*": ["../helper/*"]
     },
-    "include": [
-      "src",
-      "../helper"
-    ]
-  }
+  },
+  "include": [
+    "src",
+    "../helper"
+  ]
 }

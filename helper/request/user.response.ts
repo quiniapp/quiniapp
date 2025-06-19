@@ -12,5 +12,3 @@ export type IDeleteUserEntity = Pick<IUserEntityBack, 'user_id'>;
 export type IGetUserEntity = Partial<
   Pick<IUserEntityBack, 'user_id' | 'username' | 'number' | 'name'>
 >;
-
-

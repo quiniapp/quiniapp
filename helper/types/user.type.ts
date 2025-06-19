@@ -10,7 +10,6 @@ export enum CASHIER_TYPE {
   STREET = 'STREET',
 }
 
-
 interface BaseUserEntityBack {
   user_id: string;
   number: number;
@@ -68,4 +67,3 @@ export interface CashierUserEntityFront extends IBaseUserEntityFront {
 }
 
 export type IUserEntityFront = OwnerOrAdminUserEntityFront | CashierUserEntityFront;
-
