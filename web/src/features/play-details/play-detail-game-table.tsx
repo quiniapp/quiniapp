@@ -38,7 +38,22 @@ const PlayDetailGameTable = ({bets}:{bets:INewBetEntity[]}) => {
           <TableHead className="text-right">Jugada en</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>{bets.length === 0 ? <NoPlaysFound /> : <div>tabla</div>}</TableBody>
+      <TableBody>{bets.length === 0 ? <NoPlaysFound /> :bets.map(bet=>{
+return(
+
+  
+  <TableRow>
+        <TableCell>{bet.number}</TableCell>
+        <TableCell>{bet.with}</TableCell>
+        <TableCell>{bet.amount}</TableCell>
+        <TableCell>{bet.bet_type}</TableCell>
+        <TableCell>{bet.number}</TableCell>
+        <TableCell className="text-right">{bet.lottery_id}</TableCell>
+        </TableRow>
+        )
+      }
+      ) 
+        }</TableBody>
     </Table>
   );
 };

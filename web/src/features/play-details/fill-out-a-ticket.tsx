@@ -13,6 +13,8 @@ import { BET_TYPE, PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
+import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 export interface IBetForm {
   number?: string;
   amount?: number;
@@ -45,8 +47,8 @@ const betTypeDictionary = (length?: number, redouble?: boolean) => {
 const FillOutATicket = () => {
   const { user } = useSessionStore();
   const [bets, setBets] = useState<INewBetEntity[]>([]);
-  const [lotteries, setLotteries] = useState<string[]>([]);
-  const [schedules, setSchedules] = useState<string[]>([]);
+  const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
+  const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [bet, setBet] = useState<IBetForm>({
     number: undefined,
     amount: undefined,
@@ -54,16 +56,30 @@ const FillOutATicket = () => {
     with: null,
     position: null,
   });
-  const handleSchedules = (id: string) => {
+  const handleSchedules = (schedule: IScheduleEntityFront) => {
     setSchedules((prev) => {
-      if (prev.includes(id)) return prev.filter((sch) => sch !== id);
-      else return [...prev, id];
+      const newMap = new Map(prev); // Clonás el Map
+
+      if (newMap.has(schedule.schedule_id)) {
+        newMap.delete(schedule.schedule_id);
+      } else {
+        newMap.set(schedule.schedule_id, schedule);
+      }
+
+      return newMap; // Retornás un nuevo objeto
     });
   };
-  const handleLotteries = (id: string) => {
+  const handleLotteries = (lottery: ILotteryEntityFront) => {
     setLotteries((prev) => {
-      if (prev.includes(id)) return prev.filter((lot) => lot !== id);
-      else return [...prev, id];
+      const newMap = new Map(prev); // Clonás el Map
+
+      if (newMap.has(lottery.lottery_id)) {
+        newMap.delete(lottery.lottery_id);
+      } else {
+        newMap.set(lottery.lottery_id, lottery);
+      }
+
+      return newMap; // Retornás un nuevo objeto
     });
   };
 
@@ -121,7 +137,6 @@ const FillOutATicket = () => {
     });
   };
   console.log(bets);
-
 
   const isEnabled = useIsButtonEnabled();
   return (
@@ -203,7 +218,7 @@ const FillOutATicket = () => {
         </Flex>
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
-      <PlayDetailGameTable bets={bets}/>
+      <PlayDetailGameTable bets={bets} />
     </FlexCol>
   );
 };
