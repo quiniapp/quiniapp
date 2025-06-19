@@ -37,4 +37,8 @@ export const ROUTES = {
     base: `${PRIVATE}/current_account`,
     id: (id: string) => `${PRIVATE}/current_account/${id}`,
   },
+  results: {
+    base: `${PRIVATE}/results`,
+
+  }
 };
