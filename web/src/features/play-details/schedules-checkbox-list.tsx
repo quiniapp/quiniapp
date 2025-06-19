@@ -1,28 +1,28 @@
-import { ClockIcon } from "lucide-react";
+import { ClockIcon } from 'lucide-react';
 // Components UI
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 // Components
 import { Flex, FlexCol } from '@/components/flex';
-import Box from "@/components/box";
-import HeaderTitleSection from "@/components/header-title-section";
+import Box from '@/components/box';
+import HeaderTitleSection from '@/components/header-title-section';
 // Hooks
 import { useKeyboardCheckboxes } from '@/hooks/useHotkeyCheckbox';
 
-
 interface SchedulesProps {
-  time: string
-  schedule_id: string
-  name: string
+  time: string;
+  schedule_id: string;
+  name: string;
 }
 
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
+  setSchedules: (id: string) => void;
 }
 
 const KEY_LABELS = ['F1', 'F2', 'F3', 'F4', 'F5'];
 
-const ScheduleCheckboxList = ({ schedules }: SchedulesCheckboxListProps) => {
+const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxListProps) => {
   const { f1, f2, f3, f4, f5 } = useKeyboardCheckboxes();
 
   const keyboardMap = [f1, f2, f3, f4, f5];
@@ -46,7 +46,10 @@ const ScheduleCheckboxList = ({ schedules }: SchedulesCheckboxListProps) => {
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
                 checked={keyHandler.checked}
-                onCheckedChange={() => keyHandler.setChecked((prev) => !prev)}
+                onClick={() => {
+                  keyHandler.setChecked((prev) => !prev);
+                  setSchedules(schedule.schedule_id);
+                }}
                 className="border-2 border-primary"
               />
             </Flex>
@@ -55,6 +58,6 @@ const ScheduleCheckboxList = ({ schedules }: SchedulesCheckboxListProps) => {
       </Box>
     </FlexCol>
   );
-}
+};
 
 export default ScheduleCheckboxList;

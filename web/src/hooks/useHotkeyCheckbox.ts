@@ -34,6 +34,20 @@ export const useKeyboardCheckboxes = (): CheckboxStateMap => {
       if (keyMap[e.key]) {
         e.preventDefault();
         keyMap[e.key]((prev) => !prev);
+
+        // Activar manualmente el click
+        const refMap: Record<string, React.RefObject<HTMLButtonElement | null>> = {
+          F1: refF1,
+          F2: refF2,
+          F3: refF3,
+          F4: refF4,
+          F5: refF5,
+        };
+
+        const ref = refMap[e.key];
+        if (ref?.current) {
+          ref.current.click();
+        }
       }
     };
 

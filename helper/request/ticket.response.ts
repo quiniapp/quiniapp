@@ -1,5 +1,5 @@
-import { IUserEntityBack } from '@helper/types/user.type';
 import { ITicketEntityBack } from '../types/ticket.type';
+import { IUserEntityBack } from '../types/user.type';
 import { INewBetEntity } from './bet.response';
 
 export type INewTicketEntity = Pick<ITicketEntityBack, 'user_id' | 'user_name' | 'date'> & {
