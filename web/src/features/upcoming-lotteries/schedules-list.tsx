@@ -10,7 +10,6 @@ export interface ScheduleProps {
   active: boolean;
 }
 
-
 interface ScheduleRadioGroupProps<T extends FieldValues> {
   schedules: ScheduleProps[];
   control: Control<T>;
@@ -18,10 +17,10 @@ interface ScheduleRadioGroupProps<T extends FieldValues> {
 }
 
 export function ScheduleRadioGroup<T extends FieldValues>({
-                                                            schedules,
-                                                            control,
-                                                            name,
-                                                          }: ScheduleRadioGroupProps<T>) {
+  schedules,
+  control,
+  name,
+}: ScheduleRadioGroupProps<T>) {
   if (!Array.isArray(schedules) || schedules.length === 0) return null;
 
   return (

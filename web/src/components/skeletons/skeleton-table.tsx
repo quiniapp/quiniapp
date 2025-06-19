@@ -1,10 +1,5 @@
-
 const SkeletonTable = () => {
-  return (
-    <div>
-
-    </div>
-  );
+  return <div></div>;
 };
 
 export default SkeletonTable;

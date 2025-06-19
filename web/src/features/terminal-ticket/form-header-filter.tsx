@@ -39,7 +39,7 @@ const FormHeaderFilter = () => {
                     <TypographyMuted label={'Fecha'} />
                   </Box>
                   <Box className={'w-[200px] overflow-hidden'}>
-                    <SelectDayToSearch onDayChange={() => {}}  className={'!w-[200px]'} />
+                    <SelectDayToSearch onDayChange={() => {}} className={'!w-[200px]'} />
                   </Box>
                 </Flex>
                 <Flex className={'w-[150px]'}>

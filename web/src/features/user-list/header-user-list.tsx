@@ -1,6 +1,7 @@
 import { Flex } from '@/components/flex';
 import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 import {
   Select,
@@ -9,10 +10,10 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-
+import { ROUTES } from '@/types/routes.type.ts';
 
 const HeaderUserList = () => {
-
+  const navigate = useNavigate();
   return (
     <Flex className={'items-center gap-4'}>
       <Flex className={'gap-4 items-center'}>
@@ -32,8 +33,9 @@ const HeaderUserList = () => {
         className={'!hover:cursor-pointer bg-[--primary-800]'}
         type={'button'}
         variant={'outline'}
+        onClick={() => navigate(ROUTES.NEW_USER)}
       >
-        Actualizar
+        Crear nuevo
       </Button>
     </Flex>
   );

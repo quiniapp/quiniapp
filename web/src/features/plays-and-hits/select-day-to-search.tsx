@@ -14,11 +14,7 @@ interface SelectDayToSearchProps {
   className?: string;
 }
 
-export function SelectDayToSearch({
-                                    selectedDay,
-                                    onDayChange,
-                                    className,
-                                  }: SelectDayToSearchProps) {
+export function SelectDayToSearch({ selectedDay, onDayChange, className }: SelectDayToSearchProps) {
   // Maintain internal Date state synced with selectedDay prop
   const [date, setDate] = useState<Date | undefined>(
     selectedDay ? parseISO(selectedDay) : undefined

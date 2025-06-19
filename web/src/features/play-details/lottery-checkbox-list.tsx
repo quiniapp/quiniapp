@@ -13,6 +13,7 @@ const LotteryCheckboxList = ({ lottery, setLotteries }: LotteryCheckboxListProps
     <Flex className="items-center gap-2">
       <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
         {lottery.name}
+        {lottery.name}
       </Label>
       <Checkbox 
         id={lottery.lottery_id}

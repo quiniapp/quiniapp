@@ -3,6 +3,7 @@ import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 
 const NewUserContent = () => {
+  // se mandan  {newUser:{…..}}
   return (
     <Box>
       <HeaderSection title={'Crear nuevo usuario'} />

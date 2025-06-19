@@ -11,7 +11,7 @@ export interface Totals {
   leave: number;
 }
 
-export interface ICurrentAccountEntityFront{
+export interface ICurrentAccountEntityFront {
   claims: number;
   collections: number;
   current_account_id: string;

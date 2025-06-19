@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils.ts';
 import { useLogout } from '@/features/auth/use-logout';
 
 import { useSessionStore } from '@/stores/sessionStore';
-import { filterMenuItemsByRole  } from '@/utils/menu-access.ts';
+import { filterMenuItemsByRole } from '@/utils/menu-access.ts';
 import { MENU_ITEM } from '@/types/menu-item.tsx';
 
 interface AsideProps {
@@ -35,7 +35,7 @@ const Aside = ({ isOpen }: AsideProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { mutate: logoutMutation, isPending: isLoggingOut, isError: logoutError } = useLogout();
-  const role = useSessionStore(state => state.role);
+  const role = useSessionStore((state) => state.role);
   const visibleMenu = filterMenuItemsByRole(role, MENU_ITEMS);
   const handleLogoutClick = () => {
     logoutMutation();
@@ -50,7 +50,6 @@ const Aside = ({ isOpen }: AsideProps) => {
         </button>
         */
   }
-
 
   return (
     <Sidebar

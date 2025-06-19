@@ -7,6 +7,7 @@ import { INewBetEntity } from '../../../../helper/request/bet.response';
 
 
 const PlayDetailsContent = () => {
+  //! ResultsOverview crea el ticket
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
    

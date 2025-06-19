@@ -7,7 +7,7 @@ const HeaderPlayAndHits = () => {
     <HeaderSection title={'Juagadas'} className={'w-full'}>
       <Flex className={'justify-end  w-full items-center space-x-[24px] '}>
         <span className={'text-sm text-muted-foreground'}> Selecinar fecha</span>
-        <SelectDayToSearch onDayChange={() => {}}  />
+        <SelectDayToSearch onDayChange={() => {}} />
       </Flex>
     </HeaderSection>
   );
