@@ -28,7 +28,9 @@ import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type'
 import { UserSchema } from '@helper/schemas/user.schema';
 
 
+
 export default function UserListAddNewUserForm() {
+
   const {
     handleSubmit,
     control,

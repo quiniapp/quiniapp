@@ -7,7 +7,11 @@ import {
   TableCell,
 } from '@/components/ui/table';
 
-const TableTerminalTicket = () => {
+interface TableTerminalTicketProps {
+  data: any[];
+  onTicketClick?: (ticket: any) => void;
+}
+const TableTerminalTicket = ({ data, onTicketClick }: TableTerminalTicketProps) => {
   return (
     <div className="border mb-4">
       <Table className="min-w-full table-fixed">
@@ -23,12 +27,18 @@ const TableTerminalTicket = () => {
       <div className="overflow-y-auto h-[200px] 1440:h-[300px]">
         <Table className="min-w-full table-fixed">
           <TableBody>
-            {Array.from({ length: 20 }).map((_, idx) => (
-              <TableRow key={idx} className={' '}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>Pasador {idx + 1}</TableCell>
-                <TableCell>${(idx + 1) * 100}</TableCell>
-                <TableCell className={'text-right'}>Pagado</TableCell>
+            {data?.map((item:any) => (
+              <TableRow
+                key={item.ticket_id}
+                className="cursor-pointer hover:bg-primary-light transition"
+                onClick={() => onTicketClick?.(item)}
+              >
+                <TableCell>{item.ticket_number}</TableCell>
+                <TableCell>{item.user_name}</TableCell>
+                <TableCell>${item.total}</TableCell>
+                <TableCell className={'text-right'}>
+                  {item.paid ? 'Pagado' : 'No pagado'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -4,17 +4,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../styles/App.css';
 import { Toaster } from 'react-hot-toast';
 
-import { ThemeProvider } from '../providers/theme-provider.tsx';
-import { RoutesContent } from '../routes/route.tsx';
+import { ThemeProvider } from '../providers/theme-provider';
+import { RoutesContent } from '../routes/route';
 
-import { ModalProvider } from '@/providers/modal-provider.tsx';
-import { useSessionStore } from '@/stores/sessionStore.ts';
+import { ModalProvider } from '@/providers/modal-provider';
+
 
 const router = createBrowserRouter(RoutesContent);
 
 function App() {
   const queryClient = new QueryClient();
-  console.log('Zustand role', useSessionStore.getState().role);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
