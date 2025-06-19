@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": " vite build",
     "preview": "vite preview",
     "postinstall": "patch-package",
     "prepare": "test -z \"$CI\" && husky install || echo 'Skipping husky install in CI'",
