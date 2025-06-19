@@ -1,4 +1,4 @@
-import { IBetEntityBack, IBetEntityFront } from '@helper/types/bet.type';
+import { IBetEntityBack, IBetEntityFront } from 'helper/types/bet.type';
 import { parseLottery } from 'api/src/lottery/helper/parseLottery';
 import { parseSchedule } from 'api/src/shcedule/helper/parseSchedule';
 

@@ -1,14 +1,14 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { ResultsController } from '../controller/results.controller';
-import { APIResponse } from '@helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
-import { USER_TYPE } from '@helper/types/user.type';
-import { IResultsEntityFront } from '@helper/types/results.type';
+import { APIResponse } from 'helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
+import { USER_TYPE } from 'helper/types/user.type';
+import { IResultsEntityFront } from 'helper/types/results.type';
 import {
   editResultsSchema,
   getResultsSchema,
   newResultsSchema,
-} from '@helper/schemas/results.schema';
+} from 'helper/schemas/results.schema';
 
 export class ResultsRouter {
   public router: Router;

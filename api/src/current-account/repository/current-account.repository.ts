@@ -1,4 +1,4 @@
-import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.response';
+import { IUpdateCurrentAccountEntity } from 'helper/request/current_account.response';
 import { supabase } from '../../../database/db.connection';
 import dayjs from 'dayjs';
 

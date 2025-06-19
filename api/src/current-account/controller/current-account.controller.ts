@@ -1,10 +1,10 @@
-import { USER_TYPE } from '@helper/types/user.type';
+import { USER_TYPE } from 'helper/types/user.type';
 import {
   IGetAllCurrentAccountEntity,
   IUpdateCurrentAccountEntity,
-} from '@helper/request/current_account.response';
+} from 'helper/request/current_account.response';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
-import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import { ICurrentAccountEntityFront } from 'helper/types/current_account.type';
 import { parseCurrentAccount } from '../helper/parseCurrentAccount';
 
 export class CurrentAccountController {
