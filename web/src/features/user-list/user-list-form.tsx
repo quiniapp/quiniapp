@@ -24,10 +24,11 @@ import type { INewUserEntityForm } from '@/types/user.type';
 import { useAddNewUser } from '@/hooks/useAddNewUser';
 
 import { toast } from 'react-hot-toast';
-import { CASHIER_TYPE, USER_TYPE } from '../../../../helper/types/user.type';
-import {UserSchema} from '../../../../helper/schemas/user.schema'
+import { UserSchema } from '../../../helper/schemas/user.schema.ts';
+import { CASHIER_TYPE, USER_TYPE } from '../../../helper/types/user.type.ts';
 
 export default function UserListAddNewUserForm() {
+
   const {
     handleSubmit,
     control,

@@ -2,7 +2,7 @@ import { supabase } from '../../../database/db.connection';
 
 export class WinnerRepository {
   async generateWinners() {
-    const { error } = await supabase.rpc('calculate_all_bet_winnings');
+    const { error } = await supabase.rpc('process_bets');
 
     if (error) throw error;
     return true;
