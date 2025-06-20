@@ -124,7 +124,7 @@ export class ResultsRouter {
       }
       const { results_id, date, lottery_id, schedule_id } = parsed.data;
       const results = await this.controller.get({ results_id, date, lottery_id, schedule_id });
-      const response: APIResponse<IResultsEntityFront> = {
+      const response: APIResponse<IResultsEntityFront | []> = {
         data: {
           results,
         },

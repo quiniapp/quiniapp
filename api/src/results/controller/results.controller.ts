@@ -23,13 +23,14 @@ export class ResultsController {
     }
   };
 
-  get = async (props: IGetResultsEntity): Promise<IResultsEntityFront> => {
+  get = async (props: IGetResultsEntity): Promise<IResultsEntityFront | []> => {
     let results;
     try {
       if (props?.results_id) {
         results = await this.repository.getById(props.results_id);
       } else results = await this.repository.get(props);
-      return parseResults(results);
+      if (!results.length) return [];
+      return parseResults(results[0]);
     } catch (error) {
       console.error('Get error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
