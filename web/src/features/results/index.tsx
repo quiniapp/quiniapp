@@ -7,45 +7,61 @@ import HeaderSection from '@/components/header-section';
 import HeaderTitleSection from '@/components/header-title-section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input.tsx';
-import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
+
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 import QuiniChecks from '@/features/results/quini-check.tsx';
 import ResultShifts from '@/features/results/shifts.tsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
+import { useSchedules } from '@/hooks/useSchedules.ts';
+import { useLotteries } from '@/hooks/useLotteries.ts';
+import { useResults } from '@/hooks/useResults.ts';
 
 const ResultsContent = () => {
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
-  const [selectedShift, setSelectedShift] = useState<string | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<string | null>(null);
   const [selectedLottery, setSelectedLottery] = useState<string | null>(null);
   const [onEdit, setOnEdit] = useState(true);
 
-  const quinielas = [
-    { id: 'nacional', label: 'Nacional' },
-    { id: 'provincia', label: 'Provincia' },
-    { id: 'santafe', label: 'Santa Fe' },
-    { id: 'entrerios', label: 'Entre Rios' },
-    { id: 'cordoba', label: 'Cordoba' },
-  ];
-  const handleShiftSelect = (shiftId: string) => {
-    setSelectedShift(shiftId);
-  };
+  const { data: fetchSchedules } = useSchedules();
+  const { data: fetchLotteries } = useLotteries();
+  const { data: getResults } = useResults();
+  
 
-  const handleLotterySelect = (quinielaId: string) => {
-    setSelectedLottery(quinielaId);
-  };
+  const schedules = fetchSchedules?.data?.schedule || [];
+  const lotteries = fetchLotteries?.data?.lottery || [];
+
+  const result = getResults?.data?.results || [];
+
+
+
+    const handleScheduleSelect = (scheduleId: string) => {
+      setSelectedSchedule(scheduleId);
+
+    };
+
+    const handleLotterySelect = (lotteryId: string) => {
+      setSelectedLottery(lotteryId);
+
+    };
 
   useEffect(() => {
-    if (selectedShift && selectedLottery) {
-      const newResults = Array.from({ length: 20 }, () =>
-        Math.floor(Math.random() * 10000)
-          .toString()
-          .padStart(2, '0')
+    if (selectedSchedule && selectedLottery) {
+      const match = result.find(
+        (item: any) =>
+          item.lottery.lottery_id === selectedLottery &&
+          item.schedule.schedule_id === selectedSchedule
       );
-      setResults(newResults);
+
+      if (match) {
+        setResults(match.results);
+      } else {
+        setResults(Array(20).fill(''));
+      }
     } else {
       setResults(Array(20).fill(''));
     }
-  }, [selectedShift, selectedLottery]);
+  }, [selectedSchedule, selectedLottery, result]);
+
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -68,8 +84,8 @@ const ResultsContent = () => {
         </Flex>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
           <FlexCol className="  rounded-xl   space-y-6">
-            <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
-            <QuiniChecks quini={quinielas} onLotterySelect={handleLotterySelect} />
+            <ResultShifts schedules={schedules} onScheduleSelect={handleScheduleSelect} />
+            <QuiniChecks quini={lotteries} onLotterySelect={handleLotterySelect} />
           </FlexCol>
           <div className=" ">
             <HeaderTitleSection

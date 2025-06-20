@@ -8,8 +8,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 type Quini = {
-  id: string;
-  label: string;
+  lottery_id: string;
+  name: string;
 };
 
 interface ResultQuinisProps {
@@ -29,15 +29,19 @@ const QuiniChecks = ({ quini, onLotterySelect }: ResultQuinisProps) => {
         />
 
         <RadioGroup onValueChange={onLotterySelect}>
-          <Box className="grid 1440:grid-cols-3 grid-cols-2 1440:gap-4 gap-1">
+          <Box className="grid 1440:grid-cols-4 grid-cols-4 1440:gap-4 gap-1">
             {quini.map((turno: Quini) => (
-              <Flex key={turno.id} className=" h-[36px] items-center space-x-4">
-                <RadioGroupItem value={turno.id} id={turno.id} className="border border-primary" />
+              <Flex key={turno.lottery_id} className=" h-[36px] items-center space-x-4">
+                <RadioGroupItem
+                  value={turno.lottery_id}
+                  id={turno.lottery_id}
+                  className="border border-primary"
+                />
                 <Label
-                  htmlFor={turno.id}
+                  htmlFor={turno.lottery_id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  {turno.label}
+                  {turno.name}
                 </Label>
               </Flex>
             ))}

@@ -8,11 +8,14 @@ import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
 import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
-import { INewBetEntity } from '../../../../helper/request/bet.response';
-import { BET_TYPE, PLACE_TYPE } from '../../../../helper/types/bet.type';
+import { BET_TYPE, PLACE_TYPE } from '../../../helper/types/bet.type';
+import { INewBetEntity } from '../../../helper/request/bet.response';
+
+
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
+
 export interface IBetForm {
   number?: string;
   amount?: number;
@@ -120,8 +123,6 @@ const FillOutATicket = () => {
       return [...prev, ...newBet];
     });
   };
-  console.log(bets);
-
 
   const isEnabled = useIsButtonEnabled();
   return (
@@ -203,7 +204,7 @@ const FillOutATicket = () => {
         </Flex>
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
-      <PlayDetailGameTable bets={bets}/>
+      <PlayDetailGameTable bets={bets} />
     </FlexCol>
   );
 };

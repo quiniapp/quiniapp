@@ -108,10 +108,6 @@ const useTerminalTicketHook = () => {
     }
   };
 
-
-  console.log('Eliminando ticket con ID:', selectedTicket?.ticket_id ?? 'Ninguno seleccionado');
-
-
   return {
     data,
     isPending,

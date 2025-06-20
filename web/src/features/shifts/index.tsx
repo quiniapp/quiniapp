@@ -6,12 +6,12 @@ const ShiftsContent = () => {
     <Box className={'grid grid-rows-[auto_1fr] 1440:grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Turnos'} />
       <div>
-        <p> Cierra -1 minutos antes de cada sorteo</p>
-        lista
+        <p> This page is under construction</p>
+
       </div>
 
       <div>
-        <button> boton</button>
+
       </div>
     </Box>
   );
