@@ -30,7 +30,7 @@ export class ResultsController {
         results = await this.repository.getById(props.results_id);
       } else results = await this.repository.get(props);
       if (!results.length) return [];
-      return parseResults(results);
+      return parseResults(results[0]);
     } catch (error) {
       console.error('Get error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
