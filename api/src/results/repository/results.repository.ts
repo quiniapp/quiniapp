@@ -68,7 +68,6 @@ export class ResultsRepository {
       .eq('schedule_id', props.schedule_id)
       .eq('lottery_id', props.lottery_id)
       .eq('date', props.date);
-
     if (error) throw new Error(error.details);
     return data;
   }
