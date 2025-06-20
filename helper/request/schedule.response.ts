@@ -1,4 +1,4 @@
-import { IScheduleEntityBack } from '@helper/types/schedule.type';
+import { IScheduleEntityBack } from '../types/schedule.type';
 
 export type INewScheduleEntity = Pick<IScheduleEntityBack, 'name' | 'time'>;
 
