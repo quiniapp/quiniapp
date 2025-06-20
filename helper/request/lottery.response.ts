@@ -1,4 +1,4 @@
-import { ILotteryEntityBack } from '@helper/types/lottery.type';
+import { ILotteryEntityBack } from '../types/lottery.type';
 
 export type INewLotteryEntity = Pick<ILotteryEntityBack, 'name'>;
 

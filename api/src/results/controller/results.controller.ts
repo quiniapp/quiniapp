@@ -23,12 +23,13 @@ export class ResultsController {
     }
   };
 
-  get = async (props: IGetResultsEntity): Promise<IResultsEntityFront> => {
+  get = async (props: IGetResultsEntity): Promise<IResultsEntityFront | []> => {
     let results;
     try {
       if (props?.results_id) {
         results = await this.repository.getById(props.results_id);
       } else results = await this.repository.get(props);
+      if (!results.length) return [];
       return parseResults(results);
     } catch (error) {
       console.error('Get error:', error);

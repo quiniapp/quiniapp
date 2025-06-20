@@ -1,4 +1,4 @@
-import { IResultsEntityBack } from '@helper/types/results.type';
+import { IResultsEntityBack } from '../types/results.type';
 
 export type INewResultsEntity = Pick<IResultsEntityBack, 'results' | 'lottery_id' | 'schedule_id'> &
   Partial<Pick<IResultsEntityBack, 'date'>>;
