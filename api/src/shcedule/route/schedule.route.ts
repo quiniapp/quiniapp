@@ -97,7 +97,7 @@ export class ScheduleRouter {
       return;
     }
     try {
-      const schedule = await this.controller.getAll(user?.user?.user_type);
+      const schedule = await this.controller.getAll();
       const response: APIResponse<IScheduleEntityFront[]> = {
         data: {
           schedule,

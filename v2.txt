@@ -1,4 +1,5 @@
 Para la v2
+    !! Usar * para poner en 0 el contador
     Editar horarios, habilitar horarios, agregar horarios
     Editar loterias, agregar loterias
     Habilitar horarios para quinielas de forma independiente, tabla intermedia

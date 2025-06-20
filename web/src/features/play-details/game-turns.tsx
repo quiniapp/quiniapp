@@ -9,10 +9,12 @@ import ScheduleCheckboxList from '@/features/play-details/schedules-checkbox-lis
 import LotteryCheckboxList from '@/features/play-details/lottery-checkbox-list.tsx';
 import Box from '@/components/box';
 import { LotteryType } from '@/types/lottery.type.ts';
+import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 
 interface IGameTurns {
-  setLotteries: (id: string) => void;
-  setSchedules: (id: string) => void;
+  setLotteries: (lottery: ILotteryEntityFront) => void
+  setSchedules: (schedule: IScheduleEntityFront) => void
 }
 
 const GameTurns = ({ setLotteries, setSchedules }: IGameTurns) => {

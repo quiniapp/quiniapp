@@ -8,7 +8,6 @@ import {
 } from 'helper/request/schedule.response';
 import { scheduleBase } from '../helper/scheduleBase';
 import { parseSchedule } from '../helper/parseSchedule';
-import { USER_TYPE } from 'helper/types/user.type';
 
 export class ScheduleController {
   private repository = new ScheduleRepository();
@@ -34,9 +33,9 @@ export class ScheduleController {
     }
   };
 
-  getAll = async (user_type: USER_TYPE): Promise<IScheduleEntityFront[]> => {
+  getAll = async (): Promise<IScheduleEntityFront[]> => {
     try {
-      const schedules: IScheduleEntityBack[] = await this.repository.getAll(user_type);
+      const schedules: IScheduleEntityBack[] = await this.repository.getAll();
 
       return schedules.map((schedule) => {
         return parseSchedule(schedule);

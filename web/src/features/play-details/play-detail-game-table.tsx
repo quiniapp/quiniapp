@@ -9,10 +9,9 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
+import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
 
-const PlayDetailGameTable = ({bets}:{bets:INewBetEntity[]}) => {
-
-
+const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
   const NoPlaysFound = () => (
     <TableRow>
       <TableCell colSpan={6} className="text-center !py-[36px]">
@@ -34,26 +33,28 @@ const PlayDetailGameTable = ({bets}:{bets:INewBetEntity[]}) => {
           <TableHead>Con</TableHead>
           <TableHead>Monto</TableHead>
           <TableHead>JugadaT</TableHead>
-          <TableHead>Bloque</TableHead>
-          <TableHead className="text-right">Jugada en</TableHead>
+          <TableHead>Jugada en</TableHead>
+          <TableHead className="text-right">Turno</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>{bets.length === 0 ? <NoPlaysFound /> :bets.map(bet=>{
-return(
-
-  
-  <TableRow>
-        <TableCell>{bet.number}</TableCell>
-        <TableCell>{bet.with}</TableCell>
-        <TableCell>{bet.amount}</TableCell>
-        <TableCell>{bet.bet_type}</TableCell>
-        <TableCell>{bet.number}</TableCell>
-        <TableCell className="text-right">{bet.lottery_id}</TableCell>
-        </TableRow>
-        )
-      }
-      ) 
-        }</TableBody>
+      <TableBody>
+        {bets.length === 0 ? (
+          <NoPlaysFound />
+        ) : (
+          bets.map((bet) => {
+            return (
+              <TableRow>
+                <TableCell>{bet.number}</TableCell>
+                <TableCell>{bet.with}</TableCell>
+                <TableCell>{bet.amount}</TableCell>
+                <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                <TableCell>{bet.lotteries.name}</TableCell>
+                <TableCell className="text-right">{bet.schedules.name}</TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </TableBody>
     </Table>
   );
 };

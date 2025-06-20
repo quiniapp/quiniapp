@@ -2,10 +2,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Flex } from '@/components/flex';
 import { Label } from '@/components/ui/label.tsx';
 import { LotteryType } from '@/types/lottery.type.ts';
+import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 
 interface LotteryCheckboxListProps {
   lottery: LotteryType;
-  setLotteries: (id: string) => void;
+    setLotteries: (lottery: ILotteryEntityFront) => void
 }
 
 const LotteryCheckboxList = ({ lottery, setLotteries }: LotteryCheckboxListProps) => {
@@ -17,7 +18,7 @@ const LotteryCheckboxList = ({ lottery, setLotteries }: LotteryCheckboxListProps
       <Checkbox 
         id={lottery.lottery_id}
         className="border-2 border-primary"
-        onClick={()=>setLotteries(lottery.lottery_id)}
+        onClick={()=>setLotteries(lottery)}
       />
     </Flex>
   );

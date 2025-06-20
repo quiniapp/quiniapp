@@ -8,6 +8,7 @@ import Box from '@/components/box';
 import HeaderTitleSection from '@/components/header-title-section';
 // Hooks
 import { useKeyboardCheckboxes } from '@/hooks/useHotkeyCheckbox';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 
 interface SchedulesProps {
   time: string;
@@ -17,7 +18,7 @@ interface SchedulesProps {
 
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
-  setSchedules: (id: string) => void;
+    setSchedules: (schedule: IScheduleEntityFront) => void
 }
 
 const KEY_LABELS = ['F1', 'F2', 'F3', 'F4', 'F5'];
@@ -48,7 +49,7 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
                 checked={keyHandler.checked}
                 onClick={() => {
                   keyHandler.setChecked((prev) => !prev);
-                  setSchedules(schedule.schedule_id);
+                  setSchedules(schedule);
                 }}
                 className="border-2 border-primary"
               />
