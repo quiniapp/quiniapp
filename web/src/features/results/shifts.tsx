@@ -61,7 +61,7 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-  console.log(keyboardMap)
+  console.log(schedules)
   return (
     <Box className="  rounded-lg px-4 1440:py-8 py-4 bg-card">
 
@@ -76,7 +76,7 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
           {schedules?.map((turno: Shift, index) => (
             <Flex key={turno.schedule_id} className=" h-[36px]  items-center space-x-4">
               <RadioGroupItem
-                ref={keyboardMap[index].ref}
+                ref={keyboardMap[index]?.ref}
                 id={turno.schedule_id}
                 value={turno.schedule_id}
                 className="border border-primary"
