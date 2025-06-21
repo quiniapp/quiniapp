@@ -30,6 +30,7 @@ export class ResultsRouter {
   private newResultshandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { newResults } = req.body;
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {

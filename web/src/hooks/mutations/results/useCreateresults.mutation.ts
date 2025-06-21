@@ -5,7 +5,7 @@ import { INewResultsEntity  } from '../../../../helper/request/results.response.
 
 const performCreateResults = async (
 
-  updateResults: INewResultsEntity
+  createResults: INewResultsEntity
 ): Promise<void> => {
   const res = await fetch(ROUTES.results.base, {
     method: 'POST',
@@ -13,7 +13,7 @@ const performCreateResults = async (
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify({ updateResults }),
+    body: JSON.stringify({ newResults:createResults }),
   });
 
   if (!res.ok) {
@@ -28,10 +28,11 @@ export const useCreateResults = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({  updateResults }: {  updateResults: INewResultsEntity }) =>
-      performCreateResults(updateResults),
+    mutationFn: ({  createResults }: {  createResults: INewResultsEntity }) =>
+      performCreateResults(createResults),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['results'] });
     },
+    
   });
 };

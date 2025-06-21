@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Clock, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -21,28 +21,19 @@ import { useLotteries } from '@/hooks/useLotteries';
 import { useResults } from '@/hooks/fetchs/results/useResults';
 import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mutation';
 
-import { IUpdateResultsEntity } from '../../../helper/request/results.response';
-
-interface IResultItem {
-  lottery: {
-    lottery_id: string;
-  };
-  schedule: {
-    schedule_id: string;
-  };
-  date: string;
-  results_id: string;
-  results: string[];
-}
+import { useSessionStore } from '@/stores/sessionStore';
+import { USER_TYPE } from '../../../helper/types/user.type';
+import { useCreateResults } from '@/hooks/mutations/results/useCreateresults.mutation';
+import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 
 const ResultsContent = () => {
+  const { role } = useSessionStore();
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
   const [selectedSchedule, setSelectedSchedule] = useState<string | undefined>();
   const [selectedLottery, setSelectedLottery] = useState<string | undefined>();
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
-
-  const [onEdit, setOnEdit] = useState(true);
-
+  const [onEdit, setOnEdit] = useState(false);
+  const { mutate: createResults, isPending: isPendingResults } = useCreateResults();
   const { data: fetchSchedules } = useSchedules();
   const { data: fetchLotteries } = useLotteries();
   const { data: getResults } = useResults({
@@ -51,11 +42,12 @@ const ResultsContent = () => {
     date: selectedDate,
   });
   const { mutate: updateResults, isPending } = useUpdateResults();
+  const { mutate: generateWinners, isPending: isPendingWinners } = useGenerateWinners();
 
   const schedules = fetchSchedules?.data?.schedule || [];
   const lotteries = fetchLotteries?.data?.lottery || [];
 
-  const result = getResults?.data?.results || [];
+  let result = getResults?.data?.results ?? { results: [], results_id: '' };
 
   const handleScheduleSelect = (scheduleId: string) => {
     setSelectedSchedule(scheduleId);
@@ -65,82 +57,67 @@ const ResultsContent = () => {
     setSelectedLottery(lotteryId);
   };
 
-  useEffect(() => {
-    if (selectedSchedule !== undefined && selectedLottery !== undefined) {
-      const rawResults = getResults?.data?.results.length
-        ? getResults?.data?.results[0]
-        : undefined;
-
-      if (rawResults) {
-        setResults(rawResults);
-      } else {
-        setResults(Array(20).fill(''));
-      }
-    }
-  }, [getResults?.data?.results, selectedSchedule, selectedLottery]);
-
-  /*
-  *  useEffect(() => {
-     if (selectedSchedule && selectedLottery) {
-       const match = result.find(
-         (item: any) =>
-           item.lottery.lottery_id === selectedLottery &&
-           item.schedule.schedule_id === selectedSchedule
-       );
-
-       if (match) {
-         setResults(match.results);
-       } else {
-         setResults(Array(20).fill(''));
-       }
-     } else {
-       setResults(Array(20).fill(''));
-     }
-   }, [selectedSchedule, selectedLottery, result]);
-   * */
+  const handleGenerate = () => {
+    generateWinners(undefined, {
+      onSuccess: () => {
+        toast.success('Resultados guardados correctamente');
+      },
+      onError: (error) => {
+        toast.error(`Error al guardar: ${error.message}`);
+      },
+    });
+  };
 
   const handleSave = () => {
     if (!selectedSchedule || !selectedLottery) return;
-
-    const today = new Date().toISOString().split('T')[0];
-
-    const typedResults = result as IResultItem[];
-
-    const match = typedResults.find(
-      (item) =>
-        item.lottery.lottery_id === selectedLottery &&
-        item.schedule.schedule_id === selectedSchedule &&
-        item.date === selectedDate
-    );
-
-    if (!match || !match.results_id) {
-      console.error('❌ No se encontró un results_id para actualizar');
-      return;
-    }
-
-    const updatePayload: IUpdateResultsEntity = {
+    const payload = {
       schedule_id: selectedSchedule,
       lottery_id: selectedLottery,
-      results: results.map((r) => r.trim()),
-      date: today,
+      results: results,
+      date: selectedDate,
     };
+    if (result.results.length === 0) {
 
-    updateResults(
-      {
-        id: match.results_id,
-        updateResults: updatePayload,
-      },
-      {
-        onSuccess: () => {
-          toast.success('Resultados guardados correctamente');
+      createResults(
+        {
+          createResults: payload,
         },
-        onError: (error) => {
-          toast.error(`Error al guardar: ${error.message}`);
+        {
+          onSuccess: () => {
+            toast.success('Resultados guardados correctamente');
+          },
+          onError: (error) => {
+            toast.error(`Error al guardar: ${error.message}`);
+          },
+        }
+      );
+    } else {
+      updateResults(
+        {
+          id: result.results_id,
+          updateResults: payload,
         },
-      }
-    );
+        {
+          onSuccess: () => {
+            toast.success('Resultados guardados correctamente');
+          },
+          onError: (error) => {
+            toast.error(`Error al guardar: ${error.message}`);
+          },
+        }
+      );
+    }
+    setOnEdit(false);
   };
-  const normalizedResults = [...results, ...Array(20).fill('')].slice(0, 20);
+
+  useEffect(() => {
+    if (result?.results?.length) setResults(result.results);
+    else {
+      setResults(Array(20).fill(''));
+    }
+    setOnEdit(false);
+  }, [result?.results?.length, selectedLottery, selectedDate, selectedSchedule]);
+
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Resultados'} />
@@ -148,15 +125,23 @@ const ResultsContent = () => {
         <Flex className="w-full  mt-8 items-center space-x-[36px] max-h-[60px] justify-between">
           <Flex className={'  w-full items-center space-x-[24px] '}>
             <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
-            <SelectDayToSearch onDayChange={(date) => setSelectedDate(date)} />
+            <SelectDayToSearch
+              onDayChange={(date) => {
+                setSelectedDate(dayjs(date).format('YYYY-MM-DD'));
+              }}
+            />
           </Flex>
           <Flex className={'gap-6'}>
             <Button variant="outline" className="flex items-center gap-2">
               <RefreshCw size={16} />
               Actualizar
             </Button>
-            <Button variant={'success'} className="  hover:bg-green-700 text-white">
-              Generar Ganadores
+            <Button
+              variant={'success'}
+              className="  hover:bg-green-700 text-white"
+              onClick={()=>handleGenerate()}
+            >
+              {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
             </Button>
           </Flex>
         </Flex>
@@ -173,35 +158,44 @@ const ResultsContent = () => {
               className={'pb-2'}
             />
             <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
-              {normalizedResults.map((value, i) => (
+              {results.map((value, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
                   <Input
                     type="text"
                     value={value}
                     onChange={(e) => {
-                      const newResults = [...normalizedResults];
-                      newResults[i] = e.target.value;
-                      setResults(newResults);
+                      setResults((prev) => {
+                        const newResults = [...prev];
+                        newResults[i] = e.target.value;
+                        return newResults;
+                      });
                     }}
-                    disabled={onEdit}
+                    disabled={!onEdit}
                     className="w-full bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1"
                   />
                 </div>
               ))}
             </Box>
-            <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
-              <Button
-                variant={'outline'}
-                className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
-                onClick={() => setOnEdit(!onEdit)}
-              >
-                <PencilIcon /> Editar
-              </Button>
-              <Button variant={'default'} onClick={handleSave} className=" w-full   text-white">
-                <SaveIcon /> {isPending ? 'Guardando' : 'Guardar Results'}
-              </Button>
-            </Box>
+            {role !== USER_TYPE.CASHIER && (
+              <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
+                <Button
+                  variant={'outline'}
+                  className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
+                  onClick={() => setOnEdit(!onEdit)}
+                >
+                  <PencilIcon /> Editar
+                </Button>
+                <Button
+                  variant={'default'}
+                  onClick={handleSave}
+                  className=" w-full   text-white"
+                  disabled={!onEdit}
+                >
+                  <SaveIcon /> {isPending || isPendingResults ? 'Guardando' : 'Guardar Results'}
+                </Button>
+              </Box>
+            )}
           </div>
         </Box>
       </FlexCol>
