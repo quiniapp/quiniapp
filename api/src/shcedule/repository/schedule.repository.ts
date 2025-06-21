@@ -1,4 +1,3 @@
-import { USER_TYPE } from 'helper/types/user.type';
 import { supabase } from '../../../database/db.connection';
 import dayjs from 'dayjs';
 
@@ -10,13 +9,8 @@ export class ScheduleRepository {
     return data;
   }
 
-  async getAll(user_type: USER_TYPE) {
+  async getAll() {
     let query = supabase.from('schedules').select('*').order('time', { ascending: true });
-
-    if (user_type === USER_TYPE.CASHIER) {
-      const now = dayjs().format('HH:mm:ss'); // ej. "13:45:00"
-      query = query.gt('time', now);
-    }
 
     const { data, error } = await query;
 

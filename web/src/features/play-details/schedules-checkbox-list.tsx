@@ -7,7 +7,8 @@ import { Flex, FlexCol } from '@/components/flex';
 import Box from '@/components/box';
 import HeaderTitleSection from '@/components/header-title-section';
 // Hooks
-import { useKeyboardCheckboxes } from '@/hooks/useHotkeyCheckbox';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { useEffect, useRef } from 'react';
 
 interface SchedulesProps {
   time: string;
@@ -17,15 +18,49 @@ interface SchedulesProps {
 
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
-  setSchedules: (id: string) => void;
+  setSchedules: (schedule: IScheduleEntityFront) => void;
 }
 
-const KEY_LABELS = ['F1', 'F2', 'F3', 'F4', 'F5'];
-
 const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxListProps) => {
-  const { f1, f2, f3, f4, f5 } = useKeyboardCheckboxes();
+  const refF1 = useRef<HTMLButtonElement>(null);
+  const refF2 = useRef<HTMLButtonElement>(null);
+  const refF3 = useRef<HTMLButtonElement>(null);
+  const refF4 = useRef<HTMLButtonElement>(null);
+  const refF5 = useRef<HTMLButtonElement>(null);
 
-  const keyboardMap = [f1, f2, f3, f4, f5];
+  const keyMap: Record<string, number> = {
+    F1: 0,
+    F2: 1,
+    F3: 2,
+    F4: 3,
+    F5: 4,
+  };
+  const keyboardMap = [
+    { key: 'F1', ref: refF1 },
+    { key: 'F2', ref: refF2 },
+    { key: 'F3', ref: refF3 },
+    { key: 'F4', ref: refF4 },
+    { key: 'F5', ref: refF5 },
+  ];
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const index = keyMap[e.key];
+    if (index !== undefined) {
+      e.preventDefault();
+      
+
+       const ref = keyboardMap[index].ref;
+       if (ref?.current) {
+        ref.current.click();
+      }
+
+    }
+  };
+  useEffect(() => {
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [schedules, setSchedules]);
 
   return (
     <FlexCol className="border-2 px-4 py-4 rounded-[--rounded-form]">
@@ -33,22 +68,19 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
       <Box className="pt-2 grid grid-cols-5 gap-[12px]">
         {schedules.map((schedule, index) => {
           const keyHandler = keyboardMap[index];
-          const keyLabel = KEY_LABELS[index];
 
           if (!keyHandler) return null;
 
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">
               <Label htmlFor={`f${index + 1}`} className="text-[12px]">
-                {schedule.name} <span className="text-primary-light">[{keyLabel}]</span>
+                {schedule.name} <span className="text-primary-light">[{`F${index + 1}`}]</span>
               </Label>
               <Checkbox
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
-                checked={keyHandler.checked}
                 onClick={() => {
-                  keyHandler.setChecked((prev) => !prev);
-                  setSchedules(schedule.schedule_id);
+                  setSchedules(schedule);
                 }}
                 className="border-2 border-primary"
               />

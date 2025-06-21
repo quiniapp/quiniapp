@@ -9,10 +9,13 @@ import GameTurns from '@/features/play-details/game-turns.tsx';
 import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
-import { BET_TYPE, PLACE_TYPE } from '../../../../helper/types/bet.type';
+import {  PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
+import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
 export interface IBetForm {
   number?: string;
   amount?: number;
@@ -21,32 +24,20 @@ export interface IBetForm {
   position?: PLACE_TYPE | null;
 }
 
-const betTypeDictionary = (length?: number, redouble?: boolean) => {
-  switch (length) {
-    case 10:
-      return BET_TYPE.BORRATINA;
-      break;
-    case 4:
-      return BET_TYPE.QUATERN;
-      break;
-    case 3:
-      return BET_TYPE.TERN;
-      break;
-    case 2:
-      if (length === 2 && redouble) return BET_TYPE.REDOUBLE;
-      return BET_TYPE.DOUBLE;
-      break;
-    case 1:
-      return BET_TYPE.ONE;
-      break;
-  }
-};
 
-const FillOutATicket = () => {
+
+const FillOutATicket = ({
+  setTotalAmount,
+  setPartialAmount,
+  setBets,
+}: {
+  setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
+  setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
+  setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>
+}) => {
   const { user } = useSessionStore();
-  const [bets, setBets] = useState<INewBetEntity[]>([]);
-  const [lotteries, setLotteries] = useState<string[]>([]);
-  const [schedules, setSchedules] = useState<string[]>([]);
+  const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
+  const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [bet, setBet] = useState<IBetForm>({
     number: undefined,
     amount: undefined,
@@ -54,16 +45,30 @@ const FillOutATicket = () => {
     with: null,
     position: null,
   });
-  const handleSchedules = (id: string) => {
+  const handleSchedules = (schedule: IScheduleEntityFront) => {
     setSchedules((prev) => {
-      if (prev.includes(id)) return prev.filter((sch) => sch !== id);
-      else return [...prev, id];
+      const newMap = new Map(prev); // Clonás el Map
+
+      if (newMap.has(schedule.schedule_id)) {
+        newMap.delete(schedule.schedule_id);
+      } else {
+        newMap.set(schedule.schedule_id, schedule);
+      }
+
+      return newMap; // Retornás un nuevo objeto
     });
   };
-  const handleLotteries = (id: string) => {
+  const handleLotteries = (lottery: ILotteryEntityFront) => {
     setLotteries((prev) => {
-      if (prev.includes(id)) return prev.filter((lot) => lot !== id);
-      else return [...prev, id];
+      const newMap = new Map(prev); // Clonás el Map
+
+      if (newMap.has(lottery.lottery_id)) {
+        newMap.delete(lottery.lottery_id);
+      } else {
+        newMap.set(lottery.lottery_id, lottery);
+      }
+
+      return newMap; // Retornás un nuevo objeto
     });
   };
 
@@ -88,25 +93,24 @@ const FillOutATicket = () => {
     });
   };
 
-  const handleCreateBet = () => {
-    const date = dayjs().format('DD-MM-YYYY');
 
-    const lotterySchedule = lotteries
-      .map((lot) => {
-        return schedules.map((sch) => {
-          return {
-            schedule_id: sch,
-            lottery_id: lot,
-          };
-        });
-      })
-      .flat();
+  const handleCreateBet = () => {
+    const date = dayjs().format('YYYY-MM-DD');
+
+    const lotterySchedule = Array.from(lotteries.values()).flatMap((lot) =>
+      Array.from(schedules.values()).map((sch) => ({
+        schedule_id: sch.schedule_id,
+        lottery_id: lot.lottery_id,
+        schedules: sch,
+        lotteries: lot,
+      }))
+    );
     setBets((prev) => {
       const newBet = lotterySchedule.map((lotSched) => {
         return {
           ...lotSched,
           number: bet.number,
-          amount: bet.amount,
+          amount: +bet.amount!,
           place: bet.place,
           with: bet.with,
           position: bet.position,
@@ -115,17 +119,15 @@ const FillOutATicket = () => {
           user_id: user?.user_id,
         } as INewBetEntity;
       });
-      console.log('newBet', newBet);
-
+      setPartialAmount(newBet.reduce(((prev, curr)=>prev+curr.amount),0))
+      setTotalAmount((prev)=>prev+newBet.reduce(((prev, curr)=>prev+curr.amount),0))
       return [...prev, ...newBet];
     });
   };
-  console.log(bets);
-
 
   const isEnabled = useIsButtonEnabled();
   return (
-    <FlexCol className={'py-[0px]'}>
+    <FlexCol className={'py-[0px] h-fit'}>
       <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>
         <Flex className={'flex-1 1440:max-w-[380px] max-w-[300px] '}>
           <form className={'w-full'}>
@@ -203,7 +205,9 @@ const FillOutATicket = () => {
         </Flex>
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
-      <PlayDetailGameTable bets={bets}/>
+
+     
+      
     </FlexCol>
   );
 };
