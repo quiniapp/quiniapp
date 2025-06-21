@@ -76,7 +76,7 @@ const ResultsContent = () => {
       results: results,
       date: selectedDate,
     };
-    if (result.results.length === 0) {
+    if (result?.results?.length === 0) {
 
       createResults(
         {
