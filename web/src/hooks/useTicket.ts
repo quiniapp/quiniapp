@@ -4,7 +4,7 @@ import {INewTicketEntity} from '../../../helper/request/ticket.response'
 
 
 const createTicket = async (payload:INewTicketEntity) => {
-  console.log(payload)
+
   const res = await fetch(ROUTES.ticket.base, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

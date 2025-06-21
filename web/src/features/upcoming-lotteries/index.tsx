@@ -45,18 +45,13 @@ const UpcomingLotteriesContent = () => {
   const lottery = data?.data?.lottery ?? [];
   const schedules = schedulesData?.data?.schedule ?? [];
 
-  console.log({
-    lottery: lottery,
-    schedule: schedules,
-  });
 
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const isLargeScreen = useMediaQuery('(min-width: 1440px)');
 
   const onSubmit = (data: FormData) => {
     setSavedData(data);
-    console.log('Datos guardados:', data);
-    //!TODO @Get real data
+
   };
 
   return (

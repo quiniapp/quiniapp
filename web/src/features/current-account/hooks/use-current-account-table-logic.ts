@@ -9,8 +9,6 @@ import type {
 export function useCurrentAccountTableLogic(filters: FilterParams = {}) {
   const { data, isPending, isLoading } = useCurrentAccounts();
 
-  console.log('--->', data?.data);
-
   const rawData: ICurrentAccountEntityFront[] = Array.isArray(data?.data?.mockCurrentAccounts)
     ? data.data.mockCurrentAccounts
     : [];
