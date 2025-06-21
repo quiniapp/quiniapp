@@ -1,51 +1,122 @@
+import dayjs from 'dayjs';
+import { useEffect, useMemo, useState } from 'react';
 import { Clock, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import HeaderTitleSection from '@/components/header-title-section';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input.tsx';
-import { MODALIDADES } from '@/constants/LIstCommonBets.ts';
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
-import QuiniChecks from '@/features/results/quini-check.tsx';
-import ResultShifts from '@/features/results/shifts.tsx';
-import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
+import { Input } from '@/components/ui/input';
+
+import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
+import QuiniChecks from '@/features/results/quini-check';
+import ResultShifts from '@/features/results/shifts';
+
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useSchedules } from '@/hooks/useSchedules';
+import { useLotteries } from '@/hooks/useLotteries';
+import { useResults } from '@/hooks/fetchs/results/useResults';
+import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mutation';
+
+import { useSessionStore } from '@/stores/sessionStore';
+import { USER_TYPE } from '../../../helper/types/user.type';
+import { useCreateResults } from '@/hooks/mutations/results/useCreateresults.mutation';
+import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 
 const ResultsContent = () => {
+  const { role } = useSessionStore();
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
-  const [selectedShift, setSelectedShift] = useState<string | null>(null);
-  const [selectedLottery, setSelectedLottery] = useState<string | null>(null);
-  const [onEdit, setOnEdit] = useState(true);
+  const [selectedSchedule, setSelectedSchedule] = useState<string | undefined>();
+  const [selectedLottery, setSelectedLottery] = useState<string | undefined>();
+  const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
+  const [onEdit, setOnEdit] = useState(false);
+  const { mutate: createResults, isPending: isPendingResults } = useCreateResults();
+  const { data: fetchSchedules } = useSchedules();
+  const { data: fetchLotteries } = useLotteries();
+  const { data: getResults } = useResults({
+    lottery_id: selectedLottery,
+    schedule_id: selectedSchedule,
+    date: selectedDate,
+  });
+  const { mutate: updateResults, isPending } = useUpdateResults();
+  const { mutate: generateWinners, isPending: isPendingWinners } = useGenerateWinners();
 
-  const quinielas = [
-    { id: 'nacional', label: 'Nacional' },
-    { id: 'provincia', label: 'Provincia' },
-    { id: 'santafe', label: 'Santa Fe' },
-    { id: 'entrerios', label: 'Entre Rios' },
-    { id: 'cordoba', label: 'Cordoba' },
-  ];
-  const handleShiftSelect = (shiftId: string) => {
-    setSelectedShift(shiftId);
+  const schedules = fetchSchedules?.data?.schedule || [];
+  const lotteries = fetchLotteries?.data?.lottery || [];
+
+  let result = getResults?.data?.results ?? { results: [], results_id: '' };
+
+  const handleScheduleSelect = (scheduleId: string) => {
+    setSelectedSchedule(scheduleId);
   };
 
-  const handleLotterySelect = (quinielaId: string) => {
-    setSelectedLottery(quinielaId);
+  const handleLotterySelect = (lotteryId: string) => {
+    setSelectedLottery(lotteryId);
+  };
+
+  const handleGenerate = () => {
+    generateWinners(undefined, {
+      onSuccess: () => {
+        toast.success('Resultados guardados correctamente');
+      },
+      onError: (error) => {
+        toast.error(`Error al guardar: ${error.message}`);
+      },
+    });
+  };
+
+  const handleSave = () => {
+    if (!selectedSchedule || !selectedLottery) return;
+    const payload = {
+      schedule_id: selectedSchedule,
+      lottery_id: selectedLottery,
+      results: results,
+      date: selectedDate,
+    };
+    if (result.results.length === 0) {
+
+      createResults(
+        {
+          createResults: payload,
+        },
+        {
+          onSuccess: () => {
+            toast.success('Resultados guardados correctamente');
+          },
+          onError: (error) => {
+            toast.error(`Error al guardar: ${error.message}`);
+          },
+        }
+      );
+    } else {
+      updateResults(
+        {
+          id: result.results_id,
+          updateResults: payload,
+        },
+        {
+          onSuccess: () => {
+            toast.success('Resultados guardados correctamente');
+          },
+          onError: (error) => {
+            toast.error(`Error al guardar: ${error.message}`);
+          },
+        }
+      );
+    }
+    setOnEdit(false);
   };
 
   useEffect(() => {
-    if (selectedShift && selectedLottery) {
-      const newResults = Array.from({ length: 20 }, () =>
-        Math.floor(Math.random() * 10000)
-          .toString()
-          .padStart(2, '0')
-      );
-      setResults(newResults);
-    } else {
+    if (result?.results?.length) setResults(result.results);
+    else {
       setResults(Array(20).fill(''));
     }
-  }, [selectedShift, selectedLottery]);
+    setOnEdit(false);
+  }, [result?.results?.length, selectedLottery, selectedDate, selectedSchedule]);
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -54,22 +125,30 @@ const ResultsContent = () => {
         <Flex className="w-full  mt-8 items-center space-x-[36px] max-h-[60px] justify-between">
           <Flex className={'  w-full items-center space-x-[24px] '}>
             <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
-            <SelectDayToSearch onDayChange={() => {}} />
+            <SelectDayToSearch
+              onDayChange={(date) => {
+                setSelectedDate(dayjs(date).format('YYYY-MM-DD'));
+              }}
+            />
           </Flex>
           <Flex className={'gap-6'}>
             <Button variant="outline" className="flex items-center gap-2">
               <RefreshCw size={16} />
               Actualizar
             </Button>
-            <Button variant={'success'} className="  hover:bg-green-700 text-white">
-              Generar Ganadores
+            <Button
+              variant={'success'}
+              className="  hover:bg-green-700 text-white"
+              onClick={()=>handleGenerate()}
+            >
+              {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
             </Button>
           </Flex>
         </Flex>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
           <FlexCol className="  rounded-xl   space-y-6">
-            <ResultShifts shifts={MODALIDADES} onShiftSelect={handleShiftSelect} />
-            <QuiniChecks quini={quinielas} onLotterySelect={handleLotterySelect} />
+            <ResultShifts schedules={schedules} onScheduleSelect={handleScheduleSelect} />
+            <QuiniChecks quini={lotteries} onLotterySelect={handleLotterySelect} />
           </FlexCol>
           <div className=" ">
             <HeaderTitleSection
@@ -79,35 +158,44 @@ const ResultsContent = () => {
               className={'pb-2'}
             />
             <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
-              {Array.from({ length: 20 }, (_, i) => (
+              {results.map((value, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
                   <Input
                     type="text"
-                    value={results[i]}
+                    value={value}
                     onChange={(e) => {
-                      const newResults = [...results];
-                      newResults[i] = e.target.value;
-                      setResults(newResults);
+                      setResults((prev) => {
+                        const newResults = [...prev];
+                        newResults[i] = e.target.value;
+                        return newResults;
+                      });
                     }}
-                    disabled={onEdit}
+                    disabled={!onEdit}
                     className="w-full bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1"
                   />
                 </div>
               ))}
             </Box>
-            <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
-              <Button
-                variant={'outline'}
-                className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
-                onClick={() => setOnEdit(!onEdit)}
-              >
-                <PencilIcon /> Editar
-              </Button>
-              <Button variant={'default'} className=" w-full   text-white">
-                <SaveIcon /> Guardar Results
-              </Button>
-            </Box>
+            {role !== USER_TYPE.CASHIER && (
+              <Box className=" grid grid-cols-2 py-4 mt-6 gap-[24px] ">
+                <Button
+                  variant={'outline'}
+                  className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
+                  onClick={() => setOnEdit(!onEdit)}
+                >
+                  <PencilIcon /> Editar
+                </Button>
+                <Button
+                  variant={'default'}
+                  onClick={handleSave}
+                  className=" w-full   text-white"
+                  disabled={!onEdit}
+                >
+                  <SaveIcon /> {isPending || isPendingResults ? 'Guardando' : 'Guardar Results'}
+                </Button>
+              </Box>
+            )}
           </div>
         </Box>
       </FlexCol>

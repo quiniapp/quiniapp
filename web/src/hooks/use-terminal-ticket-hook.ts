@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTickets } from '@/hooks/useTickets.ts';
-import { useDeleteTicket } from '@/hooks/useDeleteTicket.ts';
+import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket.ts';
 import { toast } from 'react-hot-toast';
 
 
@@ -107,10 +107,6 @@ const useTerminalTicketHook = () => {
       setWinningBets([]);
     }
   };
-
-
-  console.log('Eliminando ticket con ID:', selectedTicket?.ticket_id ?? 'Ninguno seleccionado');
-
 
   return {
     data,

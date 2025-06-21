@@ -22,11 +22,11 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLotteries } from '@/hooks/useLotteries';
 import { useSchedules } from '@/hooks/useSchedules';
 import { LotteryCheckboxList } from '@/features/upcoming-lotteries/lottery-checkbox-list';
-import { ScheduleRadioGroup } from '@/features/upcoming-lotteries/schedules-list.tsx';
+import { ScheduleCheckboxList } from '@/features/upcoming-lotteries/schedules-list.tsx';
 
 interface FormData {
   day: string;
-  turns: string;
+  turns: string[];
   quinielas: string[];
 }
 
@@ -35,7 +35,7 @@ const UpcomingLotteriesContent = () => {
   const { handleSubmit, control } = useForm<FormData>({
     defaultValues: {
       day: 'domingo',
-      turns: '',
+      turns: [],
       quinielas: [],
     },
   });
@@ -142,8 +142,8 @@ const UpcomingLotteriesContent = () => {
                       className={'!mb-[36px]'}
                     />
 
-                    <ScheduleRadioGroup<FormData>
-                      schedules={schedules}
+                    <ScheduleCheckboxList<FormData>
+                      schedules={schedules ?? []}
                       control={control}
                       name="turns"
                     />

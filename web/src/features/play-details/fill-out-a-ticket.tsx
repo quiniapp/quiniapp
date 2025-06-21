@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
-import PlayDetailGameTable from '@/features/play-details/play-detail-game-table.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
 import {  PLACE_TYPE } from '../../../../helper/types/bet.type';

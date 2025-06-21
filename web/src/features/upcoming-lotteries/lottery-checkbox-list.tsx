@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 
 export interface ILottery {
   lottery_id: string;
@@ -19,17 +21,28 @@ export function LotteryCheckboxList<T extends FieldValues>({
   control,
   name,
 }: LotteryCheckboxListProps<T>) {
-  if (!lottery || lottery.length === 0) return null;
+  const isLoading = !lottery || lottery.length === 0;
+  if (isLoading) return <SkeletonList row={5} />;
+
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {lottery.map((lot, index) => (
           <div key={lot.lottery_id} className="flex items-center space-x-2">
             <Controller
-              name={name} // 👈 ya tipado correctamente
+              name={name}
               control={control}
               render={({ field }) => {
+
+                useEffect(() => {
+                  if (!field.value || field.value.length === 0) {
+                    const defaultSelected = lottery.filter((l) => l.active).map((l) => l.name);
+                    field.onChange(defaultSelected);
+                  }
+                }, []);
+
                 const isChecked = field.value?.includes(lot.name);
+
                 return (
                   <>
                     <Checkbox

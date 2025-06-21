@@ -1,14 +1,16 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-const SkeletonList = () => {
+interface SkeletonListProps {
+  row?: number;
+  className?: string;
+  height?: string;
+}
+
+const SkeletonList = ({ row = 8, className = '', height = 'h-[24px]' }: SkeletonListProps) => {
   return (
     <div className="space-y-4">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className="  space-x-4 p-6 rounded-md h-[24px]"
-          style={{ backgroundColor: 'rgb(59 130 246 / 0.1)' }}
-        />
+      {Array.from({ length: row }).map((_, i) => (
+        <Skeleton key={i} className={`rounded-md p-4 bg-blue-500/10 ${height} ${className}`} />
       ))}
     </div>
   );
