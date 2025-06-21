@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../routes/routes';
+import { ROUTES } from '../../../../routes/routes.ts';
 
 const deleteTicket = async (ticketId: string) => {
   const res = await fetch(ROUTES.ticket.id(ticketId), {
