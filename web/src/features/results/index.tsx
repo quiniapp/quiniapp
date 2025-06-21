@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { useEffect,  useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

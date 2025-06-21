@@ -3,7 +3,6 @@ import { parseLottery } from 'api/src/lottery/helper/parseLottery';
 import { parseSchedule } from 'api/src/shcedule/helper/parseSchedule';
 
 export const parseBet = (bet: IBetEntityBack): IBetEntityFront => {
-
   return {
     amount: bet.amount,
     bet_id: bet.bet_id,
