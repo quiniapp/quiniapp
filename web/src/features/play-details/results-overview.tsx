@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-const ResultsOverview = ({partialAmount, totalAmount}:{partialAmount:number, totalAmount:number}) => {
+const ResultsOverview = ({partialAmount, totalAmount, handleCreateBet}:{partialAmount:number, totalAmount:number, handleCreateBet:()=>void}) => {
   return (
     <Flex className={'justify-between py-[16px] items-center border-t-2'}>
       <FlexCol>
@@ -30,7 +30,7 @@ const ResultsOverview = ({partialAmount, totalAmount}:{partialAmount:number, tot
           </RadioGroup>
         </FlexCol>
         <Flex className={'gap-4'}>
-          <Button>Cerrar Ticket </Button>
+          <Button onClick={()=>handleCreateBet()}>Cerrar Ticket </Button>
           <Button variant={'outline'}>
             <Trash2Icon /> Eliminar
           </Button>

@@ -29,12 +29,13 @@ export interface IBetForm {
 const FillOutATicket = ({
   setTotalAmount,
   setPartialAmount,
+  setBets,
 }: {
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
+  setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>
 }) => {
   const { user } = useSessionStore();
-  const [bets, setBets] = useState<INewBetEntity[]>([]);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [bet, setBet] = useState<IBetForm>({
@@ -92,8 +93,9 @@ const FillOutATicket = ({
     });
   };
 
+
   const handleCreateBet = () => {
-    const date = dayjs().format('DD-MM-YYYY');
+    const date = dayjs().format('YYYY-MM-DD');
 
     const lotterySchedule = Array.from(lotteries.values()).flatMap((lot) =>
       Array.from(schedules.values()).map((sch) => ({
@@ -125,7 +127,7 @@ const FillOutATicket = ({
 
   const isEnabled = useIsButtonEnabled();
   return (
-    <FlexCol className={'py-[0px]'}>
+    <FlexCol className={'py-[0px] h-fit'}>
       <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>
         <Flex className={'flex-1 1440:max-w-[380px] max-w-[300px] '}>
           <form className={'w-full'}>
@@ -204,7 +206,8 @@ const FillOutATicket = ({
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
 
-      <PlayDetailGameTable bets={bets} />
+     
+      
     </FlexCol>
   );
 };

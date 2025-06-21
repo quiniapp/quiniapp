@@ -26,7 +26,8 @@ const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
   );
 
   return (
-    <Table>
+      
+    <Table >
       <TableHeader>
         <TableRow>
           <TableHead>Jugada</TableHead>
@@ -41,9 +42,9 @@ const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
         {bets.length === 0 ? (
           <NoPlaysFound />
         ) : (
-          bets.map((bet) => {
+          bets.map((bet,index) => {
             return (
-              <TableRow>
+              <TableRow key={index}>
                 <TableCell>{bet.number}</TableCell>
                 <TableCell>{bet.with}</TableCell>
                 <TableCell>{bet.amount}</TableCell>
