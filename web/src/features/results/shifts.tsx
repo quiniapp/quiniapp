@@ -61,9 +61,10 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
+  console.log(keyboardMap)
   return (
     <Box className="  rounded-lg px-4 1440:py-8 py-4 bg-card">
+
       <HeaderTitleSection
         title={'Turno'}
         icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
