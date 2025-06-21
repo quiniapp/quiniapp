@@ -18,7 +18,7 @@ const login = async (data: FormData): Promise<APIResponse<IUserEntityFront>> => 
     body: JSON.stringify(data),
     credentials: 'include',
   });
-  console.log(response);
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData?.message || 'Login failed');
