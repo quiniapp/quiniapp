@@ -36,7 +36,7 @@ const ResultsContent = () => {
   const { mutate: createResults, isPending: isPendingResults } = useCreateResults();
   const { data: fetchSchedules } = useSchedules();
   const { data: fetchLotteries } = useLotteries();
-  const { data: getResults } = useResults({
+  const { data: getResults, isSuccess } = useResults({
     lottery_id: selectedLottery,
     schedule_id: selectedSchedule,
     date: selectedDate,
@@ -46,8 +46,6 @@ const ResultsContent = () => {
 
   const schedules = fetchSchedules?.data?.schedule || [];
   const lotteries = fetchLotteries?.data?.lottery || [];
-
-  let result = getResults?.data?.results ?? { results: [], results_id: '' };
 
   const handleScheduleSelect = (scheduleId: string) => {
     setSelectedSchedule(scheduleId);
@@ -76,8 +74,7 @@ const ResultsContent = () => {
       results: results,
       date: selectedDate,
     };
-    if (result?.results?.length === 0) {
-
+    if (!getResults?.results?.length) {
       createResults(
         {
           createResults: payload,
@@ -94,7 +91,7 @@ const ResultsContent = () => {
     } else {
       updateResults(
         {
-          id: result.results_id,
+          id: getResults?.results_id,
           updateResults: payload,
         },
         {
@@ -111,12 +108,16 @@ const ResultsContent = () => {
   };
 
   useEffect(() => {
-    if (result?.results?.length) setResults(result.results);
+    if (!isSuccess) return;
     else {
-      setResults(Array(20).fill(''));
+      if (getResults?.results?.length) {
+        setResults(getResults.results);
+      } else {
+        setResults(Array(20).fill(''));
+      }
     }
     setOnEdit(false);
-  }, [result?.results?.length, selectedLottery, selectedDate, selectedSchedule]);
+  }, [isSuccess, selectedLottery, selectedDate, selectedSchedule]);
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -139,7 +140,7 @@ const ResultsContent = () => {
             <Button
               variant={'success'}
               className="  hover:bg-green-700 text-white"
-              onClick={()=>handleGenerate()}
+              onClick={() => handleGenerate()}
             >
               {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
             </Button>
@@ -163,6 +164,7 @@ const ResultsContent = () => {
                   <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
                   <Input
                     type="text"
+                    maxLength={4}
                     value={value}
                     onChange={(e) => {
                       setResults((prev) => {
