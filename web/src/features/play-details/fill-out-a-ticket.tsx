@@ -146,7 +146,8 @@ const FillOutATicket = ({
                   id="number"
                   name={'ticket-number'}
                   type={'string'}
-                  placeholder={'0000'}
+                  maxLength={10}
+                  placeholder={'0000000000'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('number', e.target.value)}
                 />
@@ -179,6 +180,7 @@ const FillOutATicket = ({
                   id="with"
                   name={'ticket-with'}
                   type={'number'}
+                  maxLength={2}
                   placeholder={'00'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('with', e.target.value)}
@@ -190,7 +192,7 @@ const FillOutATicket = ({
                   id="position"
                   name={'ticket-position'}
                   type={'number'}
-                  placeholder={'000'}
+                  placeholder={'5, 10, 20'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('position', e.target.value)}
                 />
