@@ -136,14 +136,15 @@ const ResultsContent = () => {
             <Button variant="outline" className="flex items-center gap-2">
               <RefreshCw size={16} />
               Actualizar
-            </Button>
+            </Button>{
+              role !== USER_TYPE.CASHIER &&
             <Button
               variant={'success'}
               className="  hover:bg-green-700 text-white"
               onClick={() => handleGenerate()}
             >
               {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
-            </Button>
+            </Button>}
           </Flex>
         </Flex>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
