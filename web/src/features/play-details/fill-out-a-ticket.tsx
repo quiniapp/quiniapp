@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
-import {  PLACE_TYPE } from '../../../../helper/types/bet.type';
-import { useState } from 'react';
+import { PLACE_TYPE } from '../../../../helper/types/bet.type';
+import { useEffect, useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
@@ -23,8 +23,6 @@ export interface IBetForm {
   position?: PLACE_TYPE | null;
 }
 
-
-
 const FillOutATicket = ({
   setTotalAmount,
   setPartialAmount,
@@ -32,7 +30,7 @@ const FillOutATicket = ({
 }: {
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
-  setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>
+  setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>;
 }) => {
   const { user } = useSessionStore();
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
@@ -92,7 +90,6 @@ const FillOutATicket = ({
     });
   };
 
-
   const handleCreateBet = () => {
     const date = dayjs().format('YYYY-MM-DD');
 
@@ -118,11 +115,23 @@ const FillOutATicket = ({
           user_id: user?.user_id,
         } as INewBetEntity;
       });
-      setPartialAmount(newBet.reduce(((prev, curr)=>prev+curr.amount),0))
-      setTotalAmount((prev)=>prev+newBet.reduce(((prev, curr)=>prev+curr.amount),0))
+      setPartialAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
+      setTotalAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
       return [...prev, ...newBet];
     });
   };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === '*') {
+      e.preventDefault();
+      setPartialAmount(0);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const isEnabled = useIsButtonEnabled();
   return (
@@ -204,9 +213,6 @@ const FillOutATicket = ({
         </Flex>
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
-
-     
-      
     </FlexCol>
   );
 };
