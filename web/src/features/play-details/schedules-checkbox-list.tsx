@@ -28,12 +28,23 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
   const refF4 = useRef<HTMLButtonElement>(null);
   const refF5 = useRef<HTMLButtonElement>(null);
 
+  const refF6 = useRef<HTMLButtonElement>(null);
+  const refF7 = useRef<HTMLButtonElement>(null);
+  const refF8 = useRef<HTMLButtonElement>(null);
+  const refF9 = useRef<HTMLButtonElement>(null);
+  const refF10 = useRef<HTMLButtonElement>(null);
+  
   const keyMap: Record<string, number> = {
     F1: 0,
     F2: 1,
     F3: 2,
     F4: 3,
     F5: 4,
+    F6: 5,
+    F7: 6,
+    F8: 7,
+    F9: 8,
+    F10: 9,
   };
   const keyboardMap = [
     { key: 'F1', ref: refF1 },
@@ -41,6 +52,11 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
     { key: 'F3', ref: refF3 },
     { key: 'F4', ref: refF4 },
     { key: 'F5', ref: refF5 },
+    { key: 'F6', ref: refF6 },
+    { key: 'F7', ref: refF7 },
+    { key: 'F8', ref: refF8 },
+    { key: 'F9', ref: refF9 },
+    { key: 'F10', ref: refF10 },
   ];
 
   const handleKeyDown = (e: KeyboardEvent) => {
