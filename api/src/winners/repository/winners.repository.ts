@@ -22,7 +22,7 @@ export class WinnerRepository {
 
     const { data, error } = await query;
     if (error) throw error;
-    console.log(data);
+
     return data;
   }
 }

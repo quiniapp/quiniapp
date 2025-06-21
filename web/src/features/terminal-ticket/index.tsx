@@ -27,7 +27,7 @@ export const TerminalTicketContent = () => {
     handleChangeFilter,
     handleDeleteTicket,
   } = useTerminalTicketHook();
-  console.log(data);
+
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
