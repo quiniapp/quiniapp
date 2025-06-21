@@ -39,6 +39,6 @@ export const ROUTES = {
   },
   results: {
     base: `${PRIVATE}/results`,
-
+    id: (id: string) => `${PRIVATE}/results/${id}`,
   }
 };
