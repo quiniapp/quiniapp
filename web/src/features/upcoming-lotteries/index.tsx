@@ -24,6 +24,24 @@ import { useSchedules } from '@/hooks/useSchedules';
 import { LotteryCheckboxList } from '@/features/upcoming-lotteries/lottery-checkbox-list';
 import { ScheduleCheckboxList } from '@/features/upcoming-lotteries/schedules-list.tsx';
 
+/* 
+
+  schedules:[
+    {schedule_id,
+      lotteries:[{lottery_id}]
+      day: 1-7?
+    }
+  ] o un map mejor?
+
+  if selected schedule_id && date
+    checked = schedule.lotteries.includes(lottery_id)
+
+
+
+*/
+
+
+
 interface FormData {
   day: string;
   turns: string[];
@@ -34,7 +52,7 @@ const UpcomingLotteriesContent = () => {
   const [savedData, setSavedData] = useState<FormData | null>(null);
   const { handleSubmit, control } = useForm<FormData>({
     defaultValues: {
-      day: 'domingo',
+      day: 'Domingo',
       turns: [],
       quinielas: [],
     },
@@ -155,6 +173,7 @@ const UpcomingLotteriesContent = () => {
                     />
 
                     <LotteryCheckboxList<FormData>
+                      
                       lottery={lottery ?? []}
                       control={control}
                       name="quinielas"
