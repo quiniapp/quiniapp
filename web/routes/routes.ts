@@ -8,6 +8,7 @@ export const ROUTES = {
   auth: {
     login: `${BASE}/auth/login`,
     logout: `${PRIVATE}/auth/logout`,
+    validate: `${PRIVATE}/auth/validate`,
   },
   user: {
     base: `${PRIVATE}/user`,
