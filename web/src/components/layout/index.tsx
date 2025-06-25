@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigation } from 'react-router-dom';
 
 import Footer from '../footer';
@@ -8,6 +8,7 @@ import Aside from '@/components/aside';
 import { SidebarProvider } from '@/components/ui/sidebar.tsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 import { cn } from '@/lib/utils';
+import { useSessionStore } from '@/stores/sessionStore';
 
 interface LayoutProps {
   classname?: string;
@@ -17,13 +18,18 @@ interface LayoutProps {
   /*  <Sidebar /> */
 }
 const Layout = ({ classname }: LayoutProps) => {
+  const validateSession = useSessionStore((s) => s.validateSession);
+  const { isAuth } = useSessionStore();
   const navigation = useNavigation();
   const isRouteLoading = navigation.state === 'loading';
   const [isOpen, setIsOpen] = useState(true);
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
-
+  useEffect(() => {
+    console.log(isAuth)
+    if (isAuth) validateSession();
+  }, []);
   return (
     <SidebarProvider>
       <Aside isOpen={isOpen} />

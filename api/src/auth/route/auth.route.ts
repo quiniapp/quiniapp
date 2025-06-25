@@ -27,10 +27,7 @@ export class AuthRouter {
 
   private setupPrivateRoutes() {
     this.privateRouter.post('/logout', this.logoutHandler);
-    this.privateRouter.post('/refresh', (req, res) => {
-      console.log(req, res);
-      return;
-    });
+    this.privateRouter.get('/validate', this.refreshHandler);
   }
 
   // Definís el handler afuera:
@@ -168,6 +165,36 @@ export class AuthRouter {
         },
       };
       res.status(500).json(response);
+    }
+  };
+
+  private refreshHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req.user!;
+    if (!user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.TOKEN_ERROR,
+          message: 'Unexpected error',
+        },
+      };
+      res.status(500).json(response);
+    }
+    try {
+      const response: APIResponse<IUserEntityFront> = {
+        data: {
+          user,
+        },
+      };
+
+      return res.status(200).json(response);
+    } catch (error) {
+      console.error('Error in /refresh route', error);
+      return res.status(500).json({
+        error: {
+          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
+          message: 'Unexpected error',
+        },
+      });
     }
   };
 }

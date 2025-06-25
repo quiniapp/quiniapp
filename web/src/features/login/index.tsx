@@ -21,7 +21,6 @@ import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePlatform } from '@/hooks/use-platform';
 
-import { ROUTES } from '../../../routes/routes';
 import { useLoginMutation } from '@/hooks/useLogin';
 import { useSessionStore } from '@/stores/sessionStore';
 
@@ -61,28 +60,6 @@ const LoginContent = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch(ROUTES.user.base, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // body: JSON.stringify({ ... }) // Si tu endpoint espera un body, añadilo acá
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('data---->', data);
-
-      return data;
-    } catch (error) {
-      console.error('Error al obtener usuarios:', error);
-    }
-  };
 
   useEffect(() => {
     if (isAuth) {
@@ -90,9 +67,7 @@ const LoginContent = () => {
     }
   }, [isAuth]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+
 
   return (
     <Flex className="h-screen flex-col md:flex-row">
