@@ -3,16 +3,47 @@ import dayjs from 'dayjs';
 
 export class ScheduleRepository {
   async getById(id: string) {
-    const { data, error } = await supabase.from('schedules').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('schedules')
+      .select(
+        `
+    *,
+    schedule_lotteries (
+      day,
+      lottery:lotteries (
+        lottery_id,
+        name,
+        active
+      )
+    )
+  `
+      )
+      .eq('id', id)
+      .order('day', { referencedTable: 'schedule_lotteries', ascending: true }) // ordena las loterías por día
+      .single();
 
     if (error) throw new Error(error.details);
     return data;
   }
 
   async getAll() {
-    let query = supabase.from('schedules').select('*').order('time', { ascending: true });
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from('schedules')
+      .select(
+        `
+    *,
+    schedule_lotteries (
+      day,
+      lottery:lotteries (
+        lottery_id,
+        name,
+        active
+      )
+    )
+  `
+      )
+      .order('time', { ascending: true }) // ordena los schedules por hora
+      .order('day', { referencedTable: 'schedule_lotteries', ascending: true }); // ordena las loterías por día
 
     if (error) throw new Error(error.details);
     return data;

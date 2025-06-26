@@ -8,3 +8,13 @@ Para la v2
     En liquidacion permitir editar pase, reclamos, aciertos, pase, cobro, arrastre
     El horario se cierra en funcion de la hora de schedule
     Cuenta y conexion en usuarios
+    Validar max length en numeros en inputs
+    Cuenta y conexion en usuarios
+
+    Bajar con el intro
+    Agregar con el +
+    Esta window alert con el *
+    Generar ganadores por turno
+    Borrar ticket cuando esta ok
+    Dar feedback creacion o error ticket
+    Al agregar una jugada scrollear hacia abajo
