@@ -24,6 +24,12 @@ const PlayDetailsContent = () => {
       date: dayjs().format('YYYY-MM-DD'),
       user_id:user?.user_id!,
       user_name: user?.username!
+    },{
+      onSuccess:()=>{
+        setBets([])
+        setPartialAmount(0)
+        setTotalAmount(0)
+      }
     })
 
   };

@@ -30,7 +30,7 @@ const ResultsOverview = ({partialAmount, totalAmount, handleCreateBet}:{partialA
           </RadioGroup>
         </FlexCol>
         <Flex className={'gap-4'}>
-          <Button onClick={()=>handleCreateBet()}>Cerrar Ticket </Button>
+          <Button onClick={()=>handleCreateBet()} disabled={totalAmount===0}>Cerrar Ticket </Button>
           <Button variant={'outline'}>
             <Trash2Icon /> Eliminar
           </Button>
