@@ -201,7 +201,7 @@ const FillOutATicket = ({
                 <Button
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}
-                  disabled={!isEnabled}
+                  disabled={isEnabled}
                   onClick={() => handleCreateBet()}
                 >
                   <PlusIcon /> Agregar
