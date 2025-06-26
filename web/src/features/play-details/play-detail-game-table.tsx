@@ -26,8 +26,9 @@ const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
   );
 
   return (
-      
-    <Table >
+<div>
+
+  <Table className="min-w-full table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead>Jugada</TableHead>
@@ -38,26 +39,32 @@ const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
           <TableHead className="text-right">Turno</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
-        {bets.length === 0 ? (
-          <NoPlaysFound />
-        ) : (
-          bets.map((bet,index) => {
-            return (
-              <TableRow key={index}>
-                <TableCell>{bet.number}</TableCell>
-                <TableCell>{bet.with}</TableCell>
-                <TableCell>{bet.amount}</TableCell>
-                <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
-                <TableCell>{bet.lotteries.name}</TableCell>
-                <TableCell className="text-right">{bet.schedules.name}</TableCell>
-              </TableRow>
-            );
-          })
-        )}
-      </TableBody>
     </Table>
-  );
+      <div className="overflow-y-auto h-[200px] 1440:h-[200px]">
+        <Table className="min-w-full table-fixed">
+          <TableBody>
+            {bets.length === 0 ? (
+              <NoPlaysFound />
+            ) : (
+              bets.map((bet, index) => {
+                return (
+                  <TableRow key={index}>
+                    <TableCell>{bet.number}</TableCell>
+                    <TableCell>{bet.with}</TableCell>
+                    <TableCell>{bet.amount}</TableCell>
+                    <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                    <TableCell>{bet.lotteries.name}</TableCell>
+                    <TableCell className="text-right">{bet.schedules.name}</TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+</div>
+
+);
 };
 
 export default PlayDetailGameTable;

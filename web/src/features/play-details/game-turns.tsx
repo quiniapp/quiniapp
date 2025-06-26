@@ -24,11 +24,11 @@ const GameTurns = ({ setLotteries, setSchedules }: IGameTurns) => {
   const schedules = schedulesData?.data?.schedule ?? [];
 
   return (
-    <FlexCol className="flex-col 1440:space-y-6 space-y-3 flex-1">
+    <FlexCol className="flex-col 1440:space-y-5 space-y-3 flex-1">
       <ScheduleCheckboxList schedules={schedules} setSchedules={setSchedules}/>
       <FlexCol className=" border-2 p-4 rounded-[--rounded-form]">
         <HeaderTitleSection title={'Quniela'} icon={<TicketIcon size="16px" />} variant={'small'} />
-        <Box className="pt-2 grid grid-cols-5 gap-[12px]">
+        <Box className="pt-2 grid grid-cols-6 gap-[12px]">
           {lotteries.map((lot: LotteryType) => (
             <LotteryCheckboxList key={lot.lottery_id} lottery={lot} setLotteries={setLotteries}/>
           ))}
