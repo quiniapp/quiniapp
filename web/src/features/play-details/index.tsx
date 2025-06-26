@@ -9,6 +9,7 @@ import PlayDetailGameTable from './play-detail-game-table';
 import { FlexCol } from '@/components/flex';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 
 const PlayDetailsContent = () => {
   const { user } = useSessionStore();
@@ -29,6 +30,11 @@ const PlayDetailsContent = () => {
         setBets([])
         setPartialAmount(0)
         setTotalAmount(0)
+        toast.success('Ticket creado correctamente');
+      },
+      onError:()=>{
+        
+        toast.success('Ocurrió un error, intente de nuevo');
       }
     })
 
