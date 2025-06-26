@@ -15,3 +15,6 @@ Para la v2
     Agregar con el +
     Esta window alert con el *
     Generar ganadores por turno
+    Borrar ticket cuando esta ok
+    Dar feedback creacion o error ticket
+    Al agregar una jugada scrollear hacia abajo
