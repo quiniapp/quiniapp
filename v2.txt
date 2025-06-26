@@ -7,5 +7,4 @@ Para la v2
 
     En liquidacion permitir editar pase, reclamos, aciertos, pase, cobro, arrastre
     El horario se cierra en funcion de la hora de schedule
-    Validar max length en numeros en inputs
     Cuenta y conexion en usuarios
