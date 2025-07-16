@@ -16,6 +16,7 @@ export class UserController {
   create = async (newUser: INewUserEntity): Promise<IUserEntityFront> => {
     const user = await buildUserForDB(newUser);
     try {
+      console.log(user);
       const result = await this.repository.create(user);
       if (user.cashier_type !== CASHIER_TYPE.STREET) {
         const { error } = await supabase.auth.signUp({
@@ -47,9 +48,9 @@ export class UserController {
     }
   };
 
-  getAll = async (): Promise<IUserEntityFront[]> => {
+  getAll = async (cashier_number?: number): Promise<IUserEntityFront[]> => {
     try {
-      const result = await this.repository.getAll();
+      const result = await this.repository.getAll(cashier_number);
       return result.map((user) => parseUser(user));
     } catch (error) {
       console.error('GetAll error:', error);

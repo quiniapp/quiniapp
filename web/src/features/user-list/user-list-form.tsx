@@ -35,7 +35,7 @@ export default function UserListAddNewUserForm() {
     reset,
     formState: { errors },
   } = useForm<INewUserEntityForm>({
-    resolver: zodResolver(UserSchema) as Resolver<INewUserEntityForm>,
+    // resolver: zodResolver(UserSchema) as Resolver<INewUserEntityForm>,
     mode: 'onBlur',
     defaultValues: {
       number: 0,

@@ -12,7 +12,7 @@ export class CurrentAccountRepository {
   async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
     let query = supabase
       .from('current_accounts')
-      .select('* , user(*)')
+      .select('* , users(*)')
       .eq('date', date)
       .order('created_at', { ascending: false });
 
@@ -34,7 +34,7 @@ export class CurrentAccountRepository {
       .from('current_accounts')
       .update({ ...props, edited_at: timestamp })
       .eq('current_account_id', current_account_id)
-      .select('* , user(*)')
+      .select('* , users(*)')
       .single();
 
     if (error) throw error;

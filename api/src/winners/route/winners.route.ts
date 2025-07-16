@@ -17,11 +17,13 @@ export class WinnerRouter {
 
   private setupRoutes() {
     this.router.get('/', this.getAllWinnersHandler);
-    this.router.post('/', this.generateWinnersHandler);
+    this.router.post('/:id', this.generateWinnersHandler);
   }
 
   private generateWinnersHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const { id: schedule_id } = req.params;
+    const { date } = req.body;
     if (!user?.user || user.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<null> = {
         error: {
@@ -34,7 +36,7 @@ export class WinnerRouter {
     }
 
     try {
-      await this.controller.generateWinners();
+      await this.controller.generateWinners(schedule_id, date);
       const response: APIResponse<boolean> = {
         data: {
           winner: true,

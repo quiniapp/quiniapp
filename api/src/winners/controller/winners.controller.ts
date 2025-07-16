@@ -7,9 +7,9 @@ import { WinnerRepository } from '../repository/winners.repository';
 export class WinnerController {
   private repository = new WinnerRepository();
 
-  generateWinners = async () => {
+  generateWinners = async (schedule_id: string, date: string) => {
     try {
-      const response = await this.repository.generateWinners();
+      const response = await this.repository.generateWinners(schedule_id, date);
       return response;
     } catch (error) {
       console.error('Creation error:', error);
