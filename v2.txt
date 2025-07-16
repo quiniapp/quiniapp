@@ -1,5 +1,4 @@
 Para la v2
-    !! Usar * para poner en 0 el contador
     Editar horarios, habilitar horarios, agregar horarios
     Editar loterias, agregar loterias
     Habilitar horarios para quinielas de forma independiente, tabla intermedia
@@ -8,6 +7,7 @@ Para la v2
 
     En liquidacion permitir editar pase, reclamos, aciertos, pase, cobro, arrastre
     El horario se cierra en funcion de la hora de schedule
+    Cuenta y conexion en usuarios
     Validar max length en numeros en inputs
     Cuenta y conexion en usuarios
 

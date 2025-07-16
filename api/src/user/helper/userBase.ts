@@ -15,7 +15,7 @@ const getBaseUserFields = (user: INewUserEntity) => {
     last_name: user.last_name ?? null,
     address: user.address ?? null,
     phone: user.phone ?? null,
-    group_id: user.group_id ?? null,
+    group_id: user.group_id ? user.group_id : null,
     disabled: false,
     created_at: timestamp,
     edited_at: timestamp,
@@ -35,7 +35,7 @@ export const buildUserForDB = async (user: INewUserEntity): Promise<IUserEntityB
           user_type: USER_TYPE.CASHIER,
           cashier_type: user.cashier_type!,
           fee: user?.fee!,
-          fee_plus: user?.fee_plus!,
+          fee_plus: user?.fee_plus ?? 0,
         }
       : {
           user_type: user.user_type,

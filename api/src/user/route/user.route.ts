@@ -4,7 +4,7 @@ import { INewUserEntity } from 'helper/request/user.response';
 import { APIResponse } from 'helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from 'helper/types/user.type';
-import { updateUserSchema, UserSchema } from 'helper/schemas/user.schema';
+import { updateUserSchema } from 'helper/schemas/user.schema';
 
 export class UserRouter {
   public router: Router;
@@ -47,8 +47,9 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
-    const result = UserSchema.safeParse(newUser);
-    if (!result.success) {
+    /* const result = UserSchema.safeParse(newUser);
+     if (!result.success) {
+      console.log('no new user')
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -58,7 +59,7 @@ export class UserRouter {
       res.status(400).json(response); // <-- SIN return
 
       return;
-    }
+    } */
     try {
       const user = await this.controller.create(newUser);
 
@@ -157,6 +158,7 @@ export class UserRouter {
   };
   private getAllUserHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const { cashier_number } = req.query;
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {
@@ -167,8 +169,12 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
+    let parsedCashierNumber: number | undefined = undefined;
+    if (typeof cashier_number === 'string') {
+      parsedCashierNumber = parseInt(cashier_number, 10);
+    }
     try {
-      const users = await this.controller.getAll();
+      const users = await this.controller.getAll(parsedCashierNumber);
       const response: APIResponse<IUserEntityFront[]> = {
         data: {
           users,

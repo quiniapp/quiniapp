@@ -10,12 +10,18 @@ export class UserRepository {
     return data;
   }
 
-  async getAll() {
-    const { data, error } = await supabase.from('users').select('*');
+  async getAll(cashier_number?: number) {
+    let query = supabase.from('users').select('*');
+
+    if (cashier_number) {
+      query = query.eq('number', cashier_number);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw new Error(error.details);
     return data;
   }
-
   async create(newUser: IUserEntityBack) {
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
 
