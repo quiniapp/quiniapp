@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Clock, PencilIcon, RefreshCw, SaveIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -28,8 +28,10 @@ import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 
 const ResultsContent = () => {
   const { role } = useSessionStore();
+  const [isOpen, setIsOpen] = useState<boolean>(false)
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
   const [selectedSchedule, setSelectedSchedule] = useState<string | undefined>();
+  const [scheduleWinners, setScheduleWinners] = useState<string | undefined>(undefined);
   const [selectedLottery, setSelectedLottery] = useState<string | undefined>();
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [onEdit, setOnEdit] = useState(false);
@@ -42,7 +44,10 @@ const ResultsContent = () => {
     date: selectedDate,
   });
   const { mutate: updateResults, isPending } = useUpdateResults();
-  const { mutate: generateWinners, isPending: isPendingWinners } = useGenerateWinners();
+  const { mutate: generateWinners, isPending: isPendingWinners } = useGenerateWinners({
+    schedule_id: scheduleWinners,
+    date: selectedDate,
+  });
 
   const schedules = fetchSchedules?.data?.schedule || [];
   const lotteries = fetchLotteries?.data?.lottery || [];
@@ -136,15 +141,16 @@ const ResultsContent = () => {
             <Button variant="outline" className="flex items-center gap-2">
               <RefreshCw size={16} />
               Actualizar
-            </Button>{
-              role !== USER_TYPE.CASHIER &&
-            <Button
-              variant={'success'}
-              className="  hover:bg-green-700 text-white"
-              onClick={() => handleGenerate()}
-            >
-              {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
-            </Button>}
+            </Button>
+            {role !== USER_TYPE.CASHIER && (
+              <Button
+                variant={'success'}
+                className="  hover:bg-green-700 text-white"
+                onClick={() => setIsOpen(true)}
+              >
+                {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
+              </Button>
+            )}
           </Flex>
         </Flex>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
@@ -202,8 +208,15 @@ const ResultsContent = () => {
           </div>
         </Box>
       </FlexCol>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <GenerateWinnersModal isOpen={isOpen} onClose={()=>setIsOpen(false)} schedules={schedules} setScheduleWinners={setScheduleWinners}onClick={handleGenerate} isPendingWinners={isPendingWinners}/>
+      </Suspense>
     </Box>
   );
 };
 
 export default ResultsContent;
+
+const GenerateWinnersModal = React.lazy(
+  () => import('../../../src/components/modals/generate-winners-modal')
+);

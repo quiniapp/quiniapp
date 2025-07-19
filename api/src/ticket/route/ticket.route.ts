@@ -141,7 +141,7 @@ export class TicketRouter {
   };
   private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-
+    const { date } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -152,11 +152,21 @@ export class TicketRouter {
       res.status(500).json(response);
       return;
     }
-
+    if (typeof date !== 'string') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
     try {
       const ticket = await this.controller.getAll({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
+        date: date,
       });
 
       const response: APIResponse<ITicketEntityFront[]> = {

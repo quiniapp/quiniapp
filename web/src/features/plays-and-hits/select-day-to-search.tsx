@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import dayjs from 'dayjs';
 
 interface SelectDayToSearchProps {
   selectedDay?: string;
   onDayChange: (date?: string) => void;
   className?: string;
+  toDate?:Date
 }
 
-export function SelectDayToSearch({ selectedDay, onDayChange, className }: SelectDayToSearchProps) {
+export function SelectDayToSearch({ selectedDay, onDayChange, className,toDate }: SelectDayToSearchProps) {
   // Maintain internal Date state synced with selectedDay prop
   const [date, setDate] = useState<Date | undefined>(
     selectedDay ? parseISO(selectedDay) : undefined
@@ -52,6 +54,7 @@ export function SelectDayToSearch({ selectedDay, onDayChange, className }: Selec
           selected={date}
           onSelect={handleSelect}
           locale={es}
+          toDate={toDate}
           initialFocus
           className={cn('p-3 pointer-events-auto')}
         />

@@ -3,7 +3,6 @@ import { ROUTES } from '../../../../routes/routes.ts';
 import { IGetResultsEntity } from '../../../../helper/request/results.response.ts';
 
 const fetchResults = async ({ lottery_id, schedule_id, date }: IGetResultsEntity) => {
-  if (!lottery_id || !schedule_id) return;
   const url = `${ROUTES.results.base}?date=${date}&schedule_id=${schedule_id}&lottery_id=${lottery_id}`;
 
   const res = await fetch(url, {
@@ -12,13 +11,17 @@ const fetchResults = async ({ lottery_id, schedule_id, date }: IGetResultsEntity
   });
 
   if (!res.ok) throw new Error('Error fetching results');
-  const  {data } = await res.json()
+  const { data } = await res.json();
 
   return data.results;
 };
 
-export const useResults = (params: IGetResultsEntity) =>
-  useQuery({
+export const useResults = (params: IGetResultsEntity) => {
+  const { lottery_id, schedule_id, date } = params;
+
+  return useQuery({
     queryKey: ['results', params],
     queryFn: () => fetchResults(params),
+    enabled: Boolean(lottery_id && schedule_id && date), // ⛔ evita que se ejecute con datos incompletos
   });
+};

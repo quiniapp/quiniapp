@@ -4,7 +4,7 @@ export interface ITicketEntityBase {
   ticket_id: string;
   user_id: string | null;
   user_name: string;
-  ticket_number: number;
+  ticket_number: string;
   date: string;
   paid: boolean;
   winner: boolean;
