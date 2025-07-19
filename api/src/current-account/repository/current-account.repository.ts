@@ -1,5 +1,5 @@
-import { IUpdateCurrentAccountEntity } from 'helper/request/current_account.response';
-import { supabase } from '../../../database/db.connection';
+import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.response';
+import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 
 export class CurrentAccountRepository {

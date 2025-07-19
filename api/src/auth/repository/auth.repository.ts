@@ -1,6 +1,6 @@
-import { IAuthLogin } from 'helper/types/auth.type';
-import { ERROR_MESSAGE } from 'helper/types/errors.type';
-import { supabase } from 'api/database/db.connection';
+import { IAuthLogin } from '@helper/types/auth.type';
+import { ERROR_MESSAGE } from '@helper/types/errors.type';
+import { supabase } from '@database/db.connection';
 
 export class AuthRepository {
   async login(props: IAuthLogin) {

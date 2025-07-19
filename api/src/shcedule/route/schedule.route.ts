@@ -1,10 +1,10 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { ScheduleController } from '../controller/schedule.controller';
-import { APIResponse } from 'helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
-import { USER_TYPE } from 'helper/types/user.type';
-import { IScheduleEntityFront } from 'helper/types/schedule.type';
-import { newScheduleSchema, updateScheduleSchema } from 'helper/schemas/schedule.schema';
+import { APIResponse } from '@helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { USER_TYPE } from '@helper/types/user.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 
 export class ScheduleRouter {
   public router: Router;

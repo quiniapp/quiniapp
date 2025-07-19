@@ -1,5 +1,5 @@
-import { INewBetEntity } from 'helper/request/bet.response';
-import { IBetEntityBase } from 'helper/types/bet.type';
+import { INewBetEntity } from '@helper/request/bet.response';
+import { IBetEntityBase } from '@helper/types/bet.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 

@@ -1,9 +1,9 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { AuthController } from '../controller/auth.controller';
 import { z } from 'zod';
-import { APIResponse } from 'helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
-import { IUserEntityFront } from 'helper/types/user.type';
+import { APIResponse } from '@helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { IUserEntityFront } from '@helper/types/user.type';
 import { supabase } from 'api/database/db.connection';
 import { generateEmail } from 'api/helper/generateEmail';
 import { signUserToken } from 'api/helper/JWT';

@@ -4,11 +4,11 @@ import {
   IGetLotteryEntity,
   INewLotteryEntity,
   IUpdateLotteryEntity,
-} from 'helper/request/lottery.response';
+} from '@helper/request/lottery.response';
 import { lotteryBase } from '../helper/lotteryBase';
 import { parseLottery } from '../helper/parseLottery';
-import { ILotteryEntityFront } from 'helper/types/lottery.type';
-import { USER_TYPE } from 'helper/types/user.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { USER_TYPE } from '@helper/types/user.type';
 
 export class LotteryController {
   private repository = new LotteryRepository();

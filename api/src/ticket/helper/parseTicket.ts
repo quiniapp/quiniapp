@@ -1,4 +1,4 @@
-import { ITicketEntityBack, ITicketEntityFront } from 'helper/types/ticket.type';
+import { ITicketEntityBack, ITicketEntityFront } from '@helper/types/ticket.type';
 import { parseBet } from 'api/src/bet/helper/parseBet';
 
 export const parseTicket = (ticket: ITicketEntityBack): ITicketEntityFront => {

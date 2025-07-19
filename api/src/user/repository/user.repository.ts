@@ -1,5 +1,5 @@
-import { IUserEntityBack } from 'helper/types/user.type';
-import { supabase } from 'api/database/db.connection';
+import { IUserEntityBack } from '@helper/types/user.type';
+import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 
 export class UserRepository {

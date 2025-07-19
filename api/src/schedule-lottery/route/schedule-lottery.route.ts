@@ -1,8 +1,8 @@
 import { Request, RequestHandler, Response, Router } from 'express';
-import { APIResponse } from 'helper/response/api_response.response';
-import { scheduleLotteriesSchema } from 'helper/schemas/schedule_lottery.schema';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
-import { USER_TYPE } from 'helper/types/user.type';
+import { APIResponse } from '@helper/response/api_response.response';
+import { scheduleLotteriesSchema } from '@helper/schemas/schedule_lottery.schema';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
 
 export class ScheduleLotteryRouter {

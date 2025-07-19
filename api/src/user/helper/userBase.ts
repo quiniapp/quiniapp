@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { INewUserEntity } from 'helper/request/user.response';
-import { CASHIER_TYPE, IUserEntityBack, USER_TYPE } from 'helper/types/user.type';
+import { INewUserEntity } from '@helper/request/user.response';
+import { CASHIER_TYPE, IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { generateEmail } from 'api/helper/generateEmail';
 

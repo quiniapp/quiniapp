@@ -1,8 +1,8 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { BetController } from '../controller/bet.controller';
-import { APIResponse } from 'helper/response/api_response.response';
-import { IBetEntityFront } from 'helper/types/bet.type';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
+import { APIResponse } from '@helper/response/api_response.response';
+import { IBetEntityFront } from '@helper/types/bet.type';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 
 export class BetRouter {
   public router: Router;

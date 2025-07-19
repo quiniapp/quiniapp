@@ -1,4 +1,4 @@
-import { supabase } from '../../../database/db.connection';
+import { supabase } from '@database/db.connection';
 
 export class WinnerRepository {
   async generateWinners(schedule_id: string, date: string) {

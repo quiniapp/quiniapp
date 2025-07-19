@@ -1,9 +1,9 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { TicketController } from '../controller/ticket.controller';
-import { APIResponse } from 'helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
-import { ITicketEntityFront } from 'helper/types/ticket.type';
-import { newTicketSchema } from 'helper/schemas/ticket.schema';
+import { APIResponse } from '@helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { newTicketSchema } from '@helper/schemas/ticket.schema';
 
 export class TicketRouter {
   public router: Router;
@@ -103,11 +103,21 @@ export class TicketRouter {
       res.status(500).json(response);
       return;
     }
+    if (typeof ticket_number !== 'string') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
 
     try {
       const ticket = await this.controller.get({
         ticket_id,
-        ...(ticket_number && { ticket_number: +ticket_number }),
+        ...(ticket_number && { ticket_number: ticket_number }),
       });
 
       const response: APIResponse<ITicketEntityFront> = {

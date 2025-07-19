@@ -7,7 +7,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".", // base del helper
+    "paths": {
+      "@helper/*": ["../helper/*"], // 👈 resolvé hacia arriba
+      "@database/*": ["./database/*"]
+    }
   },
-  "include": ["src", "middlewares", "helper", "../helper", "*.ts", "database"]
+  "include": ["src", "middlewares", "helper", "*.ts", "database", "../helper"]
 }

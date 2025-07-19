@@ -1,4 +1,4 @@
-import { supabase } from '../../../database/db.connection';
+import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 
 export class ScheduleRepository {

@@ -1,6 +1,6 @@
-import { IUserEntityBack, IUserEntityFront } from 'helper/types/user.type';
+import { IUserEntityBack, IUserEntityFront } from '@helper/types/user.type';
 import { AuthRepository } from '../repository/auth.repository';
-import { IAuthLogin, IAuthLogout } from 'helper/types/auth.type';
+import { IAuthLogin, IAuthLogout } from '@helper/types/auth.type';
 import { parseUser } from 'api/src/user/helper/parseUser';
 import { supabase } from 'api/database/db.connection';
 import { generateEmail } from 'api/helper/generateEmail';
