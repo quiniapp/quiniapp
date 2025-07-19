@@ -1,7 +1,7 @@
 import {
   ICurrentAccountEntityBack,
   ICurrentAccountEntityFront,
-} from 'helper/types/current_account.type';
+} from '@helper/types/current_account.type';
 
 export const parseCurrentAccount = (
   currentAccount: ICurrentAccountEntityBack

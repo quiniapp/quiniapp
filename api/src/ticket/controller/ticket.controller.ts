@@ -4,13 +4,13 @@ import {
   IGetAllTicketEntity,
   IGetTicketEntity,
   INewTicketEntity,
-} from 'helper/request/ticket.response';
+} from '@helper/request/ticket.response';
 import { ticketBase } from '../helper/ticketBase';
 import { parseTicket } from '../helper/parseTicket';
-import { ITicketEntityFront } from 'helper/types/ticket.type';
-import { USER_TYPE } from 'helper/types/user.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
-import { ERROR_MESSAGE } from 'helper/types/errors.type';
+import { ERROR_MESSAGE } from '@helper/types/errors.type';
 
 export class TicketController {
   private repository = new TicketRepository();

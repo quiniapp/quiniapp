@@ -1,6 +1,6 @@
-import { ILotteryEntityBack } from 'helper/types/lottery.type';
-import { supabase } from '../../../database/db.connection';
-import { USER_TYPE } from 'helper/types/user.type';
+import { ILotteryEntityBack } from '@helper/types/lottery.type';
+import { supabase } from '@database/db.connection';
+import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 
 export class LotteryRepository {

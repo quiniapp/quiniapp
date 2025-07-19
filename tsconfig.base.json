@@ -5,8 +5,7 @@
       "moduleResolution": "Node",
       "baseUrl": ".",
       "paths": {
-        "@/*": ["src/*"],
-        "@helper/*": ["../helper/*"]
+        "@helper/*": ["helper/*"],
       },
       "composite": true,
       "strict": true,

@@ -1,5 +1,5 @@
 import { BetRepository } from '../repository/bet.repository';
-import { IBetEntityBack, IBetEntityFront } from 'helper/types/bet.type';
+import { IBetEntityBack, IBetEntityFront } from '@helper/types/bet.type';
 import { parseBet } from '../helper/parseBet';
 
 export class BetController {

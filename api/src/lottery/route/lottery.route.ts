@@ -1,11 +1,11 @@
 import { Request, Response, Router } from 'express';
 import { LotteryController } from '../controller/lottery.controller';
 import { RequestHandler } from 'express-serve-static-core';
-import { APIResponse } from 'helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
-import { USER_TYPE } from 'helper/types/user.type';
-import { ILotteryEntityFront } from 'helper/types/lottery.type';
-import { updateLotterySchema } from 'helper/schemas/lottery.schema';
+import { APIResponse } from '@helper/response/api_response.response';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { USER_TYPE } from '@helper/types/user.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 
 export class LotteryRouter {
   public router: Router;

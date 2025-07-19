@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
-import { supabase } from '../../../database/db.connection';
-import { IDeleteTicketEntity } from 'helper/request/ticket.response';
-import { ITicketEntityBack } from 'helper/types/ticket.type';
+import { supabase } from '@database/db.connection';
+import { IDeleteTicketEntity } from '@helper/request/ticket.response';
+import { ITicketEntityBack } from '@helper/types/ticket.type';
 
 export class TicketRepository {
   async create(ticket: ITicketEntityBack) {

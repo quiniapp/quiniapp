@@ -1,10 +1,9 @@
 import { Request, RequestHandler, Response, Router } from 'express';
-import { APIResponse } from 'helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from 'helper/types/errors.type';
-
-import { USER_TYPE } from 'helper/types/user.type';
 import { WinnerController } from '../controller/winners.controller';
-import { ITicketEntityFront } from 'helper/types/ticket.type';
+import { APIResponse } from '@helper/response/api_response.response';
+import { USER_TYPE } from '@helper/types/user.type';
+import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 
 export class WinnerRouter {
   public router: Router;

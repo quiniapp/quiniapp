@@ -1,4 +1,4 @@
-import { IUserEntityBack, IUserEntityFront, USER_TYPE } from 'helper/types/user.type';
+import { IUserEntityBack, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 
 export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
   const base = {
@@ -10,7 +10,6 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
     phone: user.phone,
     email: user.email,
     username: user.username,
-    token: user.token,
     disabled: user.disabled,
   };
 

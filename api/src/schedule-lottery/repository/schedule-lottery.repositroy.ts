@@ -1,4 +1,4 @@
-import { supabase } from 'api/database/db.connection';
+import { supabase } from '@database/db.connection';
 
 export class ScheduleLotteryRepository {
   async deleteAllForScheduleAndDay(schedule_id: string, day: number) {

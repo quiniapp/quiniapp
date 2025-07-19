@@ -1,11 +1,11 @@
 import { parseResults } from '../helper/parseResults';
 import { ResultsRepository } from '../repository/results.repository';
-import { IResultsEntityBack, IResultsEntityFront } from 'helper/types/results.type';
+import { IResultsEntityBack, IResultsEntityFront } from '@helper/types/results.type';
 import {
   IGetResultsEntity,
   INewResultsEntity,
   IUpdateResultsEntity,
-} from 'helper/request/results.response';
+} from '@helper/request/results.response';
 import { resultsBase } from '../helper/resultsBase';
 
 export class ResultsController {
