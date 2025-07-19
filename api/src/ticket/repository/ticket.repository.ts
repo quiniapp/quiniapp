@@ -5,7 +5,6 @@ import { ITicketEntityBack } from 'helper/types/ticket.type';
 
 export class TicketRepository {
   async create(ticket: ITicketEntityBack) {
-    console.log('ticket', ticket);
     const { data, error } = await supabase.rpc('create_ticket_with_bets', {
       ticket: ticket,
       bets: ticket.bets,

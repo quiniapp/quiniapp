@@ -21,7 +21,7 @@ const PlaysAndHitsTable = () => {
     lottery_id: setSearchParams.get('lottery_id'),
   });
 
-  console.log('bets', data?.bets);
+
   return (
     <Table>
       <TableCaption>No se encontraron jugadas</TableCaption>

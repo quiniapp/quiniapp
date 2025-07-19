@@ -83,18 +83,14 @@ const PlayAndHitsSelect = () => {
                 <SelectValue placeholder={ALL} />
               </SelectTrigger>
               <SelectContent
-                onClick={() => {
-                  console.log('click');
-                }}
+               
               >
                 <SelectItem value={ALL}> {ALL}</SelectItem>
                 {schedules?.data?.schedule?.map((item: IScheduleEntityFront) => (
                   <SelectItem
                     key={item.schedule_id}
                     value={item.schedule_id}
-                    onClick={() => {
-                      console.log(item);
-                    }}
+
                   >
                     {item.name} - {item.time}
                   </SelectItem>
