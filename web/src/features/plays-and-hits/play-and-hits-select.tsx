@@ -7,20 +7,47 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { TypographyMuted } from '@/components/ui/typography-muted';
-import { MODALIDADES, QUINIELA_PROVINCIAS } from '@/constants/LIstCommonBets.ts';
+import { useLotteries } from '@/hooks/useLotteries';
+import { useSchedules } from '@/hooks/useSchedules';
+import { IScheduleEntityFront } from 'helper/types/schedule.type';
+import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { useSearchParams } from 'react-router-dom';
+
+const ALL = 'Todos';
 
 const PlayAndHitsSelect = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: lotteries } = useLotteries();
+
+  const { data: schedules } = useSchedules();
+
+  const selectedSchedule = searchParams.get('schedule_id');
+  const selectedLottery = searchParams.get('lottery_id');
+  const selectedCashier = searchParams.get('cashier_id');
+
+  const handleChange = (id: string, key: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (id === ALL) params.delete(key);
+    else params.set(key, id);
+    setSearchParams(params);
+  };
+
   return (
     <Flex className={' space-x-4'}>
       <Flex className={'flex-1 space-x-4'}>
         <FlexCol className={'flex-1 gap-3'}>
           <TypographyMuted label={'Pasador'} />
-          <Select>
+          <Select
+            value={selectedCashier ?? ''}
+            onValueChange={(value) => {
+              handleChange(value, 'cashier_id');
+            }}
+          >
             <SelectTrigger className={'border w-full 1440:py-[24px] bg-[var(--bg-card)]'}>
-              <SelectValue placeholder={'Todos'} />
+              <SelectValue placeholder={ALL} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={'Todos'}> Todos</SelectItem>
+              <SelectItem value={ALL}> {ALL}</SelectItem>
               <SelectItem value={'Pasador 2'}> Pasador 2</SelectItem>
               <SelectItem value={'Pasador 3'}> Pasador 3</SelectItem>
             </SelectContent>
@@ -30,10 +57,10 @@ const PlayAndHitsSelect = () => {
           <TypographyMuted label={'Grupo'} />
           <Select>
             <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
-              <SelectValue placeholder={'Todos'} />
+              <SelectValue placeholder={ALL} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={'Todos'}> Todos</SelectItem>
+              <SelectItem value={ALL}> {ALL}</SelectItem>
               <SelectItem value={'Pasador 1'}> Grupo 1</SelectItem>
               <SelectItem value={'Pasador 2'}> Grupo 2</SelectItem>
               <SelectItem value={'Pasador 4'}> Grupo 4</SelectItem>
@@ -46,15 +73,30 @@ const PlayAndHitsSelect = () => {
         <Flex className={'flex-1 gap-3'}>
           <FlexCol className={'flex-1 gap-3'}>
             <TypographyMuted label={'Turno'} />
-            <Select>
+            <Select
+              value={selectedSchedule ?? ''}
+              onValueChange={(value) => {
+                handleChange(value, 'schedule_id');
+              }}
+            >
               <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
-                <SelectValue placeholder={'Todos'} />
+                <SelectValue placeholder={ALL} />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={'Todos'}> Todos</SelectItem>
-                {MODALIDADES.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
+              <SelectContent
+                onClick={() => {
+                  console.log('click');
+                }}
+              >
+                <SelectItem value={ALL}> {ALL}</SelectItem>
+                {schedules?.data?.schedule?.map((item: IScheduleEntityFront) => (
+                  <SelectItem
+                    key={item.schedule_id}
+                    value={item.schedule_id}
+                    onClick={() => {
+                      console.log(item);
+                    }}
+                  >
+                    {item.name} - {item.time}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -64,16 +106,21 @@ const PlayAndHitsSelect = () => {
         <Flex className={'flex-1 gap-3'}>
           <FlexCol className={'flex-1 gap-3'}>
             <TypographyMuted label={'Quniela'} />
-            <Select>
+            <Select
+              value={selectedLottery ?? ''}
+              onValueChange={(value) => {
+                handleChange(value, 'lottery_id');
+              }}
+            >
               <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
-                <SelectValue placeholder={'Todos'} />
+                <SelectValue placeholder={ALL} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={'Todos'}> Todos</SelectItem>
-                {QUINIELA_PROVINCIAS.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
+                <SelectItem value={ALL}> {ALL}</SelectItem>
+                {lotteries?.data?.lottery?.map((item: ILotteryEntityFront) => (
+                  <SelectItem key={item.lottery_id} value={item.lottery_id}>
                     {' '}
-                    {item.label}
+                    {item.name}
                   </SelectItem>
                 ))}
               </SelectContent>

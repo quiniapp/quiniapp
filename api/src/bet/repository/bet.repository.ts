@@ -1,43 +1,29 @@
 import { supabase } from '../../../database/db.connection';
 
 export class BetRepository {
-  async getById(id: string) {
-    const { data, error } = await supabase.from('bet').select('*').eq('id', id).single();
+  async getAllBets({
+    schedule_id,
+    date,
+    cashier_id,
+    lottery_id,
+  }: {
+    schedule_id?: string;
+    date: string;
+    cashier_id?: string;
+    lottery_id?: string;
+  }) {
+    let query = supabase.from('bets').select('*, lotteries(*), schedules(*)').eq('date', date);
+
+    if (schedule_id) {
+      query = query.eq('schedule_id', schedule_id);
+    }
+    if (cashier_id) {
+      query = query.eq('user_id', cashier_id);
+    }
+    if (lottery_id) query = query.eq('lottery_id', lottery_id);
+    const { data, error } = await query;
 
     if (error) throw error;
     return data;
-  }
-
-  async getAll() {
-    const { data, error } = await supabase.from('bet').select('*');
-
-    if (error) throw error;
-    return data;
-  }
-
-  async create(payload: any) {
-    //validar hora
-    const { data, error } = await supabase.from('bet').insert(payload).select().single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async update(id: string, payload: any) {
-    const { data, error } = await supabase
-      .from('bet')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async delete(id: string) {
-    const { error } = await supabase.from('bet').delete().eq('id', id);
-
-    if (error) throw error;
   }
 }

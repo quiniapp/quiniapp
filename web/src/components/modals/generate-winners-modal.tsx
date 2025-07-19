@@ -1,27 +1,36 @@
-import { Clock } from 'lucide-react';
-// @UI
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-// @Components
-import Box from '@/components/box';
-import { Flex } from '@/components/flex';
-import HeaderTitleSection from '@/components/header-title-section';
-// @Hooks
-import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
-import { useEffect, useRef } from 'react';
 
+import Modal from './custom-modal';
+import { useEffect, useRef } from 'react';
+import { RadioGroup } from '@radix-ui/react-radio-group';
+import Box from '../box';
+import { Flex, FlexCol } from '../flex';
+import { RadioGroupItem } from '../ui/radio-group';
+import { Label } from '../ui/label';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { Button } from '../ui/button';
 type Shift = {
   schedule_id: string;
   name: string;
   time: string;
 };
 
-interface ResultShiftsProps {
-  schedules: Shift[];
-  onScheduleSelect: (shiftId: string) => void;
+interface GenerateWinnersModalProps {
+  isOpen: boolean
+  schedules: IScheduleEntityFront[]
+  onClose: VoidFunction
+  onClick:VoidFunction
+  setScheduleWinners:React.Dispatch<React.SetStateAction<string | undefined>>
+  isPendingWinners: boolean
 }
 
-const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
+const GenerateWinnersModal = ({
+  isOpen,
+  schedules,
+  onClose,
+  onClick,
+  setScheduleWinners,
+  isPendingWinners,
+}: GenerateWinnersModalProps) => {
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);
   const refF3 = useRef<HTMLButtonElement>(null);
@@ -59,7 +68,6 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
   ];
 
   const handleKeyDown = (e: KeyboardEvent) => {
-
     const index = keyMap[e.key];
 
     if (index !== undefined) {
@@ -75,38 +83,46 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
   return (
-    <Box className="  rounded-lg px-4 1440:py-8 py-4 bg-card">
+    <Modal
+      title="Generar ganadores"
+      isOpen={isOpen}
+      onClose={onClose}
+      className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
+    >
+        
+      <RadioGroup onValueChange={setScheduleWinners} className='flex gap-5'>
 
-      <HeaderTitleSection
-        title={'Turno'}
-        icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-        variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
-        className={'pb-2'}
-      />
-      <RadioGroup onValueChange={onScheduleSelect}>
-        <Box className="grid 1440:grid-cols-3 grid-cols-2 1440:gap-4 gap-1">
           {schedules?.map((turno: Shift, index) => (
-            <Flex key={turno.schedule_id} className=" h-[36px]  items-center space-x-4">
+              <Flex key={turno.schedule_id} className=" h-[36px]  items-center space-x-4">
               <RadioGroupItem
                 ref={keyboardMap[index]?.ref}
                 id={turno.schedule_id}
                 value={turno.schedule_id}
                 className="border border-primary"
-              />
+                />
               <Label
                 htmlFor={turno.schedule_id}
                 className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                {turno.name} [{turno.time}] [F{index+1}]
+                >
+                {turno.name} [{turno.time}] [F{index + 1}]
               </Label>
             </Flex>
           ))}
-        </Box>
       </RadioGroup>
-    </Box>
+      <FlexCol className='items-center pt-2'>
+
+      <Button
+        variant={'success'}
+        className="  hover:bg-green-700 text-white"
+        onClick={() => onClick()}
+        >
+        {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
+      </Button>
+          </FlexCol>
+
+    </Modal>
   );
 };
 
-export default ResultShifts;
+export default GenerateWinnersModal;

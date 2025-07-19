@@ -5,7 +5,7 @@ import { ITicketEntityBack } from 'helper/types/ticket.type';
 
 export class TicketRepository {
   async create(ticket: ITicketEntityBack) {
-    console.log(ticket);
+    console.log('ticket', ticket);
     const { data, error } = await supabase.rpc('create_ticket_with_bets', {
       ticket: ticket,
       bets: ticket.bets,
@@ -37,10 +37,11 @@ export class TicketRepository {
     if (error) throw error;
     return data;
   }
-  async getAll(user_id?: string) {
+  async getAll({ user_id, date }: { user_id?: string; date: string }) {
     let query = supabase
       .from('tickets')
       .select('*, bets(*, lotteries(*), schedules(*))')
+      .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 

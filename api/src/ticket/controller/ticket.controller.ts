@@ -39,9 +39,9 @@ export class TicketController {
     let tickets;
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
-        tickets = await this.repository.getAll(props.user_id);
+        tickets = await this.repository.getAll({ user_id: props.user_id, date: props.date });
       } else {
-        tickets = await this.repository.getAll();
+        tickets = await this.repository.getAll({ date: props.date });
       }
 
       return tickets.map((ticket) => {

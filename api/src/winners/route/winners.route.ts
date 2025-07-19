@@ -23,7 +23,7 @@ export class WinnerRouter {
   private generateWinnersHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: schedule_id } = req.params;
-    const { date } = req.body;
+    const { date } = req.query;
     if (!user?.user || user.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<null> = {
         error: {
@@ -34,7 +34,16 @@ export class WinnerRouter {
       res.status(500).json(response);
       return;
     }
-
+    if (typeof date !== 'string') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
     try {
       await this.controller.generateWinners(schedule_id, date);
       const response: APIResponse<boolean> = {
@@ -68,7 +77,7 @@ export class WinnerRouter {
 
   private getAllWinnersHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-
+    const { date } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -79,12 +88,21 @@ export class WinnerRouter {
       res.status(500).json(response);
       return;
     }
-
+    if (typeof date !== 'string') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
     try {
-      console.log('getAllWinners');
       const winners = await this.controller.getAllWinners({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
+        date: date,
       });
 
       const response: APIResponse<ITicketEntityFront[]> = {

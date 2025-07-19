@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../routes/routes';
+import dayjs from 'dayjs';
 
 const fetchTickets = async () => {
-  const res = await fetch(ROUTES.ticket.base, {
+  const date = dayjs().format('YYYY-MM-DD')
+  const res = await fetch(`${ROUTES.ticket.base}?date=${date}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });

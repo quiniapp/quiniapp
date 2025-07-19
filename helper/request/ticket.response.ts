@@ -11,4 +11,5 @@ export type IDeleteTicketEntity = Pick<ITicketEntityBack, 'ticket_id'> &
 
 export type IGetTicketEntity = Partial<Pick<ITicketEntityBack, 'ticket_id' | 'ticket_number'>>;
 
-export type IGetAllTicketEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'>;
+export type IGetAllTicketEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
+  Pick<ITicketEntityBack, 'date'>;
