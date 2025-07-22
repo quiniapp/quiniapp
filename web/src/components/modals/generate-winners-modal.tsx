@@ -2,7 +2,6 @@
 import Modal from './custom-modal';
 import { useEffect, useRef } from 'react';
 import { RadioGroup } from '@radix-ui/react-radio-group';
-import Box from '../box';
 import { Flex, FlexCol } from '../flex';
 import { RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';

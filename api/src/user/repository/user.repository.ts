@@ -11,7 +11,7 @@ export class UserRepository {
   }
 
   async getAll(cashier_number?: number) {
-    let query = supabase.from('users').select('*');
+    let query = supabase.from('users').select('*').is('deleted_at', null);
 
     if (cashier_number) {
       query = query.eq('number', cashier_number);
@@ -34,10 +34,9 @@ export class UserRepository {
     const { data, error } = await supabase
       .from('users')
       .update({ ...payload, edited_at: timestamp })
-      .eq('id', id)
+      .eq('user_id', id)
       .select()
       .single();
-
     if (error) throw new Error(error.details);
     return data;
   }
@@ -47,7 +46,7 @@ export class UserRepository {
     const { data, error } = await supabase
       .from('users')
       .update({ deleted_at: timestamp })
-      .eq('id', id)
+      .eq('user_id', id)
       .select()
       .single();
     if (error) throw new Error(error.details);

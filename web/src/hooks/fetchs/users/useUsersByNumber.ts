@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../routes/routes.ts';
+import { ROUTES } from '../../../../routes/routes.ts';
 
 const fetchUsersByNumber = async (cashier_number?: number) => {
   if (!cashier_number) return;

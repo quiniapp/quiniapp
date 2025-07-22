@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../routes/routes.ts';
+import { ROUTES } from '../../../../routes/routes.ts';
 
 const fetchUsers = async () => {
   const response = await fetch(ROUTES.user.base, {

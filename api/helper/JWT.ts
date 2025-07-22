@@ -1,4 +1,4 @@
-import { IUserEntityFront } from 'helper/types/user.type';
+import { IUserEntityFront } from '@helper/types/user.type';
 import { JwtPayload } from '@supabase/supabase-js';
 import { JWT_SECRET_USER } from 'api/envs';
 import jwt, { SignOptions } from 'jsonwebtoken';

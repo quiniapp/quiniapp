@@ -284,7 +284,6 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
-
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {
