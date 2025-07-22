@@ -9,6 +9,8 @@
     "helper"
   ],
   "scripts": {
+    "api-install": "npm install --workspace api",
+    "api": "npm run dev --workspace api",
     "lint": "npm run lint --workspaces",
     "format": "npm run format --workspaces",
     "build": "npm run build --workspaces",
@@ -37,6 +39,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.2"
   },
   "lint-staged": {
