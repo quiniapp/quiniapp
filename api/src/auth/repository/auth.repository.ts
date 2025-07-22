@@ -9,6 +9,7 @@ export class AuthRepository {
         .from('users')
         .select('*')
         .eq('username', props.username)
+        .is('deleted_at', null)
         .single();
 
       if (!data) throw new Error(ERROR_MESSAGE.USER_NOT_FOUND);

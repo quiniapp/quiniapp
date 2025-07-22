@@ -1,10 +1,9 @@
-import { INewTicketEntity } from '@helper/request/ticket.response';
-import { ITicketEntityBack } from '@helper/types/ticket.type';
+import { INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.response';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';
 
-export const ticketBase = (ticket: INewTicketEntity): ITicketEntityBack => {
+export const ticketBase = (ticket: INewTicketEntity): INewTicketBaseEntity => {
   const timestamp = dayjs().toISOString();
   const ticket_id = uuidv4();
   const ticket_number = dayjs().format('YYYYMMDDHHmmssSSS');

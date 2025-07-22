@@ -1,4 +1,5 @@
-import { ITicketEntityBack } from '../types/ticket.type';
+import { IBetEntityBase } from 'types/bet.type';
+import { ITicketEntityBack, ITicketEntityBase } from '../types/ticket.type';
 import { IUserEntityBack } from '../types/user.type';
 import { INewBetEntity } from './bet.response';
 
@@ -6,6 +7,9 @@ export type INewTicketEntity = Pick<ITicketEntityBack, 'user_id' | 'user_name' |
   bets: INewBetEntity[];
 };
 
+export interface INewTicketBaseEntity extends ITicketEntityBase {
+  bets: IBetEntityBase[];
+}
 export type IDeleteTicketEntity = Pick<ITicketEntityBack, 'ticket_id'> &
   Partial<Pick<IUserEntityBack, 'user_type' | 'user_id'>>;
 

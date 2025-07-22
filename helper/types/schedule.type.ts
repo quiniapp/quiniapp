@@ -6,7 +6,7 @@ export interface IScheduleEntityBack {
   time: string;
   created_at: string;
   edited_at: string;
-  schedule_lotteries: IScheduleLotteryEntityBack[];
+  schedule_lotteries?: IScheduleLotteryEntityBack[];
 }
 
 export type IScheduleEntityFront = Omit<IScheduleEntityBack, 'created_at' | 'edited_at'>;
