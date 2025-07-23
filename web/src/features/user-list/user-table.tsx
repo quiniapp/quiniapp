@@ -11,12 +11,11 @@ import {
 } from '@/components/ui/table';
 
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
-import { Users } from '@/types/user.type.ts';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { useDeleteUsers } from '@/hooks/mutations/users/useDeleteUser';
 import { toast } from 'react-hot-toast';
 import React, { Suspense, useState } from 'react';
-import { IUserEntityFront } from '../../../../helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
 
 const UsersTable = () => {
   const [open, setOpen] = useState<boolean>(false);
@@ -54,15 +53,16 @@ const UsersTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
+          
           {data?.data?.users?.map((user: IUserEntityFront) => (
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
               <TableCell>{user.name}</TableCell>
               <TableCell>{user.group_id}</TableCell>
-              <TableCell>{user.fee!}</TableCell>
-              <TableCell>{user.fee_plus!}</TableCell>
+              <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee : '-'}</TableCell>
+              <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee_plus : '-'}</TableCell>
               <TableCell>{user.address}</TableCell>
-              <TableCell>{user.account!}</TableCell>
+              {/* <TableCell>{`${userTypeDictionary[user.user_type]}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell> */}
               <TableCell>
                 <Button variant="ghost" className="hover:text-cyan" size={'icon'}>
                   <EditIcon />

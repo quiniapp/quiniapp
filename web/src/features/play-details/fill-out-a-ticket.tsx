@@ -9,7 +9,7 @@ import GameTurns from '@/features/play-details/game-turns.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
@@ -33,6 +33,7 @@ const FillOutATicket = ({
   setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>;
 }) => {
   const { user } = useSessionStore();
+  const [openModal, setOpenModal] = useState<boolean>(false);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [bet, setBet] = useState<IBetForm>({
@@ -124,10 +125,13 @@ const FillOutATicket = ({
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === '*') {
       e.preventDefault();
-      setPartialAmount(0);
+      setOpenModal(true);
     }
   };
-
+  const handleResetPartial = () => {
+    setPartialAmount(0);
+    setOpenModal(false);
+  };
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -215,8 +219,19 @@ const FillOutATicket = ({
         </Flex>
         <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <ResetPartialModal
+          isOpen={openModal}
+          onClose={() => setOpenModal(false)}
+          onClick={handleResetPartial}
+        />
+      </Suspense>
     </FlexCol>
   );
 };
 
 export default FillOutATicket;
+
+const ResetPartialModal = React.lazy(
+  () => import('../../../src/components/modals/ResetPartialModal')
+);
