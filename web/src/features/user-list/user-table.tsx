@@ -16,8 +16,11 @@ import { useDeleteUsers } from '@/hooks/mutations/users/useDeleteUser';
 import { toast } from 'react-hot-toast';
 import React, { Suspense, useState } from 'react';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
+import { cashierTypeDictionary } from '../../../../helper/functions/cashierTypeDictionary';
+import { userTypeDictionary } from '../../../../helper/functions/userTypeDictionary';
 
 const UsersTable = () => {
+  console.log('userTypeDictionary', userTypeDictionary);
   const [open, setOpen] = useState<boolean>(false);
   const { data, isLoading, error } = useUsers();
   const { mutate: deleteUser, isPending } = useDeleteUsers();
@@ -53,7 +56,6 @@ const UsersTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          
           {data?.data?.users?.map((user: IUserEntityFront) => (
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
@@ -62,7 +64,7 @@ const UsersTable = () => {
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee : '-'}</TableCell>
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee_plus : '-'}</TableCell>
               <TableCell>{user.address}</TableCell>
-              {/* <TableCell>{`${userTypeDictionary[user.user_type]}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell> */}
+              <TableCell>{`${userTypeDictionary[user.user_type]??''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
               <TableCell>
                 <Button variant="ghost" className="hover:text-cyan" size={'icon'}>
                   <EditIcon />
