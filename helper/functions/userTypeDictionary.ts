@@ -1,4 +1,4 @@
-import { USER_TYPE } from 'types/user.type';
+import { USER_TYPE } from '../types/user.type';
 
 export const userTypeDictionary: Partial<Record<USER_TYPE, string>> = {
   [USER_TYPE.ADMIN]: 'ADMINISTRADOR',
