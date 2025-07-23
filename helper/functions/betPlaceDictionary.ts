@@ -1,4 +1,4 @@
-import { PLACE_TYPE } from '../types/bet.type.js';
+import { PLACE_TYPE } from '../types/bet.type';
 
 export const betPlaceDictionary = {
   [PLACE_TYPE.HEAD]: 'CABEZA',
