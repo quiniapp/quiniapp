@@ -28,7 +28,7 @@ import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 
 const ResultsContent = () => {
   const { role } = useSessionStore();
-  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
   const [selectedSchedule, setSelectedSchedule] = useState<string | undefined>();
   const [scheduleWinners, setScheduleWinners] = useState<string | undefined>(undefined);
@@ -49,6 +49,7 @@ const ResultsContent = () => {
     date: selectedDate,
   });
 
+  const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
   const schedules = fetchSchedules?.data?.schedule || [];
   const lotteries = fetchLotteries?.data?.lottery || [];
 
@@ -170,6 +171,7 @@ const ResultsContent = () => {
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
                   <Input
+                    ref={(el) => {inputRefs.current[i] = el}}
                     type="text"
                     maxLength={4}
                     value={value}
@@ -179,6 +181,14 @@ const ResultsContent = () => {
                         newResults[i] = e.target.value;
                         return newResults;
                       });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (i < results.length - 1) {
+                          inputRefs.current[i + 1]?.focus();
+                          e.preventDefault(); // Evita el beep en algunos navegadores
+                        }
+                      }
                     }}
                     disabled={!onEdit}
                     className="w-full bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1"
@@ -209,7 +219,14 @@ const ResultsContent = () => {
         </Box>
       </FlexCol>
       <Suspense fallback={<div>Cargando...</div>}>
-        <GenerateWinnersModal isOpen={isOpen} onClose={()=>setIsOpen(false)} schedules={schedules} setScheduleWinners={setScheduleWinners}onClick={handleGenerate} isPendingWinners={isPendingWinners}/>
+        <GenerateWinnersModal
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          schedules={schedules}
+          setScheduleWinners={setScheduleWinners}
+          onClick={handleGenerate}
+          isPendingWinners={isPendingWinners}
+        />
       </Suspense>
     </Box>
   );
