@@ -1,7 +1,8 @@
 ## Hi there 👋
-## Devs
-  * `@sudacadev`
-  * `@agustineze`
+### Devs
+
+* **[@sudacadev](https://github.com/sudacadev)**
+* **[@agustineze](https://github.com/agustineze)**
 <!--
 **quiniapp/quiniapp** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
