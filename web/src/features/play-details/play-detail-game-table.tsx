@@ -40,7 +40,7 @@ const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
         </TableRow>
       </TableHeader>
     </Table>
-      <div className="overflow-y-auto h-[200px] 1440:h-[200px]">
+      <div className="overflow-y-auto ">
         <Table className="min-w-full table-fixed">
           <TableBody>
             {bets.length === 0 ? (

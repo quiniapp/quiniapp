@@ -16,7 +16,6 @@ export class UserController {
   create = async (newUser: INewUserEntity): Promise<IUserEntityFront> => {
     const user = await buildUserForDB(newUser);
     try {
-      console.log(user);
       const result = await this.repository.create(user);
       if (user.cashier_type !== CASHIER_TYPE.STREET) {
         const { error } = await supabase.auth.signUp({

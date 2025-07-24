@@ -27,7 +27,6 @@ const Layout = ({ classname }: LayoutProps) => {
     setIsOpen(!isOpen);
   };
   useEffect(() => {
-    console.log(isAuth)
     if (isAuth) validateSession();
   }, []);
   return (

@@ -2,9 +2,11 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-function Input({ className, type, maxLength, ...props }: React.ComponentProps<'input'>) {
-  return (
-    <input
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
+  ({ className, type, maxLength, ...props }, ref) => {
+    return (
+      <input
+        ref={ref}
       type={type}
       data-slot="input"
       maxLength={maxLength}
@@ -16,7 +18,11 @@ function Input({ className, type, maxLength, ...props }: React.ComponentProps<'i
       )}
       {...props}
     />
-  );
-}
+    );
+  }
+);
+
+// (Opcional, pero recomendado)
+Input.displayName = 'Input';
 
 export { Input };
