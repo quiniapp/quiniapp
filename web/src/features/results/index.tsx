@@ -165,7 +165,7 @@ const ResultsContent = () => {
               variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
               className={'pb-2'}
             />
-            <Box className="grid grid-cols-4 gap-6 p-8 justify-between bg-card">
+            <Box className="grid grid-flow-col grid-rows-5 gap-6 p-8 justify-between bg-card">
               {results.map((value, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
