@@ -9,7 +9,7 @@ import GameTurns from '@/features/play-details/game-turns.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
@@ -32,6 +32,7 @@ const FillOutATicket = ({
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>;
 }) => {
+  
   const { user } = useSessionStore();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
@@ -43,6 +44,31 @@ const FillOutATicket = ({
     with: null,
     position: null,
   });
+  // 1. Refs de cada input
+ const numberRef = useRef<HTMLInputElement>(null);
+ const amountRef = useRef<HTMLInputElement>(null);
+ const placeRef = useRef<HTMLInputElement>(null);
+ const withRef = useRef<HTMLInputElement>(null);
+ const positionRef = useRef<HTMLInputElement>(null);
+  // 2. Array para fácil navegación
+  const inputRefs = [numberRef, amountRef, placeRef, withRef, positionRef];
+
+  // 3. Handler de keydown en inputs
+  const handleInputKeyDown = (idx: number) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Siguiente input, cíclico
+      const nextIdx = (idx + 1) % inputRefs.length;
+      inputRefs[nextIdx].current?.focus();
+    } else if (e.key === '+') {
+      e.preventDefault();
+      handleCreateBet();
+      // Vuelve el foco al primer input
+      inputRefs[0].current?.focus();
+    }
+  };
+
+
   const handleSchedules = (schedule: IScheduleEntityFront) => {
     setSchedules((prev) => {
       const newMap = new Map(prev); // Clonás el Map
@@ -122,19 +148,21 @@ const FillOutATicket = ({
     });
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === '*') {
-      e.preventDefault();
-      setOpenModal(true);
-    }
-  };
+
+
   const handleResetPartial = () => {
     setPartialAmount(0);
     setOpenModal(false);
   };
+
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '*') {
+        setOpenModal(true);
+      }
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
   }, []);
 
   const isEnabled = useIsButtonEnabled();
@@ -147,6 +175,7 @@ const FillOutATicket = ({
               <Box className={'grid grid-cols-2 items-center justify-end '}>
                 <Label htmlFor={'number'}> Numero </Label>
                 <Input
+                  ref={numberRef}
                   id="number"
                   name={'ticket-number'}
                   type={'string'}
@@ -154,33 +183,39 @@ const FillOutATicket = ({
                   placeholder={'0000000000'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('number', e.target.value)}
+                  onKeyDown={handleInputKeyDown(0)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
                 <Label htmlFor={'amount'}> Monto </Label>
                 <Input
+                  ref={amountRef}
                   id="amount"
                   name={'ticket-amount'}
                   type={'number'}
                   placeholder={'000000'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('amount', e.target.value)}
+                  onKeyDown={handleInputKeyDown(1)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
                 <Label htmlFor={'place'}> Ubicación </Label>
                 <Input
+                  ref={placeRef}
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
                   placeholder={'1, 5, 10, 20'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('place', e.target.value)}
+                  onKeyDown={handleInputKeyDown(2)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
                 <Label htmlFor={'with'}> Con </Label>
                 <Input
+                  ref={withRef}
                   id="with"
                   name={'ticket-with'}
                   type={'number'}
@@ -188,17 +223,20 @@ const FillOutATicket = ({
                   placeholder={'00'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('with', e.target.value)}
+                  onKeyDown={handleInputKeyDown(3)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center  '}>
                 <Label htmlFor={'position'}> Posición </Label>
                 <Input
+                  ref={positionRef}
                   id="position"
                   name={'ticket-position'}
                   type={'number'}
                   placeholder={'5, 10, 20'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('position', e.target.value)}
+                  onKeyDown={handleInputKeyDown(4)}
                 />
               </Box>
               <Flex className={' gap-4 pt-[24px]'}>
@@ -210,7 +248,7 @@ const FillOutATicket = ({
                 >
                   <PlusIcon /> Agregar
                 </Button>
-                <Button type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
+                <Button  type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
                   <TrashIcon /> Borrar
                 </Button>
               </Flex>
