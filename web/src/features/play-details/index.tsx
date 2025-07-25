@@ -48,7 +48,12 @@ const handleSearch = useCallback((searchCashier:IUserEntityFront)=>{
   }
 },[])
 
+const handleResetBets = ()=>{
 
+        setBets([])
+        setPartialAmount(0)
+        setTotalAmount(0)
+}
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderPlayDetail setCashier={handleSearch}/>
@@ -64,6 +69,7 @@ const handleSearch = useCallback((searchCashier:IUserEntityFront)=>{
         partialAmount={partialAmount}
         totalAmount={totalAmount}
         handleCreateBet={handleCreateBet}
+        handleResetBets={handleResetBets}
       />
     </Box>
   );
