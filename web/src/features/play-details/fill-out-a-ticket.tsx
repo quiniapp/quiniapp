@@ -59,11 +59,14 @@ const FillOutATicket = ({
       e.preventDefault();
       // Siguiente input, cíclico
       const nextIdx = (idx + 1) % inputRefs.length;
-      if(nextIdx === 1) setBet((prev) => ({
-        ...prev,
-        amount: undefined,
-      }));
       inputRefs[nextIdx].current?.focus();
+      if (nextIdx === 1) {
+        setBet((prev) => ({
+          ...prev,
+          amount: undefined,
+        }));
+        inputRefs[nextIdx].current?.select();
+      }
     } else if (e.key === '+') {
       e.preventDefault();
       handleCreateBet();
