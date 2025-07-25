@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
+
 export interface IBetForm {
   number?: string;
   amount?: number;
@@ -32,7 +33,6 @@ const FillOutATicket = ({
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>;
 }) => {
-  
   const { user } = useSessionStore();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
@@ -45,11 +45,11 @@ const FillOutATicket = ({
     position: null,
   });
   // 1. Refs de cada input
- const numberRef = useRef<HTMLInputElement>(null);
- const amountRef = useRef<HTMLInputElement>(null);
- const placeRef = useRef<HTMLInputElement>(null);
- const withRef = useRef<HTMLInputElement>(null);
- const positionRef = useRef<HTMLInputElement>(null);
+  const numberRef = useRef<HTMLInputElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const placeRef = useRef<HTMLInputElement>(null);
+  const withRef = useRef<HTMLInputElement>(null);
+  const positionRef = useRef<HTMLInputElement>(null);
   // 2. Array para fácil navegación
   const inputRefs = [numberRef, amountRef, placeRef, withRef, positionRef];
 
@@ -59,6 +59,10 @@ const FillOutATicket = ({
       e.preventDefault();
       // Siguiente input, cíclico
       const nextIdx = (idx + 1) % inputRefs.length;
+      if(nextIdx === 1) setBet((prev) => ({
+        ...prev,
+        amount: undefined,
+      }));
       inputRefs[nextIdx].current?.focus();
     } else if (e.key === '+') {
       e.preventDefault();
@@ -67,7 +71,6 @@ const FillOutATicket = ({
       inputRefs[0].current?.focus();
     }
   };
-
 
   const handleSchedules = (schedule: IScheduleEntityFront) => {
     setSchedules((prev) => {
@@ -144,11 +147,18 @@ const FillOutATicket = ({
       });
       setPartialAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
       setTotalAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
+      // Resetear campos del form
+      setBet((prev) => ({
+        ...prev,
+        number: '',
+      }));
+
+      // También podés hacer focus al campo número si querés:
+      numberRef.current?.focus();
+
       return [...prev, ...newBet];
     });
   };
-
-
 
   const handleResetPartial = () => {
     setPartialAmount(0);
@@ -182,6 +192,7 @@ const FillOutATicket = ({
                   maxLength={10}
                   placeholder={'0000000000'}
                   className={'bg-[var(--bg-card)]'}
+                  value={bet.number ?? undefined}
                   onChange={(e) => handleBet('number', e.target.value)}
                   onKeyDown={handleInputKeyDown(0)}
                 />
@@ -248,7 +259,7 @@ const FillOutATicket = ({
                 >
                   <PlusIcon /> Agregar
                 </Button>
-                <Button  type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
+                <Button type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
                   <TrashIcon /> Borrar
                 </Button>
               </Flex>
