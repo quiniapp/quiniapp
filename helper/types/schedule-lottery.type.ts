@@ -1,5 +1,3 @@
-import { ILotteryEntityBack } from './lottery.type';
-
 export enum SCHEDULE_DAY {
   SUNDAY = 0,
   MONDAY = 1,
@@ -11,6 +9,15 @@ export enum SCHEDULE_DAY {
 }
 
 export interface IScheduleLotteryEntityBack {
+  schedule_lottery_id: number;
   day: SCHEDULE_DAY;
-  lotteries: ILotteryEntityBack[];
+  lottery_id: string;
+  schedule_id: string;
+  created_at: string;
 }
+
+export type IScheduleLotteryEntityFront = {
+  [day in keyof typeof SCHEDULE_DAY]?: {
+    [schedule_id: string]: string[];
+  };
+};
