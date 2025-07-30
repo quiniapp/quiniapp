@@ -11,6 +11,8 @@
   "scripts": {
     "api-install": "npm install --workspace api",
     "api": "npm run dev --workspace api",
+    "web-install": "npm install --workspace web",
+    "web": "npm run dev --workspace web",
     "lint": "npm run lint --workspaces",
     "format": "npm run format --workspaces",
     "build": "npm run build --workspaces",
