@@ -1,9 +1,12 @@
-import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import { Flex } from '@/components/flex';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+import { useSchedules } from '@/hooks/useSchedules';
+import { Fragment } from 'react/jsx-runtime';
 
 export interface ScheduleProps {
   schedule_id: string;
@@ -12,50 +15,32 @@ export interface ScheduleProps {
   active: boolean;
 }
 
-interface ScheduleCheckboxListProps<T extends FieldValues> {
-  schedules: ScheduleProps[];
-  control: Control<T>;
-  name: Path<T>;
+interface ScheduleRadioListProps {
+  handleSchedule: (id: string) => void;
+  selectedSchedule:string
 }
 
-export function ScheduleCheckboxList<T extends FieldValues>({
-  schedules,
-  control,
-  name,
-}: ScheduleCheckboxListProps<T>) {
-  const isLoading = !schedules || schedules.length === 0;
+export const ScheduleRadioList = ({ selectedSchedule,handleSchedule }: ScheduleRadioListProps) => {
+  const { data: schedules, isLoading } = useSchedules();
 
   if (isLoading) return <SkeletonList row={2} />;
-
   return (
-        <RadioGroup className='flex justify-between'>
-          {schedules.map((schedule, index) => (
-            <div key={schedule.schedule_id} className="flex items-center space-x-2">
-              <Controller
-                name={name}
-                control={control}
-                render={({ field }) => {
-
-                  return (
-                    <>
-                      <RadioGroupItem
-                      
-                        id={`schedule-${index}`}
-                        value={schedule.schedule_id}
-                        className="border-2 border-primary"
-                      />
-                      <Label
-                        htmlFor={`schedule-${index}`}
-                        className="1440:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {schedule.name} ({schedule.time.slice(0, 5)})
-                      </Label>
-                    </>
-                  );
-                }}
-              />
-            </div>
-          ))}
-      </RadioGroup>
+    <RadioGroup className="flex justify-between" onValueChange={handleSchedule} value={selectedSchedule}>
+      {schedules?.data?.schedule?.map((schedule: IScheduleEntityFront) => (
+        <Fragment key={schedule.schedule_id}>
+          <RadioGroupItem
+            id={schedule.schedule_id}
+            value={schedule.schedule_id}
+            className="border-2 border-primary"
+          />
+          <Label
+            htmlFor={schedule.schedule_id}
+            className="1440:text-sm text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            {schedule.name} ({schedule.time.slice(0, 5)})
+          </Label>
+        </Fragment>
+      ))}
+    </RadioGroup>
   );
-}
+};

@@ -3,7 +3,7 @@ import { IScheduleLotteryEntityBack, SCHEDULE_DAY } from '@helper/types/schedule
 
 export class ScheduleLotteryRepository {
   async getAllScheduleLottery(): Promise<IScheduleLotteryEntityBack[]> {
-    const { data, error } = await supabase.from('schedule_lotteries').select('*');
+    const { data, error } = await supabase.from('schedule_lotteries').select('day,*');
 
     if (error) throw new Error(error.message);
 

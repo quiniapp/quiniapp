@@ -1,6 +1,5 @@
 import { ILotteryEntityBack } from '@helper/types/lottery.type';
 import { supabase } from '@database/db.connection';
-import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 
 export class LotteryRepository {
@@ -15,10 +14,10 @@ export class LotteryRepository {
     return data;
   }
 
-  async getAll(user_type: USER_TYPE) {
+  async getAll(all?: boolean) {
     let query = supabase.from('lotteries').select('*');
 
-    if (user_type === USER_TYPE.CASHIER) {
+    if (!all) {
       query = query.eq('active', true);
     }
     const { data, error } = await query;

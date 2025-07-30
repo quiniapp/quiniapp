@@ -1,4 +1,4 @@
-import { SCHEDULE_DAY } from 'types/schedule-lottery.type';
+import { SCHEDULE_DAY } from '../types/schedule-lottery.type';
 import { z } from 'zod';
 
 export const scheduleLotteriesSchema = z.record(

@@ -9,7 +9,7 @@ export enum SCHEDULE_DAY {
 }
 
 export interface IScheduleLotteryEntityBack {
-  schedule_lottery_id: number;
+  id: string;
   day: SCHEDULE_DAY;
   lottery_id: string;
   schedule_id: string;
