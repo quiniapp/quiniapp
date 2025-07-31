@@ -18,4 +18,5 @@ export enum ROUTES {
   CURRENT_ACCOUNT = '/current-account',
   GROUPS = '/groups',
   NEW_USER = '/new-user',
+  RESET_PASSWORD = '/reset-password'
 }
