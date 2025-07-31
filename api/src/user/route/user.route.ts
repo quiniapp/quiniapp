@@ -207,7 +207,7 @@ export class UserRouter {
     const { id: user_id } = req.params;
     const { updateUser } = req.body;
     const { user } = req;
-    console.log('update', updateUser);
+
     if (!user_id || !updateUser) {
       const response: APIResponse<undefined> = {
         error: {

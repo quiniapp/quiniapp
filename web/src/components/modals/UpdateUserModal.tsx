@@ -42,7 +42,7 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
       disabled: user?.disabled,
     },
   });
-  console.log(user)
+  
   const { mutate: updateUser, isPending: isPendingUpdate } = useUpdateUser();
 
   const isAvailable = useMemo(() => {
@@ -50,7 +50,8 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
   }, [watch('cashier_type')]);
 
   const onSubmit = (formData:IUpdateUserEntity) => {
-    console.log('formData', formData)
+
+    
     updateUser(formData)
 
   };
