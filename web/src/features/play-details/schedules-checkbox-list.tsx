@@ -89,9 +89,6 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
 
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">
-              <Label htmlFor={`f${index + 1}`} className="text-[12px]">
-                {schedule.name} <span className="text-primary-light">[{`F${index + 1}`}]</span>
-              </Label>
               <Checkbox
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
@@ -100,6 +97,9 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
                 }}
                 className="border-2 border-primary"
               />
+              <Label htmlFor={`f${index + 1}`} className="text-[12px]">
+                {schedule.name} <span className="text-primary-light">[{`F${index + 1}`}]</span>
+              </Label>
             </Flex>
           );
         })}

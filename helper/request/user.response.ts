@@ -7,7 +7,8 @@ export type INewUserEntity = Omit<
   password: string;
 };
 
-export type IUpdateUserEntity = Partial<Omit<IUserEntityBack, 'user_id'>>;
+export type IUpdateUserEntity = Pick<IUserEntityBack, 'user_id'> &
+  Partial<Omit<IUserEntityBack, 'user_id' | 'created_at' | 'edited_at' | 'deleted_at'>>;
 export type IDeleteUserEntity = Pick<IUserEntityBack, 'user_id'>;
 export type IGetUserEntity = Partial<
   Pick<IUserEntityBack, 'user_id' | 'username' | 'number' | 'name'>

@@ -12,14 +12,14 @@ interface LotteryCheckboxListProps {
 const LotteryCheckboxList = ({ lottery, setLotteries }: LotteryCheckboxListProps) => {
   return (
     <Flex className="items-center gap-2">
-      <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
-        {lottery.name}
-      </Label>
       <Checkbox 
         id={lottery.lottery_id}
         className="border-2 border-primary"
         onClick={()=>setLotteries(lottery)}
       />
+      <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
+        {lottery.name}
+      </Label>
     </Flex>
   );
 };

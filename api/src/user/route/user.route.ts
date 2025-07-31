@@ -4,7 +4,6 @@ import { INewUserEntity } from '@helper/request/user.response';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { updateUserSchema } from '@helper/schemas/user.schema';
 
 export class UserRouter {
   public router: Router;
@@ -21,6 +20,7 @@ export class UserRouter {
     this.router.get('/:id', this.getUserHandler);
     this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
+    // this.router.put('/reset/:id', this.updatePasswordHandler);
     this.router.put('/:id', this.updateUserHandler);
     this.router.delete('/:id', this.deleteUserHandler);
   }
@@ -207,6 +207,7 @@ export class UserRouter {
     const { id: user_id } = req.params;
     const { updateUser } = req.body;
     const { user } = req;
+
     if (!user_id || !updateUser) {
       const response: APIResponse<undefined> = {
         error: {
@@ -227,7 +228,7 @@ export class UserRouter {
       res.status(403).json(response);
       return;
     }
-
+    /* 
     const result = updateUserSchema.safeParse(updateUser);
     if (!result.success) {
       const response: APIResponse<undefined> = {
@@ -239,7 +240,7 @@ export class UserRouter {
       res.status(400).json(response); // <-- SIN return
 
       return;
-    }
+    } */
     try {
       const user = await this.controller.update(user_id, { ...updateUser });
 
@@ -327,4 +328,60 @@ export class UserRouter {
       }
     }
   };
+
+  // private updatePasswordHandler: RequestHandler = async (req: Request, res: Response) => {
+  //   const { id: user_id } = req.params;
+  //   const { user } = req;
+  //   if (!user_id) {
+  //     const response: APIResponse<undefined> = {
+  //       error: {
+  //         error: ERROR_TYPE.BAD_REQUEST,
+  //         message: ERROR_MESSAGE.BAD_REQUEST,
+  //       },
+  //     };
+  //     res.status(403).json(response);
+  //     return;
+  //   }
+  //   if (user?.user.user_type === USER_TYPE.CASHIER) {
+  //     const response: APIResponse<undefined> = {
+  //       error: {
+  //         error: ERROR_TYPE.FORBIDDEN,
+  //         message: ERROR_MESSAGE.FORBIDDEN,
+  //       },
+  //     };
+  //     res.status(403).json(response);
+  //     return;
+  //   }
+  //   try {
+  //     const user = await this.controller.updatePassword(user_id);
+  //     const response: APIResponse<IUserEntityFront> = {
+  //       data: {
+  //         user,
+  //       },
+  //     };
+  //     res.status(200).json(response);
+  //     return;
+  //   } catch (error) {
+  //     {
+  //       if (error instanceof Error) {
+  //         let statusCode = 500;
+  //         if (
+  //           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+  //           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+  //         ) {
+  //           statusCode = 401;
+  //         }
+
+  //         const response: APIResponse<null> = {
+  //           error: {
+  //             error: ERROR_TYPE.AUTH_ERROR,
+  //             message: error.message,
+  //           },
+  //         };
+  //         res.status(statusCode).json(response);
+  //         return;
+  //       }
+  //     }
+  //   }
+  // };
 }
