@@ -29,6 +29,8 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
     defaultValues: {
       user_id: user?.user_id,
       number: user?.number,
+      phone: user?.phone,
+      name: user?.name,
       user_type: user?.user_type,
       cashier_type: user?.user_type === USER_TYPE.CASHIER ? user?.cashier_type : undefined,
       fee: user?.user_type === USER_TYPE.CASHIER ? user?.fee : undefined,
@@ -37,6 +39,7 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
       group_id: user?.group_id,
       last_name: user?.last_name,
       address: user?.address,
+      disabled: user?.disabled,
     },
   });
   console.log(user)
