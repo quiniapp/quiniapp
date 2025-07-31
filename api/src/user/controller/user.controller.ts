@@ -9,6 +9,7 @@ import { CASHIER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
 import { buildUserForDB } from '../helper/userBase';
 import { supabase } from 'api/database/db.connection';
+// import { generateEmail } from 'helper/generateEmail';
 
 export class UserController {
   private repository = new UserRepository();
@@ -91,4 +92,16 @@ export class UserController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+  // updatePassword = async (user_id: string) => {
+  //   try {
+  //     const user = await this.repository.getById(user_id);
+  //     const response = await supabase.auth.resetPasswordForEmail(generateEmail(user.username), {
+  //       redirectTo: 'http://localhost:5173/reset-password',
+  //     });
+  //     console.log(response);
+  //   } catch (error) {
+  //     console.error('Delete error:', error);
+  //     throw error instanceof Error ? error : new Error('Unknown error');
+  //   }
+  // };
 }

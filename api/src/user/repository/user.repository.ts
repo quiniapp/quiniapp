@@ -1,4 +1,4 @@
-import { IUserEntityBack } from '@helper/types/user.type';
+import { IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 
@@ -11,7 +11,11 @@ export class UserRepository {
   }
 
   async getAll(cashier_number?: number) {
-    let query = supabase.from('users').select('*').is('deleted_at', null);
+    let query = supabase
+      .from('users')
+      .select('*')
+      .eq('user_type', USER_TYPE.CASHIER)
+      .is('deleted_at', null);
 
     if (cashier_number) {
       query = query.eq('number', cashier_number);

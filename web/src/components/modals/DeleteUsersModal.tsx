@@ -7,7 +7,7 @@ import { IUserEntityFront } from '../../../../helper/types/user.type';
 
 interface DeleteUsersModalProps {
   isOpen: boolean;
-  user: IUserEntityFront;
+  user?: IUserEntityFront;
   onClose: VoidFunction;
   onClick: (id:string)=>void;
   isPending: boolean;
@@ -27,7 +27,7 @@ const DeleteUsersModal = ({ isOpen, onClose, onClick,user, isPending }: DeleteUs
         </Label>
         <Flex>
             <Label className="text-white text-center">
-                {`${user.name} - ${user.number}`}
+                {`${user?.name} - ${user?.number}`}
             </Label>
         </Flex>
         <Label className="text-white text-center">
@@ -38,7 +38,7 @@ const DeleteUsersModal = ({ isOpen, onClose, onClick,user, isPending }: DeleteUs
         <Button
           variant={'success'}
           className="  hover:bg-green-700 text-white"
-          onClick={() => onClick(user.user_id)}
+          onClick={() => onClick(user?.user_id ?? '')}
         >
           {isPending ? 'Eliminando...' : 'Eliminar'}
         </Button>

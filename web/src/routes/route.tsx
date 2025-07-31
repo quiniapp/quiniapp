@@ -23,6 +23,8 @@ import ShiftsPage from '@/pages/shifts';
 import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
 import UsersPage from '@/pages/users';
 import NewUserPage from '@/pages/new-user.tsx';
+import path from 'path';
+import ResetPassword from '@/pages/ResetPassword';
 
 export const RoutesContent = [
   {
@@ -119,6 +121,11 @@ export const RoutesContent = [
         id: 'New_User',
         element: <NewUserPage />,
       },
+      {
+        path: ROUTES.RESET_PASSWORD,
+        id: 'Reset_Password',
+        element: <ResetPassword />,
+      }
     ],
   },
   {

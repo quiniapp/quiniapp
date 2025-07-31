@@ -20,9 +20,10 @@ import { cashierTypeDictionary } from '../../../../helper/functions/cashierTypeD
 import { userTypeDictionary } from '../../../../helper/functions/userTypeDictionary';
 
 const UsersTable = () => {
-  console.log('userTypeDictionary', userTypeDictionary);
   const [open, setOpen] = useState<boolean>(false);
+  const [update, setUpdate] = useState<boolean>(false);
   const { data, isLoading, error } = useUsers();
+  const [user, setUser] = useState<IUserEntityFront | undefined>(undefined);
   const { mutate: deleteUser, isPending } = useDeleteUsers();
   const handleDeleteUser = (id: string) => {
     deleteUser(id, {
@@ -64,9 +65,17 @@ const UsersTable = () => {
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee : '-'}</TableCell>
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee_plus : '-'}</TableCell>
               <TableCell>{user.address}</TableCell>
-              <TableCell>{`${userTypeDictionary[user.user_type]??''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
+              <TableCell>{`${userTypeDictionary[user.user_type] ?? ''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
               <TableCell>
-                <Button variant="ghost" className="hover:text-cyan" size={'icon'}>
+                <Button
+                  variant="ghost"
+                  className="hover:text-cyan"
+                  size={'icon'}
+                  onClick={() => {
+                    setUser(user);
+                    setUpdate(true);
+                  }}
+                >
                   <EditIcon />
                 </Button>
               </TableCell>
@@ -75,24 +84,30 @@ const UsersTable = () => {
                   variant="ghost"
                   className="hover:text-destructive"
                   size={'icon'}
-                  onClick={() => setOpen(true)}
+                  onClick={() => {
+                    setUser(user);
+                    setOpen(true);
+                  }}
                 >
                   <TrashIcon />
                 </Button>
               </TableCell>
-              <Suspense fallback={<div>Cargando...</div>}>
-                <DeleteUsersModal
-                  isOpen={open}
-                  onClose={() => setOpen(false)}
-                  onClick={handleDeleteUser}
-                  isPending={isPending}
-                  user={user}
-                />
-              </Suspense>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <DeleteUsersModal
+          isOpen={open}
+          onClose={() => setOpen(false)}
+          onClick={handleDeleteUser}
+          isPending={isPending}
+          user={user}
+        />
+      </Suspense>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <UpdateUserModal isOpen={update} onClose={() => setUpdate(false)} user={user} />
+      </Suspense>
     </div>
   );
 };
@@ -101,3 +116,4 @@ export default UsersTable;
 const DeleteUsersModal = React.lazy(
   () => import('../../../src/components/modals/DeleteUsersModal')
 );
+const UpdateUserModal = React.lazy(() => import('../../../src/components/modals/UpdateUserModal'));

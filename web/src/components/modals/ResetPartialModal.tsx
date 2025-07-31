@@ -12,7 +12,7 @@ interface ResetPartialModalProps {
 const ResetPartialModal = ({ isOpen, onClose, onClick }: ResetPartialModalProps) => {
   return (
     <Modal
-      title="Eliminar usuario"
+      title="Resetear suma parcial"
       isOpen={isOpen}
       onClose={onClose}
       className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
@@ -32,7 +32,7 @@ const ResetPartialModal = ({ isOpen, onClose, onClick }: ResetPartialModalProps)
           <Button
             variant={'destructive'}
             className="  hover:bg-blue-700 text-white w-3"
-            onClick={() => onClick()}
+            onClick={() => onClose()}
           >
             No
           </Button>
