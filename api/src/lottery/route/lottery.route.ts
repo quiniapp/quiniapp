@@ -82,6 +82,7 @@ export class LotteryRouter {
 
   private getAllLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const { all } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -94,7 +95,7 @@ export class LotteryRouter {
     }
 
     try {
-      const lottery = await this.controller.getAll(user?.user.user_type);
+      const lottery = await this.controller.getAll(!!all);
       const response: APIResponse<ILotteryEntityFront[]> = {
         data: {
           lottery,

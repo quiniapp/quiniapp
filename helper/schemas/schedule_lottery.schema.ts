@@ -1,10 +1,8 @@
+import { SCHEDULE_DAY } from '../types/schedule-lottery.type';
 import { z } from 'zod';
 
-export const scheduleLotteriesSchema = z.object({
-  day: z
-    .number()
-    .int()
-    .min(0, { message: 'El día debe ser entre 0 (domingo) y 6 (sábado)' })
-    .max(6, { message: 'El día debe ser entre 0 (domingo) y 6 (sábado)' }),
-  lotteries: z.array(z.string()),
-});
+export const scheduleLotteriesSchema = z.record(
+  z.nativeEnum(SCHEDULE_DAY),
+  // Por cada día, un objeto { [schedule_id: string]: string[] }
+  z.record(z.string(), z.array(z.string()))
+);

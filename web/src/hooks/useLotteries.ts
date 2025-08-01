@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../routes/routes';
 
-const fetchLotteries = async () => {
-  const res = await fetch(ROUTES.lottery.base, {
+const fetchLotteries = async (all?: boolean) => {
+  const res = await fetch(`${ROUTES.lottery.base}${all ? '?all=true' : ''}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });
@@ -10,4 +10,5 @@ const fetchLotteries = async () => {
   return res.json();
 };
 
-export const useLotteries = () => useQuery({ queryKey: ['lotteries'], queryFn: fetchLotteries });
+export const useLotteries = (all?: boolean) =>
+  useQuery({ queryKey: ['lotteries'], queryFn: () => fetchLotteries(all) });

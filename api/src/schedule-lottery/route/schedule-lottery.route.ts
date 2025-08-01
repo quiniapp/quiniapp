@@ -1,9 +1,10 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { APIResponse } from '@helper/response/api_response.response';
-import { scheduleLotteriesSchema } from '@helper/schemas/schedule_lottery.schema';
+// import { scheduleLotteriesSchema } from '@helper/schemas/schedule_lottery.schema';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
+import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
 export class ScheduleLotteryRouter {
   public router: Router;
@@ -17,14 +18,13 @@ export class ScheduleLotteryRouter {
   }
 
   private setupRoutes() {
-    this.router.post('/:id', this.scheduleLotteryHandler);
+    this.router.post('/', this.newScheduleLotteryHandler);
+    this.router.get('/', this.getScheduleLotteryHandler);
   }
 
-  private scheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { schedule_id } = req.params;
+  private newScheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { scheduleLottery } = req.body;
-
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {
@@ -36,7 +36,7 @@ export class ScheduleLotteryRouter {
       return;
     }
 
-    const result = scheduleLotteriesSchema.safeParse(scheduleLottery);
+    /*     const result = scheduleLotteriesSchema.safeParse(scheduleLottery);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
@@ -46,21 +46,76 @@ export class ScheduleLotteryRouter {
       };
       res.status(403).json(response);
       return;
-    }
+    } */
 
-    const { day, lotteries } = result.data;
+    const deletePromises: Promise<void>[] = [];
+    const insertData: Array<{ day: SCHEDULE_DAY; schedule_id: string; lottery_id: string }> = [];
 
     try {
-      // 1. Borrar todas las relaciones existentes
-      await this.controller.deleteAllForScheduleAndDay(schedule_id, day);
-
-      // 2. Si hay nuevas, insertarlas
-      if (lotteries.length > 0) {
-        await this.controller.bulkInsert(schedule_id, day, lotteries);
+      for (const dayStr of Object.keys(scheduleLottery)) {
+        if (!dayStr) continue;
+        const day = SCHEDULE_DAY[dayStr as keyof typeof SCHEDULE_DAY];
+        const schedules = scheduleLottery[dayStr];
+        for (const schedule_id of Object.keys(schedules)) {
+          if (!schedule_id) continue;
+          // 1. Borra la combinación
+          deletePromises.push(this.controller.deleteAllForScheduleAndDay({ day, schedule_id }));
+          // 2. Prepara el insert para cada lottery_id de esa combinación
+          for (const lottery_id of schedules[schedule_id]) {
+            insertData.push({ day, schedule_id, lottery_id });
+          }
+        }
       }
 
-      res.status(200);
-      return;
+      // 3. Ejecuta los deletes en paralelo
+      await Promise.all(deletePromises);
+
+      // 4. Insertá todo de una (bulk insert)
+      let data: IScheduleLotteryEntityFront;
+      if (insertData.length) {
+        data = await this.controller.bulkInsert(insertData);
+      }
+
+      const response: APIResponse<IScheduleLotteryEntityFront> = {
+        data: {
+          scheduleLotteries: data!,
+        },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+
+  private getScheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
+    try {
+      const data = await this.controller.getAllScheduleLotteries();
+      const response: APIResponse<IScheduleLotteryEntityFront> = {
+        data: {
+          scheduleLotteries: data!,
+        },
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
