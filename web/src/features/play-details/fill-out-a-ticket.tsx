@@ -33,6 +33,7 @@ const FillOutATicket = ({
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>;
 }) => {
+  const today = dayjs()
   const { user } = useSessionStore();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
