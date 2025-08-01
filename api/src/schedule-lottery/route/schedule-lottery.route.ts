@@ -1,6 +1,6 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { APIResponse } from '@helper/response/api_response.response';
-import { scheduleLotteriesSchema } from '@helper/schemas/schedule_lottery.schema';
+// import { scheduleLotteriesSchema } from '@helper/schemas/schedule_lottery.schema';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
@@ -25,7 +25,6 @@ export class ScheduleLotteryRouter {
   private newScheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { scheduleLottery } = req.body;
-
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {
@@ -37,7 +36,7 @@ export class ScheduleLotteryRouter {
       return;
     }
 
-    const result = scheduleLotteriesSchema.safeParse(scheduleLottery);
+    /*     const result = scheduleLotteriesSchema.safeParse(scheduleLottery);
     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
@@ -47,16 +46,18 @@ export class ScheduleLotteryRouter {
       };
       res.status(403).json(response);
       return;
-    }
+    } */
 
     const deletePromises: Promise<void>[] = [];
     const insertData: Array<{ day: SCHEDULE_DAY; schedule_id: string; lottery_id: string }> = [];
 
     try {
-      for (const dayStr of Object.keys(result.data)) {
+      for (const dayStr of Object.keys(scheduleLottery)) {
+        if (!dayStr) continue;
         const day = SCHEDULE_DAY[dayStr as keyof typeof SCHEDULE_DAY];
-        const schedules = result.data[dayStr];
+        const schedules = scheduleLottery[dayStr];
         for (const schedule_id of Object.keys(schedules)) {
+          if (!schedule_id) continue;
           // 1. Borra la combinación
           deletePromises.push(this.controller.deleteAllForScheduleAndDay({ day, schedule_id }));
           // 2. Prepara el insert para cada lottery_id de esa combinación
@@ -74,6 +75,7 @@ export class ScheduleLotteryRouter {
       if (insertData.length) {
         data = await this.controller.bulkInsert(insertData);
       }
+
       const response: APIResponse<IScheduleLotteryEntityFront> = {
         data: {
           scheduleLotteries: data!,

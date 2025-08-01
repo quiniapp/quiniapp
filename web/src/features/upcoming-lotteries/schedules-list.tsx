@@ -4,9 +4,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import { Flex } from '@/components/flex';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
-import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import { useSchedules } from '@/hooks/useSchedules';
-import { Fragment } from 'react/jsx-runtime';
+
 
 export interface ScheduleProps {
   schedule_id: string;
@@ -27,7 +26,7 @@ export const ScheduleRadioList = ({ selectedSchedule,handleSchedule }: ScheduleR
   return (
     <RadioGroup className="flex justify-between" onValueChange={handleSchedule} value={selectedSchedule}>
       {schedules?.data?.schedule?.map((schedule: IScheduleEntityFront) => (
-        <Fragment key={schedule.schedule_id}>
+        <Flex className={'gap-3 items-center'} key={schedule.schedule_id}>
           <RadioGroupItem
             id={schedule.schedule_id}
             value={schedule.schedule_id}
@@ -39,7 +38,7 @@ export const ScheduleRadioList = ({ selectedSchedule,handleSchedule }: ScheduleR
           >
             {schedule.name} ({schedule.time.slice(0, 5)})
           </Label>
-        </Fragment>
+        </Flex>
       ))}
     </RadioGroup>
   );
