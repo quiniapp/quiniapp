@@ -56,4 +56,16 @@ export class UserRepository {
     if (error) throw new Error(error.details);
     return data;
   }
+
+  async deleteFailedUser(id: string) {
+    const { data, error } = await supabase
+      .from('users')
+      .delete()
+      .eq('user_id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.details);
+    return data;
+  }
 }

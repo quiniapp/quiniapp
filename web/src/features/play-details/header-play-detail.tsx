@@ -38,10 +38,10 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
       {isOpen && (
         <RepeatTicketModal isOpen={isOpen} title={'Repetir Ticket'} onClose={closeModal} />
       )}
-      <Flex className={'h-[56px] items-center   justify-end w-full'}>
-        <Flex className={'gap-8'}>
+      <Flex className={' items-center   justify-end w-full'}>
+
         {getRole !== USER_TYPE.CASHIER && (
-          <Flex className={'items-center justify-center gap-4'}>
+          <Flex className={'items-center justify-center gap-4 px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>
             <Input
               type={'text'}
@@ -54,13 +54,13 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
               }}
             />
             <div className="w-40">
-              {data?.data?.users?.length && (
+              {data?.data?.users?.length >0 && (
                 <Label htmlFor={'user'}> {data?.data?.users?.[0].name}</Label>
               )}
             </div>
           </Flex>
         )}
-        <Box className={'grid grid-cols-3 space-x-5'}>
+        <Box className={'grid grid-cols-3 space-x-3'}>
           <Button type={'button'} onClick={openModal}>
             <Repeat2Icon />
             <Typography variant={'small'}>Repetir Ticker</Typography>
@@ -73,7 +73,6 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
             Cancelar Ticket{' '}
           </Button>
         </Box>
-      </Flex>
       </Flex>
     </HeaderSection>
   );

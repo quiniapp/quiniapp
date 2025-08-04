@@ -1,5 +1,4 @@
 import { PlusIcon, TrashIcon } from 'lucide-react';
-
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
 import { Button } from '@/components/ui/button.tsx';
@@ -7,14 +6,11 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
-import { INewBetEntity } from '../../../../helper/request/bet.response';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import React, { Suspense, useEffect, useRef, useState } from 'react';
-import { useSessionStore } from '@/stores/sessionStore';
-import dayjs from 'dayjs';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
-import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
+import { IBetTable, ILotterySchedule } from '.';
 
 export interface IBetForm {
   number?: string;
@@ -31,10 +27,8 @@ const FillOutATicket = ({
 }: {
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
-  setBets: React.Dispatch<React.SetStateAction<INewBetEntity[]>>;
+  setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
 }) => {
-  const today = dayjs()
-  const { user } = useSessionStore();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
@@ -125,32 +119,24 @@ const FillOutATicket = ({
   };
 
   const handleCreateBet = () => {
-    const date = dayjs().format('YYYY-MM-DD');
+    const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).map((sch) => {
+      return {
+        schedule: sch,
+        lotteries: Array.from(lotteries.values()),
+      };
+    });
 
-    const lotterySchedule = Array.from(lotteries.values()).flatMap((lot) =>
-      Array.from(schedules.values()).map((sch) => ({
-        schedule_id: sch.schedule_id,
-        lottery_id: lot.lottery_id,
-        schedules: sch,
-        lotteries: lot,
-      }))
-    );
     setBets((prev) => {
-      const newBet = lotterySchedule.map((lotSched) => {
-        return {
-          ...lotSched,
-          number: bet.number,
-          amount: +bet.amount!,
-          place: bet.place,
-          with: bet.with,
-          position: bet.position,
-          bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length),
-          date: date,
-          user_id: user?.user_id,
-        } as INewBetEntity;
-      });
-      setPartialAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
-      setTotalAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
+      const newBet: IBetTable = {
+        number: bet?.number ?? '',
+        amount: +bet.amount!,
+        place: bet?.place ?? PLACE_TYPE.HEAD,
+        with: bet?.with ?? '',
+        position: bet.position,
+        scheduleLottery: lotterySchedule,
+      };
+      setPartialAmount((prev) => prev + newBet.amount * newBet.scheduleLottery.length);
+      setTotalAmount((prev) => prev + newBet.amount * newBet.scheduleLottery.length);
       // Resetear campos del form
       setBet((prev) => ({
         ...prev,
@@ -160,7 +146,7 @@ const FillOutATicket = ({
       // También podés hacer focus al campo número si querés:
       numberRef.current?.focus();
 
-      return [...prev, ...newBet];
+      return [newBet, ...prev];
     });
   };
 

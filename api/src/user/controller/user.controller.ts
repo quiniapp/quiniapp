@@ -25,7 +25,7 @@ export class UserController {
         });
 
         if (error) {
-          await this.repository.delete(result.user_id);
+          await this.repository.deleteFailedUser(result.user_id);
           console.error('Supabase creation error:', error);
           throw new Error(error.message);
         }

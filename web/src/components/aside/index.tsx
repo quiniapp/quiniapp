@@ -55,9 +55,9 @@ const Aside = ({ isOpen }: AsideProps) => {
     <Sidebar
       data-slot="sidebar-container"
       className={cn(
-        'fixed top-0 left-0 z-40 h-screen transition-transform block md:block ',
-        isOpen ? 'translate-x-0' : '-translate-x-full',
-        'w-64 bg-[--background] text-sidebar-foreground shadow-lg'
+        `flex transition-transform duration-300
+          ${isOpen ? ' md:static translate-x-0  ' : '-translate-x-full'}
+          w-64 bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed  z-40`
       )}
     >
       <SidebarHeader className={'p-6'}>

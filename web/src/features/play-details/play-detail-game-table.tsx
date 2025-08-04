@@ -8,10 +8,10 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
-import { INewBetEntity } from '../../../../helper/request/bet.response';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
+import { IBetTable } from '.';
 
-const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
+const PlayDetailGameTable = ({ bets }: { bets: IBetTable[] }) => {
   const NoPlaysFound = () => (
     <TableRow>
       <TableCell colSpan={6} className="text-center !py-[36px]">
@@ -26,45 +26,45 @@ const PlayDetailGameTable = ({ bets }: { bets: INewBetEntity[] }) => {
   );
 
   return (
-<div>
+    <div className="flex-1 overflow-y-auto">
+      <Table className=" ">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Jugada</TableHead>
+            <TableHead>Con</TableHead>
+            <TableHead>Monto</TableHead>
+            <TableHead>JugadaT</TableHead>
+            <TableHead>Jugada en/Turno</TableHead>
+          </TableRow>
+        </TableHeader>
 
-  <Table className="min-w-full table-fixed">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Jugada</TableHead>
-          <TableHead>Con</TableHead>
-          <TableHead>Monto</TableHead>
-          <TableHead>JugadaT</TableHead>
-          <TableHead>Jugada en</TableHead>
-          <TableHead className="text-right">Turno</TableHead>
-        </TableRow>
-      </TableHeader>
-    </Table>
-      <div className="overflow-y-auto ">
-        <Table className="min-w-full table-fixed">
-          <TableBody>
-            {bets.length === 0 ? (
-              <NoPlaysFound />
-            ) : (
-              bets.map((bet, index) => {
-                return (
-                  <TableRow key={index}>
-                    <TableCell>{bet.number}</TableCell>
-                    <TableCell>{bet.with}</TableCell>
-                    <TableCell>{bet.amount}</TableCell>
-                    <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
-                    <TableCell>{bet.lotteries.name}</TableCell>
-                    <TableCell className="text-right">{bet.schedules.name}</TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-</div>
-
-);
+        <TableBody>
+          {bets.length === 0 ? (
+            <NoPlaysFound />
+          ) : (
+            bets.map((bet, index) => {
+              return (
+                <TableRow key={index} className="text-slate-300">
+                  <TableCell>{bet.number}</TableCell>
+                  <TableCell>{bet.with}</TableCell>
+                  <TableCell>{bet.amount}</TableCell>
+                  <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                  <TableCell className="whitespace-normal break-words">
+                    <span>
+                      {bet.scheduleLottery
+                        .map((lotSched) => {
+                          return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
+                        })}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
 };
 
 export default PlayDetailGameTable;
