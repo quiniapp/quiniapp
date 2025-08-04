@@ -14,7 +14,6 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
-import { INewTicketEntity } from '../../../../helper/request/ticket.response';
 export interface ILotterySchedule {
   schedule: IScheduleEntityFront;
   lotteries: ILotteryEntityFront[];
@@ -82,7 +81,7 @@ const PlayDetailsContent = () => {
               
               
               */
-    const newBets = bets.flatMap((bet) =>
+    const newBets: INewBetEntity[] = bets.flatMap((bet) =>
       bet.scheduleLottery.flatMap((schedLot) =>
         schedLot.lotteries.map((lot) => ({
           number: bet.number,
@@ -96,8 +95,7 @@ const PlayDetailsContent = () => {
           user_id: cashier?.user_id ?? user?.user_id!,
           date: today,
           user_name: cashier?.name ?? user?.name!,
-          schedules: schedLot.schedule,
-          lotteries: lot,
+          cashier_name: cashier?.name ?? user?.name!,
         }))
       )
     );

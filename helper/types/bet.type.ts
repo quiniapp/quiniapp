@@ -35,6 +35,7 @@ export interface IBetEntityBase {
   created_at: string;
   edited_at: string;
   prize: number;
+  hits: number;
   ticket_number: number;
   cashier_name: string;
   deleted_at: string | null;
