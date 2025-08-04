@@ -6,18 +6,11 @@ import Header from '../header';
 
 import Aside from '@/components/aside';
 import { SidebarProvider } from '@/components/ui/sidebar.tsx';
-import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
-import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/sessionStore';
+import { Flex, FlexCol } from '../flex';
+import { cn } from '@/lib/utils';
 
-interface LayoutProps {
-  classname?: string;
-}
-
-{
-  /*  <Sidebar /> */
-}
-const Layout = ({ classname }: LayoutProps) => {
+const Layout = () => {
   const validateSession = useSessionStore((s) => s.validateSession);
   const { isAuth } = useSessionStore();
   const navigation = useNavigation();
@@ -31,27 +24,21 @@ const Layout = ({ classname }: LayoutProps) => {
   }, []);
   return (
     <SidebarProvider>
-      <Aside isOpen={isOpen} />
-      <main
-        className={cn(
-          classname,
-          `flex flex-col gap-6 w-full transition-all duration-300 ease-in-out ${isOpen ? 'md:ml-64' : 'ml-0'}`
-        )}
-      >
-        <div className="grid  grid-rows-[1fr_auto] 1440:grid-rows-[auto_1fr_auto] w-full overflow-hidden flex-1 border-[var(--isActive)]">
-          {useMediaQuery('(min-width: 1440px)') && <Header setIsOpen={toggleSidebar} />}
-
-          <div className=" px-[24px] bg-[var(--primary-bg-content)]">
+      <Flex className="h-screen w-screen overflow-hidden">
+        <Aside isOpen={isOpen} />
+        <FlexCol className={cn(`flex-1 relative transition-all duration-300 ease-in-out  ${isOpen ? '' : 'ml-0'}`)}>
+          <Header setIsOpen={toggleSidebar} />
+          <main className="flex flex-1 overflow-y-auto px-4 py-2 justify-center">
             {isRouteLoading && (
-              <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-[rgba(0,0,0,0.1)] z-10">
+              <div className="absolute inset-0 flex justify-center items-center bg-[rgba(0,0,0,0.1)] z-10">
                 <p> cargando </p>
               </div>
             )}
             <Outlet />
-          </div>
+          </main>
           <Footer />
-        </div>
-      </main>
+        </FlexCol>
+      </Flex>
     </SidebarProvider>
   );
 };

@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const ResultsOverview = ({partialAmount, totalAmount, handleCreateBet, handleResetBets}:{partialAmount:number, totalAmount:number, handleCreateBet:VoidFunction,handleResetBets:VoidFunction}) => {
   return (
-    <Flex className={'justify-between py-[16px] items-center border-t-2'}>
+    <Flex className={'justify-between py-[16px] items-center border-t-2 sticky bottom-0 bg-background z-10'}>
       <FlexCol>
         <Flex>Monto parcial</Flex>
         <Flex>Total</Flex>
