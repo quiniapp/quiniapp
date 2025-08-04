@@ -14,7 +14,7 @@ interface HeaderSectionProps {
 const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
   return (
     <Flex
-      className={`${cn(className)} items-center lg:flex-row flex-col justify-between  border-b min-h-[50px] 1440:min-h-[90px]`}
+      className={`${cn(className)} items-center lg:flex-row flex-col justify-between  border-b p-2`}
     >
       <Flex className={' items-center gap-4'}>
         <span>
@@ -23,9 +23,9 @@ const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
             size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'}
           />
         </span>
-        <p className={'1440:text-2xl text-md font-medium '}>{title}</p>
+        <p className={'1440:text-2xl text-md font-medium text-nowrap'}>{title}</p>
       </Flex>
-      <Flex className={''}>{children}</Flex>
+      {children}
     </Flex>
   );
 };

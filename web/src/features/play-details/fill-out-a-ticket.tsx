@@ -119,26 +119,12 @@ const FillOutATicket = ({
   };
 
   const handleCreateBet = () => {
-    const lotterySchedule: ILotterySchedule[] = Array.from(lotteries.values()).flatMap((lot) =>
-      Array.from(schedules.values()).map((sch) => ({
-        schedules: sch,
-        lotteries: lot,
-      }))
-    );
-
-    /* 
-export interface IBetTable {
-  number: string
-  with: string
-  amount: number
-  place: PLACE_TYPE 
-  position?: PLACE_TYPE|null
-  scheduleLottery: ILotterySchedule[]
-}
-
-
-
-*/
+    const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).map((sch) => {
+      return {
+        schedule: sch,
+        lotteries: Array.from(lotteries.values()),
+      };
+    });
 
     setBets((prev) => {
       const newBet: IBetTable = {
@@ -149,8 +135,8 @@ export interface IBetTable {
         position: bet.position,
         scheduleLottery: lotterySchedule,
       };
-      setPartialAmount((prev) => prev + newBet.amount*newBet.scheduleLottery.length);
-      setTotalAmount((prev) => prev + newBet.amount*newBet.scheduleLottery.length);
+      setPartialAmount((prev) => prev + newBet.amount * newBet.scheduleLottery.length);
+      setTotalAmount((prev) => prev + newBet.amount * newBet.scheduleLottery.length);
       // Resetear campos del form
       setBet((prev) => ({
         ...prev,

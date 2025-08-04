@@ -1,4 +1,4 @@
-import { Flex, FlexCol } from '@/components/flex';
+import { FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';
 import {
   Table,
@@ -44,18 +44,17 @@ const PlayDetailGameTable = ({ bets }: { bets: IBetTable[] }) => {
           ) : (
             bets.map((bet, index) => {
               return (
-                <TableRow key={index} className="">
+                <TableRow key={index} className="text-slate-300">
                   <TableCell>{bet.number}</TableCell>
                   <TableCell>{bet.with}</TableCell>
                   <TableCell>{bet.amount}</TableCell>
-                  <TableCell className="whitespace-normal break-words">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
-                  <TableCell>
+                  <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                  <TableCell className="whitespace-normal break-words">
                     <span>
                       {bet.scheduleLottery
                         .map((lotSched) => {
-                          return `${lotSched.lotteries.name}-${lotSched.schedules.name}`;
-                        })
-                        .join(' / ')}
+                          return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
+                        })}
                     </span>
                   </TableCell>
                 </TableRow>
