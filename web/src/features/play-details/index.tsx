@@ -14,15 +14,17 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
+import {placeTypeParse} from '../../../../helper/functions/placeTypeParse';
+
 export interface ILotterySchedule {
   schedule: IScheduleEntityFront;
   lotteries: ILotteryEntityFront[];
 }
 export interface IBetTable {
   number: string;
-  with: string;
   amount: number;
   place: PLACE_TYPE;
+  with: string | null;
   position?: PLACE_TYPE | null;
   scheduleLottery: ILotterySchedule[];
 }
