@@ -60,7 +60,7 @@ const Aside = ({ isOpen }: AsideProps) => {
           w-64 bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed  z-40`
       )}
     >
-      <SidebarHeader className={'p-6'}>
+      <SidebarHeader className={'p-3'}>
         <Link to={'/'}>
           <Logo />
         </Link>

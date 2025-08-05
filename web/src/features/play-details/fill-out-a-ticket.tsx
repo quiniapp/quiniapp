@@ -172,11 +172,11 @@ const FillOutATicket = ({
 
   const isEnabled = useIsButtonEnabled();
   return (
-    <FlexCol className={'py-[0px] h-fit'}>
-      <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>
-        <Flex className={'flex-1 1440:max-w-[380px] max-w-[300px] '}>
+    <FlexCol className={' h-fit'}>
+      <Flex className={' py-1 1440:py-2 gap-1'}>
+        <Flex className={'flex-1 max-w-[300px] '}>
           <form className={'w-full'}>
-            <FlexCol className={'space-y-2 h-auto border p-4 bg-card rounded-[--rounded-form]'}>
+            <FlexCol className={'space-y-2 h-auto border p-2 bg-card rounded-[--rounded-form]'}>
               <Box className={'grid grid-cols-2 items-center justify-end '}>
                 <Label htmlFor={'number'}> Numero </Label>
                 <Input
@@ -226,6 +226,7 @@ const FillOutATicket = ({
                   name={'ticket-with'}
                   type={'number'}
                   maxLength={2}
+                  value={bet.with ?? undefined}
                   placeholder={'00'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('with', e.target.value)}
@@ -245,7 +246,7 @@ const FillOutATicket = ({
                   onKeyDown={handleInputKeyDown(4)}
                 />
               </Box>
-              <Flex className={' gap-4 pt-[24px]'}>
+              <Flex className={' gap-2 py-2'}>
                 <Button
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}

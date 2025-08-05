@@ -23,27 +23,27 @@ const ResultsOverview = ({
   return (
     <Flex
       className={
-        'justify-between py-[16px] items-center border-t-2 sticky bottom-0 bg-background z-10'
+        'justify-between p-1 1440:p-2 items-center border-t-2 sticky bottom-0 bg-background z-10'
       }
     >
       <FlexCol>
-        <Flex>Monto parcial</Flex>
-        <Flex>Total</Flex>
+        <span className='text-xs 1440:text-sm'>Monto parcial</span>
+        <span className='text-xs 1440:text-sm'>Total</span>
       </FlexCol>
       <FlexCol>
-        <Flex>$ {partialAmount}</Flex>
-        <Flex>$ {totalAmount}</Flex>
+        <span className='text-xs 1440:text-sm'>$ {partialAmount}</span>
+        <span className='text-xs 1440:text-sm'>$ {totalAmount}</span>
       </FlexCol>
       <Flex className={'space-x-[100px] items-center '}>
         <FlexCol>
           <RadioGroup defaultValue="option-one">
             <Flex className=" items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />
-              <Label htmlFor="option-one">Imprimir</Label>
+              <Label className='text-xs 1440:text-sm' htmlFor="option-one">Imprimir</Label>
             </Flex>
             <Flex className=" items-center space-x-2">
               <RadioGroupItem value="option-two" id="option-two" />
-              <Label htmlFor="option-two">Exportar</Label>
+              <Label className='text-xs 1440:text-sm' htmlFor="option-two">Exportar</Label>
             </Flex>
           </RadioGroup>
         </FlexCol>

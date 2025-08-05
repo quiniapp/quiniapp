@@ -28,7 +28,7 @@ const Layout = () => {
         <Aside isOpen={isOpen} />
         <FlexCol className={cn(`flex-1 relative transition-all duration-300 ease-in-out  ${isOpen ? '' : 'ml-0'}`)}>
           <Header setIsOpen={toggleSidebar} />
-          <main className="flex flex-1 overflow-y-auto px-4 py-2 justify-center">
+          <main className="flex flex-1 overflow-y-auto px-2 py-1 justify-center">
             {isRouteLoading && (
               <div className="absolute inset-0 flex justify-center items-center bg-[rgba(0,0,0,0.1)] z-10">
                 <p> cargando </p>

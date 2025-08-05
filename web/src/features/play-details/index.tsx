@@ -114,7 +114,7 @@ const PlayDetailsContent = () => {
   };
 
   return (
-    <FlexCol className={'h-full w-full '}>
+    <FlexCol className={'h-full sm:w-[1000px] 1440:w-full '}>
       <HeaderPlayDetail setCashier={handleSearch} />
 
       <FillOutATicket
