@@ -135,15 +135,17 @@ const FillOutATicket = ({
         position: bet.position,
         scheduleLottery: lotterySchedule,
       };
-      const scheduleLotteryCombinations =schedules.size * lotteries.size
-
+      const scheduleLotteryCombinations = schedules.size * lotteries.size;
 
       setPartialAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
-      setTotalAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations );
+      setTotalAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
       // Resetear campos del form
       setBet((prev) => ({
         ...prev,
         number: '',
+        with: null,
+        position: null,
+        place: PLACE_TYPE.HEAD,
       }));
 
       // También podés hacer focus al campo número si querés:
