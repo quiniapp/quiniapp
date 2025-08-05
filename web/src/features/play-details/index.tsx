@@ -34,53 +34,12 @@ const PlayDetailsContent = () => {
   const [bets, setBets] = useState<IBetTable[]>([]);
   const [cashier, setCashier] = useState<IUserEntityFront | undefined>(undefined);
   const { mutate: createTicket } = useCreateTicket();
+  const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
 
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
     const today = dayjs().format('YYYY-MM-DD');
-    /* 
-    const handleCreateBet = () => {
-      const date = dayjs().format('YYYY-MM-DD');
-      
-      const lotterySchedule = Array.from(lotteries.values()).flatMap((lot) =>
-      Array.from(schedules.values()).map((sch) => ({
-      schedule_id: sch.schedule_id,
-      lottery_id: lot.lottery_id,
-      schedules: sch,
-      lotteries: lot,
-      }))
-      );
-      setBets((prev) => {
-        const newBet = lotterySchedule.map((lotSched) => {
-          return {
-            ...lotSched,
-            number: bet.number,
-            amount: +bet.amount!,
-            place: bet.place,
-            with: bet.with,
-            position: bet.position,
-            bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length),
-            date: date,
-            user_id: user?.user_id,
-            } as INewBetEntity;
-            });
-            setPartialAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
-            setTotalAmount((prev) => prev + newBet.reduce((prev, curr) => prev + curr.amount, 0));
-            // Resetear campos del form
-            setBet((prev) => ({
-              ...prev,
-              number: '',
-              }));
-              
-              // También podés hacer focus al campo número si querés:
-              numberRef.current?.focus();
-              
-              return [...newBet,...prev];
-              });
-              };
-              
-              
-              */
+
     const newBets: INewBetEntity[] = bets.flatMap((bet) =>
       bet.scheduleLottery.flatMap((schedLot) =>
         schedLot.lotteries.map((lot) => ({
@@ -131,6 +90,29 @@ const PlayDetailsContent = () => {
     setPartialAmount(0);
     setTotalAmount(0);
   };
+
+  const handleDeleteSelectedBets = () => {
+    if (selectedIndexes.length === 0) return;
+
+    let reduction = 0;
+
+    const updatedBets = bets.filter((bet, idx) => {
+      if (selectedIndexes.includes(idx)) {
+
+        
+
+        reduction += bet.amount *bet.scheduleLottery.reduce((acc, schedLot) => acc + schedLot.lotteries.length, 0);
+        return false; // eliminar
+      }
+      return true;
+    });
+
+    setBets(updatedBets);
+    setPartialAmount((prev) => prev- reduction>=0 ?prev - reduction: 0);
+    setTotalAmount((prev) => prev - reduction);
+    setSelectedIndexes([]);
+  };
+
   return (
     <FlexCol className={'h-full w-full '}>
       <HeaderPlayDetail setCashier={handleSearch} />
@@ -140,13 +122,19 @@ const PlayDetailsContent = () => {
         setPartialAmount={setPartialAmount}
         setBets={setBets}
       />
-      <PlayDetailGameTable bets={bets} />
+      <PlayDetailGameTable
+        bets={bets}
+        selectedIndexes={selectedIndexes}
+        setSelectedIndexes={setSelectedIndexes}
+      />
 
       <ResultsOverview
         partialAmount={partialAmount}
         totalAmount={totalAmount}
         handleCreateBet={handleCreateBet}
         handleResetBets={handleResetBets}
+        onDeleteSelected={handleDeleteSelectedBets}
+        hasSelection={selectedIndexes.length > 0}
       />
     </FlexCol>
   );

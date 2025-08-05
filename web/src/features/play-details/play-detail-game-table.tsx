@@ -10,20 +10,37 @@ import {
 } from '@/components/ui/table';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
 import { IBetTable } from '.';
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
-const PlayDetailGameTable = ({ bets }: { bets: IBetTable[] }) => {
-  const NoPlaysFound = () => (
-    <TableRow>
-      <TableCell colSpan={6} className="text-center !py-[36px]">
-        <FlexCol className="items-center justify-center gap-3">
-          <Typography variant={'large'}>No se encontraron jugadas</Typography>
-          <Typography variant={'small'} className={'font-light text-muted-foreground'}>
-            Por favor cargue nuevas jugadas
-          </Typography>
-        </FlexCol>
-      </TableCell>
-    </TableRow>
-  );
+const PlayDetailGameTable = ({
+  bets,
+  selectedIndexes,
+  setSelectedIndexes,
+}: {
+  bets: IBetTable[];
+  selectedIndexes: number[];
+  setSelectedIndexes: React.Dispatch<React.SetStateAction<number[]>>;
+}) => {
+  const [isSelecting, setIsSelecting] = useState(false);
+  const dragStarted = useRef(false);
+
+  useEffect(() => {
+    const handleMouseUp = () => setIsSelecting(false);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedIndexes([]);
+        setIsSelecting(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -44,17 +61,44 @@ const PlayDetailGameTable = ({ bets }: { bets: IBetTable[] }) => {
           ) : (
             bets.map((bet, index) => {
               return (
-                <TableRow key={index} className="text-slate-300">
+                <TableRow
+                  key={index}
+                  data-state={selectedIndexes.includes(index) ? 'selected' : undefined}
+                  className={cn('cursor-pointer select-none text-slate-300')}
+                  onMouseDown={() => {
+                    dragStarted.current = false;
+                    setIsSelecting(true);
+                  }}
+                  onMouseMove={() => {
+                    dragStarted.current = true;
+                  }}
+                  onMouseEnter={() => {
+                    if (isSelecting) {
+                      setSelectedIndexes(
+                        (prev) =>
+                          prev.includes(index)
+                            ? prev.filter((i) => i !== index) // des-seleccionar
+                            : [...prev, index] // seleccionar
+                      );
+                    }
+                  }}
+                  onClick={() => {
+                    if (!dragStarted.current) {
+                      setSelectedIndexes((prev) =>
+                        prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+                      );
+                    }
+                  }}
+                >
                   <TableCell>{bet.number}</TableCell>
                   <TableCell>{bet.with}</TableCell>
                   <TableCell>{bet.amount}</TableCell>
                   <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
                   <TableCell className="whitespace-normal break-words">
                     <span>
-                      {bet.scheduleLottery
-                        .map((lotSched) => {
-                          return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
-                        })}
+                      {bet.scheduleLottery.map((lotSched) => {
+                        return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
+                      })}
                     </span>
                   </TableCell>
                 </TableRow>
@@ -68,3 +112,16 @@ const PlayDetailGameTable = ({ bets }: { bets: IBetTable[] }) => {
 };
 
 export default PlayDetailGameTable;
+
+const NoPlaysFound = () => (
+  <TableRow>
+    <TableCell colSpan={6} className="text-center !py-[36px]">
+      <FlexCol className="items-center justify-center gap-3">
+        <Typography variant={'large'}>No se encontraron jugadas</Typography>
+        <Typography variant={'small'} className={'font-light text-muted-foreground'}>
+          Por favor cargue nuevas jugadas
+        </Typography>
+      </FlexCol>
+    </TableCell>
+  </TableRow>
+);
