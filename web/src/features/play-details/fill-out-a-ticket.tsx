@@ -181,14 +181,14 @@ const FillOutATicket = ({
           bet.with?.length === 2 &&
           bet.number.length === 2))
   );
-  console.log({ isAddButtonEnabled, bet });
+
   return (
     <FlexCol className={' h-fit'}>
-      <Flex className={' py-1 1440:py-2 gap-1'}>
-        <Flex className={'flex-1 max-w-[300px] '}>
-          <form className={'w-full'}>
+      <Flex className={'flex-col-reverse sm:flex-row py-1 1440:py-2 gap-1'}>
+        <Flex className={'flex-1  sm:max-w-[300px] '}>
+          <form className={''}>
             <FlexCol className={'space-y-2 h-auto border p-2 bg-card rounded-[--rounded-form]'}>
-              <Box className={'grid grid-cols-2 items-center justify-end '}>
+              <Box className={'grid grid-cols-2 items-center justify-end  '}>
                 <Label htmlFor={'number'}> Numero </Label>
                 <Input
                   ref={numberRef}

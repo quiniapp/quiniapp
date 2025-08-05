@@ -14,7 +14,6 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
-import {placeTypeParse} from '../../../../helper/functions/placeTypeParse';
 
 export interface ILotterySchedule {
   schedule: IScheduleEntityFront;
@@ -75,7 +74,7 @@ const PlayDetailsContent = () => {
           toast.success('Ticket creado correctamente');
         },
         onError: () => {
-          toast.success('Ocurrió un error, intente de nuevo');
+          toast.error('Ocurrió un error, intente de nuevo');
         },
       }
     );
@@ -116,7 +115,7 @@ const PlayDetailsContent = () => {
   };
 
   return (
-    <FlexCol className={'h-full sm:w-[1000px] 1440:w-full '}>
+    <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
       <HeaderPlayDetail setCashier={handleSearch} />
 
       <FillOutATicket
@@ -129,7 +128,6 @@ const PlayDetailsContent = () => {
         selectedIndexes={selectedIndexes}
         setSelectedIndexes={setSelectedIndexes}
       />
-
       <ResultsOverview
         partialAmount={partialAmount}
         totalAmount={totalAmount}
