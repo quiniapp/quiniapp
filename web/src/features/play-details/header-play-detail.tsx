@@ -1,6 +1,6 @@
 import { PrinterIcon, Repeat2Icon } from 'lucide-react';
 
-import Box from '@/components/box';
+
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import RepeatTicketModal from '@/components/modals/repeat-ticket-modal.tsx';
@@ -19,18 +19,18 @@ interface HeaderPlayDetailProps {
 
 const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
   const getRole = localStorage.getItem('role');
- const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-    const { data } = useUsersByNumber(userNumber);
+  const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
+  const { data } = useUsersByNumber(userNumber);
 
-    const handleSearch = (search: string) => {
-      const parsed = parseInt(search);
-      setUserNumber(isNaN(parsed) ? undefined : parsed);
-    };
-    useEffect(() => {
-      if (data) {
-        setCashier(data?.data?.users?.[0]);
-      }
-    }, [userNumber, data]);
+  const handleSearch = (search: string) => {
+    const parsed = parseInt(search);
+    setUserNumber(isNaN(parsed) ? undefined : parsed);
+  };
+  useEffect(() => {
+    if (data) {
+      setCashier(data?.data?.users?.[0]);
+    }
+  }, [userNumber, data]);
 
   const { isOpen, openModal, closeModal } = useModalContext();
   return (
@@ -38,10 +38,9 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
       {isOpen && (
         <RepeatTicketModal isOpen={isOpen} title={'Repetir Ticket'} onClose={closeModal} />
       )}
-      <Flex className={' items-center   justify-end w-full'}>
-
+      <Flex className={' items-center gap-2  justify-end w-full'}>
         {getRole !== USER_TYPE.CASHIER && (
-          <Flex className={'items-center justify-center gap-4 px-3'}>
+          <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>
             <Input
               type={'text'}
@@ -54,25 +53,29 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
               }}
             />
             <div className="w-40">
-              {data?.data?.users?.length >0 && (
+              {data?.data?.users?.length > 0 && (
                 <Label htmlFor={'user'}> {data?.data?.users?.[0].name}</Label>
               )}
             </div>
           </Flex>
         )}
-        <Box className={'grid grid-cols-3 space-x-3'}>
-          <Button type={'button'} onClick={openModal}>
-            <Repeat2Icon />
-            <Typography variant={'small'}>Repetir Ticker</Typography>
+        <Flex className={'flex-col sm:flex-row w-fit gap-1 sm:gap-3 justify-center'}>
+          <Button className="sm:w-fit p-1" type={'button'} onClick={openModal}>
+            <Repeat2Icon className='w-2 h-2 sm:w-3 sm:h-3'/>
+            <Typography className="text-xs text-wrap" variant={'small'}>
+              Repetir Ticker
+            </Typography>
           </Button>
-          <Button type={'button'} variant={'outline'}>
-            <PrinterIcon />
-            <Typography variant={'small'}>Reimprimir Anterior</Typography>
+          <Button className="text-xs sm:w-fit p-1" type={'button'} variant={'outline'}>
+            <PrinterIcon  className='w-2 h-2 sm:w-3 sm:h-3'/>
+            <Typography className="text-xs text-wrap" variant={'small'}>
+              Reimprimir Anterior
+            </Typography>
           </Button>
-          <Button type={'button'} className={''} variant={'outline'}>
-            Cancelar Ticket{' '}
+          <Button type={'button'} className={'text-xs sm:w-fit p-1'} variant={'outline'}>
+            Cancelar Ticket
           </Button>
-        </Box>
+        </Flex>
       </Flex>
     </HeaderSection>
   );

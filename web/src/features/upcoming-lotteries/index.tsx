@@ -23,6 +23,7 @@ import { ScheduleRadioList } from '@/features/upcoming-lotteries/schedules-list.
 import { dayParseToString, dayDictionary } from '../../../../helper/functions/dayDictionary';
 import { useSaveScheduleLottery } from '@/hooks/mutations/schedule-lottery/useSaveScheduleLottery';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+import toast from 'react-hot-toast';
 
 const UpcomingLotteriesContent = () => {
   const [savedData, setSavedData] = useState<Record<string, Record<string, string[]>>>({});
@@ -67,7 +68,19 @@ const UpcomingLotteriesContent = () => {
     }
   };
   const handleSave = () => {
-    saveScheduleLottery(savedData);
+    saveScheduleLottery(savedData,
+  {
+        onSuccess: () => {
+
+          toast.success('Guardado correctamente');
+        },
+        onError: () => {
+          toast.error('Ocurrió un error, intente de nuevo');
+        },
+      }
+
+
+    );
   };
   useEffect(() => {
     setSavedData(scheduleLottery?.scheduleLotteries);

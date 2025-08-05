@@ -79,9 +79,9 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
   }, [schedules, setSchedules]);
 
   return (
-    <FlexCol className="border-2 px-4 py-4 rounded-[--rounded-form]">
+    <FlexCol className="border-2  p-2 sm:p-4 rounded-[--rounded-form]">
       <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
-      <Box className="pt-2 grid grid-cols-6 gap-[12px]">
+      <Box className=" grid grid-cols-2 sm:grid-cols-6 gap-[12px]">
         {schedules.map((schedule, index) => {
           const keyHandler = keyboardMap[index];
 
