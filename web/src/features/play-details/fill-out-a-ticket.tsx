@@ -11,13 +11,14 @@ import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { IBetTable, ILotterySchedule } from '.';
+import { placeTypeParse } from '../../../../helper/functions/placeTypeParse';
 
 export interface IBetForm {
-  number?: string;
+  number: string;
   amount?: number;
-  place?: PLACE_TYPE;
-  with?: string | null;
-  position?: PLACE_TYPE | null;
+  place: string;
+  with?: string;
+  position?: string;
 }
 
 const FillOutATicket = ({
@@ -33,11 +34,11 @@ const FillOutATicket = ({
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [bet, setBet] = useState<IBetForm>({
-    number: undefined,
+    number: '',
     amount: undefined,
-    place: PLACE_TYPE.HEAD,
-    with: null,
-    position: null,
+    place: '',
+    with: '',
+    position: '',
   });
   // 1. Refs de cada input
   const numberRef = useRef<HTMLInputElement>(null);
@@ -99,21 +100,6 @@ const FillOutATicket = ({
 
   const handleBet = (key: string, value: string | number) => {
     setBet((prev) => {
-      if (key === 'place' || key === 'position') {
-        if (value === '1') {
-          return { ...prev, [key]: PLACE_TYPE.HEAD };
-        }
-        if (value === '5' || !value) {
-          return { ...prev, [key]: PLACE_TYPE.FIVE };
-        }
-        if (value === '10' || !value) {
-          return { ...prev, [key]: PLACE_TYPE.TEN };
-        }
-        if (value === '20' || !value) {
-          return { ...prev, [key]: PLACE_TYPE.TWENTY };
-        }
-      }
-
       return { ...prev, [key]: value };
     });
   };
@@ -130,20 +116,22 @@ const FillOutATicket = ({
       const newBet: IBetTable = {
         number: bet?.number ?? '',
         amount: +bet.amount!,
-        place: bet?.place ?? PLACE_TYPE.HEAD,
+        place: placeTypeParse(bet?.place) ?? PLACE_TYPE.HEAD,
         with: bet?.with ?? '',
-        position: bet.position,
+        position: placeTypeParse(bet.position),
         scheduleLottery: lotterySchedule,
       };
-      const scheduleLotteryCombinations =schedules.size * lotteries.size
-
+      const scheduleLotteryCombinations = schedules.size * lotteries.size;
 
       setPartialAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
-      setTotalAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations );
+      setTotalAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
       // Resetear campos del form
       setBet((prev) => ({
         ...prev,
         number: '',
+        place: '',
+        with: '',
+        position: '',
       }));
 
       // También podés hacer focus al campo número si querés:
@@ -157,7 +145,15 @@ const FillOutATicket = ({
     setPartialAmount(0);
     setOpenModal(false);
   };
-
+  const handleDeleteForm = () => {
+    setBet({
+      number: '',
+      amount: undefined,
+      place: '',
+      with: '',
+      position: '',
+    });
+  };
   useEffect(() => {
     const handleWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key === '*') {
@@ -168,13 +164,30 @@ const FillOutATicket = ({
     return () => window.removeEventListener('keydown', handleWindowKeyDown);
   }, []);
 
-  const isEnabled = useIsButtonEnabled();
+  // const isEnabled = useIsButtonEnabled();
+  const isAddButtonEnabled = Boolean(
+    bet.number &&
+      (bet.number.length < 5 || bet.number.length === 10) &&
+      bet?.amount &&
+      bet.amount > 0 &&
+      (bet.place === '' ||
+        bet.place === '1' ||
+        bet.place === '5' ||
+        bet.place === '10' ||
+        bet.place === '20') &&
+      ((!bet.position && !bet.with) ||
+        (bet.position &&
+          (bet.position === '5' || bet.position === '10' || bet.position === '20') &&
+          bet.with?.length === 2 &&
+          bet.number.length === 2))
+  );
+  console.log({ isAddButtonEnabled, bet });
   return (
-    <FlexCol className={'py-[0px] h-fit'}>
-      <Flex className={'flex-col xl:flex-row py-[16px] 1440:py-[36px] gap-[16px]'}>
-        <Flex className={'flex-1 1440:max-w-[380px] max-w-[300px] '}>
+    <FlexCol className={' h-fit'}>
+      <Flex className={' py-1 1440:py-2 gap-1'}>
+        <Flex className={'flex-1 max-w-[300px] '}>
           <form className={'w-full'}>
-            <FlexCol className={'space-y-2 h-auto border p-4 bg-card rounded-[--rounded-form]'}>
+            <FlexCol className={'space-y-2 h-auto border p-2 bg-card rounded-[--rounded-form]'}>
               <Box className={'grid grid-cols-2 items-center justify-end '}>
                 <Label htmlFor={'number'}> Numero </Label>
                 <Input
@@ -198,6 +211,7 @@ const FillOutATicket = ({
                   name={'ticket-amount'}
                   type={'number'}
                   placeholder={'000000'}
+                  value={bet?.amount ?? ''}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('amount', e.target.value)}
                   onKeyDown={handleInputKeyDown(1)}
@@ -212,6 +226,7 @@ const FillOutATicket = ({
                   type={'number'}
                   placeholder={'1, 5, 10, 20'}
                   className={'bg-[var(--bg-card)]'}
+                  value={bet.place ?? undefined}
                   onChange={(e) => handleBet('place', e.target.value)}
                   onKeyDown={handleInputKeyDown(2)}
                 />
@@ -222,8 +237,9 @@ const FillOutATicket = ({
                   ref={withRef}
                   id="with"
                   name={'ticket-with'}
-                  type={'number'}
+                  type={'string'}
                   maxLength={2}
+                  value={bet.with}
                   placeholder={'00'}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('with', e.target.value)}
@@ -238,21 +254,27 @@ const FillOutATicket = ({
                   name={'ticket-position'}
                   type={'number'}
                   placeholder={'5, 10, 20'}
+                  value={bet.position}
                   className={'bg-[var(--bg-card)]'}
                   onChange={(e) => handleBet('position', e.target.value)}
                   onKeyDown={handleInputKeyDown(4)}
                 />
               </Box>
-              <Flex className={' gap-4 pt-[24px]'}>
+              <Flex className={' gap-2 py-2'}>
                 <Button
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}
-                  disabled={!isEnabled}
+                  disabled={!isAddButtonEnabled}
                   onClick={() => handleCreateBet()}
                 >
                   <PlusIcon /> Agregar
                 </Button>
-                <Button type={'reset'} variant={'outline'} className={'flex-1 max-w-[120px]  '}>
+                <Button
+                  type={'reset'}
+                  variant={'outline'}
+                  className={'flex-1 max-w-[120px]  '}
+                  onClick={() => handleDeleteForm()}
+                >
                   <TrashIcon /> Borrar
                 </Button>
               </Flex>
