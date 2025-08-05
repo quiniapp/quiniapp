@@ -5,9 +5,27 @@ import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-const ResultsOverview = ({partialAmount, totalAmount, handleCreateBet, handleResetBets}:{partialAmount:number, totalAmount:number, handleCreateBet:VoidFunction,handleResetBets:VoidFunction}) => {
+const ResultsOverview = ({
+  partialAmount,
+  totalAmount,
+  handleCreateBet,
+  handleResetBets,
+  onDeleteSelected,
+  hasSelection,
+}: {
+  partialAmount: number;
+  totalAmount: number;
+  handleCreateBet: VoidFunction;
+  handleResetBets: VoidFunction;
+  onDeleteSelected: VoidFunction;
+  hasSelection: boolean;
+}) => {
   return (
-    <Flex className={'justify-between py-[16px] items-center border-t-2 sticky bottom-0 bg-background z-10'}>
+    <Flex
+      className={
+        'justify-between py-[16px] items-center border-t-2 sticky bottom-0 bg-background z-10'
+      }
+    >
       <FlexCol>
         <Flex>Monto parcial</Flex>
         <Flex>Total</Flex>
@@ -30,11 +48,13 @@ const ResultsOverview = ({partialAmount, totalAmount, handleCreateBet, handleRes
           </RadioGroup>
         </FlexCol>
         <Flex className={'gap-4'}>
-          <Button onClick={()=>handleCreateBet()} disabled={totalAmount===0}>Cerrar Ticket </Button>
-          <Button variant={'outline'}>
+          <Button onClick={() => handleCreateBet()} disabled={totalAmount === 0}>
+            Cerrar Ticket{' '}
+          </Button>
+          <Button  onClick={onDeleteSelected} variant="destructive" disabled={!hasSelection}>
             <Trash2Icon /> Eliminar
           </Button>
-          <Button onClick={()=>handleResetBets()} variant={'outline'}>
+          <Button onClick={() => handleResetBets()} variant={'outline'}>
             <TimerReset /> Reiniciar
           </Button>
         </Flex>

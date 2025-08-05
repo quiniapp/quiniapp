@@ -135,8 +135,11 @@ const FillOutATicket = ({
         position: bet.position,
         scheduleLottery: lotterySchedule,
       };
-      setPartialAmount((prev) => prev + newBet.amount * newBet.scheduleLottery.length);
-      setTotalAmount((prev) => prev + newBet.amount * newBet.scheduleLottery.length);
+      const scheduleLotteryCombinations =schedules.size * lotteries.size
+
+
+      setPartialAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
+      setTotalAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations );
       // Resetear campos del form
       setBet((prev) => ({
         ...prev,
