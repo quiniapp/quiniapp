@@ -58,21 +58,19 @@ export class ScheduleLotteryRouter {
         const schedules = scheduleLottery[dayStr];
         for (const schedule_id of Object.keys(schedules)) {
           if (!schedule_id) continue;
+
           // 1. Borra la combinación
           deletePromises.push(this.controller.deleteAllForScheduleAndDay({ day, schedule_id }));
           // 2. Prepara el insert para cada lottery_id de esa combinación
           for (const lottery_id of schedules[schedule_id]) {
             if (!lottery_id) continue;
-            if (lotteries.includes(lottery_id)) continue;
-            lotteries.push(lottery_id);
+            if (!lotteries.includes(lottery_id)) lotteries.push(lottery_id);
             insertData.push({ day, schedule_id, lottery_id });
           }
         }
       }
-
       // 3. Ejecuta los deletes en paralelo
       await Promise.all(deletePromises);
-
       // 4. Insertá todo de una (bulk insert)
       let data: IScheduleLotteryEntityFront;
       if (insertData.length) {
