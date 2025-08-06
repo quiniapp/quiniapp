@@ -9,7 +9,7 @@ export const lotteryBase = (lottery: INewLotteryEntity): ILotteryEntityBack => {
     lottery_id: uuidv4(),
     name: lottery.name,
     deleted_at: null,
-    active: true,
+    active: false,
     created_at: timestamp,
     edited_at: timestamp,
   };

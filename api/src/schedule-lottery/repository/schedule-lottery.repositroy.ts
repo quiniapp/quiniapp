@@ -39,4 +39,12 @@ export class ScheduleLotteryRepository {
 
     if (error) throw new Error(error.message);
   }
+
+  async bulkActiveLotteries(lotteries: string[]) {
+    const { error } = await supabase.rpc('update_active_lotteries', {
+      lottery_ids: lotteries,
+    });
+
+    if (error) throw new Error(error.message);
+  }
 }

@@ -39,4 +39,12 @@ export class ScheduleLotteryController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   }
+  async bulkActiveLotteries(lotteries: string[]): Promise<void> {
+    try {
+      await this.repository.bulkActiveLotteries(lotteries);
+    } catch (error) {
+      console.error('bulkInsert:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  }
 }
