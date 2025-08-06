@@ -3,6 +3,7 @@ import { BetController } from '../controller/bet.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { USER_TYPE } from '@helper/types/user.type';
 
 export class BetRouter {
   public router: Router;
@@ -26,6 +27,7 @@ export class BetRouter {
 
   private getAllBets: RequestHandler = async (req: Request, res: Response) => {
     const { date, schedule_id, cashier_id, lottery_id } = req.query;
+    const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
         error: {
@@ -41,7 +43,12 @@ export class BetRouter {
       const bets = await this.controller.getAllBets({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
-        cashier_id: typeof cashier_id === 'string' ? cashier_id : undefined,
+        cashier_id:
+          user?.user.user_type === USER_TYPE.CASHIER
+            ? user.user.user_id
+            : typeof cashier_id === 'string'
+              ? cashier_id
+              : undefined,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
       });
       const response: APIResponse<IBetEntityFront[]> = {
