@@ -50,7 +50,7 @@ export class ScheduleLotteryRouter {
 
     const deletePromises: Promise<void>[] = [];
     const insertData: Array<{ day: SCHEDULE_DAY; schedule_id: string; lottery_id: string }> = [];
-
+    const lotteries: string[] = [];
     try {
       for (const dayStr of Object.keys(scheduleLottery)) {
         if (!dayStr) continue;
@@ -62,6 +62,9 @@ export class ScheduleLotteryRouter {
           deletePromises.push(this.controller.deleteAllForScheduleAndDay({ day, schedule_id }));
           // 2. Prepara el insert para cada lottery_id de esa combinación
           for (const lottery_id of schedules[schedule_id]) {
+            if (!lottery_id) continue;
+            if (lotteries.includes(lottery_id)) continue;
+            lotteries.push(lottery_id);
             insertData.push({ day, schedule_id, lottery_id });
           }
         }
@@ -75,7 +78,7 @@ export class ScheduleLotteryRouter {
       if (insertData.length) {
         data = await this.controller.bulkInsert(insertData);
       }
-
+      await this.controller.bulkActiveLotteries(lotteries);
       const response: APIResponse<IScheduleLotteryEntityFront> = {
         data: {
           scheduleLotteries: data!,
