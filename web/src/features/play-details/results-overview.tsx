@@ -29,25 +29,25 @@ const ResultsOverview = ({
       <Flex className={'justify-between w-full '}>
         <Flex className='gap-2'>
           <FlexCol className="">
-            <span className="text-xs 1440:text-sm">Monto parcial</span>
-            <span className="text-xs 1440:text-sm">Total</span>
+            <span className="text-xs md:text-sm ">Monto parcial</span>
+            <span className="text-xs md:text-sm">Total</span>
           </FlexCol>
           <FlexCol>
-            <span className="text-xs 1440:text-sm">$ {partialAmount}</span>
-            <span className="text-xs 1440:text-sm">$ {totalAmount}</span>
+            <span className="text-xs md:text-sm">$ {partialAmount}</span>
+            <span className="text-xs md:text-sm">$ {totalAmount}</span>
           </FlexCol>
         </Flex>
         <FlexCol>
           <RadioGroup defaultValue="option-one">
             <Flex className=" items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />
-              <Label className="text-xs 1440:text-sm" htmlFor="option-one">
+              <Label className="text-xs md:text-sm" htmlFor="option-one">
                 Imprimir
               </Label>
             </Flex>
             <Flex className=" items-center space-x-2">
               <RadioGroupItem value="option-two" id="option-two" />
-              <Label className="text-xs 1440:text-sm" htmlFor="option-two">
+              <Label className="text-xs md:text-sm" htmlFor="option-two">
                 Exportar
               </Label>
             </Flex>

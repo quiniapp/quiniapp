@@ -15,9 +15,11 @@ import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 interface IGameTurns {
   setLotteries: (lottery: ILotteryEntityFront) => void
   setSchedules: (schedule: IScheduleEntityFront) => void
+  checkedLotteries: Map<string, ILotteryEntityFront>
+  checkedSchedules: Map<string, IScheduleEntityFront>
 }
 
-const GameTurns = ({ setLotteries, setSchedules }: IGameTurns) => {
+const GameTurns = ({ setLotteries, setSchedules, checkedLotteries, checkedSchedules }: IGameTurns) => {
   const { data } = useLotteries();
   const { data: schedulesData } = useSchedules();
   const lotteries = data?.data?.lottery ?? [];
@@ -25,12 +27,12 @@ const GameTurns = ({ setLotteries, setSchedules }: IGameTurns) => {
 
   return (
     <FlexCol className="flex-col 1440:space-y-5 space-y-3 flex-1">
-      <ScheduleCheckboxList schedules={schedules} setSchedules={setSchedules}/>
+      <ScheduleCheckboxList schedules={schedules} setSchedules={setSchedules} checkedSchedules={checkedSchedules}/>
       <FlexCol className=" border-2 p-4 rounded-[--rounded-form]">
         <HeaderTitleSection title={'Quniela'} icon={<TicketIcon size="16px" />} variant={'small'} />
         <Box className=" grid grid-cols-2 sm:grid-cols-6 gap-[12px]">
           {lotteries.map((lot: LotteryType) => (
-            <LotteryCheckboxList key={lot.lottery_id} lottery={lot} setLotteries={setLotteries}/>
+            <LotteryCheckboxList key={lot.lottery_id} lottery={lot} setLotteries={setLotteries} checkedLottery={checkedLotteries.has(lot.lottery_id)}/>
           ))}
         </Box>
       </FlexCol>

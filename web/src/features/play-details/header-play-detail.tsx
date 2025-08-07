@@ -12,13 +12,14 @@ import { useModalContext } from '@/providers/modal-provider';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { useEffect, useState } from 'react';
+import { useSessionStore } from '@/stores/sessionStore';
 
 interface HeaderPlayDetailProps {
   setCashier: (searchCashier: IUserEntityFront) => void;
 }
 
 const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
-  const getRole = localStorage.getItem('role');
+  const {role} = useSessionStore();
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
 
@@ -39,7 +40,7 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
         <RepeatTicketModal isOpen={isOpen} title={'Repetir Ticket'} onClose={closeModal} />
       )}
       <Flex className={' items-center gap-2  justify-end w-full'}>
-        {getRole !== USER_TYPE.CASHIER && (
+        {role !== USER_TYPE.CASHIER && (
           <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>
             <Input
