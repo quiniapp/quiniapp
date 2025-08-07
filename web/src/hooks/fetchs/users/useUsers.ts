@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
+import { IUserEntityFront } from '../../../../../helper/types/user.type.ts';
 
 const fetchUsers = async () => {
   const response = await fetch(ROUTES.user.base, {
@@ -13,12 +14,12 @@ const fetchUsers = async () => {
   if (!response.ok) {
     throw new Error(`Error: ${response.status}`);
   }
-
-  return response.json();
+  const {data} = await response.json();
+  return data.users;
 };
 
 export const useUsers = () => {
-  return useQuery({
+  return useQuery<IUserEntityFront[]>({
     queryKey: ['users'],
     queryFn: fetchUsers,
     retry: false,
