@@ -38,7 +38,7 @@ const PlaysAndHitsTable = ({ bets = [] }: { bets?: IBetEntityFront[] }) => {
                 <TableCell>{betPlaceDictionary[bet.place]}</TableCell>
                 <TableCell>{bet.schedule.name}</TableCell>
                 <TableCell>{bet.lottery.name}</TableCell>
-                <TableCell>{bet.winner}</TableCell>
+                <TableCell>{bet.hits}</TableCell>
                 <TableCell>${bet.prize}</TableCell>
                 <TableCell>{bet.ticket_number}</TableCell>
                 <TableCell>{bet.cashier_name}</TableCell>

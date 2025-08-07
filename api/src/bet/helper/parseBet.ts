@@ -19,6 +19,7 @@ export const parseBet = (bet: IBetEntityBack): IBetEntityFront => {
     winner: bet.winner,
     with: bet.with,
     prize: bet.prize,
+    hits: bet.hits,
     cashier_name: bet.cashier_name,
     ticket_number: bet.ticket_number,
     schedule: bet?.schedules && parseSchedule(bet.schedules),

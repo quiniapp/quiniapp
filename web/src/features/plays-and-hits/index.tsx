@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react';
 
 import Box from '@/components/box';
-import { Flex, FlexCol } from '@/components/flex';
+import {  FlexCol } from '@/components/flex';
 import { Button } from '@/components/ui/button.tsx';
 import HeaderPlayAndHits from '@/features/plays-and-hits/header-play-and-hits.tsx';
 import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box.tsx';
