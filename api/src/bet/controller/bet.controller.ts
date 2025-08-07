@@ -10,18 +10,33 @@ export class BetController {
     date,
     cashier_id,
     lottery_id,
+    winners,
+    grouped,
   }: {
     schedule_id?: string;
     date: string;
     cashier_id?: string;
     lottery_id?: string;
+    winners?: boolean;
+    grouped?: boolean;
   }): Promise<IBetEntityFront[]> => {
+    let bets: IBetEntityBack[];
     try {
-      const bets: IBetEntityBack[] = await this.repository.getAllBets({
+      if (grouped) {
+        bets = await this.repository.getAllBetsGrouped({
+          schedule_id,
+          date,
+          cashier_id,
+          lottery_id,
+          winners,
+        });
+      }
+      bets = await this.repository.getAllBets({
         schedule_id,
         date,
         cashier_id,
         lottery_id,
+        winners,
       });
 
       return bets.map((bet) => {

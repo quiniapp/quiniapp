@@ -13,6 +13,7 @@ export interface ITicketEntityBase {
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
+  hits: number;
 }
 
 export interface ITicketEntityBack extends ITicketEntityBase {
