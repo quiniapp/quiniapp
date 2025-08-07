@@ -57,7 +57,7 @@ const UsersTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.data?.users?.map((user: IUserEntityFront) => (
+          {data?.map((user: IUserEntityFront) => (
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
               <TableCell>{user.name}</TableCell>

@@ -13,13 +13,17 @@ import { IScheduleEntityFront } from 'helper/types/schedule.type';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
+import { useSessionStore } from '@/stores/sessionStore';
+import { USER_TYPE } from '../../../../helper/types/user.type';
+import { Fragment } from 'react/jsx-runtime';
 
 const ALL = 'Todos';
 
 const PlayAndHitsSelect = () => {
+  const { role } = useSessionStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lotteries } = useLotteries();
-  const {data} =useUsers()
+  const { data } = useUsers();
   const { data: schedules } = useSchedules();
 
   const selectedSchedule = searchParams.get('schedule_id');
@@ -35,41 +39,50 @@ const PlayAndHitsSelect = () => {
 
   return (
     <Flex className={' space-x-4'}>
-      <Flex className={'flex-1 space-x-4'}>
-        <FlexCol className={'flex-1 gap-3'}>
-          <TypographyMuted label={'Pasador'} />
-          <Select
-            value={selectedCashier ?? ''}
-            onValueChange={(value) => {
-              handleChange(value, 'cashier_id');
-            }}
-          >
-            <SelectTrigger className={'border w-full 1440:py-[24px] bg-[var(--bg-card)]'}>
-              <SelectValue placeholder={ALL} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}> {ALL}</SelectItem>
-              <SelectItem value={'Pasador 2'}> Pasador 2</SelectItem>
-              <SelectItem value={'Pasador 3'}> Pasador 3</SelectItem>
-            </SelectContent>
-          </Select>
-        </FlexCol>
-        <FlexCol className={'flex-1 gap-3'}>
-          <TypographyMuted label={'Grupo'} />
-          <Select>
-            <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
-              <SelectValue placeholder={ALL} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}> {ALL}</SelectItem>
-              <SelectItem value={'Pasador 1'}> Grupo 1</SelectItem>
-              <SelectItem value={'Pasador 2'}> Grupo 2</SelectItem>
-              <SelectItem value={'Pasador 4'}> Grupo 4</SelectItem>
-              <SelectItem value={'Pasador 5'}> Grupo 5</SelectItem>
-            </SelectContent>
-          </Select>
-        </FlexCol>
-      </Flex>
+      {role !== USER_TYPE.CASHIER && (
+        <Flex className={'flex-1 space-x-4'}>
+          <Fragment>
+            <FlexCol className={'flex-1 gap-3'}>
+              <TypographyMuted label={'Pasador'} />
+              <Select
+                value={selectedCashier ?? ''}
+                onValueChange={(value) => {
+                  handleChange(value, 'cashier_id');
+                }}
+              >
+                <SelectTrigger className={'border w-full 1440:py-[24px] bg-[var(--bg-card)]'}>
+                  <SelectValue placeholder={ALL} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}> {ALL}</SelectItem>
+                  {data?.map(user=>{
+                    return(
+
+                      <SelectItem value={user.user_id}>{user.name} - {user.number}</SelectItem>
+                    )
+                  })}
+                  
+                </SelectContent>
+              </Select>
+            </FlexCol>
+            <FlexCol className={'flex-1 gap-3'}>
+              <TypographyMuted label={'Grupo'} />
+              <Select>
+                <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
+                  <SelectValue placeholder={ALL} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}> {ALL}</SelectItem>
+                  <SelectItem value={'Pasador 1'}> Grupo 1</SelectItem>
+                  <SelectItem value={'Pasador 2'}> Grupo 2</SelectItem>
+                  <SelectItem value={'Pasador 4'}> Grupo 4</SelectItem>
+                  <SelectItem value={'Pasador 5'}> Grupo 5</SelectItem>
+                </SelectContent>
+              </Select>
+            </FlexCol>
+          </Fragment>
+        </Flex>
+      )}
       <Flex className={'flex-1 space-x-4'}>
         <Flex className={'flex-1 gap-3'}>
           <FlexCol className={'flex-1 gap-3'}>
@@ -83,16 +96,10 @@ const PlayAndHitsSelect = () => {
               <SelectTrigger className={'border w-full   bg-[var(--bg-card)]'}>
                 <SelectValue placeholder={ALL} />
               </SelectTrigger>
-              <SelectContent
-               
-              >
+              <SelectContent>
                 <SelectItem value={ALL}> {ALL}</SelectItem>
                 {schedules?.data?.schedule?.map((item: IScheduleEntityFront) => (
-                  <SelectItem
-                    key={item.schedule_id}
-                    value={item.schedule_id}
-
-                  >
+                  <SelectItem key={item.schedule_id} value={item.schedule_id}>
                     {item.name} - {item.time}
                   </SelectItem>
                 ))}
