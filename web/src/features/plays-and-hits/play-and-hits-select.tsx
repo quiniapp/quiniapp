@@ -12,13 +12,14 @@ import { useSchedules } from '@/hooks/useSchedules';
 import { IScheduleEntityFront } from 'helper/types/schedule.type';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';
+import { useUsers } from '@/hooks/fetchs/users/useUsers';
 
 const ALL = 'Todos';
 
 const PlayAndHitsSelect = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lotteries } = useLotteries();
-
+  const {data} =useUsers()
   const { data: schedules } = useSchedules();
 
   const selectedSchedule = searchParams.get('schedule_id');

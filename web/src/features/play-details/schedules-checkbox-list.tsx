@@ -19,9 +19,11 @@ interface SchedulesProps {
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
   setSchedules: (schedule: IScheduleEntityFront) => void;
+  
+  checkedSchedules: Map<string, IScheduleEntityFront>
 }
 
-const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxListProps) => {
+const ScheduleCheckboxList = ({ schedules, setSchedules,checkedSchedules }: SchedulesCheckboxListProps) => {
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);
   const refF3 = useRef<HTMLButtonElement>(null);
@@ -90,11 +92,13 @@ const ScheduleCheckboxList = ({ schedules, setSchedules }: SchedulesCheckboxList
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">
               <Checkbox
+              checked={checkedSchedules.has(schedule.schedule_id)}
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
                 onClick={() => {
                   setSchedules(schedule);
                 }}
+                
                 className="border-2 border-primary"
               />
               <Label htmlFor={`f${index + 1}`} className="text-[12px]">

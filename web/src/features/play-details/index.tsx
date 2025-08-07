@@ -34,6 +34,9 @@ const PlayDetailsContent = () => {
   const [partialAmount, setPartialAmount] = useState<number>(0);
   const [bets, setBets] = useState<IBetTable[]>([]);
   const [cashier, setCashier] = useState<IUserEntityFront | undefined>(undefined);
+
+  const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
+  const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const { mutate: createTicket } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
 
@@ -71,6 +74,9 @@ const PlayDetailsContent = () => {
           setBets([]);
           setPartialAmount(0);
           setTotalAmount(0);
+          setCashier(undefined);
+          setLotteries(new Map());
+          setSchedules(new Map());
           toast.success('Ticket creado correctamente');
         },
         onError: () => {
@@ -99,17 +105,16 @@ const PlayDetailsContent = () => {
 
     const updatedBets = bets.filter((bet, idx) => {
       if (selectedIndexes.includes(idx)) {
-
-        
-
-        reduction += bet.amount *bet.scheduleLottery.reduce((acc, schedLot) => acc + schedLot.lotteries.length, 0);
+        reduction +=
+          bet.amount *
+          bet.scheduleLottery.reduce((acc, schedLot) => acc + schedLot.lotteries.length, 0);
         return false; // eliminar
       }
       return true;
     });
 
     setBets(updatedBets);
-    setPartialAmount((prev) => prev- reduction>=0 ?prev - reduction: 0);
+    setPartialAmount((prev) => (prev - reduction >= 0 ? prev - reduction : 0));
     setTotalAmount((prev) => prev - reduction);
     setSelectedIndexes([]);
   };
@@ -122,6 +127,10 @@ const PlayDetailsContent = () => {
         setTotalAmount={setTotalAmount}
         setPartialAmount={setPartialAmount}
         setBets={setBets}
+        lotteries={lotteries}
+        setLotteries={setLotteries}
+        schedules={schedules}
+        setSchedules={setSchedules}
       />
       <PlayDetailGameTable
         bets={bets}

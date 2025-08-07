@@ -25,14 +25,20 @@ const FillOutATicket = ({
   setTotalAmount,
   setPartialAmount,
   setBets,
+  lotteries, 
+  setLotteries,
+  schedules,
+  setSchedules,
 }: {
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
+  lotteries: Map<string, ILotteryEntityFront>
+  setLotteries: React.Dispatch<React.SetStateAction<Map<string, ILotteryEntityFront>>>
+  schedules:Map<string, IScheduleEntityFront>
+  setSchedules:React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>
 }) => {
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
-  const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [bet, setBet] = useState<IBetForm>({
     number: '',
     amount: undefined,
@@ -197,7 +203,7 @@ const FillOutATicket = ({
                   type={'string'}
                   maxLength={10}
                   placeholder={'0000000000'}
-                  className={'bg-[var(--bg-card)]'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   value={bet.number ?? undefined}
                   onChange={(e) => handleBet('number', e.target.value)}
                   onKeyDown={handleInputKeyDown(0)}
@@ -212,7 +218,7 @@ const FillOutATicket = ({
                   type={'number'}
                   placeholder={'000000'}
                   value={bet?.amount ?? ''}
-                  className={'bg-[var(--bg-card)]'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('amount', e.target.value)}
                   onKeyDown={handleInputKeyDown(1)}
                 />
@@ -225,7 +231,7 @@ const FillOutATicket = ({
                   name={'ticket-place'}
                   type={'number'}
                   placeholder={'1, 5, 10, 20'}
-                  className={'bg-[var(--bg-card)]'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   value={bet.place ?? undefined}
                   onChange={(e) => handleBet('place', e.target.value)}
                   onKeyDown={handleInputKeyDown(2)}
@@ -241,7 +247,7 @@ const FillOutATicket = ({
                   maxLength={2}
                   value={bet.with}
                   placeholder={'00'}
-                  className={'bg-[var(--bg-card)]'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
                 />
@@ -255,7 +261,7 @@ const FillOutATicket = ({
                   type={'number'}
                   placeholder={'5, 10, 20'}
                   value={bet.position}
-                  className={'bg-[var(--bg-card)]'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('position', e.target.value)}
                   onKeyDown={handleInputKeyDown(4)}
                 />
@@ -281,7 +287,7 @@ const FillOutATicket = ({
             </FlexCol>
           </form>
         </Flex>
-        <GameTurns setLotteries={handleLotteries} setSchedules={handleSchedules} />
+        <GameTurns checkedLotteries={lotteries} checkedSchedules={schedules} setLotteries={handleLotteries} setSchedules={handleSchedules} />
       </Flex>
       <Suspense fallback={<div>Cargando...</div>}>
         <ResetPartialModal

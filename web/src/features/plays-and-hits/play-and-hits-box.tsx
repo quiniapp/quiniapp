@@ -4,7 +4,7 @@ import PlayAndHitsToggleSelect from '@/features/plays-and-hits/play-and-hits-tog
 
 const PlayAndHitsBox = () => {
   return (
-    <FlexCol className={'gap-8 rounded-md '}>
+    <FlexCol className={'gap-2 rounded-md '}>
       <PlayAndHitsToggleSelect
         filters={{
           view: 'jugadas',
