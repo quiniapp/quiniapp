@@ -44,6 +44,10 @@ const LoginContent = () => {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(validationSchemaLogin),
+    defaultValues: {
+      username: '',
+      password: '',
+    },
   });
 
   const platform = usePlatform();
