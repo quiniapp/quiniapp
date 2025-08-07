@@ -19,7 +19,7 @@ const HeaderPlayAndHits = () => {
   }, []);
 
   return (
-    <HeaderSection title={'Jugadas'} className={'w-full'}>
+    <HeaderSection title={'Jugadas'} >
       <Flex className={'justify-end  w-full items-center space-x-[24px] '}>
         <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
         <SelectDayToSearch onDayChange={handleDayChange} toDate={today.toDate()} />

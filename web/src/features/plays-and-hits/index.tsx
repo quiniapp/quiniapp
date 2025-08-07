@@ -13,11 +13,11 @@ import { useMemo } from 'react';
 
 const PlaysAndHitsContent = () => {
   const [setSearchParams] = useSearchParams();
-const schedule_id =setSearchParams.get('schedule_id')
+  const schedule_id = setSearchParams.get('schedule_id');
 
-const date=  setSearchParams.get('date')
-const lottery_id= setSearchParams.get('lottery_id')
-const cashier_id= setSearchParams.get('cashier_id')
+  const date = setSearchParams.get('date');
+  const lottery_id = setSearchParams.get('lottery_id');
+  const cashier_id = setSearchParams.get('cashier_id');
   const { data } = useBets({
     schedule_id: schedule_id,
     date: date,
@@ -25,30 +25,34 @@ const cashier_id= setSearchParams.get('cashier_id')
     lottery_id: lottery_id,
   });
 
-  const {totalPlaysAmount, totalHitsAmount} = useMemo(()=>{
-    const totalPlaysAmount = data?.reduce((acc:number, bet) => {
+  const { totalPlaysAmount, totalHitsAmount } = useMemo(() => {
+    const totalPlaysAmount = data?.reduce((acc: number, bet) => {
       return acc + bet.amount;
     }, 0);
-    const totalHitsAmount = data?.reduce((acc:number, bet) => {
+    const totalHitsAmount = data?.reduce((acc: number, bet) => {
       return acc + bet.prize;
     }, 0);
-    return {totalPlaysAmount, totalHitsAmount}
-  },[])
-
-
+    return { totalPlaysAmount, totalHitsAmount };
+  }, [data,schedule_id,lottery_id, date]);
+console.log({ totalPlaysAmount, totalHitsAmount })
   return (
-    <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden gap-1'}>
+    <FlexCol
+      className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden gap-1'}
+    >
       <HeaderPlayAndHits />
-        <FlexCol className={'p-1 sm:p-2 gap-2 '}>
-          <PlayAndHitsBox />
-          <Box className={'w-[200px]'}>
-            <Button className={'w-full'}>
-              <Search /> Buscar
-            </Button>
-          </Box>
-        </FlexCol>
-        <PlaysAndHitsTable bets={data}/>
-      <TotalAmountPlayAndHits totalPlaysAmount={totalPlaysAmount} totalHitsAmount={totalHitsAmount}/>
+      <FlexCol className={'p-1 sm:p-2 gap-2 '}>
+        <PlayAndHitsBox />
+        <Box className={'w-[200px]'}>
+          <Button className={'w-full'}>
+            <Search /> Buscar
+          </Button>
+        </Box>
+      </FlexCol>
+      <PlaysAndHitsTable bets={data} />
+      <TotalAmountPlayAndHits
+        totalPlaysAmount={totalPlaysAmount}
+        totalHitsAmount={totalHitsAmount}
+      />
     </FlexCol>
   );
 };
