@@ -6,15 +6,26 @@ interface FetchBetsProps {
   schedule_id?: string | null;
   date: string | null;
   cashier_id?: string | null;
+  grouped?: string | null;
+  winners?: string | null;
 }
 
-const fetchBets = async ({ date, schedule_id, lottery_id, cashier_id }: FetchBetsProps):Promise<IBetEntityFront[]> => {
+const fetchBets = async ({
+  date,
+  schedule_id,
+  lottery_id,
+  cashier_id,
+  grouped,
+  winners,
+}: FetchBetsProps): Promise<IBetEntityFront[]> => {
   if (!date) return [];
   const params = new URLSearchParams({ date });
 
   if (schedule_id) params.append('schedule_id', schedule_id);
   if (lottery_id) params.append('lottery_id', lottery_id);
   if (cashier_id) params.append('cashier_id', cashier_id);
+  if (grouped) params.append('grouped', grouped);
+  if (winners) params.append('winners', winners);
 
   const url = `${ROUTES.bet.base}?${params.toString()}`;
 
@@ -28,10 +39,17 @@ const fetchBets = async ({ date, schedule_id, lottery_id, cashier_id }: FetchBet
   return data.bets;
 };
 
-export const useBets = ({ schedule_id, date, lottery_id, cashier_id }: FetchBetsProps) => {
+export const useBets = ({
+  schedule_id,
+  date,
+  lottery_id,
+  cashier_id,
+  grouped,
+  winners,
+}: FetchBetsProps) => {
   return useQuery<IBetEntityFront[]>({
-    queryKey: ['plays', { date, schedule_id, lottery_id, cashier_id }],
-    queryFn: () => fetchBets({ schedule_id, date, lottery_id, cashier_id }),
+    queryKey: ['plays', { date, schedule_id, lottery_id, cashier_id, grouped, winners }],
+    queryFn: () => fetchBets({ schedule_id, date, lottery_id, cashier_id, grouped, winners }),
     enabled: Boolean(date), // solo se ejecuta si `date` tiene valor
   });
 };

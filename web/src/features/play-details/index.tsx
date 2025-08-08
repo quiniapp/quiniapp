@@ -1,6 +1,6 @@
 import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
 import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
@@ -14,6 +14,7 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
+import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 
 export interface ILotterySchedule {
   schedule: IScheduleEntityFront;
@@ -40,6 +41,8 @@ const PlayDetailsContent = () => {
   const { mutate: createTicket } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
 
+  const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
+  const { data } = useUsersByNumber(userNumber);
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
     const today = dayjs().format('YYYY-MM-DD');
@@ -86,11 +89,6 @@ const PlayDetailsContent = () => {
     );
   };
 
-  const handleSearch = useCallback((searchCashier: IUserEntityFront) => {
-    if (searchCashier) {
-      setCashier(searchCashier);
-    }
-  }, []);
 
   const handleResetBets = () => {
     setBets([]);
@@ -119,9 +117,15 @@ const PlayDetailsContent = () => {
     setSelectedIndexes([]);
   };
 
+  useEffect(() => {
+    if (data) {
+      setCashier(data?.data?.users?.[0]);
+    }
+  }, [userNumber, data]);
+
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
-      <HeaderPlayDetail setCashier={handleSearch} />
+      <HeaderPlayDetail cashier={cashier} setUserNumber={setUserNumber} userNumber={userNumber} />
 
       <FillOutATicket
         setTotalAmount={setTotalAmount}

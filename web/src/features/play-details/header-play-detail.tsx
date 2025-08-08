@@ -1,6 +1,5 @@
 import { PrinterIcon, Repeat2Icon } from 'lucide-react';
 
-
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import RepeatTicketModal from '@/components/modals/repeat-ticket-modal.tsx';
@@ -15,23 +14,22 @@ import { useEffect, useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 
 interface HeaderPlayDetailProps {
-  setCashier: (searchCashier: IUserEntityFront) => void;
+  cashier?: IUserEntityFront;
+  userNumber?: number;
+  setUserNumber: React.Dispatch<React.SetStateAction<number | undefined>>;
 }
 
-const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
-  const {role} = useSessionStore();
-  const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-  const { data } = useUsersByNumber(userNumber);
+const HeaderPlayDetail = ({
+  cashier,
+  userNumber,
+  setUserNumber,
+}: HeaderPlayDetailProps) => {
+  const { role } = useSessionStore();
 
   const handleSearch = (search: string) => {
     const parsed = parseInt(search);
     setUserNumber(isNaN(parsed) ? undefined : parsed);
   };
-  useEffect(() => {
-    if (data) {
-      setCashier(data?.data?.users?.[0]);
-    }
-  }, [userNumber, data]);
 
   const { isOpen, openModal, closeModal } = useModalContext();
   return (
@@ -54,21 +52,21 @@ const HeaderPlayDetail = ({ setCashier }: HeaderPlayDetailProps) => {
               }}
             />
             <div className="w-40">
-              {data?.data?.users?.length > 0 && (
-                <Label htmlFor={'user'}> {data?.data?.users?.[0].name}</Label>
+              {cashier && (
+                <Label htmlFor={'user'}> {cashier.name}</Label>
               )}
             </div>
           </Flex>
         )}
         <Flex className={'flex-col sm:flex-row w-fit gap-1 sm:gap-3 justify-center'}>
           <Button className="sm:w-fit p-1" type={'button'} onClick={openModal}>
-            <Repeat2Icon className='w-2 h-2 sm:w-3 sm:h-3'/>
+            <Repeat2Icon className="w-2 h-2 sm:w-3 sm:h-3" />
             <Typography className="text-xs text-wrap" variant={'small'}>
               Repetir Ticker
             </Typography>
           </Button>
           <Button className="text-xs sm:w-fit p-1" type={'button'} variant={'outline'}>
-            <PrinterIcon  className='w-2 h-2 sm:w-3 sm:h-3'/>
+            <PrinterIcon className="w-2 h-2 sm:w-3 sm:h-3" />
             <Typography className="text-xs text-wrap" variant={'small'}>
               Reimprimir Anterior
             </Typography>
