@@ -80,6 +80,7 @@ const PlayDetailsContent = () => {
           setCashier(undefined);
           setLotteries(new Map());
           setSchedules(new Map());
+          setUserNumber(undefined);
           toast.success('Ticket creado correctamente');
         },
         onError: () => {

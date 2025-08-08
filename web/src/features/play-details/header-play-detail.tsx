@@ -52,9 +52,8 @@ const HeaderPlayDetail = ({
               }}
             />
             <div className="w-40">
-              {cashier && (
-                <Label htmlFor={'user'}> {cashier.name}</Label>
-              )}
+                <Label htmlFor={'user'}> {cashier?.name}</Label>
+        
             </div>
           </Flex>
         )}
