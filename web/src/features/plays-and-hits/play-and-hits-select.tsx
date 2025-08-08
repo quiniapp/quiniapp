@@ -58,7 +58,7 @@ const PlayAndHitsSelect = () => {
                   {data?.map(user=>{
                     return(
 
-                      <SelectItem value={user.user_id}>{user.name} - {user.number}</SelectItem>
+                      <SelectItem key={user.user_id} value={user.user_id}>{user.name} - {user.number}</SelectItem>
                     )
                   })}
                   
@@ -123,7 +123,6 @@ const PlayAndHitsSelect = () => {
                 <SelectItem value={ALL}> {ALL}</SelectItem>
                 {lotteries?.data?.lottery?.map((item: ILotteryEntityFront) => (
                   <SelectItem key={item.lottery_id} value={item.lottery_id}>
-                    {' '}
                     {item.name}
                   </SelectItem>
                 ))}

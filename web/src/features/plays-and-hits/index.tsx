@@ -18,11 +18,15 @@ const PlaysAndHitsContent = () => {
   const date = setSearchParams.get('date');
   const lottery_id = setSearchParams.get('lottery_id');
   const cashier_id = setSearchParams.get('cashier_id');
+  const grouped = setSearchParams.get('grouped');
+  const winners = setSearchParams.get('winners');
   const { data } = useBets({
     schedule_id: schedule_id,
     date: date,
     cashier_id: cashier_id,
     lottery_id: lottery_id,
+    winners: winners,
+    grouped:grouped
   });
 
   const { totalPlaysAmount, totalHitsAmount } = useMemo(() => {
@@ -33,8 +37,10 @@ const PlaysAndHitsContent = () => {
       return acc + bet.prize;
     }, 0);
     return { totalPlaysAmount, totalHitsAmount };
-  }, [data,schedule_id,lottery_id, date]);
-console.log({ totalPlaysAmount, totalHitsAmount })
+  }, [data,schedule_id,lottery_id, date, grouped, winners]);
+
+  
+
   return (
     <FlexCol
       className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden gap-1'}

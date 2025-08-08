@@ -44,11 +44,9 @@ export class BetRepository {
     date: string;
     cashier_id?: string;
     lottery_id?: string;
-
     winners?: boolean;
   }) {
-    let query = supabase.from('bets').select('number, sum:amount').eq('date', date).group('number');
-
+    let query = supabase.from('bets').select('number,amount.sum()').eq('date', date);
     if (schedule_id) query = query.eq('schedule_id', schedule_id);
     if (cashier_id) query = query.eq('user_id', cashier_id);
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
@@ -56,6 +54,7 @@ export class BetRepository {
 
     const { data, error } = await query;
 
+    console.log('data', data);
     if (error) throw error;
 
     // Normalizamos el nombre del campo sum

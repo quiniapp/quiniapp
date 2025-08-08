@@ -1,22 +1,32 @@
 import { EyeIcon, UsersIcon } from 'lucide-react';
-import { useState } from 'react';
 
 import { Flex, FlexCol } from '@/components/flex';
 import HeaderTitleSection from '@/components/header-title-section';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
+import { useSearchParams } from 'react-router-dom';
 
-interface PlayAndHitsToggleSelectOptions {
-  filters: {
-    view: 'jugadas' | 'aciertos';
-    mode: 'individual' | 'agrupados';
+const PlayAndHitsToggleSelect = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Convertimos el string de la URL a booleano
+  const grouped = searchParams.get('grouped') === 'true';
+  const winners = searchParams.get('winners') === 'true';
+
+  const handleChangeWinners = () => {
+    // Creamos una copia de los params actuales
+    const newParams = new URLSearchParams(searchParams);
+    // Alternamos entre 'true' y 'false'
+    newParams.set('winners', (!winners).toString());
+    // Aplicamos la copia al hook
+    setSearchParams(newParams);
   };
-}
 
-const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) => {
-  const [viewMode, setViewMode] = useState(filters.view);
-  const [groupMode, setGroupMode] = useState(filters.mode);
-
+  const handleChangeGrouped = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('grouped', (!grouped).toString());
+    setSearchParams(newParams);
+  };
   return (
     <Flex className={'space-x-5'}>
       <FlexCol className={'flex-1 border bg-card rounded-sm px-4 1440:py-6 py-4 gap-3'}>
@@ -29,20 +39,20 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
 
         <ToggleGroup
           type="single"
-          value={viewMode}
-          onValueChange={(value) => {
-            if (value) setViewMode(value as 'jugadas' | 'aciertos');
+          value={winners ? 'hits' : 'plays'}
+          onClick={(value) => {
+            if (value) handleChangeWinners();
           }}
           className="p-1 rounded-md gap-2"
         >
           <ToggleGroupItem
-            value="jugadas"
+            value="plays"
             className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
           >
             Jugadas
           </ToggleGroupItem>
           <ToggleGroupItem
-            value="aciertos"
+            value="hits"
             className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
           >
             Aciertos
@@ -59,9 +69,9 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
         />
         <ToggleGroup
           type="single"
-          value={groupMode}
-          onValueChange={(value) => {
-            if (value) setGroupMode(value as 'individual' | 'agrupados');
+          value={grouped ? 'grouped' : 'individual'}
+          onClick={(value) => {
+            if (value) handleChangeGrouped();
           }}
           className="p-1 rounded-md gap-2"
         >
@@ -72,7 +82,7 @@ const PlayAndHitsToggleSelect = ({ filters }: PlayAndHitsToggleSelectOptions) =>
             Individual
           </ToggleGroupItem>
           <ToggleGroupItem
-            value="agrupados"
+            value="grouped"
             className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
           >
             Agrupados

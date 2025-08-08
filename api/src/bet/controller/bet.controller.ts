@@ -31,6 +31,7 @@ export class BetController {
           winners,
         });
       }
+      // else {
       bets = await this.repository.getAllBets({
         schedule_id,
         date,
@@ -38,6 +39,7 @@ export class BetController {
         lottery_id,
         winners,
       });
+      // }
 
       return bets.map((bet) => {
         return parseBet(bet);
