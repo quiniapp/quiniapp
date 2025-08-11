@@ -1,17 +1,17 @@
-import { Search } from 'lucide-react';
-
-import Box from '@/components/box';
-import {  FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button.tsx';
+import { FlexCol } from '@/components/flex';
 import HeaderPlayAndHits from '@/features/plays-and-hits/header-play-and-hits.tsx';
 import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box.tsx';
 import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table.tsx';
 import TotalAmountPlayAndHits from '@/features/plays-and-hits/total-amount-play-and-hits.tsx';
 import { useBets } from '@/hooks/fetchs/plays/useBets';
 import { useSearchParams } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import SelectBetType from './select-bet-type';
+import { BET_TYPE, IBetEntityFront } from '../../../../helper/types/bet.type';
 
 const PlaysAndHitsContent = () => {
+  const [bets, setBets] = useState<IBetEntityFront[]>([]);
+
   const [setSearchParams] = useSearchParams();
   const schedule_id = setSearchParams.get('schedule_id');
 
@@ -20,26 +20,50 @@ const PlaysAndHitsContent = () => {
   const cashier_id = setSearchParams.get('cashier_id');
   const grouped = setSearchParams.get('grouped');
   const winners = setSearchParams.get('winners');
+  const quatern = setSearchParams.get('quatern');
+  const tern = setSearchParams.get('tern');
+
   const { data } = useBets({
     schedule_id: schedule_id,
     date: date,
     cashier_id: cashier_id,
     lottery_id: lottery_id,
-    winners: winners,
-    grouped:grouped
+    grouped: grouped,
   });
 
-  const { totalPlaysAmount, totalHitsAmount } = useMemo(() => {
-    const totalPlaysAmount = data?.reduce((acc: number, bet) => {
-      return acc + bet.amount;
-    }, 0);
-    const totalHitsAmount = data?.reduce((acc: number, bet) => {
+  const totalHitsAmount = useMemo(() => {
+    return data?.reduce((acc: number, bet) => {
       return acc + bet.prize;
     }, 0);
-    return { totalPlaysAmount, totalHitsAmount };
-  }, [data,schedule_id,lottery_id, date, grouped, winners]);
+  }, [data, schedule_id, lottery_id, date]);
 
-  
+  const totalPlaysAmount = useMemo(() => {
+    if (data)
+      return data?.reduce((acc: number, bet) => {
+        return acc + bet.amount;
+      }, 0);
+  }, [schedule_id, lottery_id, date, data]);
+
+  useEffect(() => {
+    if (data) {
+      if (winners === 'true') {
+        setBets(data.filter((bet: IBetEntityFront) => bet.winner));
+      } else if (tern === 'true' && quatern === 'true') {
+        setBets(
+          data.filter(
+            (bet: IBetEntityFront) =>
+              bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
+          )
+        );
+      } else if (tern === 'true') {
+        setBets(data.filter((bet: IBetEntityFront) => bet.bet_type === BET_TYPE.TERN));
+      } else if (quatern === 'true') {
+        setBets(data.filter((bet: IBetEntityFront) => bet.bet_type === BET_TYPE.QUATERN));
+      } else {
+        setBets(data);
+      }
+    }
+  }, [data, grouped, winners, tern, quatern]);
 
   return (
     <FlexCol
@@ -48,13 +72,9 @@ const PlaysAndHitsContent = () => {
       <HeaderPlayAndHits />
       <FlexCol className={'p-1 sm:p-2 gap-2 '}>
         <PlayAndHitsBox />
-        <Box className={'w-[200px]'}>
-          <Button className={'w-full'}>
-            <Search /> Buscar
-          </Button>
-        </Box>
+        <SelectBetType />
       </FlexCol>
-      <PlaysAndHitsTable bets={data} />
+      <PlaysAndHitsTable bets={bets} />
       <TotalAmountPlayAndHits
         totalPlaysAmount={totalPlaysAmount}
         totalHitsAmount={totalHitsAmount}

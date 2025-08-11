@@ -46,21 +46,16 @@ export class BetRepository {
     lottery_id?: string;
     winners?: boolean;
   }) {
-    let query = supabase.from('bets').select('number,amount.sum()').eq('date', date);
-    if (schedule_id) query = query.eq('schedule_id', schedule_id);
-    if (cashier_id) query = query.eq('user_id', cashier_id);
-    if (lottery_id) query = query.eq('lottery_id', lottery_id);
-    if (winners) query = query.eq('winner', true);
-
-    const { data, error } = await query;
-
-    console.log('data', data);
+    const { data, error } = await supabase.rpc('get_grouped_bets_for_parse', {
+      p_date: date,
+      p_schedule_id: schedule_id ?? null,
+      p_cashier_id: cashier_id ?? null,
+      p_lottery_id: lottery_id ?? null,
+      p_winners_only: !!winners,
+    });
     if (error) throw error;
 
     // Normalizamos el nombre del campo sum
-    return data.map((item) => ({
-      number: item.number,
-      amount: item.sum,
-    }));
+    return data;
   }
 }

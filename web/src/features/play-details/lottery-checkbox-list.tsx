@@ -6,18 +6,22 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 
 interface LotteryCheckboxListProps {
   lottery: LotteryType;
-    setLotteries: (lottery: ILotteryEntityFront) => void
-    checkedLottery?:boolean
+  setLotteries: (lottery: ILotteryEntityFront) => void;
+  checkedLottery?: boolean;
 }
 
-const LotteryCheckboxList = ({ lottery, setLotteries,checkedLottery }: LotteryCheckboxListProps) => {
+const LotteryCheckboxList = ({
+  lottery,
+  setLotteries,
+  checkedLottery,
+}: LotteryCheckboxListProps) => {
   return (
     <Flex className="items-center gap-2">
-      <Checkbox 
-      checked={checkedLottery}
+      <Checkbox
+        checked={checkedLottery}
         id={lottery.lottery_id}
         className="border-2 border-primary"
-        onClick={()=>setLotteries(lottery)}
+        onClick={() => setLotteries(lottery)}
       />
       <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
         {lottery.name}

@@ -19,11 +19,15 @@ interface SchedulesProps {
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
   setSchedules: (schedule: IScheduleEntityFront) => void;
-  
-  checkedSchedules: Map<string, IScheduleEntityFront>
+
+  checkedSchedules: Map<string, IScheduleEntityFront>;
 }
 
-const ScheduleCheckboxList = ({ schedules, setSchedules,checkedSchedules }: SchedulesCheckboxListProps) => {
+const ScheduleCheckboxList = ({
+  schedules,
+  setSchedules,
+  checkedSchedules,
+}: SchedulesCheckboxListProps) => {
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);
   const refF3 = useRef<HTMLButtonElement>(null);
@@ -35,7 +39,7 @@ const ScheduleCheckboxList = ({ schedules, setSchedules,checkedSchedules }: Sche
   const refF8 = useRef<HTMLButtonElement>(null);
   const refF9 = useRef<HTMLButtonElement>(null);
   const refF10 = useRef<HTMLButtonElement>(null);
-  
+
   const keyMap: Record<string, number> = {
     F1: 0,
     F2: 1,
@@ -65,17 +69,14 @@ const ScheduleCheckboxList = ({ schedules, setSchedules,checkedSchedules }: Sche
     const index = keyMap[e.key];
     if (index !== undefined) {
       e.preventDefault();
-      
 
-       const ref = keyboardMap[index].ref;
-       if (ref?.current) {
+      const ref = keyboardMap[index].ref;
+      if (ref?.current) {
         ref.current.click();
       }
-
     }
   };
   useEffect(() => {
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [schedules, setSchedules]);
@@ -92,13 +93,13 @@ const ScheduleCheckboxList = ({ schedules, setSchedules,checkedSchedules }: Sche
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">
               <Checkbox
-              checked={checkedSchedules.has(schedule.schedule_id)}
+                checked={checkedSchedules.has(schedule.schedule_id)}
+                disabled={false}
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
                 onClick={() => {
                   setSchedules(schedule);
                 }}
-                
                 className="border-2 border-primary"
               />
               <Label htmlFor={`f${index + 1}`} className="text-[12px]">

@@ -60,8 +60,8 @@ const PlayDetailsContent = () => {
           schedule_id: schedLot.schedule.schedule_id,
           user_id: cashier?.user_id ?? user?.user_id!,
           date: today,
-          user_name: cashier?.name ?? user?.name!,
-          cashier_name: cashier?.name ?? user?.name!,
+          user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
+          cashier_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
         }))
       )
     );
@@ -70,7 +70,7 @@ const PlayDetailsContent = () => {
         bets: newBets,
         date: today,
         user_id: cashier?.user_id ?? user?.user_id!,
-        user_name: cashier?.name ?? user?.name!,
+        user_name:`${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
       },
       {
         onSuccess: () => {
