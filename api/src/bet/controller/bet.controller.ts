@@ -30,16 +30,15 @@ export class BetController {
           lottery_id,
           winners,
         });
+      } else {
+        bets = await this.repository.getAllBets({
+          schedule_id,
+          date,
+          cashier_id,
+          lottery_id,
+          winners,
+        });
       }
-      // else {
-      bets = await this.repository.getAllBets({
-        schedule_id,
-        date,
-        cashier_id,
-        lottery_id,
-        winners,
-      });
-      // }
 
       return bets.map((bet) => {
         return parseBet(bet);
