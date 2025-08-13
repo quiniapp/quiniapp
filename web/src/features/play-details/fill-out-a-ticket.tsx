@@ -200,13 +200,14 @@ const FillOutATicket = ({
           bet.with?.length === 2 &&
           bet.number.length === 2)) &&
       schedules.size &&
-      lotteries.size &&
-      Array.from(schedules.values()).some((sch) => {
-        const target = dayjs(sch.time);
-        const diffSec = target.diff(now, 'second');
-        return diffSec > 0 && diffSec <= 600;
-      })
-  )
+      lotteries.size 
+    )
+    /* &&
+    Array.from(schedules.values()).some((sch) => {
+      const target = dayjs(sch.time);
+      const diffSec = target.diff(now, 'second');
+      return diffSec > 0 && diffSec <= 600;
+    }) */
   const isLessThanTenMinutes = useMemo(() => {
     return Array.from(schedules.values()).some((sch) => {
       console.log(sch.time)
@@ -300,7 +301,7 @@ const FillOutATicket = ({
                 <Button
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}
-                  disabled={!isAddButtonEnabled || isLessThanTenMinutes}
+                  disabled={!isAddButtonEnabled}
                   onClick={() => handleCreateBet()}
                 >
                   <PlusIcon /> Agregar
