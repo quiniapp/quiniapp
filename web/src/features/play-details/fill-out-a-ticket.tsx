@@ -196,7 +196,8 @@ const FillOutATicket = ({
         (bet.position &&
           (bet.position === '5' || bet.position === '10' || bet.position === '20') &&
           bet.with?.length === 2 &&
-          bet.number.length === 2))
+          bet.number.length === 2)) &&
+          schedules.size && lotteries.size
   );
 
   return (
