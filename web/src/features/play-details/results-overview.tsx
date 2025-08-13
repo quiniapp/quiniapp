@@ -12,6 +12,7 @@ const ResultsOverview = ({
   handleResetBets,
   onDeleteSelected,
   hasSelection,
+  isEnabled,
 }: {
   partialAmount: number;
   totalAmount: number;
@@ -19,6 +20,8 @@ const ResultsOverview = ({
   handleResetBets: VoidFunction;
   onDeleteSelected: VoidFunction;
   hasSelection: boolean;
+
+  isEnabled: boolean;
 }) => {
   return (
     <Flex
@@ -27,7 +30,7 @@ const ResultsOverview = ({
       }
     >
       <Flex className={'justify-between w-full '}>
-        <Flex className='gap-2'>
+        <Flex className="gap-2">
           <FlexCol className="">
             <span className="text-xs md:text-sm ">Monto parcial</span>
             <span className="text-xs md:text-sm">Total</span>
@@ -55,7 +58,7 @@ const ResultsOverview = ({
         </FlexCol>
       </Flex>
       <Flex className={'gap-4 items-center '}>
-        <Button onClick={() => handleCreateBet()} disabled={totalAmount === 0}>
+        <Button onClick={() => handleCreateBet()} disabled={totalAmount === 0 || !isEnabled}>
           Cerrar Ticket{' '}
         </Button>
         <Button onClick={onDeleteSelected} variant="destructive" disabled={!hasSelection}>
