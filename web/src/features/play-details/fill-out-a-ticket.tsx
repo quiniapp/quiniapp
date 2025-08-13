@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
-import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
@@ -201,15 +200,24 @@ const FillOutATicket = ({
           bet.with?.length === 2 &&
           bet.number.length === 2)) &&
       schedules.size &&
-      lotteries.size
-  );
+      lotteries.size &&
+      Array.from(schedules.values()).some((sch) => {
+        const target = dayjs(sch.time);
+        const diffSec = target.diff(now, 'second');
+        return diffSec > 0 && diffSec <= 600;
+      })
+  )
   const isLessThanTenMinutes = useMemo(() => {
     return Array.from(schedules.values()).some((sch) => {
+      console.log(sch.time)
       const target = dayjs(sch.time);
+      console.log(target)
       const diffSec = target.diff(now, 'second');
       return diffSec > 0 && diffSec <= 600;
     });
   }, [now]);
+
+
   return (
     <FlexCol className={' h-fit'}>
       <Flex className={'flex-col-reverse sm:flex-row py-1 1440:py-2 gap-1'}>

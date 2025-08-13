@@ -6,7 +6,6 @@ import { Flex } from '@/components/flex';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { useSchedules } from '@/hooks/useSchedules';
 
-
 export interface ScheduleProps {
   schedule_id: string;
   name: string;
@@ -16,15 +15,19 @@ export interface ScheduleProps {
 
 interface ScheduleRadioListProps {
   handleSchedule: (id: string) => void;
-  selectedSchedule:string
+  selectedSchedule: string;
 }
 
-export const ScheduleRadioList = ({ selectedSchedule,handleSchedule }: ScheduleRadioListProps) => {
+export const ScheduleRadioList = ({ selectedSchedule, handleSchedule }: ScheduleRadioListProps) => {
   const { data: schedules, isLoading } = useSchedules();
 
   if (isLoading) return <SkeletonList row={2} />;
   return (
-    <RadioGroup className="flex justify-between" onValueChange={handleSchedule} value={selectedSchedule}>
+    <RadioGroup
+      className="flex justify-between"
+      onValueChange={handleSchedule}
+      value={selectedSchedule}
+    >
       {schedules?.data?.schedule?.map((schedule: IScheduleEntityFront) => (
         <Flex className={'gap-3 items-center'} key={schedule.schedule_id}>
           <RadioGroupItem

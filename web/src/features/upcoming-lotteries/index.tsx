@@ -29,7 +29,7 @@ const UpcomingLotteriesContent = () => {
   const [savedData, setSavedData] = useState<Record<string, Record<string, string[]>>>({});
   const [selectedDay, setSelectedDay] = useState<string>(''); // 'LUNES'
   const [selectedSchedule, setSelectedSchedule] = useState<string>(''); // 'schedule_id'
-  const { mutate: saveScheduleLottery } = useSaveScheduleLottery();
+  const { mutate: saveScheduleLottery, isPending: isPendingSave } = useSaveScheduleLottery();
   const { data: scheduleLottery, isPending } = useScheduleLottery();
   // const isLargeScreen = useMediaQuery('(min-width: 1366px)');
   const handleSchedule = useCallback(
@@ -68,19 +68,14 @@ const UpcomingLotteriesContent = () => {
     }
   };
   const handleSave = () => {
-    saveScheduleLottery(savedData,
-  {
-        onSuccess: () => {
-
-          toast.success('Guardado correctamente');
-        },
-        onError: () => {
-          toast.error('Ocurrió un error, intente de nuevo');
-        },
-      }
-
-
-    );
+    saveScheduleLottery(savedData, {
+      onSuccess: () => {
+        toast.success('Guardado correctamente');
+      },
+      onError: () => {
+        toast.error('Ocurrió un error, intente de nuevo');
+      },
+    });
   };
   useEffect(() => {
     setSavedData(scheduleLottery?.scheduleLotteries);
@@ -162,7 +157,7 @@ const UpcomingLotteriesContent = () => {
                     onClick={handleSave}
                   >
                     <SaveIcon />
-                    Guardar
+                    {isPendingSave ? 'Guardando...' : 'Guardar'}
                   </Button>
                 </Flex>
               </div>
