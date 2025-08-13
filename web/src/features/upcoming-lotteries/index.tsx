@@ -68,19 +68,14 @@ const UpcomingLotteriesContent = () => {
     }
   };
   const handleSave = () => {
-    saveScheduleLottery(savedData,
-  {
-        onSuccess: () => {
-
-          toast.success('Guardado correctamente');
-        },
-        onError: () => {
-          toast.error('Ocurrió un error, intente de nuevo');
-        },
-      }
-
-
-    );
+    saveScheduleLottery(savedData, {
+      onSuccess: () => {
+        toast.success('Guardado correctamente');
+      },
+      onError: () => {
+        toast.error('Ocurrió un error, intente de nuevo');
+      },
+    });
   };
   useEffect(() => {
     setSavedData(scheduleLottery?.scheduleLotteries);
@@ -162,7 +157,7 @@ const UpcomingLotteriesContent = () => {
                     onClick={handleSave}
                   >
                     <SaveIcon />
-                    {isPendingSave? 'Guardando...':'Guardar'}
+                    {isPendingSave ? 'Guardando...' : 'Guardar'}
                   </Button>
                 </Flex>
               </div>
