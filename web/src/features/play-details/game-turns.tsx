@@ -33,7 +33,7 @@ const GameTurns = ({
   setIsEnabledCreateBet,
 }: IGameTurns) => {
   const { now, isLessThanTenMinutes } = useClock();
-  const {role} = useSessionStore()
+  const { role } = useSessionStore();
   const { data } = useLotteries();
   const { data: schedulesData } = useSchedules();
   const lotteries = data?.data?.lottery ?? [];
@@ -41,8 +41,7 @@ const GameTurns = ({
 
   useEffect(() => {
     const status = schedules?.some((sch: IScheduleEntityFront) => isLessThanTenMinutes(sch.time));
-    console.log('status', status)
-    setIsEnabledCreateBet(!status || role !==USER_TYPE.CASHIER);
+    setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
   }, [now, schedules]);
 
   return (

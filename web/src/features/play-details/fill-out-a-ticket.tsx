@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
-import React, { Suspense, useEffect,  useRef, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { IBetTable, ILotterySchedule } from '.';
@@ -32,7 +32,7 @@ const FillOutATicket = ({
   schedules,
   setSchedules,
   isEnabled,
-  setIsEnabledCreateBet
+  setIsEnabledCreateBet,
 }: {
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
@@ -42,7 +42,7 @@ const FillOutATicket = ({
   schedules: Map<string, IScheduleEntityFront>;
   setSchedules: React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>;
   isEnabled: boolean;
-  setIsEnabledCreateBet:React.Dispatch<React.SetStateAction<boolean>>
+  setIsEnabledCreateBet: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const today = dayjs().day();
   const [openModal, setOpenModal] = useState<boolean>(false);

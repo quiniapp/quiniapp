@@ -30,7 +30,7 @@ const ScheduleCheckboxList = ({
   checkedSchedules,
 }: SchedulesCheckboxListProps) => {
   const { role } = useSessionStore();
-  const { isScheduleAfter,isLessThanTenMinutes } = useClock();
+  const { isScheduleAfter, isLessThanTenMinutes } = useClock();
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);
   const refF3 = useRef<HTMLButtonElement>(null);
@@ -92,7 +92,10 @@ const ScheduleCheckboxList = ({
           const keyHandler = keyboardMap[index];
 
           if (!keyHandler) return null;
-          const enabled = isScheduleAfter(schedule.time) || role !== USER_TYPE.CASHIER || !isLessThanTenMinutes(schedule.time);
+          const enabled =
+            isScheduleAfter(schedule.time) ||
+            role !== USER_TYPE.CASHIER ||
+            !isLessThanTenMinutes(schedule.time);
           if (!enabled) checkedSchedules.delete(schedule.schedule_id);
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">

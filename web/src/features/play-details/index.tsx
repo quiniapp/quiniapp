@@ -43,7 +43,7 @@ const PlayDetailsContent = () => {
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
-  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false)
+  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
     const today = dayjs().format('YYYY-MM-DD');
@@ -123,7 +123,6 @@ const PlayDetailsContent = () => {
       setCashier(data?.data?.users?.[0]);
     }
   }, [userNumber, data]);
-
 
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
