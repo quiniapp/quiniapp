@@ -15,6 +15,8 @@ import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
+import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+
 
 export interface ILotterySchedule {
   schedule: IScheduleEntityFront;
@@ -30,17 +32,16 @@ export interface IBetTable {
 }
 
 const PlayDetailsContent = () => {
+
   const { user } = useSessionStore();
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [partialAmount, setPartialAmount] = useState<number>(0);
   const [bets, setBets] = useState<IBetTable[]>([]);
   const [cashier, setCashier] = useState<IUserEntityFront | undefined>(undefined);
-
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const { mutate: createTicket } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
-
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
   //! ResultsOverview crea el ticket
