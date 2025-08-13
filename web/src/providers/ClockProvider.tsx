@@ -29,6 +29,9 @@ type ClockContext = {
   tz: string;
   /** true si el horario HH:mm es > ahora (mismo día), false si es <= */
   isScheduleAfter: (hhmm: string) => boolean;
+  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean; // <---
+  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean; // <---
+
   /** forzar resincronización manual */
   refresh: () => Promise<() => void>;
 };
@@ -58,38 +61,29 @@ export function ClockProvider({
   const [, setTick] = useState(0);
   const tickId = useRef<number>(null);
 
-  const computeNow = useCallback(
-    () => dayjs.utc(Date.now() + offsetMs).tz(tz),
-    [offsetMs, tz]
-  );
+  const computeNow = useCallback(() => dayjs.utc(Date.now() + offsetMs).tz(tz), [offsetMs, tz]);
 
   const now = computeNow();
   const time = useMemo(() => now.format('HH:mm:ss'), [now]);
-  const date = useMemo(
-    () => now.format('dddd, D [de] MMMM [de] YYYY'),
-    [now]
-  );
+  const date = useMemo(() => now.format('dddd, D [de] MMMM [de] YYYY'), [now]);
 
   // Obtiene hora de red y devuelve offset (serverUTC - clientUTCmedio)
   const fetchNetworkOffset = useCallback(
     async (signal: AbortSignal): Promise<number | null> => {
       try {
-        const url =
-          timeApiUrl ??
-          `https://worldtimeapi.org/api/timezone/${encodeURIComponent(tz)}`;
+        const url = timeApiUrl ?? `https://worldtimeapi.org/api/timezone/${encodeURIComponent(tz)}`;
         const t0 = Date.now();
         const res = await fetch(url, { cache: 'no-store', signal });
         const t1 = Date.now();
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json() as any;
+        const data = (await res.json()) as any;
 
         // Preferimos utc_datetime (worldtimeapi). Fallbacks comunes para otros endpoints.
         let serverEpochMs: number | null = null;
         if (data?.utc_datetime) serverEpochMs = dayjs(data.utc_datetime).valueOf();
         else if (data?.datetime) serverEpochMs = dayjs(data.datetime).valueOf();
         else if (data?.dateTime) serverEpochMs = dayjs(data.dateTime).valueOf();
-        else if (data?.currentDateTime)
-          serverEpochMs = dayjs(data.currentDateTime).valueOf();
+        else if (data?.currentDateTime) serverEpochMs = dayjs(data.currentDateTime).valueOf();
 
         if (!serverEpochMs || Number.isNaN(serverEpochMs)) {
           throw new Error('No se encontró un datetime válido en la respuesta');
@@ -158,14 +152,47 @@ export function ClockProvider({
       const h = Number(hs);
       const m = Number(ms);
       if (Number.isNaN(h) || Number.isNaN(m)) return false;
-      const target = computeNow()
-        .hour(h)
-        .minute(m)
-        .second(0)
-        .millisecond(0);
+      const target = computeNow().hour(h).minute(m).second(0).millisecond(0);
       return target.isAfter(computeNow());
     },
     [computeNow]
+  );
+
+  // dentro de ClockProvider, arriba de `const value = useMemo(...`
+  const toTodayAt = useCallback(
+    (hhmmss: string) => {
+      const [hh, mm, ss = '0'] = (hhmmss ?? '').trim().split(':');
+      const h = Number(hh),
+        m = Number(mm),
+        s = Number(ss);
+      if ([h, m, s].some(Number.isNaN)) return null;
+
+      // usar misma fecha/tz que now (via computeNow)
+      return computeNow().hour(h).minute(m).second(s).millisecond(0);
+    },
+    [computeNow]
+  );
+
+  /** true si falta <= windowMin minutos para ese horario de hoy (y todavía no pasó) */
+  const isLessThanTenMinutes = useCallback(
+    (hhmmss: string, windowMin = 10) => {
+      const target = toTodayAt(hhmmss);
+      if (!target) return false;
+      const diffSec = target.diff(computeNow(), 'second');
+      return diffSec > 0 && diffSec <= windowMin * 60;
+    },
+    [toTodayAt, computeNow]
+  );
+
+  /** Tu regla original: habilitado si falta > windowMin minutos; deshabilitado cuando <= windowMin */
+  const isScheduleEnabled = useCallback(
+    (hhmmss: string, windowMin = 10) => {
+      const target = toTodayAt(hhmmss);
+      if (!target) return false; // string inválido
+      const diffSec = target.diff(computeNow(), 'second');
+      return diffSec > windowMin * 60; // true: aún falta más de 10min
+    },
+    [toTodayAt, computeNow]
   );
 
   const value = useMemo<ClockContext>(
@@ -175,14 +202,14 @@ export function ClockProvider({
       now,
       tz,
       isScheduleAfter,
+      isLessThanTenMinutes, // <---
+      isScheduleEnabled, // <---
       refresh: sync,
     }),
-    [time, date, now, tz, isScheduleAfter, sync]
+    [time, date, now, tz, isScheduleAfter,isLessThanTenMinutes, isScheduleEnabled,  sync]
   );
 
-  return (
-    <ClockContext.Provider value={value}>{children}</ClockContext.Provider>
-  );
+  return <ClockContext.Provider value={value}>{children}</ClockContext.Provider>;
 }
 
 export function useClock() {

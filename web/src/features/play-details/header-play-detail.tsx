@@ -17,11 +17,7 @@ interface HeaderPlayDetailProps {
   setUserNumber: React.Dispatch<React.SetStateAction<number | undefined>>;
 }
 
-const HeaderPlayDetail = ({
-  cashier,
-  userNumber,
-  setUserNumber,
-}: HeaderPlayDetailProps) => {
+const HeaderPlayDetail = ({ cashier, userNumber, setUserNumber }: HeaderPlayDetailProps) => {
   const { role } = useSessionStore();
 
   const handleSearch = (search: string) => {
@@ -50,8 +46,7 @@ const HeaderPlayDetail = ({
               }}
             />
             <div className="w-40">
-                <Label htmlFor={'user'}> {cashier?.name}</Label>
-        
+              <Label htmlFor={'user'}> {cashier?.name}</Label>
             </div>
           </Flex>
         )}
