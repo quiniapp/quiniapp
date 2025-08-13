@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
 import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { IBetTable, ILotterySchedule } from '.';
@@ -15,6 +15,7 @@ import { placeTypeParse } from '../../../../helper/functions/placeTypeParse';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
+import { useClock } from '@/providers/ClockProvider';
 
 export interface IBetForm {
   number: string;
@@ -42,6 +43,7 @@ const FillOutATicket = ({
   setSchedules: React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>;
 }) => {
   const today = dayjs().day();
+  const { now } = useClock();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [bet, setBet] = useState<IBetForm>({
     number: '',
@@ -116,18 +118,19 @@ const FillOutATicket = ({
 
   const handleCreateBet = () => {
     const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]];
-  const lotterySchedule: ILotterySchedule[] =
-  Array.from(schedules.values()).reduce<ILotterySchedule[]>((acc, sch) => {
-    const ids: string[] | undefined = schLotPerDate[sch.schedule_id];
-    if (!ids?.length) return acc;
+    const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).reduce<
+      ILotterySchedule[]
+    >((acc, sch) => {
+      const ids: string[] | undefined = schLotPerDate[sch.schedule_id];
+      if (!ids?.length) return acc;
 
-    const valid = ids
-      .map((id) => lotteries.get(id))
-      .filter((x): x is ILotteryEntityFront => Boolean(x));
+      const valid = ids
+        .map((id) => lotteries.get(id))
+        .filter((x): x is ILotteryEntityFront => Boolean(x));
 
-    if (valid.length) acc.push({ schedule: sch, lotteries: valid });
-    return acc;
-  }, []);
+      if (valid.length) acc.push({ schedule: sch, lotteries: valid });
+      return acc;
+    }, []);
 
     setBets((prev) => {
       const newBet: IBetTable = {
@@ -197,9 +200,16 @@ const FillOutATicket = ({
           (bet.position === '5' || bet.position === '10' || bet.position === '20') &&
           bet.with?.length === 2 &&
           bet.number.length === 2)) &&
-          schedules.size && lotteries.size
+      schedules.size &&
+      lotteries.size
   );
-
+  const isLessThanTenMinutes = useMemo(() => {
+    return Array.from(schedules.values()).some((sch) => {
+      const target = dayjs(sch.time);
+      const diffSec = target.diff(now, 'second');
+      return diffSec > 0 && diffSec <= 600;
+    });
+  }, [now]);
   return (
     <FlexCol className={' h-fit'}>
       <Flex className={'flex-col-reverse sm:flex-row py-1 1440:py-2 gap-1'}>
@@ -282,7 +292,7 @@ const FillOutATicket = ({
                 <Button
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}
-                  disabled={!isAddButtonEnabled}
+                  disabled={!isAddButtonEnabled || isLessThanTenMinutes}
                   onClick={() => handleCreateBet()}
                 >
                   <PlusIcon /> Agregar
