@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/play-details/game-turns.tsx';
-import { useIsButtonEnabled } from '@/hooks/use-is-button-enabled.ts';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
@@ -292,7 +291,7 @@ const FillOutATicket = ({
                 <Button
                   type={'button'}
                   className={'flex-1 disabled:bg-pink-50'}
-                  disabled={!isAddButtonEnabled || isLessThanTenMinutes}
+                  disabled={!isAddButtonEnabled || !isLessThanTenMinutes}
                   onClick={() => handleCreateBet()}
                 >
                   <PlusIcon /> Agregar

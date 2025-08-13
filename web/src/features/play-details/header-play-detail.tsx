@@ -9,8 +9,6 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { useModalContext } from '@/providers/modal-provider';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
-import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { useEffect, useState } from 'react';
 import { useSessionStore } from '@/stores/sessionStore';
 
 interface HeaderPlayDetailProps {

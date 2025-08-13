@@ -1,6 +1,6 @@
 import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
 import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
-import { useCallback, useEffect, useState } from 'react';
+import {  useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
@@ -15,7 +15,6 @@ import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 
 
 export interface ILotterySchedule {
