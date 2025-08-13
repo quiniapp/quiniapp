@@ -9,6 +9,9 @@ import HeaderTitleSection from '@/components/header-title-section';
 // Hooks
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { useEffect, useRef } from 'react';
+import { useClock } from '@/providers/ClockProvider';
+import { useSessionStore } from '@/stores/sessionStore';
+import { USER_TYPE } from '../../../../helper/types/user.type';
 
 interface SchedulesProps {
   time: string;
@@ -22,12 +25,13 @@ interface SchedulesCheckboxListProps {
 
   checkedSchedules: Map<string, IScheduleEntityFront>;
 }
-
 const ScheduleCheckboxList = ({
   schedules,
   setSchedules,
   checkedSchedules,
 }: SchedulesCheckboxListProps) => {
+  const {role} = useSessionStore()
+  const {isScheduleAfter } = useClock();
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);
   const refF3 = useRef<HTMLButtonElement>(null);
@@ -94,7 +98,7 @@ const ScheduleCheckboxList = ({
             <Flex key={schedule.schedule_id} className="items-center gap-2">
               <Checkbox
                 checked={checkedSchedules.has(schedule.schedule_id)}
-                disabled={false}
+                disabled={!isScheduleAfter(schedule.time) &&role === USER_TYPE.CASHIER}
                 id={`f${index + 1}`}
                 ref={keyHandler.ref}
                 onClick={() => {

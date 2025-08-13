@@ -12,6 +12,9 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { IBetTable, ILotterySchedule } from '.';
 import { placeTypeParse } from '../../../../helper/functions/placeTypeParse';
+import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+import dayjs from 'dayjs';
+import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 
 export interface IBetForm {
   number: string;
@@ -25,7 +28,7 @@ const FillOutATicket = ({
   setTotalAmount,
   setPartialAmount,
   setBets,
-  lotteries, 
+  lotteries,
   setLotteries,
   schedules,
   setSchedules,
@@ -33,11 +36,12 @@ const FillOutATicket = ({
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
-  lotteries: Map<string, ILotteryEntityFront>
-  setLotteries: React.Dispatch<React.SetStateAction<Map<string, ILotteryEntityFront>>>
-  schedules:Map<string, IScheduleEntityFront>
-  setSchedules:React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>
+  lotteries: Map<string, ILotteryEntityFront>;
+  setLotteries: React.Dispatch<React.SetStateAction<Map<string, ILotteryEntityFront>>>;
+  schedules: Map<string, IScheduleEntityFront>;
+  setSchedules: React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>;
 }) => {
+  const today = dayjs().day();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [bet, setBet] = useState<IBetForm>({
     number: '',
@@ -46,6 +50,7 @@ const FillOutATicket = ({
     with: '',
     position: '',
   });
+  const { data: scheduleLotteryPerDate } = useScheduleLottery();
   // 1. Refs de cada input
   const numberRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
@@ -54,7 +59,6 @@ const FillOutATicket = ({
   const positionRef = useRef<HTMLInputElement>(null);
   // 2. Array para fácil navegación
   const inputRefs = [numberRef, amountRef, placeRef, withRef, positionRef];
-
   // 3. Handler de keydown en inputs
   const handleInputKeyDown = (idx: number) => (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -111,12 +115,19 @@ const FillOutATicket = ({
   };
 
   const handleCreateBet = () => {
-    const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).map((sch) => {
-      return {
-        schedule: sch,
-        lotteries: Array.from(lotteries.values()),
-      };
-    });
+    const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]];
+  const lotterySchedule: ILotterySchedule[] =
+  Array.from(schedules.values()).reduce<ILotterySchedule[]>((acc, sch) => {
+    const ids: string[] | undefined = schLotPerDate[sch.schedule_id];
+    if (!ids?.length) return acc;
+
+    const valid = ids
+      .map((id) => lotteries.get(id))
+      .filter((x): x is ILotteryEntityFront => Boolean(x));
+
+    if (valid.length) acc.push({ schedule: sch, lotteries: valid });
+    return acc;
+  }, []);
 
     setBets((prev) => {
       const newBet: IBetTable = {
@@ -287,7 +298,12 @@ const FillOutATicket = ({
             </FlexCol>
           </form>
         </Flex>
-        <GameTurns checkedLotteries={lotteries} checkedSchedules={schedules} setLotteries={handleLotteries} setSchedules={handleSchedules} />
+        <GameTurns
+          checkedLotteries={lotteries}
+          checkedSchedules={schedules}
+          setLotteries={handleLotteries}
+          setSchedules={handleSchedules}
+        />
       </Flex>
       <Suspense fallback={<div>Cargando...</div>}>
         <ResetPartialModal

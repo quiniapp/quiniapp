@@ -8,7 +8,7 @@ import { ThemeProvider } from '../providers/theme-provider';
 import { RoutesContent } from '../routes/route';
 
 import { ModalProvider } from '@/providers/modal-provider';
-
+import { ClockProvider } from '@/providers/ClockProvider';
 
 const router = createBrowserRouter(RoutesContent);
 
@@ -18,10 +18,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <ModalProvider>
-          <Toaster position="bottom-center" />
-          <RouterProvider router={router} />
-        </ModalProvider>
+        <ClockProvider>
+          <ModalProvider>
+            <Toaster position="bottom-center" />
+            <RouterProvider router={router} />
+          </ModalProvider>
+        </ClockProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

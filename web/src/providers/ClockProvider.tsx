@@ -1,0 +1,192 @@
+'use client';
+
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale('es');
+
+type ClockContext = {
+  /** "HH:mm:ss" en 24hs */
+  time: string;
+  /** "martes, 12 de agosto de 2025" */
+  date: string;
+  /** now en la tz configurada */
+  now: dayjs.Dayjs;
+  /** zona horaria aplicada (por defecto America/Argentina/Buenos_Aires) */
+  tz: string;
+  /** true si el horario HH:mm es > ahora (mismo día), false si es <= */
+  isScheduleAfter: (hhmm: string) => boolean;
+  /** forzar resincronización manual */
+  refresh: () => Promise<() => void>;
+};
+
+const ClockContext = createContext<ClockContext | null>(null);
+
+type ClockProviderProps = {
+  children: React.ReactNode;
+  /** default: 'America/Argentina/Buenos_Aires' */
+  tz?: string;
+  /** cada cuánto resincronizar (ms). default: 30min */
+  syncEveryMs?: number;
+  /** API opcional. Por defecto usa worldtimeapi para la tz dada */
+  timeApiUrl?: string;
+};
+
+export function ClockProvider({
+  children,
+  tz = 'America/Argentina/Buenos_Aires',
+  syncEveryMs = 30 * 60 * 1000,
+  timeApiUrl,
+}: ClockProviderProps) {
+  // offset contra el reloj del cliente, en ms. Se calcula con tiempo de red del servidor.
+  const [offsetMs, setOffsetMs] = useState(0);
+
+  // ‘tick’ para re-renderizar cada segundo
+  const [, setTick] = useState(0);
+  const tickId = useRef<number>(null);
+
+  const computeNow = useCallback(
+    () => dayjs.utc(Date.now() + offsetMs).tz(tz),
+    [offsetMs, tz]
+  );
+
+  const now = computeNow();
+  const time = useMemo(() => now.format('HH:mm:ss'), [now]);
+  const date = useMemo(
+    () => now.format('dddd, D [de] MMMM [de] YYYY'),
+    [now]
+  );
+
+  // Obtiene hora de red y devuelve offset (serverUTC - clientUTCmedio)
+  const fetchNetworkOffset = useCallback(
+    async (signal: AbortSignal): Promise<number | null> => {
+      try {
+        const url =
+          timeApiUrl ??
+          `https://worldtimeapi.org/api/timezone/${encodeURIComponent(tz)}`;
+        const t0 = Date.now();
+        const res = await fetch(url, { cache: 'no-store', signal });
+        const t1 = Date.now();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json() as any;
+
+        // Preferimos utc_datetime (worldtimeapi). Fallbacks comunes para otros endpoints.
+        let serverEpochMs: number | null = null;
+        if (data?.utc_datetime) serverEpochMs = dayjs(data.utc_datetime).valueOf();
+        else if (data?.datetime) serverEpochMs = dayjs(data.datetime).valueOf();
+        else if (data?.dateTime) serverEpochMs = dayjs(data.dateTime).valueOf();
+        else if (data?.currentDateTime)
+          serverEpochMs = dayjs(data.currentDateTime).valueOf();
+
+        if (!serverEpochMs || Number.isNaN(serverEpochMs)) {
+          throw new Error('No se encontró un datetime válido en la respuesta');
+        }
+
+        const clientMid = (t0 + t1) / 2;
+        return serverEpochMs - clientMid; // corrección tipo NTP
+      } catch (err) {
+        console.warn('Clock sync failed:', err);
+        return null;
+      }
+    },
+    [timeApiUrl, tz]
+  );
+
+  const sync = useCallback(async () => {
+    const ac = new AbortController();
+    const ms = await fetchNetworkOffset(ac.signal);
+    if (typeof ms === 'number') setOffsetMs(ms);
+    return () => ac.abort();
+  }, [fetchNetworkOffset]);
+
+  // tick de 1s
+  useEffect(() => {
+    tickId.current = window.setInterval(() => {
+      setTick((t) => (t + 1) % 60_000);
+    }, 1000);
+    return () => {
+      if (tickId.current) clearInterval(tickId.current);
+    };
+  }, []);
+
+  // sync inicial + periódica + cuando vuelve el foco o la pestaña
+  useEffect(() => {
+    let intervalId: number | undefined;
+
+    const run = async () => {
+      await sync();
+      intervalId = window.setInterval(() => {
+        sync();
+      }, syncEveryMs) as unknown as number;
+    };
+    run();
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') sync();
+    };
+    const onFocus = () => sync();
+    const onOnline = () => sync();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [sync, syncEveryMs]);
+
+  // true si HH:mm es estrictamente mayor que ahora (mismo día)
+  const isScheduleAfter = useCallback(
+    (hhmm: string) => {
+      const [hs, ms] = hhmm.split(':');
+      const h = Number(hs);
+      const m = Number(ms);
+      if (Number.isNaN(h) || Number.isNaN(m)) return false;
+      const target = computeNow()
+        .hour(h)
+        .minute(m)
+        .second(0)
+        .millisecond(0);
+      return target.isAfter(computeNow());
+    },
+    [computeNow]
+  );
+
+  const value = useMemo<ClockContext>(
+    () => ({
+      time,
+      date,
+      now,
+      tz,
+      isScheduleAfter,
+      refresh: sync,
+    }),
+    [time, date, now, tz, isScheduleAfter, sync]
+  );
+
+  return (
+    <ClockContext.Provider value={value}>{children}</ClockContext.Provider>
+  );
+}
+
+export function useClock() {
+  const ctx = useContext(ClockContext);
+  if (!ctx) throw new Error('useClock debe usarse dentro de <ClockProvider>');
+  return ctx;
+}
