@@ -6,11 +6,17 @@ import SettlementPayrollTable from '@/components/settlement-payroll-table';
 import { useSessionStore } from '@/stores/sessionStore';
 
 import IsRoleCashier from '@/components/is-role-cashier';
+import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
+import { useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 const CurrentAccountContent = () => {
-
-  const { role } = useSessionStore()
-
+  const { role } = useSessionStore();
+  const [searchParams] = useSearchParams();
+  const { mutate } = useUpdateCurrentAcoount();
+  const handleUpdateCurrentAccount = () => {
+    mutate(searchParams.get('date') ?? dayjs().format('DD-MM-YYYY'));
+  };
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>
@@ -18,7 +24,10 @@ const CurrentAccountContent = () => {
           <Box className={'grid grid-cols-3 gap-4'}>
             <Button> Exportar Diario</Button>
             <Button variant={'outline'}> Exportar Liquidación </Button>
-            <Button variant={'outline'}> Actualizar </Button>
+            <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
+              {' '}
+              Actualizar{' '}
+            </Button>
           </Box>
         </IsRoleCashier>
       </HeaderSection>

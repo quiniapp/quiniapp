@@ -12,9 +12,15 @@ import {
 } from '@/components/ui/table';
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { Button } from '@/components/ui/button';
-import { CurrentAccountTableProps } from '@/types/current-account.type.ts';
+import { ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type';
 
-const CurrentAccountTable = ({ data, totals, isLoading, isPending }: CurrentAccountTableProps) => {
+interface CurrentAccountTableProps{
+data:ICurrentAccountEntityFront[]
+isLoading: boolean
+isPending: boolean
+}
+
+const CurrentAccountTable = ({ data/*,  totals */, isLoading, isPending }:CurrentAccountTableProps) => {
   return (
     <Box className="py-[36px]">
       <Table className="overflow-hidden rounded-[16px_16px_0_0]">
@@ -82,20 +88,20 @@ const CurrentAccountTable = ({ data, totals, isLoading, isPending }: CurrentAcco
         </TableBody>
 
         <TableFooter className="border">
-          <TableRow>
+     {/*      <TableRow>
             <TableCell colSpan={3}>Total General</TableCell>
-            <TableCell>{totals.pass}</TableCell>
-            <TableCell>{totals.successes}</TableCell>
-            <TableCell>{totals.claims}</TableCell>
-            <TableCell>${totals.subtotal.toFixed(2)}</TableCell>
-            <TableCell>${totals.previous_balance.toFixed(2)}</TableCell>
-            <TableCell>${totals.collections.toFixed(2)}</TableCell>
-            <TableCell>${totals.paid.toFixed(2)}</TableCell>
-            <TableCell>${totals.total.toFixed(2)}</TableCell>
-            <TableCell>${totals.drag.toFixed(2)}</TableCell>
-            <TableCell>${totals.leave.toFixed(2)}</TableCell>
+            <TableCell>{totals?.pass}</TableCell>
+            <TableCell>{totals?.successes}</TableCell>
+            <TableCell>{totals?.claims}</TableCell>
+            <TableCell>${totals?.subtotal.toFixed(2)}</TableCell>
+            <TableCell>${totals?.previous_balance.toFixed(2)}</TableCell>
+            <TableCell>${totals?.collections.toFixed(2)}</TableCell>
+            <TableCell>${totals?.paid.toFixed(2)}</TableCell>
+            <TableCell>${totals?.total.toFixed(2)}</TableCell>
+            <TableCell>${totals?.drag.toFixed(2)}</TableCell>
+            <TableCell>${totals?.leave.toFixed(2)}</TableCell>
             <TableCell></TableCell>
-          </TableRow>
+          </TableRow> */}
         </TableFooter>
       </Table>
     </Box>

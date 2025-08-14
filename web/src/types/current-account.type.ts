@@ -37,7 +37,7 @@ export interface FilterParams {
 
 export interface CurrentAccountTableProps {
   data: ICurrentAccountEntityFront[];
-  totals: {
+/*   totals: {
     pass: number;
     successes: number;
     claims: number;
@@ -48,7 +48,7 @@ export interface CurrentAccountTableProps {
     total: number;
     drag: number;
     leave: number;
-  };
+  }; */
   isLoading: boolean;
   isPending: boolean;
 }
