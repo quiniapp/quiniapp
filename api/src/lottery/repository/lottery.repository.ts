@@ -20,7 +20,7 @@ export class LotteryRepository {
     if (!all) {
       query = query.eq('active', true);
     }
-    const { data, error } = await query;
+    const { data, error } = await query.order('created_at', { ascending: true });
     if (error) throw new Error(error.details);
     return data;
   }
