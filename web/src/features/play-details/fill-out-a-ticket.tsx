@@ -118,20 +118,36 @@ const FillOutATicket = ({
   };
 
   const handleCreateBet = () => {
-    const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]];
+    // Mapeo day -> { [schedule_id]: string[] }
+    const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]] as
+      | Record<string, string[] | undefined>
+      | undefined;
+
+    // Construye SOLO los horarios que tengan loterías válidas
     const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).reduce<
       ILotterySchedule[]
     >((acc, sch) => {
-      const ids: string[] | undefined = schLotPerDate?.[sch.schedule_id];
-      if (!ids?.length) return acc;
+      const ids = schLotPerDate?.[sch.schedule_id];
+      if (!ids || ids.length === 0) return acc; // nada para este horario
 
       const valid = ids
         .map((id) => lotteries.get(id))
         .filter((x): x is ILotteryEntityFront => Boolean(x));
 
-      if (valid.length) acc.push({ schedule: sch, lotteries: valid });
+      if (valid.length === 0) return acc; // los ids no existen en el Map de loterías
+
+      acc.push({ schedule: sch, lotteries: valid });
       return acc;
     }, []);
+
+    // Cantidad REAL de combinaciones (pares schedule-lottery)
+    const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
+
+    if (combosCount === 0) {
+      // Opcional: avisar que no hay combinaciones válidas
+      // toast.error('No hay combinaciones válidas para el día/horario seleccionado');
+      return;
+    }
 
     setBets((prev) => {
       const newBet: IBetTable = {
@@ -142,11 +158,12 @@ const FillOutATicket = ({
         position: placeTypeParse(bet.position),
         scheduleLottery: lotterySchedule,
       };
-      const scheduleLotteryCombinations = schedules.size * lotteries.size;
 
-      setPartialAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
-      setTotalAmount((prev) => prev + newBet.amount * scheduleLotteryCombinations);
-      // Resetear campos del form
+      // Usar combosCount calculado sobre lotterySchedule (resultado real)
+      setPartialAmount((p) => p + newBet.amount * combosCount);
+      setTotalAmount((p) => p + newBet.amount * combosCount);
+
+      // Reset form
       setBet((prev) => ({
         ...prev,
         number: '',
@@ -154,8 +171,6 @@ const FillOutATicket = ({
         with: '',
         position: '',
       }));
-
-      // También podés hacer focus al campo número si querés:
       numberRef.current?.focus();
 
       return [newBet, ...prev];

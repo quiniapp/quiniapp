@@ -39,13 +39,14 @@ const PlayDetailsContent = () => {
   const [cashier, setCashier] = useState<IUserEntityFront | undefined>(undefined);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
-  const { mutate: createTicket } = useCreateTicket();
+  const { mutate: createTicket, isPending } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
+    setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
     const newBets: INewBetEntity[] = bets.flatMap((bet) =>
@@ -82,9 +83,11 @@ const PlayDetailsContent = () => {
           setLotteries(new Map());
           setSchedules(new Map());
           setUserNumber(undefined);
+          setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
         },
         onError: () => {
+          setIsEnabledCreateBet(true);
           toast.error('Ocurrió un error, intente de nuevo');
         },
       }
