@@ -2,19 +2,17 @@ import { useState } from 'react';
 import Box from '@/components/box';
 import FilterSection from '@/components/filter-section';
 import CurrentAccountTable from '@/features/agent-commission/current-account-table';
-import { useCurrentAccountTableLogic } from '@/features/current-account/hooks/use-current-account-table-logic';
+import { useGetCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
+import { useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 const SettlementPayrollTable = () => {
   const [date, setDate] = useState<string | undefined>(undefined);
   const [group, setGroup] = useState<string>('Todos');
   const [employeeNumber, setEmployeeNumber] = useState<string>('');
-
-  const { DATA, totals, isLoading, isPending } = useCurrentAccountTableLogic({
-    date,
-    group,
-    employeeNumber,
-  });
-
+  const [searchParams] = useSearchParams()
+  const { data,  isLoading, isPending } = useGetCurrentAccount(searchParams.get('date') ?? dayjs().format('YYYY-MM-DD'))
+  console.log(data)
   return (
     <Box className="overflow-auto bg-[var(--primary-bg-content)] py-[24px] text-white">
       <FilterSection
@@ -26,8 +24,8 @@ const SettlementPayrollTable = () => {
         onEmployeeNumberChange={setEmployeeNumber}
       />
       <CurrentAccountTable
-        data={DATA}
-        totals={totals}
+        data={data ?? []}
+        // totals={}
         isLoading={isLoading}
         isPending={isPending}
       />
