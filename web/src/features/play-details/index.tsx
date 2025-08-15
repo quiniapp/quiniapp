@@ -156,16 +156,10 @@ const PlayDetailsContent = () => {
         hasSelection={selectedIndexes.length > 0}
         isEnabled={isEnabledCreateBet}
       />
-      <Suspense>
-        <ModalCreateBetsUnavailable
-          isOpen={!isEnabledCreateBet && !isPending && user?.user_type === USER_TYPE.CASHIER}
-        />
-      </Suspense>
+
     </FlexCol>
   );
 };
 
 export default PlayDetailsContent;
-const ModalCreateBetsUnavailable = React.lazy(
-  () => import('../../../src/components/modals/ModalCreateBetsUnavailable')
-);
+
