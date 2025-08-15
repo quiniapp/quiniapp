@@ -93,9 +93,8 @@ const ScheduleCheckboxList = ({
 
           if (!keyHandler) return null;
           const enabled =
-            isScheduleAfter(schedule.time) ||
-            role !== USER_TYPE.CASHIER ||
-            !isLessThanTenMinutes(schedule.time);
+            (isScheduleAfter(schedule.time) && !isLessThanTenMinutes(schedule.time)) ||
+            role !== USER_TYPE.CASHIER;
           if (!enabled) checkedSchedules.delete(schedule.schedule_id);
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">
