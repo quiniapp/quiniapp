@@ -9,20 +9,25 @@ export class CurrentAccountRepository {
     return data;
   }
 
-  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
+  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date: string }) {
     let query = supabase
       .from('current_accounts')
-      .select('* , users(*)')
+      .select('*, users!inner(*)')
+      .is('users.deleted_at', null)
       .eq('date', date)
       .order('created_at', { ascending: false });
 
-    if (user_id !== undefined) {
-      query = query.eq('user_id', user_id);
-    }
+    if (user_id !== undefined) query = query.eq('user_id', user_id);
 
     const { data, error } = await query;
     if (error) throw error;
-    return data;
+
+    // dedupe: primera aparición (ya viene la más reciente primero)
+    const byUser: Record<string, (typeof data)[number]> = {};
+    for (const row of data ?? []) {
+      if (!byUser[row.user_id]) byUser[row.user_id] = row;
+    }
+    return Object.values(byUser);
   }
 
   async updateCurrentAccountHandler(
