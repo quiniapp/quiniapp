@@ -1,6 +1,6 @@
 import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
 import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
-import { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
@@ -156,8 +156,16 @@ const PlayDetailsContent = () => {
         hasSelection={selectedIndexes.length > 0}
         isEnabled={isEnabledCreateBet}
       />
+      <Suspense>
+        <ModalCreateBetsUnavailable
+          isOpen={!isEnabledCreateBet && !isPending && user?.user_type === USER_TYPE.CASHIER}
+        />
+      </Suspense>
     </FlexCol>
   );
 };
 
 export default PlayDetailsContent;
+const ModalCreateBetsUnavailable = React.lazy(
+  () => import('../../../src/components/modals/ModalCreateBetsUnavailable')
+);
