@@ -1,4 +1,4 @@
-import { Request, RequestHandler, Response, Router } from 'express';
+import express, { Request, RequestHandler, Response, Router } from 'express';
 import { TicketController } from '../controller/ticket.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
@@ -18,7 +18,7 @@ export class TicketRouter {
     // this.router.get('/:id', this.controller.get);
     this.router.get('/', this.getAllTicketHandler);
     this.router.get('/:id', this.getTicketHandler);
-    this.router.post('/', this.newTicketHandler);
+    this.router.post('/', this.newTicketHandler, express.json({ limit: '50mb' }));
     this.router.delete('/:id', this.deleteTicketHandler);
   }
 

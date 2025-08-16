@@ -10,11 +10,12 @@ import { WinnerRouter } from './winners/route/winners.route';
 import { CurrentAccountRouter } from './current-account/route/current-account.route';
 import { ScheduleLotteryRouter } from './schedule-lottery/route/schedule-lottery.route';
 
-const router = Router();
+export const router = Router();
+export const publicRouter = Router();
 const authRouter = new AuthRouter();
 
 // Rutas públicas
-export const publicRouter = router.use('/auth', authRouter.publicRouter);
+publicRouter.use('/auth', authRouter.publicRouter);
 
 // Rutas privadas
 router.use('/auth', authRouter.privateRouter);
@@ -30,6 +31,3 @@ router.use('/schedule_lottery', new ScheduleLotteryRouter().router);
 router.use('/test', (req, res) => {
   res.send('ok');
 });
-
-const privateRouter = router;
-export default privateRouter;

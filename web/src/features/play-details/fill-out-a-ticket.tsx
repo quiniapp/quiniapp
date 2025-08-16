@@ -118,63 +118,65 @@ const FillOutATicket = ({
   };
 
   const handleCreateBet = () => {
-    // Mapeo day -> { [schedule_id]: string[] }
-    const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]] as
-      | Record<string, string[] | undefined>
-      | undefined;
+    if (isAddButtonEnabled) {
+      // Mapeo day -> { [schedule_id]: string[] }
+      const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]] as
+        | Record<string, string[] | undefined>
+        | undefined;
 
-    // Construye SOLO los horarios que tengan loterías válidas
-    const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).reduce<
-      ILotterySchedule[]
-    >((acc, sch) => {
-      const ids = schLotPerDate?.[sch.schedule_id];
-      if (!ids || ids.length === 0) return acc; // nada para este horario
+      // Construye SOLO los horarios que tengan loterías válidas
+      const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).reduce<
+        ILotterySchedule[]
+      >((acc, sch) => {
+        const ids = schLotPerDate?.[sch.schedule_id];
+        if (!ids || ids.length === 0) return acc; // nada para este horario
 
-      const valid = ids
-        .map((id) => lotteries.get(id))
-        .filter((x): x is ILotteryEntityFront => Boolean(x));
+        const valid = ids
+          .map((id) => lotteries.get(id))
+          .filter((x): x is ILotteryEntityFront => Boolean(x));
 
-      if (valid.length === 0) return acc; // los ids no existen en el Map de loterías
+        if (valid.length === 0) return acc; // los ids no existen en el Map de loterías
 
-      acc.push({ schedule: sch, lotteries: valid });
-      return acc;
-    }, []);
+        acc.push({ schedule: sch, lotteries: valid });
+        return acc;
+      }, []);
 
-    // Cantidad REAL de combinaciones (pares schedule-lottery)
-    const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
+      // Cantidad REAL de combinaciones (pares schedule-lottery)
+      const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
 
-    if (combosCount === 0) {
-      // Opcional: avisar que no hay combinaciones válidas
-      // toast.error('No hay combinaciones válidas para el día/horario seleccionado');
-      return;
+      if (combosCount === 0) {
+        // Opcional: avisar que no hay combinaciones válidas
+        // toast.error('No hay combinaciones válidas para el día/horario seleccionado');
+        return;
+      }
+
+      setBets((prev) => {
+        const newBet: IBetTable = {
+          number: bet?.number ?? '',
+          amount: +bet.amount!,
+          place: placeTypeParse(bet?.place) ?? PLACE_TYPE.HEAD,
+          with: bet?.with ?? '',
+          position: placeTypeParse(bet.position),
+          scheduleLottery: lotterySchedule,
+        };
+
+        // Usar combosCount calculado sobre lotterySchedule (resultado real)
+        setPartialAmount((p) => p + newBet.amount * combosCount);
+        setTotalAmount((p) => p + newBet.amount * combosCount);
+
+        // Reset form
+        setBet((prev) => ({
+          ...prev,
+          number: '',
+          place: '',
+          with: '',
+          position: '',
+        }));
+        numberRef.current?.focus();
+
+        return [newBet, ...prev];
+      });
     }
-
-    setBets((prev) => {
-      const newBet: IBetTable = {
-        number: bet?.number ?? '',
-        amount: +bet.amount!,
-        place: placeTypeParse(bet?.place) ?? PLACE_TYPE.HEAD,
-        with: bet?.with ?? '',
-        position: placeTypeParse(bet.position),
-        scheduleLottery: lotterySchedule,
-      };
-
-      // Usar combosCount calculado sobre lotterySchedule (resultado real)
-      setPartialAmount((p) => p + newBet.amount * combosCount);
-      setTotalAmount((p) => p + newBet.amount * combosCount);
-
-      // Reset form
-      setBet((prev) => ({
-        ...prev,
-        number: '',
-        place: '',
-        with: '',
-        position: '',
-      }));
-      numberRef.current?.focus();
-
-      return [newBet, ...prev];
-    });
   };
 
   const handleResetPartial = () => {
