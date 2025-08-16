@@ -15,7 +15,8 @@ export class UserRepository {
       .from('users')
       .select('*')
       .eq('user_type', USER_TYPE.CASHIER)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .order('number', { ascending: true });
 
     if (cashier_number) {
       query = query.eq('number', cashier_number);

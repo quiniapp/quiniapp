@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import { isAuthenticated } from '../middlewares/auth.middleware';
-import privateRouter, { publicRouter } from './router';
+import { publicRouter, router } from './router';
 import { PORT, URL } from 'api/envs';
 import cookieParser from 'cookie-parser';
 
@@ -24,13 +24,11 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
 app.use(morgan('dev'));
 app.use(cookieParser());
 // Rutas
-app.use('/api', publicRouter);
-
-app.use('/api/private', isAuthenticated, privateRouter);
+app.use('/api/private', isAuthenticated, express.json({ limit: '5mb' }), router);
+app.use('/api', express.json({ limit: '200kb' }), publicRouter);
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en ${URL}:${PORT}`);

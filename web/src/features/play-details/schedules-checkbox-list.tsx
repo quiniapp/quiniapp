@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import { useClock } from '@/providers/ClockProvider';
 import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
+import dayjs from 'dayjs';
 
 interface SchedulesProps {
   time: string;
@@ -109,7 +110,7 @@ const ScheduleCheckboxList = ({
                 className="border-2 border-primary"
               />
               <Label htmlFor={`f${index + 1}`} className="text-[12px]">
-                {schedule.name} <span className="text-primary-light">[{`F${index + 1}`}]</span>
+                {schedule.name}-[{schedule.time.slice(0, 5)}] <span className="text-primary-light">[{`F${index + 1}`}]</span>
               </Label>
             </Flex>
           );
