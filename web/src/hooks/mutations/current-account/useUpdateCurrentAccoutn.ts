@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
 
-const updateCurrentAccount = async (date: string): Promise<void> => {
-  const url = `${ROUTES.current_account.base}?date=${date}`;
+const updateCurrentAccount = async (date?: string | null): Promise<void> => {
+  const url = `${ROUTES.current_account.base}${date ? `?date=${date}` : ''}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -24,9 +24,9 @@ export const useUpdateCurrentAcoount = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (date: string) => updateCurrentAccount(date),
+    mutationFn: (date?: string | null) => updateCurrentAccount(date),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['getCurrentAccoutns'] });
+      queryClient.invalidateQueries({ queryKey: ['getCurrentAccount'] });
     },
   });
 };

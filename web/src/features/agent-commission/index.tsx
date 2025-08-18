@@ -15,7 +15,7 @@ const CurrentAccountContent = () => {
   const [searchParams] = useSearchParams();
   const { mutate } = useUpdateCurrentAcoount();
   const handleUpdateCurrentAccount = () => {
-    mutate(searchParams.get('date') ?? dayjs().format('DD-MM-YYYY'));
+    mutate(searchParams.get('date'));
   };
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>

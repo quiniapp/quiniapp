@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
 import {ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type.ts'
-const fetchResults = async ( date : string) => {
-  const url = `${ROUTES.current_account.base}?date=${date}`;
+const fetchResults = async ( date? : string| null) => {
+  const url = `${ROUTES.current_account.base}${date ? `?date=${date}` : ''}`;
 
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
@@ -15,11 +15,10 @@ const fetchResults = async ( date : string) => {
   return data.currentAccount;
 };
 
-export const useGetCurrentAccount = (date : string) => {
+export const useGetCurrentAccount = (date? : string| null) => {
 
   return useQuery<ICurrentAccountEntityFront[]>({
-    queryKey: ['getCurrentAccount', date],
+    queryKey: ['getCurrentAccount'],
     queryFn: () => fetchResults(date),
-    enabled: Boolean(date), // ⛔ evita que se ejecute con datos incompletos
   });
 };
