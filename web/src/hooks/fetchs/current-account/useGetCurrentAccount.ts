@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
 import {ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type.ts'
+import dayjs from 'dayjs';
 const fetchResults = async ( date? : string| null) => {
-  const url = `${ROUTES.current_account.base}${date ? `?date=${date}` : ''}`;
+  const url = `${ROUTES.current_account.base}${date ? `?date=${dayjs(date).format('YYYY-MM-DD')}` : ''}`;
 
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
@@ -18,7 +19,7 @@ const fetchResults = async ( date? : string| null) => {
 export const useGetCurrentAccount = (date? : string| null) => {
 
   return useQuery<ICurrentAccountEntityFront[]>({
-    queryKey: ['getCurrentAccount'],
+    queryKey: ['getCurrentAccount',date],
     queryFn: () => fetchResults(date),
   });
 };

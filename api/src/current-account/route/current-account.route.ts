@@ -74,7 +74,6 @@ export class CurrentAccountRouter {
   private calculateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { date } = req.query;
-    console.log('date', date);
 
     if (!user?.user) {
       const response: APIResponse<null> = {
