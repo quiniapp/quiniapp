@@ -8,15 +8,24 @@ import { useSessionStore } from '@/stores/sessionStore';
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
 import { useSearchParams } from 'react-router-dom';
-import dayjs from 'dayjs';
+
+import toast from 'react-hot-toast';
 
 const CurrentAccountContent = () => {
   const { role } = useSessionStore();
   const [searchParams] = useSearchParams();
   const { mutate } = useUpdateCurrentAcoount();
   const handleUpdateCurrentAccount = () => {
-    mutate(searchParams.get('date'));
+    mutate(searchParams.get('date'), {
+      onSuccess: () => {
+        toast.success('Actualizado correctamente');
+      },
+      onError: () => {
+        toast.error('Error al actualizar');
+      },
+    });
   };
+  
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>
