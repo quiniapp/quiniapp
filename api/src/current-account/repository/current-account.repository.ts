@@ -6,7 +6,7 @@ export class CurrentAccountRepository {
   async calculateCurrentAccountHandler(date: string) {
     console.log('calculate', date);
     const { data, error } = await supabase.rpc('calculate_current_account', {
-      date: dayjs(date).format('DD-MM-YYYY'),
+      p_date_text: dayjs(date).format('DD-MM-YYYY'),
     });
     if (error) throw error;
     return data;

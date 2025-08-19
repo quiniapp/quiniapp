@@ -38,7 +38,7 @@ const CurrentAccountTable = ({ data/*,  totals */, isLoading, isPending }:Curren
             <TableHead> Pagos </TableHead>
             <TableHead> Total </TableHead>
             <TableHead> Arrastre </TableHead>
-            <TableHead> Debe </TableHead>
+            <TableHead> Deje </TableHead>
             <TableHead> Grupo </TableHead>
           </TableRow>
         </TableHeader>
