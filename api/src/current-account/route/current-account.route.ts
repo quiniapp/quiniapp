@@ -15,6 +15,7 @@ export class CurrentAccountRouter {
   }
 
   private setupRoutes() {
+    this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
     this.router.post('/:id', this.updateCurrentAccountHandler);
     this.router.post('/', this.calculateCurrentAccountHandler);
@@ -151,6 +152,59 @@ export class CurrentAccountRouter {
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
           currentaccount,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+
+  private getCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { date } = req.query;
+    // const { id } = req.params;
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    try {
+      const currentAccount = await this.controller.getCurrentAccountHandler({
+        user_type: user.user.user_type,
+        user_id: user.user.user_id,
+        date: date as string,
+      });
+
+      const response: APIResponse<ICurrentAccountEntityFront[]> = {
+        data: {
+          currentAccount,
         },
       };
       res.status(200).json(response);

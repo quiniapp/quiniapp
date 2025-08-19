@@ -18,6 +18,7 @@ import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../helper/types/user.type.ts';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
 
 interface FilterSectionProps {
   group: string;
@@ -32,6 +33,8 @@ const FilterSection = ({
   employeeNumber,
   onEmployeeNumberChange,
 }: FilterSectionProps) => {
+  const [userNumber, setUserNumber] = useState()
+   const { data } = useUsersByNumber(userNumber);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const isMobile = useIsMobile();
 
@@ -66,7 +69,7 @@ const FilterSection = ({
 
         <Flex className="items-center">
           <Label htmlFor="employee_number" className="text-sm mr-2 text-muted-foreground">
-            Nro Pasador:
+            Nro Pasador: {}
           </Label>
           <Input
             id="employee_number"

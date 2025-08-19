@@ -1,6 +1,7 @@
 import { USER_TYPE } from '@helper/types/user.type';
 import {
   IGetAllCurrentAccountEntity,
+  IGetCurrentAccountEntity,
   IUpdateCurrentAccountEntity,
 } from '@helper/request/current_account.response';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
@@ -57,6 +58,28 @@ export class CurrentAccountController {
       });
 
       return parseCurrentAccount(currentAccount);
+    } catch (error) {
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+  getCurrentAccountHandler = async (
+    props: IGetCurrentAccountEntity
+  ): Promise<ICurrentAccountEntityFront[]> => {
+    let currentaccounts;
+    try {
+      if (props.user_type === USER_TYPE.CASHIER) {
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          user_id: props.user_id,
+          date: props.date,
+        });
+      } else {
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({ date: props.date });
+      }
+
+      return currentaccounts.map((currentaccount) => {
+        return parseCurrentAccount(currentaccount);
+      });
     } catch (error) {
       console.error('GetAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

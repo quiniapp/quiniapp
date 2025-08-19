@@ -4,18 +4,23 @@ import dayjs from 'dayjs';
 
 export class CurrentAccountRepository {
   async calculateCurrentAccountHandler(date: string) {
-    const { data, error } = await supabase.rpc('calculate_current_account', { date });
+    console.log('calculate', date);
+    const { data, error } = await supabase.rpc('calculate_current_account', {
+      date: dayjs(date).format('DD-MM-YYYY'),
+    });
     if (error) throw error;
     return data;
   }
 
   async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
+    console.log('get', date);
     // Base query to select current accounts and join with users table
     let query = supabase
       .from('current_accounts')
       .select('*, users!inner(*)')
       .is('users.deleted_at', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('user_number', { ascending: true });
 
     // If a user_id is provided, filter the results for that specific user.
     // The .order() method already ensures the newest record is first.
@@ -25,7 +30,7 @@ export class CurrentAccountRepository {
 
     // If a date is provided, filter the results for that specific date.
     if (date) {
-      query = query.eq('date', date);
+      query = query.eq('date', dayjs(date).format('YYYY-MM-DD'));
     }
 
     const { data, error } = await query;
