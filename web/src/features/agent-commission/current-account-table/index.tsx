@@ -13,6 +13,7 @@ import {
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { Button } from '@/components/ui/button';
 import { ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type';
+import { useMemo } from 'react';
 
 interface CurrentAccountTableProps{
 data:ICurrentAccountEntityFront[]
@@ -20,7 +21,34 @@ isLoading: boolean
 isPending: boolean
 }
 
-const CurrentAccountTable = ({ data/*,  totals */, isLoading, isPending }:CurrentAccountTableProps) => {
+const CurrentAccountTable = ({ data, isLoading, isPending }:CurrentAccountTableProps) => {
+  const totals = useMemo(() => {
+    return data?.reduce((currAcc, item) => {
+    currAcc.pass += item.pass || 0;
+    currAcc.successes += item.successes || 0;
+    currAcc.claims += item.claims || 0;
+    currAcc.subtotal += item.subtotal || 0;
+    currAcc.previous_balance += item.previous_balance || 0;
+    currAcc.collections += item.collections || 0;
+    currAcc.paid += item.paid || 0;
+    currAcc.total += item.total || 0;
+    currAcc.drag += item.drag || 0;
+    currAcc.leave += item.leave || 0;
+    return currAcc;
+  }, {
+    pass: 0,
+    successes: 0,
+    claims: 0,
+    subtotal: 0,
+    previous_balance: 0,
+    collections: 0,
+    paid: 0,
+    total: 0,
+    drag: 0,
+    leave: 0,
+  });
+}, [data]);
+
   return (
     <Box className="py-[36px]">
       <Table className="overflow-hidden rounded-[16px_16px_0_0]">
@@ -88,11 +116,11 @@ const CurrentAccountTable = ({ data/*,  totals */, isLoading, isPending }:Curren
         </TableBody>
 
         <TableFooter className="border">
-     {/*      <TableRow>
+          <TableRow>
             <TableCell colSpan={3}>Total General</TableCell>
-            <TableCell>{totals?.pass}</TableCell>
-            <TableCell>{totals?.successes}</TableCell>
-            <TableCell>{totals?.claims}</TableCell>
+            <TableCell>${totals?.pass}</TableCell>
+            <TableCell>${totals?.successes}</TableCell>
+            <TableCell>${totals?.claims}</TableCell>
             <TableCell>${totals?.subtotal.toFixed(2)}</TableCell>
             <TableCell>${totals?.previous_balance.toFixed(2)}</TableCell>
             <TableCell>${totals?.collections.toFixed(2)}</TableCell>
@@ -100,8 +128,7 @@ const CurrentAccountTable = ({ data/*,  totals */, isLoading, isPending }:Curren
             <TableCell>${totals?.total.toFixed(2)}</TableCell>
             <TableCell>${totals?.drag.toFixed(2)}</TableCell>
             <TableCell>${totals?.leave.toFixed(2)}</TableCell>
-            <TableCell></TableCell>
-          </TableRow> */}
+          </TableRow>
         </TableFooter>
       </Table>
     </Box>
