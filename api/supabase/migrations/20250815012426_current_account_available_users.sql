@@ -52,19 +52,16 @@ BEGIN
       u.number AS user_number,
       COALESCE(da.pass, 0) AS pass,
       COALESCE(da.successes, 0) AS successes,
-      0::NUMERIC(12,2) AS claims, -- Valor fijo, como en tu función original
-      0::NUMERIC(12,2) AS collections, -- Valor fijo
-      0::NUMERIC(12,2) AS paid, -- Valor fijo
-      0::NUMERIC(12,2) AS leave, -- Valor fijo
+      0::NUMERIC(12,2) AS claims,
+      0::NUMERIC(12,2) AS collections,
+      0::NUMERIC(12,2) AS paid,
+      0::NUMERIC(12,2) AS leave,
       COALESCE(ps.previous_balance, 0) AS previous_balance,
       COALESCE(ps.previous_drag, 0) AS previous_drag,
-      COALESCE(ps.previous_bills, 0) AS bills, -- Copia del anterior
+      COALESCE(ps.previous_bills, 0) AS bills,
       ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2) AS cashier_commission,
-      -- revenue
       (COALESCE(da.pass, 0) - COALESCE(da.successes, 0) - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)) AS revenue,
-      -- subtotal (es igual a revenue en tu lógica)
       (COALESCE(da.pass, 0) - COALESCE(da.successes, 0) - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)) AS subtotal,
-      -- drag (lógica de reinicio de mes con CASE)
       CASE
         WHEN ps.prev_ca_date IS NULL OR date_trunc('month', ps.prev_ca_date) <> date_trunc('month', v_date) THEN
           CASE
@@ -74,7 +71,6 @@ BEGIN
         ELSE
           COALESCE(ps.previous_drag, 0) + (COALESCE(da.pass, 0) - COALESCE(da.successes, 0) - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2))
       END AS drag,
-      -- total
       (COALESCE(ps.previous_balance, 0) + (COALESCE(da.pass, 0) - COALESCE(da.successes, 0) - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2))) AS total
     FROM users u
     LEFT JOIN daily_activity da ON u.user_id = da.user_id
@@ -82,7 +78,7 @@ BEGIN
     WHERE u.user_type = 'CASHIER' AND u.deleted_at IS NULL
   ),
 
-  -- 4. Hacemos el UPSERT (INSERT ... ON CONFLICT) con todos los datos calculados.
+  -- 4. Hacemos el UPSERT con todos los datos calculados.
   upserted_rows AS (
     INSERT INTO current_accounts (
       current_account_id, user_id, user_name, user_number, pass, successes, claims,
@@ -101,7 +97,7 @@ BEGIN
       successes          = EXCLUDED.successes,
       claims             = EXCLUDED.claims,
       subtotal           = EXCLUDED.subtotal,
-      previous_balance   = EXCLUDED.previous_balance,
+      previous_balance   = EXcluded.previous_balance,
       collections        = EXCLUDED.collections,
       paid               = EXCLUDED.paid,
       total              = EXCLUDED.total,
@@ -111,10 +107,13 @@ BEGIN
       bills              = EXCLUDED.bills,
       revenue            = EXCLUDED.revenue,
       previous_drag      = EXCLUDED.previous_drag
-    RETURNING TO_JSONB(current_accounts.*)
+    -- CAMBIO 1: Le damos un nombre (alias) a la columna que retorna.
+    RETURNING TO_JSONB(current_accounts.*) as json_row
   )
   -- 5. Finalmente, recolectamos los resultados en un array de JSONB.
-  SELECT COALESCE(array_agg(upserted_rows), '{}'::JSONB[])
+  SELECT
+    -- CAMBIO 2: Usamos el alias dentro de array_agg.
+    COALESCE(array_agg(upserted_rows.json_row), '{}'::JSONB[])
   INTO result_array
   FROM upserted_rows;
 
