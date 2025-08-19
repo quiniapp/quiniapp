@@ -12,7 +12,6 @@ import { useEffect, useRef } from 'react';
 import { useClock } from '@/providers/ClockProvider';
 import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
-import dayjs from 'dayjs';
 
 interface SchedulesProps {
   time: string;
@@ -88,7 +87,7 @@ const ScheduleCheckboxList = ({
   return (
     <FlexCol className="border-2  p-2 sm:p-4 rounded-[--rounded-form]">
       <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
-      <Box className=" grid grid-cols-2 sm:grid-cols-6 gap-[12px]">
+      <Box className=" grid grid-cols-2  gap-[12px]">
         {schedules.map((schedule, index) => {
           const keyHandler = keyboardMap[index];
 
@@ -110,7 +109,8 @@ const ScheduleCheckboxList = ({
                 className="border-2 border-primary"
               />
               <Label htmlFor={`f${index + 1}`} className="text-[12px]">
-                {schedule.name}-[{schedule.time.slice(0, 5)}] <span className="text-primary-light">[{`F${index + 1}`}]</span>
+                {schedule.name} [{schedule.time.slice(0, 5)}]{' '}
+                <span className="text-primary-light">[{`F${index + 1}`}]</span>
               </Label>
             </Flex>
           );

@@ -9,24 +9,46 @@ export class CurrentAccountRepository {
     return data;
   }
 
-  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date: string }) {
+  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
+    // Base query to select current accounts and join with users table
     let query = supabase
       .from('current_accounts')
       .select('*, users!inner(*)')
       .is('users.deleted_at', null)
-      .eq('date', date)
       .order('created_at', { ascending: false });
 
-    if (user_id !== undefined) query = query.eq('user_id', user_id);
+    // If a user_id is provided, filter the results for that specific user.
+    // The .order() method already ensures the newest record is first.
+    if (user_id) {
+      query = query.eq('user_id', user_id);
+    }
+
+    // If a date is provided, filter the results for that specific date.
+    if (date) {
+      query = query.eq('date', date);
+    }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
-    // dedupe: primera aparición (ya viene la más reciente primero)
+    // If a specific date or user_id was provided, we don't need to deduplicate.
+    // We can return the results directly.
+    if (date || user_id) {
+      return data;
+    }
+
+    // If neither a user_id nor a date was provided,
+    // we need to return the *most recent* current account for *each* user.
+    // The .order() method already has the most recent one at the beginning of the array.
     const byUser: Record<string, (typeof data)[number]> = {};
     for (const row of data ?? []) {
-      if (!byUser[row.user_id]) byUser[row.user_id] = row;
+      if (!byUser[row.user_id]) {
+        byUser[row.user_id] = row;
+      }
     }
+
     return Object.values(byUser);
   }
 

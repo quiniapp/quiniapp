@@ -16,12 +16,9 @@ import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-searc
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../helper/types/user.type.ts';
-
-
+import { useSearchParams } from 'react-router-dom';
 
 interface FilterSectionProps {
-  date?: string;
-  onDateChange: (date?: string) => void;
   group: string;
   onGroupChange: (group: string) => void;
   employeeNumber: string;
@@ -29,8 +26,6 @@ interface FilterSectionProps {
 }
 
 const FilterSection = ({
-  date,
-  onDateChange,
   group,
   onGroupChange,
   employeeNumber,
@@ -40,6 +35,11 @@ const FilterSection = ({
   const isMobile = useIsMobile();
 
   const { role } = useSessionStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const date = searchParams.get('date');
+  const handleDayChange = (date?: string) => {
+    if (date) setSearchParams({ date: date });
+  };
 
   const IsRoleCashier = () => {
     if (role === USER_TYPE.CASHIER) {
@@ -100,7 +100,7 @@ const FilterSection = ({
       >
         <Flex className="items-center">
           <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
-          <SelectDayToSearch selectedDay={date} onDayChange={onDateChange} />
+          <SelectDayToSearch selectedDay={date ?? undefined} onDayChange={handleDayChange} />
         </Flex>
         <IsRoleCashier />
       </Box>

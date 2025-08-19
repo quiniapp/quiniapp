@@ -7,22 +7,21 @@ import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 const SettlementPayrollTable = () => {
-  const [date, setDate] = useState<string | undefined>(undefined);
   const [group, setGroup] = useState<string>('Todos');
   const [employeeNumber, setEmployeeNumber] = useState<string>('');
   const [searchParams] = useSearchParams()
-  const { data,  isLoading, isPending } = useGetCurrentAccount(searchParams.get('date') ?? dayjs().format('YYYY-MM-DD'))
-  console.log(data)
+  const { data,  isLoading, isPending } = useGetCurrentAccount(searchParams.get('date'))
+
   return (
     <Box className="overflow-auto bg-[var(--primary-bg-content)] py-[24px] text-white">
+      
       <FilterSection
-        date={date}
-        onDateChange={setDate}
         group={group}
         onGroupChange={setGroup}
         employeeNumber={employeeNumber}
         onEmployeeNumberChange={setEmployeeNumber}
       />
+      <>Fecha de la Liquidación : {data?.[0]?.date && dayjs(data?.[0]?.date ).format('DD/MM/YYYY')}</>
       <CurrentAccountTable
         data={data ?? []}
         // totals={}
