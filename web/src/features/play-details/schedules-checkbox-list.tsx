@@ -87,7 +87,7 @@ const ScheduleCheckboxList = ({
   return (
     <FlexCol className="border-2  p-2 sm:p-4 rounded-[--rounded-form]">
       <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
-      <Box className=" grid grid-cols-2  gap-[12px]">
+      <Box className=" grid grid-cols-2  gap-[12px] w-fit">
         {schedules.map((schedule, index) => {
           const keyHandler = keyboardMap[index];
 

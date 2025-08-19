@@ -17,6 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../helper/types/user.type.ts';
 import { useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 interface FilterSectionProps {
   group: string;
@@ -100,7 +101,7 @@ const FilterSection = ({
       >
         <Flex className="items-center">
           <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
-          <SelectDayToSearch selectedDay={date ?? undefined} onDayChange={handleDayChange} />
+          <SelectDayToSearch selectedDay={date ?? undefined} onDayChange={handleDayChange} toDate={dayjs().toDate()}/>
         </Flex>
         <IsRoleCashier />
       </Box>

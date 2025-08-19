@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
+import dayjs from 'dayjs';
 
 const updateCurrentAccount = async (date?: string | null): Promise<void> => {
-  const url = `${ROUTES.current_account.base}${date ? `?date=${date}` : ''}`;
+  const url = `${ROUTES.current_account.base}${date ? `?date=${dayjs(date).format('YYYY-MM-DD')}` : ''}`;
 
   const res = await fetch(url, {
     method: 'POST',

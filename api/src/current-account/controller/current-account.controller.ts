@@ -17,7 +17,7 @@ export class CurrentAccountController {
   calculateCurrentAccountHandler = async (date: string) => {
     try {
       const results = await this.repository.calculateCurrentAccountHandler(date);
-      console.log('result', results);
+
       return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
     } catch (error) {
       console.error('Creation error:', error);
