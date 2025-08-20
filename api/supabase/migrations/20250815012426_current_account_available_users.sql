@@ -102,6 +102,7 @@ BEGIN
       paid               = EXCLUDED.paid,
       total              = EXCLUDED.total,
       drag               = EXCLUDED.drag,
+      date               = EXCLUDED.date,
       edited_at          = NOW(),
       cashier_commission = EXCLUDED.cashier_commission,
       bills              = EXCLUDED.bills,

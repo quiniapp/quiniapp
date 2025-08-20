@@ -15,7 +15,7 @@ import {
 export class CurrentAccountController {
   private repository = new CurrentAccountRepository();
 
-  calculateCurrentAccountHandler = async (date: string) => {
+  calculateCurrentAccountHandler = async (date?: string) => {
     try {
       const results = await this.repository.calculateCurrentAccountHandler(date);
 
