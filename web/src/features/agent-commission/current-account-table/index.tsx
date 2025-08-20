@@ -13,41 +13,54 @@ import {
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { Button } from '@/components/ui/button';
 import { ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type';
-import { useMemo } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
+import { set } from 'date-fns';
 
-interface CurrentAccountTableProps{
-data:ICurrentAccountEntityFront[]
-isLoading: boolean
-isPending: boolean
+interface CurrentAccountTableProps {
+  data: ICurrentAccountEntityFront[];
+  isLoading: boolean;
+  isPending: boolean;
 }
 
-const CurrentAccountTable = ({ data, isLoading, isPending }:CurrentAccountTableProps) => {
+const CurrentAccountTable = ({ data, isLoading, isPending }: CurrentAccountTableProps) => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [currentAccount, setCurrentAccount] = useState<ICurrentAccountEntityFront | undefined>(
+    undefined
+  );
   const totals = useMemo(() => {
-    return data?.reduce((currAcc, item) => {
-    currAcc.pass += item.pass || 0;
-    currAcc.successes += item.successes || 0;
-    currAcc.claims += item.claims || 0;
-    currAcc.subtotal += item.subtotal || 0;
-    currAcc.previous_balance += item.previous_balance || 0;
-    currAcc.collections += item.collections || 0;
-    currAcc.paid += item.paid || 0;
-    currAcc.total += item.total || 0;
-    currAcc.drag += item.drag || 0;
-    currAcc.leave += item.leave || 0;
-    return currAcc;
-  }, {
-    pass: 0,
-    successes: 0,
-    claims: 0,
-    subtotal: 0,
-    previous_balance: 0,
-    collections: 0,
-    paid: 0,
-    total: 0,
-    drag: 0,
-    leave: 0,
-  });
-}, [data]);
+    return data?.reduce(
+      (currAcc, item) => {
+        currAcc.pass += item.pass || 0;
+        currAcc.successes += item.successes || 0;
+        currAcc.claims += item.claims || 0;
+        currAcc.subtotal += item.subtotal || 0;
+        currAcc.previous_balance += item.previous_balance || 0;
+        currAcc.collections += item.collections || 0;
+        currAcc.paid += item.paid || 0;
+        currAcc.total += item.total || 0;
+        currAcc.drag += item.drag || 0;
+        currAcc.leave += item.leave || 0;
+        return currAcc;
+      },
+      {
+        pass: 0,
+        successes: 0,
+        claims: 0,
+        subtotal: 0,
+        previous_balance: 0,
+        collections: 0,
+        paid: 0,
+        total: 0,
+        drag: 0,
+        leave: 0,
+      }
+    );
+  }, [data]);
+
+  const handleClick = (currentAccount: ICurrentAccountEntityFront) => {
+    setIsOpen(true);
+    setCurrentAccount(currentAccount);
+  };
 
   return (
     <Box className="py-[36px]">
@@ -90,10 +103,16 @@ const CurrentAccountTable = ({ data, isLoading, isPending }:CurrentAccountTableP
               </TableCell>
             </TableRow>
           ) : (
-            data?.map((account: any) => (
+            data?.map((account: ICurrentAccountEntityFront) => (
               <TableRow key={account.current_account_id}>
                 <TableCell>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      handleClick(account);
+                    }}
+                  >
                     Liquidar
                   </Button>
                 </TableCell>
@@ -131,8 +150,12 @@ const CurrentAccountTable = ({ data, isLoading, isPending }:CurrentAccountTableP
           </TableRow>
         </TableFooter>
       </Table>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <UserCurrentAccountModal isOpen={isOpen} onClose={() => setIsOpen(false)} currentAccount={currentAccount} />
+      </Suspense>
     </Box>
   );
 };
 
 export default CurrentAccountTable;
+const UserCurrentAccountModal = React.lazy(() => import('../../../components/modals/UserCurrentAccountModal'));

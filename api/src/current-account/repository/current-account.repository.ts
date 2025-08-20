@@ -1,12 +1,31 @@
 import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.response';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export class CurrentAccountRepository {
-  async calculateCurrentAccountHandler(date: string) {
-    console.log('calculate', date);
+  async calculateCurrentAccountHandler(date?: string) {
+    // Si la fecha no se ha proporcionado (es undefined o null)
+    let dateToProcess: string;
+    if (!date) {
+      // Usa la fecha del día anterior en la zona horaria del servidor
+      dateToProcess = dayjs()
+        .tz('America/Argentina/Buenos_Aires')
+        .subtract(1, 'day')
+        .format('DD-MM-YYYY');
+      console.log('No date provided. Using previous day:', dateToProcess);
+    } else {
+      // Usa la fecha proporcionada, ajustando la zona horaria si es necesario
+      dateToProcess = dayjs(date).tz('America/Argentina/Buenos_Aires').format('DD-MM-YYYY');
+      console.log('Using provided date:', dateToProcess);
+    }
+
     const { data, error } = await supabase.rpc('calculate_current_account', {
-      p_date_text: dayjs(date).format('DD-MM-YYYY'),
+      p_date_text: dateToProcess,
     });
     if (error) throw error;
     return data;
