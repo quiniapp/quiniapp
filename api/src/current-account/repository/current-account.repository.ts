@@ -13,10 +13,7 @@ export class CurrentAccountRepository {
     let dateToProcess: string;
     if (!date) {
       // Usa la fecha del día anterior en la zona horaria del servidor
-      dateToProcess = dayjs()
-        .tz('America/Argentina/Buenos_Aires')
-        .subtract(1, 'day')
-        .format('DD-MM-YYYY');
+      dateToProcess = dayjs().tz('America/Argentina/Buenos_Aires').format('DD-MM-YYYY');
       console.log('No date provided. Using previous day:', dateToProcess);
     } else {
       // Usa la fecha proporcionada, ajustando la zona horaria si es necesario
