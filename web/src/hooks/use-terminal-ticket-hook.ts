@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useTickets } from '@/hooks/useTickets.ts';
 import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket.ts';
 import { toast } from 'react-hot-toast';
+import { useTickets } from './fetchs/tickets/useTickets';
 
 
 type TicketFilter = 'all' | 'winner' | 'paid' | 'not_paid';
@@ -9,7 +9,7 @@ type TicketFilter = 'all' | 'winner' | 'paid' | 'not_paid';
 
 
 const useTerminalTicketHook = () => {
-  const { data } = useTickets();
+  const { data } = useTickets({});
   const [ticketNumberFilter, setTicketNumberFilter] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [selectedBets, setSelectedBets] = useState<any[]>([]);
@@ -47,7 +47,7 @@ const useTerminalTicketHook = () => {
     setTicketNumberFilter(number);
     setFilteredTicketSource('all');
 
-    const tickets = data?.data?.ticket || [];
+    const tickets = data || [];
     const found = tickets.find((t: any) => t.ticket_number.includes(number));
 
     if (found) {
@@ -72,7 +72,7 @@ const useTerminalTicketHook = () => {
 
 
 
-  const tickets = data?.data?.ticket || [];
+  const tickets = data || [];
   const filteredTickets = tickets.filter((t: any) => {
     switch (filteredTicketSource) {
       case 'winner':

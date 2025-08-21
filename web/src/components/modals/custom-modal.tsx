@@ -8,6 +8,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils.ts';
+import { useId } from 'react';
 
 interface BasicModalProps {
   isOpen: boolean;
@@ -28,9 +29,11 @@ const Modal = ({
   className,
   isCloseButton = false,
 }: BasicModalProps) => {
+  const descId = useId();
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DialogContent className={cn(className)}>
+      <DialogContent className={cn(className)}
+        aria-describedby={description ? descId : undefined}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

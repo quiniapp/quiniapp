@@ -17,3 +17,5 @@ export type IGetTicketEntity = Partial<Pick<ITicketEntityBack, 'ticket_id' | 'ti
 
 export type IGetAllTicketEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
   Pick<ITicketEntityBack, 'date'>;
+
+export type IGetAllTicketByUserEntity = Pick<ITicketEntityBack, 'date' | 'user_id'>;
