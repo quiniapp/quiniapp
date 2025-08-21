@@ -1,4 +1,4 @@
-import { FlexCol } from '@/components/flex';
+import { Flex, FlexCol } from '@/components/flex';
 import HeaderPlayAndHits from '@/features/plays-and-hits/header-play-and-hits.tsx';
 import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box.tsx';
 import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table.tsx';
@@ -8,6 +8,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import SelectBetType from './select-bet-type';
 import { BET_TYPE, IBetEntityFront } from '../../../../helper/types/bet.type';
+import PlayAndHitsToggleSelect from './play-and-hits-toggle-select';
+import PlayAndHitsSelect from './play-and-hits-select';
 
 const PlaysAndHitsContent = () => {
   const [bets, setBets] = useState<IBetEntityFront[]>([]);
@@ -71,8 +73,11 @@ const PlaysAndHitsContent = () => {
     >
       <HeaderPlayAndHits />
       <FlexCol className={'p-1 sm:p-2 gap-2 '}>
-        <PlayAndHitsBox />
-        <SelectBetType />
+        <PlayAndHitsToggleSelect />
+        <Flex className='w-full'>
+          <SelectBetType />
+          <PlayAndHitsSelect />
+        </Flex>
       </FlexCol>
       <PlaysAndHitsTable bets={bets} />
       <TotalAmountPlayAndHits

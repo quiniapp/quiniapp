@@ -16,6 +16,7 @@ import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import {makeTicketPdf} from '../../../helper/function/makeTicket'
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -75,7 +76,8 @@ const PlayDetailsContent = () => {
         user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
       },
       {
-        onSuccess: () => {
+        onSuccess: (res) => {
+          makeTicketPdf(res.data.ticket, bets)
           setBets([]);
           setPartialAmount(0);
           setTotalAmount(0);
