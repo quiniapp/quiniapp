@@ -70,7 +70,6 @@ const UserCurrentAccountModal = ({
   });
 
   const {mutate} = useUpdateCurrentAcoount()
-
   const onSubmit = (values: ICurrentAccountEntityFront) => {
     console.log('Liquidación enviada:', values);
     onClose();
