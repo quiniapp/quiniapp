@@ -44,7 +44,7 @@ export class CurrentAccountController {
         return parseCurrentAccount(currentaccount);
       });
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('getAllCurrentAccountHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
@@ -59,7 +59,7 @@ export class CurrentAccountController {
 
       return parseCurrentAccount(currentAccount);
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('updateCurrentAccountHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
@@ -81,7 +81,7 @@ export class CurrentAccountController {
         return parseCurrentAccount(currentaccount);
       });
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('getCurrentAccountHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

@@ -63,7 +63,7 @@ const CurrentAccountTable = ({ data, isLoading, isPending }: CurrentAccountTable
   };
 
   return (
-    <Box className="py-[36px]">
+    <Box className="p-1 sm:p-3">
       <Table className="overflow-hidden rounded-[16px_16px_0_0]">
         <TableHeader className="border overflow-hidden rounded-[16px_16px_0_0]">
           <TableRow>

@@ -9,7 +9,6 @@ import toast from 'react-hot-toast';
 
 const SettlementPayrollTable = () => {
   const [group, setGroup] = useState<string>('Todos');
-  const [employeeNumber, setEmployeeNumber] = useState<string>('');
   const [searchParams] = useSearchParams();
   const { data, isLoading, isPending, isError, isSuccess } = useGetCurrentAccount(
     searchParams.get('date')
@@ -28,8 +27,6 @@ const SettlementPayrollTable = () => {
       <FilterSection
         group={group}
         onGroupChange={setGroup}
-        employeeNumber={employeeNumber}
-        onEmployeeNumberChange={setEmployeeNumber}
       />
       <>
         Fecha de la Liquidación : {data?.[0]?.date && dayjs(data?.[0]?.date).format('DD/MM/YYYY')}

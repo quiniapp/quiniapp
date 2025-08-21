@@ -17,7 +17,7 @@ const fetchTickets = async ({ user_id, date }: FetchTicketsProps) => {
   );
   if (!res.ok) throw new Error('Error fetching tickets');
   const { data } = await res.json();
-  console.log('fetch', data);
+
   return data.ticket;
 };
 

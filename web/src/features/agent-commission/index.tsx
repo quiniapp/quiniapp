@@ -25,17 +25,19 @@ const CurrentAccountContent = () => {
       },
     });
   };
-  
+
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>
         <IsRoleCashier role={role}>
-          <Box className={'grid grid-cols-3 gap-4'}>
+          <Box className={'grid grid-cols-2 gap-4'}>
             <Button> Exportar Diario</Button>
             <Button variant={'outline'}> Exportar Liquidación </Button>
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
-              {' '}
-              Actualizar{' '}
+              Actualizar
+            </Button>
+            <Button variant={'outline'} onClick={()=>{}}>
+              Generar Liquidación
             </Button>
           </Box>
         </IsRoleCashier>
