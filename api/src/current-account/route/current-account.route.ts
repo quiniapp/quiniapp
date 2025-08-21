@@ -17,8 +17,8 @@ export class CurrentAccountRouter {
   private setupRoutes() {
     this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
-    this.router.post('/:id', this.updateCurrentAccountHandler);
     this.router.post('/', this.calculateCurrentAccountHandler);
+    this.router.put('/:id', this.updateCurrentAccountHandler);
   }
 
   private getAllCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {

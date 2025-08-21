@@ -7,10 +7,9 @@ interface FetchTicketsProps {
   user_id?: string;
 }
 
-const fetchTickets = async ({ user_id }: FetchTicketsProps) => {
-  const date = dayjs().format('YYYY-MM-DD');
+const fetchTickets = async ({ user_id, date }: FetchTicketsProps) => {
   const res = await fetch(
-    `${ROUTES.ticket.base}${user_id ? `/user/${user_id}` : ''}?date=${date}`,
+    `${ROUTES.ticket.base}${user_id ? `/user/${user_id}` : ''}?date=${date ? `${date}` : `${dayjs().format('YYYY-MM-DD')}`}`,
     {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -18,9 +17,12 @@ const fetchTickets = async ({ user_id }: FetchTicketsProps) => {
   );
   if (!res.ok) throw new Error('Error fetching tickets');
   const { data } = await res.json();
-  console.log('fetch', data)
+  console.log('fetch', data);
   return data.ticket;
 };
 
-export const useTickets = ({ user_id }: FetchTicketsProps) =>
-  useQuery({ queryKey: ['tickets', user_id], queryFn: () => fetchTickets({ user_id }) });
+export const useTickets = ({ user_id, date }: FetchTicketsProps) =>
+  useQuery({
+    queryKey: ['tickets', user_id, date],
+    queryFn: () => fetchTickets({ user_id, date }),
+  });
