@@ -14,7 +14,8 @@ import SkeletonList from '../skeletons/skeleton-list';
 import { Typography } from '../typography';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 import { IBetEntityFront } from '../../../../helper/types/bet.type';
-import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
+import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
+import { useUpdateCurrentAcoountByUser } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutnByUser';
 
 interface UserCurrentAccountModalProps {
   isOpen: boolean;
@@ -67,14 +68,15 @@ const UserCurrentAccountModal = ({
     date: currentAccount?.date,
   });
 
-  const { mutate } = useUpdateCurrentAcoount();
+  const { mutate } = useUpdateCurrentAcoountByUser();
   const onSubmit = (values: ICurrentAccountEntityFront) => {
-    console.log('Liquidación enviada:', values);
+    mutate({
+      date: currentAccount?.date ?? '',
+      current_account_id: currentAccount?.current_account_id ?? '',
+      updateCurrentAccount: values,
+    });
     onClose();
   };
-
-  console.log('ticket', tickets);
-  console.log('bets', bets);
 
   return (
     <Modal
@@ -222,7 +224,7 @@ const UserCurrentAccountModal = ({
                       <TableRow key={bet.ticket_id}>
                         <TableCell>{bet.number}</TableCell>
                         <TableCell>{bet.amount}</TableCell>
-                        <TableCell>{bet.place}</TableCell>
+                        <TableCell>{betPlaceDictionary[bet.place]}</TableCell>
                         <TableCell>{bet.lottery.name}</TableCell>
                         <TableCell>{bet.schedule.name}</TableCell>
                         <TableCell>{bet.hits}</TableCell>

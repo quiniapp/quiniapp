@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Filter } from 'lucide-react';
 
 import Box from '@/components/box';
@@ -23,73 +23,43 @@ import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
 interface FilterSectionProps {
   group: string;
   onGroupChange: (group: string) => void;
-  employeeNumber: string;
-  onEmployeeNumberChange: (num: string) => void;
 }
 
-const FilterSection = ({
-  group,
-  onGroupChange,
-  employeeNumber,
-  onEmployeeNumberChange,
-}: FilterSectionProps) => {
-  const [userNumber, setUserNumber] = useState()
-   const { data } = useUsersByNumber(userNumber);
+const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
+  const [userNumber, setUserNumber] = useState<string>('');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+
   const isMobile = useIsMobile();
-
   const { role } = useSessionStore();
+
   const [searchParams, setSearchParams] = useSearchParams();
-  const date = searchParams.get('date');
-  const handleDayChange = (date?: string) => {
-    if (date) setSearchParams({ date: date });
+  const date = searchParams.get('date') ?? undefined;
+
+  // No pises otros params al setear la fecha
+  const handleDayChange = (newDate?: string) => {
+    if (!newDate) return;
+    const params = new URLSearchParams(searchParams);
+    params.set('date', newDate);
+    setSearchParams(params);
   };
 
-  const IsRoleCashier = () => {
-    if (role === USER_TYPE.CASHIER) {
-      return false;
-    }
-    return (
-      <>
-        <Flex className=" items-center">
-          <Label className="text-sm mr-2 text-muted-foreground">Grupo:</Label>
-          <Box>
-            <Select value={group} onValueChange={onGroupChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar Grupo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                <SelectItem value="Group 1">Group 1</SelectItem>
-                <SelectItem value="Group 2">Group 2</SelectItem>
-              </SelectContent>
-            </Select>
-          </Box>
-        </Flex>
+  // Si tu hook admite "enabled", mejor: pero por compatibilidad dejamos el parseo acá
+  const userNumberInt = useMemo(
+    () => (userNumber.trim() === '' ? 0 : Number.parseInt(userNumber, 10) || 0),
+    [userNumber]
+  );
+  const { data } = useUsersByNumber(userNumberInt);
 
-        <Flex className="items-center">
-          <Label htmlFor="employee_number" className="text-sm mr-2 text-muted-foreground">
-            Nro Pasador: {}
-          </Label>
-          <Input
-            id="employee_number"
-            type="text"
-            className="border bg-card-bg rounded text-sm w-28"
-            value={employeeNumber}
-            onChange={(e) => onEmployeeNumberChange(e.target.value)}
-          />
-        </Flex>
-      </>
-    );
-  };
+  const showGroupAndCashierFilters = role !== USER_TYPE.CASHIER;
 
   return (
-    <Box className="bg-[var(--primary-bg-content)] text-white px-3 py-6">
+    <Box className="bg-[var(--primary-bg-content)] text-white p-1 sm:p-3">
       {isMobile && (
-        <Flex className=" justify-between items-center mb-2">
+        <Flex className="justify-between items-center mb-2">
           <button
+            type="button"
             className="flex items-center bg-[#2A3042] px-3 py-1 rounded"
-            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+            onClick={() => setIsFilterExpanded((s) => !s)}
           >
             <Filter size={16} className="mr-2" />
             {isFilterExpanded ? 'Ocultar filtros' : 'Mostrar filtros'}
@@ -104,9 +74,50 @@ const FilterSection = ({
       >
         <Flex className="items-center">
           <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
-          <SelectDayToSearch selectedDay={date ?? undefined} onDayChange={handleDayChange} toDate={dayjs().toDate()}/>
+          <SelectDayToSearch
+            selectedDay={date}
+            onDayChange={handleDayChange}
+            toDate={dayjs().toDate()}
+          />
         </Flex>
-        <IsRoleCashier />
+
+        {showGroupAndCashierFilters && (
+          <>
+            <Flex className="items-center">
+              <Label className="text-sm text-muted-foreground mr-2">Grupo:</Label>
+              <Box>
+                <Select value={group} onValueChange={onGroupChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar Grupo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Todos">Todos</SelectItem>
+                    <SelectItem value="Group 1">Group 1</SelectItem>
+                    <SelectItem value="Group 2">Group 2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Box>
+            </Flex>
+
+            <Flex className="items-center gap-1 sm:gap-3">
+              <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
+                Pasador:
+              </Label>
+              <Input
+                id="employee_number"
+                type="text"
+                className="border bg-card-bg rounded text-sm w-28"
+                inputMode="numeric"
+                value={userNumber}
+                onChange={(e) => setUserNumber(e.currentTarget.value)}
+                // Si querés solo dígitos: onChange={(e)=> setUserNumber(e.currentTarget.value.replace(/\D/g,''))}
+              />
+              <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
+                {data?.name} {data?.number}
+              </Label>
+            </Flex>
+          </>
+        )}
       </Box>
     </Box>
   );

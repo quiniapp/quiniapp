@@ -3,7 +3,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
-import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
+// import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
 export class CurrentAccountRouter {
   public router: Router;
@@ -131,7 +131,7 @@ export class CurrentAccountRouter {
       };
       res.status(500).json(response);
       return;
-    }
+    } /* 
     const result = updateCurrentAccountSchema.safeParse(updateCurrentAccount);
     if (!result.success) {
       const response: APIResponse<undefined> = {
@@ -143,7 +143,7 @@ export class CurrentAccountRouter {
       res.status(400).json(response); // <-- SIN return
 
       return;
-    }
+    } */
     try {
       const currentaccount = await this.controller.updateCurrentAccountHandler(current_account_id, {
         ...updateCurrentAccount,
