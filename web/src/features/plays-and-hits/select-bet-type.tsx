@@ -2,8 +2,6 @@ import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import { useSearchParams } from 'react-router-dom';
 import { Flex } from '@/components/flex';
-import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { betTypeParse } from '../../../../helper/functions/betTypeParse';
@@ -29,10 +27,6 @@ const SelectBetType = () => {
 
   return (
     <Flex className="gap-1 sm:gap-3 items-center">
-      <Button>
-        <Search /> Buscar
-      </Button>
-
       <Checkbox
         id={BET_TYPE.QUATERN}
         className="border-2 border-primary"

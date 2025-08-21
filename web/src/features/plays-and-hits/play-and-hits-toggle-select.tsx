@@ -1,6 +1,6 @@
 import { EyeIcon, UsersIcon } from 'lucide-react';
 
-import { Flex, FlexCol } from '@/components/flex';
+import { Flex } from '@/components/flex';
 import HeaderTitleSection from '@/components/header-title-section';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
@@ -29,7 +29,7 @@ const PlayAndHitsToggleSelect = () => {
   };
   return (
     <Flex className={'space-x-5'}>
-      <FlexCol className={'flex-1 border bg-card rounded-sm px-4 1440:py-6 py-4 gap-3'}>
+      <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3 gap-3'}>
         <HeaderTitleSection
           title={'Ver'}
           icon={<EyeIcon size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
@@ -58,9 +58,9 @@ const PlayAndHitsToggleSelect = () => {
             Aciertos
           </ToggleGroupItem>
         </ToggleGroup>
-      </FlexCol>
+      </Flex>
 
-      <FlexCol className={'flex-1 border bg-card rounded-sm px-4 1440:py-6 py-2 gap-3'}>
+      <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3  gap-3'}>
         <HeaderTitleSection
           title={'Agrupado'}
           icon={<UsersIcon size="16px" />}
@@ -88,7 +88,7 @@ const PlayAndHitsToggleSelect = () => {
             Agrupados
           </ToggleGroupItem>
         </ToggleGroup>
-      </FlexCol>
+      </Flex>
     </Flex>
   );
 };
