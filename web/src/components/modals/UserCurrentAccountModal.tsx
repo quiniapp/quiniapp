@@ -1,10 +1,7 @@
 import Modal from './custom-modal';
 import { Flex, FlexCol } from '../flex';
 
-import {
-  FormProvider,
-  useForm,
-} from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
 import { ICurrentAccountEntityFront } from '../../../../helper/types/current_account.type';
 import dayjs from 'dayjs';
 import LabelInputForm from '../molecules/LabelInputForm';
@@ -26,11 +23,11 @@ interface UserCurrentAccountModalProps {
 }
 
 const UserCurrentAccountModal = ({
-    isOpen,
-    onClose,
-    currentAccount,
+  isOpen,
+  onClose,
+  currentAccount,
 }: UserCurrentAccountModalProps) => {
-    if (!isOpen) return null;
+  if (!isOpen) return null;
   const methods = useForm<ICurrentAccountEntityFront>({
     values: currentAccount
       ? { ...currentAccount }
@@ -67,15 +64,16 @@ const UserCurrentAccountModal = ({
   });
   const { data: tickets, isLoading: isLoadingTickets } = useTickets({
     user_id: currentAccount?.user_id,
+    date: currentAccount?.date,
   });
 
-  const {mutate} = useUpdateCurrentAcoount()
+  const { mutate } = useUpdateCurrentAcoount();
   const onSubmit = (values: ICurrentAccountEntityFront) => {
     console.log('Liquidación enviada:', values);
     onClose();
   };
 
-  console.log('ticket',tickets);
+  console.log('ticket', tickets);
   console.log('bets', bets);
 
   return (
@@ -213,7 +211,9 @@ const UserCurrentAccountModal = ({
                     <TableRow>
                       <TableCell colSpan={14} className="text-center">
                         <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">No se encontraron jugadas ganadoras</Typography>
+                          <Typography variant="large">
+                            No se encontraron jugadas ganadoras
+                          </Typography>
                         </FlexCol>
                       </TableCell>
                     </TableRow>
