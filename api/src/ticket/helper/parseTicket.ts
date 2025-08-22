@@ -16,5 +16,6 @@ export const parseTicket = (ticket: ITicketEntityBack): ITicketEntityFront => {
     user_name: ticket.user_name,
     winner: ticket.winner,
     total_prize: ticket.total_prize,
+    hits: ticket.hits,
   };
 };

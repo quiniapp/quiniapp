@@ -1,4 +1,4 @@
-import CurrentAccountContent from '@/features/agent-commission';
+import CurrentAccountContent from '@/features/current-account';
 
 const CurrentAccountPage = () => {
   return <CurrentAccountContent />;

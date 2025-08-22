@@ -1,6 +1,6 @@
 import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
 import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
-import {  useEffect,  useState } from 'react';
+import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
@@ -9,14 +9,14 @@ import { FlexCol } from '@/components/flex';
 import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
-import { IUserEntityFront } from '../../../../helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import {makeTicketPdf} from '../../../helper/function/makeTicket'
+import { makeTicketPdf } from '../../../helper/function/makeTicket';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -77,7 +77,9 @@ const PlayDetailsContent = () => {
       },
       {
         onSuccess: (res) => {
-          makeTicketPdf({bets:bets, ticket: res.data.ticket,cashier_number:cashier?.number})
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            makeTicketPdf({ bets: bets, ticket: res.data.ticket, cashier_number: cashier?.number });
+          }
           setBets([]);
           setPartialAmount(0);
           setTotalAmount(0);
@@ -158,10 +160,8 @@ const PlayDetailsContent = () => {
         hasSelection={selectedIndexes.length > 0}
         isEnabled={isEnabledCreateBet}
       />
-
     </FlexCol>
   );
 };
 
 export default PlayDetailsContent;
-

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Box from '@/components/box';
 import FilterSection from '@/components/filter-section';
-import CurrentAccountTable from '@/features/agent-commission/current-account-table';
+import CurrentAccountTable from '@/features/current-account/current-account-table';
 import { useGetCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
