@@ -41,7 +41,7 @@ export class CurrentAccountRepository {
     // If a user_id is provided, filter the results for that specific user.
     // The .order() method already ensures the newest record is first.
     if (user_id) {
-      query = query.eq('user_id', user_id);
+      query = query.eq('user_id', user_id).limit(1);
     }
 
     // If a date is provided, filter the results for that specific date.
