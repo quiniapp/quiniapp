@@ -1,4 +1,4 @@
-import { Flex, FlexCol } from '@/components/flex';
+import { Flex } from '@/components/flex';
 import {
   Select,
   SelectContent,
