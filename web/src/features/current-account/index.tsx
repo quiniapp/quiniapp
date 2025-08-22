@@ -10,6 +10,7 @@ import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUp
 import { useSearchParams } from 'react-router-dom';
 
 import toast from 'react-hot-toast';
+import { USER_TYPE } from '../../../../helper/types/user.type';
 
 const CurrentAccountContent = () => {
   const { role } = useSessionStore();
@@ -25,7 +26,7 @@ const CurrentAccountContent = () => {
       },
     });
   };
-
+  if (role === USER_TYPE.CASHIER) return <></>;
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>
@@ -36,7 +37,7 @@ const CurrentAccountContent = () => {
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
             </Button>
-            <Button variant={'outline'} onClick={()=>{}}>
+            <Button variant={'outline'} onClick={() => {}}>
               Generar Liquidación
             </Button>
           </Box>
