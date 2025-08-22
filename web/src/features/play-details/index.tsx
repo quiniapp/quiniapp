@@ -77,7 +77,7 @@ const PlayDetailsContent = () => {
       },
       {
         onSuccess: (res) => {
-          makeTicketPdf(res.data.ticket, bets)
+          makeTicketPdf({bets:bets, ticket: res.data.ticket,cashier_number:cashier?.number})
           setBets([]);
           setPartialAmount(0);
           setTotalAmount(0);

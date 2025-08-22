@@ -1,6 +1,5 @@
 import { Flex, FlexCol } from '@/components/flex';
 import HeaderPlayAndHits from '@/features/plays-and-hits/header-play-and-hits.tsx';
-import PlayAndHitsBox from '@/features/plays-and-hits/play-and-hits-box.tsx';
 import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table.tsx';
 import TotalAmountPlayAndHits from '@/features/plays-and-hits/total-amount-play-and-hits.tsx';
 import { useBets } from '@/hooks/fetchs/plays/useBets';
