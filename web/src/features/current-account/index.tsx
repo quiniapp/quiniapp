@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import toast from 'react-hot-toast';
 import { USER_TYPE } from '../../../../helper/types/user.type';
+import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 
 const CurrentAccountContent = () => {
   const { role } = useSessionStore();
@@ -26,7 +27,7 @@ const CurrentAccountContent = () => {
       },
     });
   };
-  if (role === USER_TYPE.CASHIER) return <></>;
+  if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable/>;
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>
