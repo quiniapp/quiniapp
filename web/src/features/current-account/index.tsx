@@ -12,8 +12,10 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
+import React, { Suspense, useState } from 'react';
 
 const CurrentAccountContent = () => {
+  const [open, setOpen] = useState<boolean>(false)
   const { role } = useSessionStore();
   const [searchParams] = useSearchParams();
   const { mutate } = useUpdateCurrentAcoount();
@@ -27,6 +29,13 @@ const CurrentAccountContent = () => {
       },
     });
   };
+
+  const handleGenerateLiquidation = ()=>{
+
+    setOpen(true)
+  }
+
+
   if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable/>;
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
@@ -38,15 +47,21 @@ const CurrentAccountContent = () => {
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
             </Button>
-            <Button variant={'outline'} onClick={() => {}}>
+            <Button variant={'outline'} onClick={handleGenerateLiquidation}>
               Generar Liquidación
             </Button>
           </Box>
         </IsRoleCashier>
       </HeaderSection>
       <SettlementPayrollTable />
+      <Suspense>
+        <GenerateLiquitationModal isOpen={open} onClose={()=>setOpen(false)}/>
+
+      </Suspense>
     </Box>
   );
 };
 
 export default CurrentAccountContent;
+
+const GenerateLiquitationModal = React.lazy(()=>import('../../components/modals/GenerateLiquitationModal'))

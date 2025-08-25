@@ -18,7 +18,7 @@ export class TicketRepository {
       .from('tickets')
 
       .select('*, bets(*, lotteries(*), schedules(*))')
-      .eq('id', id)
+      .eq('ticket_id', id)
       .single();
 
     if (error) throw error;
@@ -58,7 +58,7 @@ export class TicketRepository {
     const { data, error } = await supabase
       .from('tickets')
       .update({ deleted_at: timestamp, deleted_by: props.user_id })
-      .eq('id', props.ticket_id)
+      .eq('ticket_id', props.ticket_id)
       .select()
       .single();
 

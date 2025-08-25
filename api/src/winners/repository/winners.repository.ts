@@ -1,4 +1,5 @@
 import { supabase } from '@database/db.connection';
+import dayjs from 'dayjs';
 
 export class WinnerRepository {
   async generateWinners(schedule_id: string, date: string) {
@@ -8,6 +9,16 @@ export class WinnerRepository {
     });
 
     if (error) throw error;
+
+    const dateToProcess: string = dayjs(date)
+      .tz('America/Argentina/Buenos_Aires')
+      .format('DD-MM-YYYY');
+
+    const { error: currentAccountError } = await supabase.rpc('calculate_current_account', {
+      p_date_text: dateToProcess,
+    });
+    if (currentAccountError) throw currentAccountError;
+
     return true;
   }
 

@@ -18,6 +18,7 @@ export class CurrentAccountRouter {
     this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
     this.router.post('/', this.calculateCurrentAccountHandler);
+    this.router.put('/bulk', this.bulkUpdateCurrentAccountHandler);
     this.router.put('/:id', this.updateCurrentAccountHandler);
   }
 
@@ -208,6 +209,106 @@ export class CurrentAccountRouter {
         },
       };
       res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private bulkUpdateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { date } = req.query; // DD-MM-YYYY
+    const { updateCurrentAccount } = req.body as {
+      updateCurrentAccount?: Record<
+        string,
+        { claims?: number; paid?: number; collections?: number }
+      >;
+    };
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: { error: ERROR_TYPE.AUTH_ERROR, message: ERROR_MESSAGE.INVALID_CREDENTIALS },
+      };
+      res.status(401).json(response);
+      return;
+    }
+
+    // Validaciones básicas
+    if (
+      !updateCurrentAccount ||
+      typeof updateCurrentAccount !== 'object' ||
+      Array.isArray(updateCurrentAccount)
+    ) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: 'Body must include "updateCurrentAccount" as an object',
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const entries = Object.entries(updateCurrentAccount); // [ [id, payload], ... ]
+    if (entries.length === 0) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: '"updateCurrentAccount" must not be empty',
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    try {
+      const results = await Promise.allSettled(
+        entries.map(([id, payload]) =>
+          this.controller.updateCurrentAccountHandler(id, { ...payload })
+        )
+      );
+
+      const updated: ICurrentAccountEntityFront[] = [];
+      const failed: Array<{ id: string; error: string }> = [];
+
+      results.forEach((r, idx) => {
+        const [id] = entries[idx];
+        if (r.status === 'fulfilled') {
+          updated.push(r.value);
+        } else {
+          const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+          failed.push({ id, error: reason });
+        }
+      });
+
+      await this.controller.calculateCurrentAccountHandler(String(date));
+      const statusCode = failed.length ? 207 : 200;
+      const response: APIResponse<{
+        updated: ICurrentAccountEntityFront[];
+        failed: Array<{ id: string; error: string }>;
+      }> = {
+        data: {
+          result: { updated, failed },
+        },
+      };
+      res.status(statusCode).json(response);
       return;
     } catch (error) {
       console.error(error);

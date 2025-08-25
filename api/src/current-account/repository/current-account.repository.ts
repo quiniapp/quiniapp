@@ -14,11 +14,9 @@ export class CurrentAccountRepository {
     if (!date) {
       // Usa la fecha del día anterior en la zona horaria del servidor
       dateToProcess = dayjs().tz('America/Argentina/Buenos_Aires').format('DD-MM-YYYY');
-      console.log('No date provided. Using previous day:', dateToProcess);
     } else {
       // Usa la fecha proporcionada, ajustando la zona horaria si es necesario
       dateToProcess = dayjs(date).format('DD-MM-YYYY');
-      console.log('Using provided date:', dateToProcess);
     }
 
     const { data, error } = await supabase.rpc('calculate_current_account', {
@@ -29,7 +27,6 @@ export class CurrentAccountRepository {
   }
 
   async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
-    console.log('get', date);
     // Base query to select current accounts and join with users table
     let query = supabase
       .from('current_accounts')
@@ -82,9 +79,8 @@ export class CurrentAccountRepository {
       .from('current_accounts')
       .update({ ...props, edited_at: timestamp })
       .eq('current_account_id', current_account_id)
-      .select('* , users(*)')
+      .select('*')
       .single();
-
     if (error) throw error;
     return data;
   }
