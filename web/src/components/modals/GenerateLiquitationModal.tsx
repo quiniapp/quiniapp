@@ -1,4 +1,3 @@
-import Box from '../box';
 import {
   Table,
   TableBody,
@@ -19,8 +18,8 @@ import { useGetCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurre
 import { useMemo, useState } from 'react';
 import { Input } from '../ui/input';
 import { useBulkUpdateCurrentAccount } from '@/hooks/mutations/current-account/useBulkUpdateCurrentAccount';
-import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 
 interface GenerateLiquitationModalProps {
   isOpen: boolean;
@@ -41,9 +40,7 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
   if (!isOpen) return null;
   const [editPayload, setEditPayload] = useState<Map<string, editPayloadObject>>(new Map());
   const [searchParams] = useSearchParams();
-  const { data, isLoading, isPending, isError, isSuccess } = useGetCurrentAccount(
-    searchParams.get('date')
-  );
+  const { data, isLoading, isPending } = useGetCurrentAccount(searchParams.get('date'));
   const { mutate } = useBulkUpdateCurrentAccount();
   const handleChange = ({ key, value, id }: HandleChangeProps) => {
     setEditPayload((prev) => {
@@ -55,10 +52,18 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
   };
 
   const handleGenerate = async () => {
-    mutate({
-      updateCurrentAccount: editPayload, // Map<string, editPayloadObject>
-      date: data?.[0].date ?? '',
-    });
+    mutate(
+      {
+        updateCurrentAccount: editPayload, // Map<string, editPayloadObject>
+        date: data?.[0].date ?? '',
+      },
+      {
+        onSuccess: () => {
+          toast.success('Calculado correctamente');
+          onClose();
+        },
+      }
+    );
   };
 
   const totals = useMemo(() => {

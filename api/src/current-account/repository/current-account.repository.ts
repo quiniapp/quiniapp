@@ -32,7 +32,7 @@ export class CurrentAccountRepository {
       .from('current_accounts')
       .select('*, users!inner(*)')
       .is('users.deleted_at', null)
-      .order('created_at', { ascending: false })
+      .order('edited_at', { ascending: false })
       .order('user_number', { ascending: true });
 
     // If a user_id is provided, filter the results for that specific user.

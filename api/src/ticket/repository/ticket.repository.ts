@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import { supabase } from '@database/db.connection';
 import { IDeleteTicketEntity } from '@helper/request/ticket.response';
 import { ITicketEntityBack } from '@helper/types/ticket.type';
@@ -54,13 +53,10 @@ export class TicketRepository {
   }
 
   async delete(props: IDeleteTicketEntity) {
-    const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('tickets')
-      .update({ deleted_at: timestamp, deleted_by: props.user_id })
-      .eq('ticket_id', props.ticket_id)
-      .select()
-      .single();
+      .delete()
+      .eq('ticket_id', props.ticket_id);
 
     if (error) throw new Error(error.message);
     return data;
