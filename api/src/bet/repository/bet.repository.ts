@@ -15,7 +15,11 @@ export class BetRepository {
 
     winners?: boolean;
   }) {
-    let query = supabase.from('bets').select('*, lotteries(*), schedules(*)').eq('date', date);
+    let query = supabase
+      .from('bets')
+      .select('*, lotteries(*), schedules(*)')
+      .eq('date', date)
+      .is('deleted_at', null);
 
     if (schedule_id) {
       query = query.eq('schedule_id', schedule_id);
