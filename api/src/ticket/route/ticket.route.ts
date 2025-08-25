@@ -290,6 +290,7 @@ export class TicketRouter {
         user_id: user.user.user_id,
       });
       res.status(200);
+      return;
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
@@ -359,8 +360,8 @@ export class TicketRouter {
           ticket,
         },
       };
+
       res.status(200).json(response);
-      return;
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {

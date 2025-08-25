@@ -14,6 +14,7 @@ import TerminalTicketMatchesTable from '@/features/terminal-ticket/terminal-tick
 
 import useTerminalTicketHook from '@/hooks/use-terminal-ticket-hook.ts';
 
+
 export const TerminalTicketContent = () => {
   const {
     data,
@@ -25,7 +26,7 @@ export const TerminalTicketContent = () => {
     handleTicketClick,
     handleResetFilters,
     handleChangeFilter,
-    handleDeleteTicket,
+    handleDeleteTicket
   } = useTerminalTicketHook();
 
 
