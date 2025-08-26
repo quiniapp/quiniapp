@@ -6,12 +6,29 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import { useSearchParams } from 'react-router-dom';
+import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 
 interface TableTerminalTicketProps {
-  data: any[];
+  data: ITicketEntityFront[];
   onTicketClick?: (ticket: any) => void;
 }
-const TableTerminalTicket = ({ data, onTicketClick }: TableTerminalTicketProps) => {
+const TableTerminalTicket = ({ data }: TableTerminalTicketProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selected = searchParams.get('ticket_number');
+
+  const handleClick = (ticket_number: string) => {
+    if (selected === ticket_number) {
+      searchParams.delete('ticket_number');
+      setSearchParams(searchParams)
+    } else {
+      const params = new URLSearchParams(searchParams);
+      params.set('ticket_number', ticket_number);
+      setSearchParams(params);
+    }
+  };
+  
   return (
     <div className="border mb-4">
       <Table className="min-w-full table-fixed">
@@ -27,18 +44,19 @@ const TableTerminalTicket = ({ data, onTicketClick }: TableTerminalTicketProps) 
       <div className="overflow-y-auto h-[200px] 1440:h-[300px]">
         <Table className="min-w-full table-fixed">
           <TableBody>
-            {data?.map((item:any) => (
+            {data?.map((item: ITicketEntityFront) => (
               <TableRow
+                data-state={selected === item.ticket_number ? 'selected' : undefined}
                 key={item.ticket_id}
-                className="cursor-pointer hover:bg-primary-light transition"
-                onClick={() => onTicketClick?.(item)}
+                className={cn(
+                  `cursor-pointer hover:bg-primary-light transition ${selected === item.ticket_number ? 'bg-primary-light' : ''}`
+                )}
+                onClick={() => handleClick(item.ticket_number)}
               >
                 <TableCell>{item.ticket_number}</TableCell>
                 <TableCell>{item.user_name}</TableCell>
                 <TableCell>${item.total}</TableCell>
-                <TableCell className={'text-right'}>
-                  {item.paid ? 'Pagado' : 'No pagado'}
-                </TableCell>
+                <TableCell className={'text-right'}>{item.paid ? 'Pagado' : 'No pagado'}</TableCell>
               </TableRow>
             ))}
           </TableBody>

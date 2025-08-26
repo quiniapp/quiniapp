@@ -1,8 +1,9 @@
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table';
 import { Flex } from '@/components/flex';
 import SkeletonList from '@/components/skeletons/skeleton-list';
+import { IBetEntityFront } from '../../../../helper/types/bet.type';
 interface TerminalTicketPlayTableProps {
-  bets: any[];
+  bets?: IBetEntityFront[];
 }
 
 const TerminalTicketPlayTable = ({ bets }: TerminalTicketPlayTableProps) => {

@@ -24,7 +24,7 @@ export class TicketRepository {
     return data;
   }
 
-  async getByNumber(ticket_number: number) {
+  async getByNumber(ticket_number: string) {
     const { data, error } = await supabase
       .from('tickets')
 

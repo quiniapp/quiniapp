@@ -8,9 +8,10 @@ import {
 } from '@/components/ui/table';
 import { Flex } from '@/components/flex';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
+import { IBetEntityFront } from '../../../../helper/types/bet.type';
 
 interface TerminalTicketMatchesTableProps {
-  bets: any[];
+  bets?: IBetEntityFront[];
 }
 
 const TerminalTicketMatchesTable = ({ bets }: TerminalTicketMatchesTableProps) => {
@@ -47,9 +48,7 @@ const TerminalTicketMatchesTable = ({ bets }: TerminalTicketMatchesTableProps) =
         </>
       )}
     </>
-
   );
 };
 
 export default TerminalTicketMatchesTable;
-

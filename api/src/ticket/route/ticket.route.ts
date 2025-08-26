@@ -4,7 +4,6 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { newTicketSchema } from '@helper/schemas/ticket.schema';
-import { USER_TYPE } from '@helper/types/user.type';
 
 export class TicketRouter {
   public router: Router;
@@ -17,7 +16,6 @@ export class TicketRouter {
 
   private setupRoutes() {
     // this.router.get('/:id', this.controller.get);
-    this.router.get('/user/:id', this.getAllTicketByUserHandler);
     this.router.get('/', this.getAllTicketHandler);
     this.router.get('/:id', this.getTicketHandler);
     this.router.post('/', this.newTicketHandler);
@@ -94,18 +92,7 @@ export class TicketRouter {
   private getTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: ticket_id } = req.params;
-    const { ticket_number } = req.query;
     if (!user?.user) {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(500).json(response);
-      return;
-    }
-    if (typeof ticket_number !== 'string') {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -119,7 +106,6 @@ export class TicketRouter {
     try {
       const ticket = await this.controller.get({
         ticket_id,
-        ...(ticket_number && { ticket_number: ticket_number }),
       });
 
       const response: APIResponse<ITicketEntityFront> = {
@@ -154,6 +140,7 @@ export class TicketRouter {
   private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { date } = req.query;
+    const { ticket_number } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -164,22 +151,30 @@ export class TicketRouter {
       res.status(500).json(response);
       return;
     }
-    if (typeof date !== 'string') {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(500).json(response);
-      return;
-    }
     try {
-      const ticket = await this.controller.getAll({
-        user_type: user.user.user_type,
-        user_id: user.user.user_id,
-        date: date,
-      });
+      let ticket;
+      if (typeof ticket_number === 'string') {
+        const res = await this.controller.get({
+          ticket_number: ticket_number,
+        });
+        ticket = [res];
+      } else {
+        if (typeof date !== 'string') {
+          const response: APIResponse<null> = {
+            error: {
+              error: ERROR_TYPE.BAD_REQUEST,
+              message: ERROR_MESSAGE.BAD_REQUEST,
+            },
+          };
+          res.status(500).json(response);
+          return;
+        }
+        ticket = await this.controller.getAll({
+          user_type: user.user.user_type,
+          user_id: user.user.user_id,
+          date: date,
+        });
+      }
 
       const response: APIResponse<ITicketEntityFront[]> = {
         data: {
@@ -290,78 +285,6 @@ export class TicketRouter {
         user_id: user.user.user_id,
       });
       res.status(200);
-      return;
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
-
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
-    }
-  };
-
-  private getAllTicketByUserHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
-    const { date } = req.query;
-    const { id: cashier_id } = req.params;
-    if (!user?.user) {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(500).json(response);
-      return;
-    }
-    if (typeof date !== 'string') {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(500).json(response);
-      return;
-    }
-
-    if (user.user.user_type === USER_TYPE.CASHIER && cashier_id !== user.user.user_id) {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(500).json(response);
-      return;
-    }
-    try {
-      const ticket = await this.controller.getAllByUser({
-        user_id: cashier_id,
-        date: date,
-      });
-
-      const response: APIResponse<ITicketEntityFront[]> = {
-        data: {
-          ticket,
-        },
-      };
-
-      res.status(200).json(response);
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
