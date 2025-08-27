@@ -11,6 +11,7 @@ type BaseProps<T extends FieldValues> = {
   readOnly?: boolean;
   suffix?: string; // ejemplo: '%'
   inputClassName?: string;
+  disabled?: boolean;
 };
 function LabelInputForm<T extends FieldValues>({
   name,
@@ -19,6 +20,7 @@ function LabelInputForm<T extends FieldValues>({
   readOnly = false,
   suffix,
   inputClassName,
+  disabled = false,
 }: BaseProps<T>) {
   const {
     register,
@@ -38,6 +40,7 @@ function LabelInputForm<T extends FieldValues>({
           id={id}
           type={type}
           readOnly={readOnly}
+          disabled={disabled}
           className={`${inputClassName} text-white`}
           {...register(name, { valueAsNumber: isNumber })}
         />
