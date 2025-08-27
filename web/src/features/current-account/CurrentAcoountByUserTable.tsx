@@ -62,44 +62,57 @@ const CurrentAcoountByUserTable = () => {
     user_id: user?.user_id,
     date: today,
   });
-  
+
   useEffect(() => {
     if (currentAccount?.length) methods.reset(currentAccount[0]);
   }, [currentAccount]);
   return (
     <FlexCol className="items-center justify-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]">
-      
-                          <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.[0].date).format('DD-MM-YYYY')}`}</Typography>
+      <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.[0].date).format('DD-MM-YYYY')}`}</Typography>
       <FormProvider {...methods}>
         <form className="w-full">
           <Flex className="justify-center gap-1 sm:gap-3">
             <FlexCol className="items-between pt-2">
-              <LabelInputForm<ICurrentAccountEntityFront> name="pass" label="Pase" type="number" />
+              <LabelInputForm<ICurrentAccountEntityFront>
+                name="pass"
+                label="Pase"
+                type="number"
+                disabled={true}
+              />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="cashier_commission"
                 label={`Comisión`}
                 type="number"
-                readOnly
+                disabled={true}
+                
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="successes"
                 label="Aciertos"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="claims"
                 label="Reclamos"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="bills"
                 label="Gastos"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="revenue"
                 label="Deja"
                 type="number"
+                
+                disabled={true}
               />
             </FlexCol>
 
@@ -108,28 +121,43 @@ const CurrentAcoountByUserTable = () => {
                 name="previous_balance"
                 label="Saldo Anterior"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="collections"
                 label="Cobro al pasador"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="paid"
                 label="Pago al pasador"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="previous_drag"
                 label="Arrastre anterior"
                 type="number"
+                
+                disabled={true}
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="drag"
                 label="Arrastre nuevo"
                 type="number"
+                
+                disabled={true}
               />
-              <LabelInputForm<ICurrentAccountEntityFront> name="leave" label="Deje" type="number" />
+              <LabelInputForm<ICurrentAccountEntityFront>
+                name="leave"
+                label="Deje"
+                type="number"
+                disabled={true}
+              />
             </FlexCol>
           </Flex>
 
