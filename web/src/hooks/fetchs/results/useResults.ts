@@ -22,6 +22,7 @@ export const useResults = (params: IGetResultsEntity) => {
   return useQuery({
     queryKey: ['results', params],
     queryFn: () => fetchResults(params),
+    
     enabled: Boolean(lottery_id && schedule_id && date), // ⛔ evita que se ejecute con datos incompletos
   });
 };

@@ -1,26 +1,40 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '../../../../../helper/types/bet.type.ts';
-interface FetchBetsProps {
+
+export interface FetchBetsProps {
   lottery_id?: string | null;
   schedule_id?: string | null;
   date: string | null;
   cashier_id?: string | null;
   grouped?: string | null;
-  winners?: string | null;
+  winners?: string | null; // 'true' | 'false'
 }
 
-const fetchBets = async ({
+// ⬇️ Incluir TODOS los filtros en el key (con fallback a '')
+export const betsKey = (p: FetchBetsProps) =>
+  [
+    'bets',
+    p.date ?? '',
+    p.cashier_id ?? '',
+    p.schedule_id ?? '',
+    p.lottery_id ?? '',
+    p.grouped ?? '',
+    p.winners ?? '',
+  ] as const;
+
+// ⬇️ Exportá el fetch para usarlo fuera del hook
+export async function fetchBets({
   date,
   schedule_id,
   lottery_id,
   cashier_id,
   grouped,
   winners,
-}: FetchBetsProps): Promise<IBetEntityFront[]> => {
+}: FetchBetsProps): Promise<IBetEntityFront[]> {
   if (!date) return [];
-  const params = new URLSearchParams({ date });
 
+  const params = new URLSearchParams({ date });
   if (schedule_id) params.append('schedule_id', schedule_id);
   if (lottery_id) params.append('lottery_id', lottery_id);
   if (cashier_id) params.append('cashier_id', cashier_id);
@@ -28,28 +42,22 @@ const fetchBets = async ({
   if (winners) params.append('winners', winners);
 
   const url = `${ROUTES.bet.base}?${params.toString()}`;
-
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });
 
-  if (!res.ok) throw new Error('Error fetching results');
-  const { data } = await res.json();
-  return data.bets;
-};
+  if (!res.ok) throw new Error('Error fetching bets');
 
-export const useBets = ({
-  schedule_id,
-  date,
-  lottery_id,
-  cashier_id,
-  grouped,
-  winners,
-}: FetchBetsProps) => {
+  // ajustá a tu shape real
+  const json = await res.json();
+  return json?.data?.bets ?? [];
+}
+
+export const useBets = (p: FetchBetsProps) => {
   return useQuery<IBetEntityFront[]>({
-    queryKey: ['plays', { date, schedule_id, lottery_id, cashier_id, grouped, winners }],
-    queryFn: () => fetchBets({ schedule_id, date, lottery_id, cashier_id, grouped, winners }),
-    enabled: Boolean(date), // solo se ejecuta si `date` tiene valor
+    queryKey: betsKey(p),
+    queryFn: () => fetchBets(p),
+    enabled: Boolean(p.date), // sólo si hay fecha
   });
 };

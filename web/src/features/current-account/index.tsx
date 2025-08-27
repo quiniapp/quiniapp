@@ -13,12 +13,29 @@ import toast from 'react-hot-toast';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 import React, { Suspense, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ICurrentAccountEntityFront } from '../../../../helper/types/current_account.type';
+import { downloadCurrentAccountTablePDF } from '../../../helper/function/printLiquidationAdmin';
+import { printUserSlipPDF } from '../../../helper/function/printLiquidationCashier';
+import { betsKey, fetchBets, useBets } from '@/hooks/fetchs/plays/useBets';
+import {
+  currentAccountKey,
+  fetchCurrentAccount,
+} from '@/hooks/fetchs/current-account/useGetCurrentAccount';
+import dayjs from 'dayjs';
 
 const CurrentAccountContent = () => {
-  const [open, setOpen] = useState<boolean>(false)
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState<boolean>(false);
   const { role } = useSessionStore();
   const [searchParams] = useSearchParams();
   const { mutate } = useUpdateCurrentAcoount();
+  const [printing, setPrinting] = useState(false);
+  const date = searchParams.get('date'); // puede ser null: backend devuelve la última
+  const currentAccounts = queryClient.getQueryData<ICurrentAccountEntityFront[]>([
+    'getCurrentAccount',
+    date,
+  ]);
   const handleUpdateCurrentAccount = () => {
     mutate(searchParams.get('date'), {
       onSuccess: () => {
@@ -30,20 +47,95 @@ const CurrentAccountContent = () => {
     });
   };
 
-  const handleGenerateLiquidation = ()=>{
+  const handleGenerateLiquidation = () => {
+    setOpen(true);
+  };
+  const handlePrintLiquidationCashier = async () => {
+    try {
+      setPrinting(true);
 
-    setOpen(true)
-  }
+      // 1) Traer cuentas (caché o fetch)
+      const accounts = await queryClient.fetchQuery({
+        queryKey: currentAccountKey(date),
+        queryFn: () => fetchCurrentAccount(date),
+      });
 
+      if (!accounts?.length) {
+        toast.error('No hay cuentas a liquidar.');
+        return;
+      }
 
-  if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable/>;
+      // 2) Por cada cuenta, traer bets (SIN hooks) y generar PDF
+      for (const acc of accounts) {
+        const bKey = betsKey({
+          date: acc.date,
+          cashier_id: acc.user_id,
+          winners: 'true',
+        });
+
+        const bets = await queryClient.fetchQuery({
+          queryKey: bKey,
+          queryFn: () =>
+            fetchBets({
+              date: acc.date,
+              cashier_id: acc.user_id,
+              winners: 'true',
+            }),
+        });
+
+        await printUserSlipPDF({
+          account: acc,
+          date: acc.date,
+          bets,
+        });
+      }
+
+      toast.success('Liquidaciones exportadas.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Error exportando liquidaciones.');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handlePrintDiaryLiquidation = async () => {
+    try {
+      setPrinting(true);
+      const rows = await queryClient.fetchQuery({
+        queryKey: currentAccountKey(date),
+        queryFn: () => fetchCurrentAccount(date),
+      });
+
+      if (!rows?.length) {
+        toast.error('No hay datos para exportar.');
+        return;
+      }
+
+      await downloadCurrentAccountTablePDF({
+        data: rows,
+        date: rows[0]?.date ?? dayjs().format('YYYY-MM-DD'),
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error('No se pudo generar el PDF.');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable />;
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
       <HeaderSection title={'Cuenta Corriente'}>
         <IsRoleCashier role={role}>
           <Box className={'grid grid-cols-2 gap-4'}>
-            <Button> Exportar Diario</Button>
-            <Button variant={'outline'}> Exportar Liquidación </Button>
+            <Button onClick={handlePrintDiaryLiquidation} disabled={printing}>
+              Exportar Diario
+            </Button>
+            <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing}>
+              Exportar Liquidación
+            </Button>
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
             </Button>
@@ -55,8 +147,7 @@ const CurrentAccountContent = () => {
       </HeaderSection>
       <SettlementPayrollTable />
       <Suspense>
-        <GenerateLiquitationModal isOpen={open} onClose={()=>setOpen(false)}/>
-
+        <GenerateLiquitationModal isOpen={open} onClose={() => setOpen(false)} />
       </Suspense>
     </Box>
   );
@@ -64,4 +155,6 @@ const CurrentAccountContent = () => {
 
 export default CurrentAccountContent;
 
-const GenerateLiquitationModal = React.lazy(()=>import('../../components/modals/GenerateLiquitationModal'))
+const GenerateLiquitationModal = React.lazy(
+  () => import('../../components/modals/GenerateLiquitationModal')
+);
