@@ -13,11 +13,14 @@ import TerminalTicketMatchesTable from '@/features/terminal-ticket/terminal-tick
 // @Hooks
 
 import useTerminalTicketHook from '@/hooks/use-terminal-ticket-hook.ts';
+import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
+import { useState } from 'react';
+import TicketDetails from './TicketDetails';
 
 
 export const TerminalTicketContent = () => {
+  const { data } = useTickets({});
   const {
-    data,
     selectedBets,
     winningBets,
     filteredTickets,
@@ -45,21 +48,12 @@ export const TerminalTicketContent = () => {
               <TableTerminalTicket data={filteredTickets} onTicketClick={handleTicketClick} />
 
               <Typography className={'text-xs'} variant={'p'}>
-                Cantidad de Tickets: {data?.data?.ticket.length}
+                Cantidad de Tickets: {data?.length}
               </Typography>
             </FlexCol>
           </FlexCol>
         </Flex>
-        <Flex className={'1440:py-8 py-3 space-x-8 '}>
-          <FlexCol className={'flex-1  space-y-4'}>
-            <p> Jugadas</p>
-            <TerminalTicketPlayTable bets={selectedBets} />
-          </FlexCol>
-          <FlexCol className={'flex-1 space-y-4'}>
-            <p> Aciertos</p>
-            <TerminalTicketMatchesTable bets={winningBets} />
-          </FlexCol>
-        </Flex>
+       <TicketDetails />
       </FlexCol>
       <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
         <Button

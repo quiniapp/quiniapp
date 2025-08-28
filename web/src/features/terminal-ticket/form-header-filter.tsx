@@ -17,7 +17,8 @@ import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-searc
 import { useSessionStore } from '@/stores/sessionStore.ts';
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useState } from 'react';
-
+import { useUsers } from '@/hooks/fetchs/users/useUsers';
+import dayjs from 'dayjs';
 
 interface FormHeaderFilterProps {
   onSearchByTicketNumber: (number: string) => void;
@@ -25,9 +26,13 @@ interface FormHeaderFilterProps {
   onChangeFilter: (value: 'all' | 'winner' | 'paid' | 'not_paid') => void;
 }
 
-
-const FormHeaderFilter = ({ onSearchByTicketNumber, onResetFilters, onChangeFilter  }: FormHeaderFilterProps) => {
-  const { role } = useSessionStore()
+const FormHeaderFilter = ({
+  onSearchByTicketNumber,
+  onResetFilters,
+  onChangeFilter,
+}: FormHeaderFilterProps) => {
+  const { role } = useSessionStore();
+  const { data: cashiers } = useUsers();
   const [inputValue, setInputValue] = useState('');
 
   const handleSearch = () => {
@@ -39,6 +44,9 @@ const FormHeaderFilter = ({ onSearchByTicketNumber, onResetFilters, onChangeFilt
     onResetFilters();
   };
 
+const handleSelectCashier = ()=>{
+
+}
 
   return (
     <form>
@@ -48,18 +56,22 @@ const FormHeaderFilter = ({ onSearchByTicketNumber, onResetFilters, onChangeFilt
             <FlexCol className={'space-y-4'}>
               <IsRoleCashier role={role}>
                 <Flex className={' gap-3'}>
-                  <Select>
+                  <Select value='' onValueChange={(value)=>{}}>
                     <SelectTrigger className={'border w-full '}>
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Todos">Todos</SelectItem>
-                      <SelectItem value="pasador">pasador</SelectItem>
+                      {cashiers?.map((cashier) => {
+                        return (
+                          <SelectItem value="Todos" >
+                            {cashier.name} - {cashier.number}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </Flex>
               </IsRoleCashier>
-
 
               <Flex className={'flex-1 gap-2 '}>
                 <Flex className={'items-center gap-3'}>
@@ -67,7 +79,7 @@ const FormHeaderFilter = ({ onSearchByTicketNumber, onResetFilters, onChangeFilt
                     <TypographyMuted label={'Fecha'} />
                   </Box>
                   <Box className={'w-[200px] overflow-hidden'}>
-                    <SelectDayToSearch onDayChange={() => {}} className={'!w-[200px]'} />
+                    <SelectDayToSearch onDayChange={() => {}} className={'!w-[200px]'} toDate={dayjs().toDate()}/>
                   </Box>
                 </Flex>
                 <Flex className={'w-[150px]'}>

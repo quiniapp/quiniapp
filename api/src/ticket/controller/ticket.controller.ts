@@ -28,7 +28,13 @@ export class TicketController {
   };
   get = async (props: IGetTicketEntity): Promise<ITicketEntityFront> => {
     try {
-      const ticket = await this.repository.getById(props?.ticket_id ?? '');
+      let ticket;
+      if (props.ticket_id) {
+        ticket = await this.repository.getById(props?.ticket_id);
+      } else if (props.ticket_number) {
+        ticket = await this.repository.getByNumber(props.ticket_number);
+      }
+
       return parseTicket(ticket);
     } catch (error) {
       console.error('Get error:', error);
