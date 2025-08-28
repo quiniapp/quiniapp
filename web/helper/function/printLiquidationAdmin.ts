@@ -2,6 +2,12 @@
 
 import dayjs from 'dayjs';
 import { ICurrentAccountEntityFront } from '../../../helper/types/current_account.type';
+const BASE_LINE = 0.15; // probá 0.15–0.2 hasta que lo veas igual
+const BORDER_CELL = { lineWidth: BASE_LINE, lineColor: [0, 0, 0] as [number, number, number] };
+const BORDER_TABLE = {
+  tableLineWidth: BASE_LINE,
+  tableLineColor: [0, 0, 0] as [number, number, number],
+};
 
 const money = (n: number) => `$ ${n}`;
 
@@ -115,26 +121,33 @@ export async function downloadCurrentAccountTablePDF(params: {
     body,
     startY: 26,
     margin,
+    theme: 'grid',
+
+    // 👉 borde exterior de la tabla = igual que celdas
+    ...BORDER_TABLE,
+
     styles: {
+      ...BORDER_CELL,
       fontSize: 9,
       cellPadding: 2,
       overflow: 'linebreak',
-      fillColor: [255, 255, 255], // filas blancas
-      textColor: [0, 0, 0], // texto negro
-    },
-    headStyles: {
-      halign: 'center',
-      fillColor: [255, 255, 255], // header blanco
-      textColor: [0, 0, 0], // header en negro
-    },
-    bodyStyles: {
-      fillColor: [255, 255, 255], // asegura cuerpo blanco
+      fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
     },
-    alternateRowStyles: { fillColor: [255, 255, 255] }, // sin gris alternado
+    headStyles: {
+      ...BORDER_CELL, // 👉 header con el mismo borde que las celdas
+      halign: 'center',
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+    },
+    bodyStyles: {
+      ...BORDER_CELL,
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+    },
+    alternateRowStyles: { fillColor: [255, 255, 255] },
     columnStyles,
     tableWidth: available,
-    theme: 'grid', // sin “striped”
   });
 
   const finalY = (doc as any).lastAutoTable?.finalY ?? 26;
@@ -160,25 +173,34 @@ export async function downloadCurrentAccountTablePDF(params: {
     head: HEAD_FOOTER,
     body: [totalsRow],
     margin,
+
+    alternateRowStyles: { fillColor: [255, 255, 255] },
+    columnStyles,
+    tableWidth: available,
+    theme: 'grid',
+
+    // 👉 borde exterior de la tabla = igual que celdas
+    ...BORDER_TABLE,
+
     styles: {
+      ...BORDER_CELL,
       fontSize: 9,
       cellPadding: 2,
+      overflow: 'linebreak',
       fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
     },
     headStyles: {
+      ...BORDER_CELL, // 👉 header con el mismo borde que las celdas
       halign: 'center',
       fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
     },
     bodyStyles: {
+      ...BORDER_CELL,
       fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
     },
-    alternateRowStyles: { fillColor: [255, 255, 255] },
-    columnStyles,
-    tableWidth: available,
-    theme: 'grid',
   });
 
   addFooterPageNumbers(doc);

@@ -8,18 +8,18 @@ DECLARE
   result_array JSONB[];
 BEGIN
   WITH
-  -- 1) Actividad del día (ventas/premios)
+  -- 1) Actividad del día (tickets)
   daily_activity AS (
     SELECT
       t.user_id,
-      COALESCE(SUM(t.total), 0)       AS pass,
+      COALESCE(SUM(t.total), 0)       AS pass_raw,
       COALESCE(SUM(t.total_prize), 0) AS successes
     FROM tickets t
     WHERE t.date = v_date AND t.deleted_at IS NULL
     GROUP BY t.user_id
   ),
 
-  -- 2) Último estado anterior a la fecha (para previous_balance/drag/bills)
+  -- 2) Último estado anterior (< v_date)
   previous_state AS (
     SELECT DISTINCT ON (ca.user_id)
       ca.user_id,
@@ -32,83 +32,71 @@ BEGIN
     ORDER BY ca.user_id, ca.date DESC
   ),
 
-  -- 3) Manuales del mismo día (si hay fila ya creada)
+  -- 3) Manuales del mismo día (si hay fila creada)
   existing_day AS (
     SELECT
       ca.user_id,
       COALESCE(ca.claims, 0)      AS claims,
       COALESCE(ca.collections, 0) AS collections,
-      COALESCE(ca.paid, 0)        AS paid,
+      COALESCE(ca.paid, 0)      AS paid,
       COALESCE(ca.leave, 0)       AS leave
     FROM current_accounts ca
     WHERE ca.date = v_date
   ),
 
-  -- 4) Cálculo (base + manuales)
+  -- 4) Cálculo según reglas
   calculated_data AS (
     SELECT
       u.user_id,
       u.name   AS user_name,
       u.number AS user_number,
 
-      COALESCE(da.pass, 0)      AS pass,
-      COALESCE(da.successes, 0) AS successes,
+      COALESCE(da.pass_raw, 0)      AS pass_raw,
+      COALESCE(da.successes, 0)     AS successes,
+      COALESCE(ed.claims, 0)        AS claims,
+      GREATEST(COALESCE(ed.claims,0), 0) AS claims_pos,
+      LEAST(COALESCE(ed.claims,0), 0)    AS claims_neg,
 
-      -- manuales (si no hay fila del día, 0)
-      COALESCE(ed.claims, 0)      AS claims,
-      COALESCE(ed.collections, 0) AS collections,
+      COALESCE(ed.collections, 0)   AS collections,
       COALESCE(ed.paid, 0)        AS paid,
-      COALESCE(ed.leave, 0)       AS leave,
+      COALESCE(ed.leave, 0)         AS leave,
 
       COALESCE(ps.previous_balance, 0) AS previous_balance,
       COALESCE(ps.previous_drag, 0)    AS previous_drag,
       COALESCE(ps.previous_bills, 0)   AS bills,
+      COALESCE(u.fee, 0) / 100.0       AS fee_pct,
 
-      ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2) AS cashier_commission,
+      -- pass ajustado con claims positivos
+      (COALESCE(da.pass_raw, 0) + GREATEST(COALESCE(ed.claims, 0), 0)) AS pass,
 
-      -- base del día sin manuales (para referencia)
-      (COALESCE(da.pass, 0) - COALESCE(da.successes, 0)
-       - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)) AS revenue,
+      -- comisión sobre pass ajustado
+      ROUND(
+        (COALESCE(da.pass_raw, 0) + GREATEST(COALESCE(ed.claims, 0), 0)) * (COALESCE(u.fee, 0) / 100.0),
+        2
+      ) AS cashier_commission,
 
-      -- subtotal del día con manuales
-      (COALESCE(da.pass, 0) - COALESCE(da.successes, 0)
-       - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)
-       - COALESCE(ed.claims, 0)
-       + COALESCE(ed.collections, 0)
-       - COALESCE(ed.paid, 0)) AS subtotal,
-
-      -- ✅ DRAG: ya NO incluye collections ni paid; claims ahora SUMA.
-      --    Delta para drag = revenue + claims
-      CASE
-        WHEN ps.prev_ca_date IS NULL
-          OR date_trunc('month', ps.prev_ca_date) <> date_trunc('month', v_date)
-        THEN
-          CASE
-            WHEN COALESCE(ps.previous_drag, 0) >= 0
-            THEN (
-              COALESCE(da.pass, 0) - COALESCE(da.successes, 0)
-              - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)
-              + COALESCE(ed.claims, 0)         -- ← cambio: + claims
-            )
-            ELSE COALESCE(ps.previous_drag, 0) + (
-              COALESCE(da.pass, 0) - COALESCE(da.successes, 0)
-              - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)
-              + COALESCE(ed.claims, 0)         -- ← cambio: + claims
-            )
-          END
-        ELSE
-          COALESCE(ps.previous_drag, 0) + (
-            COALESCE(da.pass, 0) - COALESCE(da.successes, 0)
-            - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)
-            + COALESCE(ed.claims, 0)           -- ← cambio: + claims
+      -- subtotal/revenue: pass - comisión - successes + claims_neg
+      (
+        (COALESCE(da.pass_raw, 0) + GREATEST(COALESCE(ed.claims, 0), 0))
+        - ROUND(
+            (COALESCE(da.pass_raw, 0) + GREATEST(COALESCE(ed.claims, 0), 0)) * (COALESCE(u.fee, 0) / 100.0),
+            2
           )
-      END AS drag,
+        - COALESCE(da.successes, 0)
+        + LEAST(COALESCE(ed.claims, 0), 0)
+      ) AS subtotal,
 
-      -- total acumulado = saldo anterior + subtotal del día (ajustado)
-      (COALESCE(ps.previous_balance, 0) +
-       (COALESCE(da.pass, 0) - COALESCE(da.successes, 0)
-        - ROUND(COALESCE(da.pass, 0) * (COALESCE(u.fee, 0) / 100), 2)
-        - COALESCE(ed.claims, 0) + COALESCE(ed.collections, 0) - COALESCE(ed.paid, 0))) AS total
+      -- revenue = subtotal
+      (
+        (COALESCE(da.pass_raw, 0) + GREATEST(COALESCE(ed.claims, 0), 0))
+        - ROUND(
+            (COALESCE(da.pass_raw, 0) + GREATEST(COALESCE(ed.claims, 0), 0)) * (COALESCE(u.fee, 0) / 100.0),
+            2
+          )
+        - COALESCE(da.successes, 0)
+        + LEAST(COALESCE(ed.claims, 0), 0)
+      ) AS revenue
+
     FROM users u
     LEFT JOIN daily_activity da ON u.user_id = da.user_id
     LEFT JOIN previous_state ps ON u.user_id = ps.user_id
@@ -116,36 +104,55 @@ BEGIN
     WHERE u.user_type = 'CASHIER' AND u.deleted_at IS NULL
   ),
 
-  -- 5) UPSERT (no pisar manuales; sí actualizar derivados)
+  -- 5) Totales acumulados (total/drag)
+  final_data AS (
+    SELECT
+      cd.*,
+      -- total = saldo anterior + revenue - collections + paid
+      (cd.previous_balance + cd.revenue - cd.collections + cd.paid) AS total,
+
+      -- drag = previous_drag + revenue
+      (cd.previous_drag + cd.revenue) AS drag
+    FROM calculated_data cd
+  ),
+
+  -- 6) UPSERT (no tocar manuales)
   upserted_rows AS (
     INSERT INTO current_accounts (
-      current_account_id, user_id, user_name, user_number, pass, successes, claims,
-      subtotal, previous_balance, collections, paid, total, drag, leave, date,
-      created_at, edited_at, cashier_commission, bills, revenue, previous_drag
+      current_account_id,
+      user_id, user_name, user_number,
+      pass, successes, claims,
+      subtotal, previous_balance, collections, paid,
+      total, drag, leave, date,
+      created_at, edited_at,
+      cashier_commission, bills, revenue, previous_drag
     )
     SELECT
-      gen_random_uuid(), user_id, user_name, user_number, pass, successes, claims,
-      subtotal, previous_balance, collections, paid, total, drag, leave, v_date,
-      NOW(), NOW(), cashier_commission, bills, revenue, previous_drag
-    FROM calculated_data
+      gen_random_uuid(),
+      user_id, user_name, user_number,
+      pass, successes, claims,
+      subtotal, previous_balance, collections, paid,
+      total, drag, leave, v_date,
+      NOW(), NOW(),
+      cashier_commission, bills, revenue, previous_drag
+    FROM final_data
     ON CONFLICT (user_id, date) DO UPDATE SET
       user_name          = EXCLUDED.user_name,
       user_number        = EXCLUDED.user_number,
       pass               = EXCLUDED.pass,
       successes          = EXCLUDED.successes,
 
-      -- ⛔ no tocar manuales
+      -- ⛔ manuales no se pisan
       claims             = current_accounts.claims,
       collections        = current_accounts.collections,
-      paid               = current_accounts.paid,
+      paid             = current_accounts.paid,
       leave              = current_accounts.leave,
 
-      -- ✅ actualizar derivados
+      -- ✅ derivados
       subtotal           = EXCLUDED.subtotal,
       previous_balance   = EXCLUDED.previous_balance,
       total              = EXCLUDED.total,
       drag               = EXCLUDED.drag,
-      date               = EXCLUDED.date,
       edited_at          = NOW(),
       cashier_commission = EXCLUDED.cashier_commission,
       bills              = EXCLUDED.bills,
