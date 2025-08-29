@@ -12,12 +12,6 @@ export const useTickets = ({
   date?: string;
   winner?: boolean;
 }) => {
-  console.log('hook',{
-    
-  user_id,
-  date,
-  winner,
-  })
   const normalizedDate = date ?? dayjs().format('YYYY-MM-DD');
 
   return useQuery<ITicketEntityFront[]>({
