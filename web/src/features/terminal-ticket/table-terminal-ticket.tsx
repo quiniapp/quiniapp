@@ -11,8 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 
 interface TableTerminalTicketProps {
-  data: ITicketEntityFront[];
-  onTicketClick?: (ticket: any) => void;
+  data?: ITicketEntityFront[];
 }
 const TableTerminalTicket = ({ data }: TableTerminalTicketProps) => {
   const [searchParams, setSearchParams] = useSearchParams();

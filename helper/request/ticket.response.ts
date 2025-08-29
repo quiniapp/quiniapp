@@ -10,12 +10,13 @@ export type INewTicketEntity = Pick<ITicketEntityBack, 'user_id' | 'user_name' |
 export interface INewTicketBaseEntity extends ITicketEntityBase {
   bets: IBetEntityBase[];
 }
-export type IDeleteTicketEntity = Pick<ITicketEntityBack, 'ticket_id'> &
+export type IDeleteTicketEntity = Pick<ITicketEntityBack, 'ticket_number'> &
   Partial<Pick<IUserEntityBack, 'user_type' | 'user_id'>>;
 
 export type IGetTicketEntity = Partial<Pick<ITicketEntityBack, 'ticket_id' | 'ticket_number'>>;
 
 export type IGetAllTicketEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
-  Pick<ITicketEntityBack, 'date'>;
+  Pick<ITicketEntityBack, 'date' | 'winner'> & { cashier_id?: string };
 
-export type IGetAllTicketByUserEntity = Pick<ITicketEntityBack, 'date' | 'user_id'>;
+export type IGetAllTicketByUserEntity = Pick<ITicketEntityBack, 'date' | 'user_id'> &
+  Partial<Pick<ITicketEntityBack, 'winner'>>;

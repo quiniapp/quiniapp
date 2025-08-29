@@ -15,15 +15,7 @@ const createTicket = async (payload:INewTicketEntity) => {
   return res.json();
 };
 
-const deleteTicket = async (ticketId: string) => {
-  const res = await fetch(ROUTES.ticket.id(ticketId), {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Error deleting ticket');
-  return res.json();
-};
+
 
 export const useCreateTicket = () => {
   const queryClient = useQueryClient();
@@ -36,13 +28,4 @@ export const useCreateTicket = () => {
   });
 };
 
-export const useDeleteTicket = () => {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: deleteTicket,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
-    },
-  });
-};

@@ -30,12 +30,12 @@ export class TicketRepository {
 
       .select('*, bets(*, lotteries(*), schedules(*))')
       .eq('ticket_number', ticket_number)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
   }
-  async getAll({ user_id, date }: { user_id?: string; date: string }) {
+  async getAll({ user_id, date, winner }: { user_id?: string; date: string; winner: boolean }) {
     let query = supabase
       .from('tickets')
       .select('*, bets(*, lotteries(*), schedules(*))')
@@ -46,7 +46,9 @@ export class TicketRepository {
     if (user_id !== undefined) {
       query = query.eq('user_id', user_id);
     }
-
+    if (winner) {
+      query = query.is('winner', true);
+    }
     const { data, error } = await query;
     if (error) throw error;
     return data;
@@ -56,7 +58,7 @@ export class TicketRepository {
     const { data, error } = await supabase
       .from('tickets')
       .delete()
-      .eq('ticket_id', props.ticket_id);
+      .eq('ticket_number', props.ticket_number);
 
     if (error) throw new Error(error.message);
     return data;

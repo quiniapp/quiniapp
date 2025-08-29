@@ -35,4 +35,5 @@ export const ERROR_MESSAGE = {
   INVALID_ID: 'El ID no es válido',
 
   INVALID_DELETE_TIME: 'Pasaron más de 2 minutos desde la creación',
+  TICKET_NOT_FOUND: 'Ticket no encontrado',
 };

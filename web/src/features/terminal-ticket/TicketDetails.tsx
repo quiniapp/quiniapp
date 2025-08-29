@@ -8,7 +8,7 @@ import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
 const TicketDetails = () => {
   const [searchParams] = useSearchParams();
   const ticket_number = searchParams.get('ticket_number');
-  const { data } = getTicketByNumber(ticket_number);
+  const { data, isLoading } = getTicketByNumber(ticket_number);
 
   const winningBets = useMemo(() => {
     if (data)
@@ -20,12 +20,12 @@ const TicketDetails = () => {
   return (
     <Flex className={'1440:py-8 py-3 space-x-8 '}>
       <FlexCol className={'flex-1  space-y-4'}>
-        <p> Jugadas</p>
-        <TerminalTicketPlayTable bets={data?.bets} />
+        <p> Jugadas {`${ticket_number ? `ticket ${ticket_number}` : ''}`}</p>
+        <TerminalTicketPlayTable bets={data?.bets} isLoading={isLoading} />
       </FlexCol>
       <FlexCol className={'flex-1 space-y-4'}>
         <p> Aciertos</p>
-        <TerminalTicketMatchesTable bets={winningBets} />
+        <TerminalTicketMatchesTable bets={winningBets} isLoading={isLoading} />
       </FlexCol>
     </Flex>
   );

@@ -12,10 +12,10 @@ import { IBetEntityFront } from '../../../../helper/types/bet.type';
 
 interface TerminalTicketMatchesTableProps {
   bets?: IBetEntityFront[];
+  isLoading: boolean;
 }
 
-const TerminalTicketMatchesTable = ({ bets }: TerminalTicketMatchesTableProps) => {
-  const isLoading = bets === undefined || bets === null;
+const TerminalTicketMatchesTable = ({ bets, isLoading }: TerminalTicketMatchesTableProps) => {
   return (
     <>
       {isLoading ? (
@@ -44,7 +44,7 @@ const TerminalTicketMatchesTable = ({ bets }: TerminalTicketMatchesTableProps) =
               ))}
             </TableBody>
           </Table>
-          <Flex className="text-right items-end justify-end">Total Aciertos: {bets.length}</Flex>
+          <Flex className="text-right items-end justify-end">Total Aciertos: {bets?.length ??0}</Flex>
         </>
       )}
     </>
