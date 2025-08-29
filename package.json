@@ -48,9 +48,5 @@
       "eslint --fix",
       "prettier --write"
     ]
-  },
-  "dependencies": {
-    "jspdf": "^3.0.2",
-    "jspdf-autotable": "^5.0.2"
   }
 }
