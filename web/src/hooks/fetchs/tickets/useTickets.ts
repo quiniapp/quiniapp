@@ -1,28 +1,35 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes';
 import dayjs from 'dayjs';
+import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
 
-interface FetchTicketsProps {
-  date?: string;
+export const useTickets = ({
+  user_id,
+  date,
+  winner,
+}: {
   user_id?: string;
-}
+  date?: string;
+  winner?: boolean;
+}) => {
+  console.log('hook',{
+    
+  user_id,
+  date,
+  winner,
+  })
+  const normalizedDate = date ?? dayjs().format('YYYY-MM-DD');
 
-const fetchTickets = async ({ user_id, date }: FetchTicketsProps) => {
-  const res = await fetch(
-    `${ROUTES.ticket.base}${user_id ? `/user/${user_id}` : ''}?date=${date ? `${date}` : `${dayjs().format('YYYY-MM-DD')}`}`,
-    {
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    }
-  );
-  if (!res.ok) throw new Error('Error fetching tickets');
-  const { data } = await res.json();
-
-  return data.ticket;
-};
-
-export const useTickets = ({ user_id, date }: FetchTicketsProps) =>
-  useQuery({
-    queryKey: ['tickets', user_id, date],
-    queryFn: () => fetchTickets({ user_id, date }),
+  return useQuery<ITicketEntityFront[]>({
+    queryKey: ['tickets', user_id ?? null, normalizedDate, winner],
+    queryFn: async () => {
+      const res = await fetch(
+        `${ROUTES.ticket.base}?date=${normalizedDate}${user_id ? `&cashier_id=${user_id}` : ''}${winner ? `&winner=true` : ''}`,
+        { headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
+      );
+      if (!res.ok) throw new Error('Error fetching tickets');
+      const { data } = await res.json();
+      return data.ticket;
+    },
   });
+};

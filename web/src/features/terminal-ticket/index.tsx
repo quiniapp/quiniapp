@@ -7,30 +7,40 @@ import { Flex, FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';
 import HeaderSection from '@/components/header-section';
 import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
-import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket';
-import TerminalTicketPlayTable from '@/features/terminal-ticket/termina-ticket-play-table';
-import TerminalTicketMatchesTable from '@/features/terminal-ticket/terminal-ticket-matches-table';
-// @Hooks
+import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket'; // @Hooks
 
-import useTerminalTicketHook from '@/hooks/use-terminal-ticket-hook.ts';
 import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
-import { useState } from 'react';
-import TicketDetails from './TicketDetails';
 
+import TicketDetails from './TicketDetails';
+import { useSearchParams } from 'react-router-dom';
+import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket';
+import toast from 'react-hot-toast';
 
 export const TerminalTicketContent = () => {
-  const { data } = useTickets({});
-  const {
-    selectedBets,
-    winningBets,
-    filteredTickets,
-    selectedTicket,
-    handleSearchByTicketNumber,
-    handleTicketClick,
-    handleResetFilters,
-    handleChangeFilter,
-    handleDeleteTicket
-  } = useTerminalTicketHook();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const date = searchParams.get('date') ?? undefined;
+  const cashier_id = searchParams.get('cashier_id') ?? undefined;
+  const filter = searchParams.get('filter') ?? undefined;
+  const ticket_number = searchParams.get('ticket_number') ?? undefined;
+  const { data } = useTickets({
+    date: date,
+    user_id: cashier_id,
+    winner: filter === 'winner' ? true : undefined,
+  });
+  const { mutate: runDeleteTicket } = useDeleteTicket();
+
+  const handleDeleteTicket = () => {
+    runDeleteTicket(ticket_number, {
+      onSuccess: () => {
+        searchParams.delete('ticket_number');
+        setSearchParams(searchParams);
+        toast.success('Ticket eliminado correctamente');
+      },
+      onError: () => {
+        toast.error('Ocurrió un error al eliminar el ticket, intente nuevamente');
+      },
+    });
+  };
 
 
   return (
@@ -38,14 +48,10 @@ export const TerminalTicketContent = () => {
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-[16px]'}>
         <Flex className={'gap-8'}>
-          <FormHeaderFilter
-            onSearchByTicketNumber={handleSearchByTicketNumber}
-            onResetFilters={handleResetFilters}
-            onChangeFilter={handleChangeFilter}
-          />
+          <FormHeaderFilter />
           <FlexCol>
             <FlexCol>
-              <TableTerminalTicket data={filteredTickets} onTicketClick={handleTicketClick} />
+              <TableTerminalTicket data={data} />
 
               <Typography className={'text-xs'} variant={'p'}>
                 Cantidad de Tickets: {data?.length}
@@ -53,14 +59,10 @@ export const TerminalTicketContent = () => {
             </FlexCol>
           </FlexCol>
         </Flex>
-       <TicketDetails />
+        <TicketDetails />
       </FlexCol>
       <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
-        <Button
-          variant={'destructive'}
-          onClick={handleDeleteTicket}
-          disabled={!selectedTicket}
-        >
+        <Button variant={'destructive'} disabled={!ticket_number} onClick={handleDeleteTicket}>
           <TicketX /> Eliminar Ticket
         </Button>
         <Button variant={'outline'}> Cerrar </Button>

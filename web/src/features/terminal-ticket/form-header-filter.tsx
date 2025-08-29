@@ -19,34 +19,46 @@ import IsRoleCashier from '@/components/is-role-cashier';
 import { useState } from 'react';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import dayjs from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
 
-interface FormHeaderFilterProps {
-  onSearchByTicketNumber: (number: string) => void;
-  onResetFilters: () => void;
-  onChangeFilter: (value: 'all' | 'winner' | 'paid' | 'not_paid') => void;
-}
-
-const FormHeaderFilter = ({
-  onSearchByTicketNumber,
-  onResetFilters,
-  onChangeFilter,
-}: FormHeaderFilterProps) => {
+const FormHeaderFilter = () => {
   const { role } = useSessionStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: cashiers } = useUsers();
   const [inputValue, setInputValue] = useState('');
 
+  const selectValue = searchParams.get('cashier_id') ?? undefined;
+
   const handleSearch = () => {
-    onSearchByTicketNumber(inputValue.trim());
+    const params = new URLSearchParams();
+    params.set('ticket_number', inputValue.trim());
+    setSearchParams(params);
+    setInputValue('');
   };
 
   const handleReset = () => {
     setInputValue('');
-    onResetFilters();
+    const params = new URLSearchParams();
+    setSearchParams(params);
   };
 
-const handleSelectCashier = ()=>{
-
-}
+  const handleSelectCashier = (id: string) => {
+    if (searchParams.get('cashier_id') === id) searchParams.delete('cashier_id');
+    else {
+      searchParams.set('cashier_id', id);
+    }
+    setSearchParams(searchParams);
+  };
+  const handleSelectDate = (date?: string) => {
+    if (date) {
+      searchParams.set('date', date);
+      setSearchParams(searchParams);
+    }
+  };
+  const onChangeFilter = (value: string) => {
+    searchParams.set('filter', value);
+    setSearchParams(searchParams);
+  };
 
   return (
     <form>
@@ -56,14 +68,20 @@ const handleSelectCashier = ()=>{
             <FlexCol className={'space-y-4'}>
               <IsRoleCashier role={role}>
                 <Flex className={' gap-3'}>
-                  <Select value='' onValueChange={(value)=>{}}>
+                  <Select
+                    defaultValue={undefined}
+                    value={selectValue}
+                    onValueChange={(value) => {
+                      handleSelectCashier(value);
+                    }}
+                  >
                     <SelectTrigger className={'border w-full '}>
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
                       {cashiers?.map((cashier) => {
                         return (
-                          <SelectItem value="Todos" >
+                          <SelectItem key={cashier.user_id} value={cashier.user_id}>
                             {cashier.name} - {cashier.number}
                           </SelectItem>
                         );
@@ -79,7 +97,13 @@ const handleSelectCashier = ()=>{
                     <TypographyMuted label={'Fecha'} />
                   </Box>
                   <Box className={'w-[200px] overflow-hidden'}>
-                    <SelectDayToSearch onDayChange={() => {}} className={'!w-[200px]'} toDate={dayjs().toDate()}/>
+                    <SelectDayToSearch
+                      onDayChange={(value) => {
+                        handleSelectDate(value);
+                      }}
+                      className={'!w-[200px]'}
+                      toDate={dayjs().toDate()}
+                    />
                   </Box>
                 </Flex>
                 <Flex className={'w-[150px]'}>

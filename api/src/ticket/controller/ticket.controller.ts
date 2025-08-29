@@ -34,7 +34,11 @@ export class TicketController {
       } else if (props.ticket_number) {
         ticket = await this.repository.getByNumber(props.ticket_number);
       }
-
+      if (!ticket) {
+        // lanzar error controlado o devolver null y que router lo traduzca
+        const err = new Error(ERROR_MESSAGE.TICKET_NOT_FOUND);
+        throw err;
+      }
       return parseTicket(ticket);
     } catch (error) {
       console.error('Get error:', error);
@@ -46,9 +50,17 @@ export class TicketController {
     let tickets;
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
-        tickets = await this.repository.getAll({ user_id: props.user_id, date: props.date });
+        tickets = await this.repository.getAll({
+          user_id: props.user_id,
+          date: props.date,
+          winner: props.winner,
+        });
       } else {
-        tickets = await this.repository.getAll({ date: props.date });
+        tickets = await this.repository.getAll({
+          date: props.date,
+          user_id: props?.cashier_id,
+          winner: props.winner,
+        });
       }
 
       return tickets.map((ticket) => {
@@ -62,7 +74,7 @@ export class TicketController {
 
   delete = async (props: IDeleteTicketEntity) => {
     try {
-      const ticket = await this.repository.getById(props.ticket_id);
+      const ticket = await this.repository.getByNumber(props.ticket_number);
       if (props.user_type === USER_TYPE.CASHIER) {
         if (dayjs().diff(ticket.created_at, 'minutes') > 2)
           throw new Error(ERROR_MESSAGE.INVALID_DELETE_TIME);
@@ -77,7 +89,11 @@ export class TicketController {
   };
   getAllByUser = async (props: IGetAllTicketByUserEntity): Promise<ITicketEntityFront[]> => {
     try {
-      const tickets = await this.repository.getAll({ user_id: props.user_id!, date: props.date });
+      const tickets = await this.repository.getAll({
+        user_id: props.user_id!,
+        date: props.date,
+        winner: props?.winner ?? false,
+      });
 
       return tickets.map((ticket) => {
         return parseTicket(ticket);

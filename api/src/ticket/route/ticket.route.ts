@@ -139,8 +139,7 @@ export class TicketRouter {
   };
   private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date } = req.query;
-    const { ticket_number } = req.query;
+    const { date, ticket_number, cashier_id, winner } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -151,6 +150,7 @@ export class TicketRouter {
       res.status(500).json(response);
       return;
     }
+
     try {
       let ticket;
       if (typeof ticket_number === 'string') {
@@ -173,6 +173,10 @@ export class TicketRouter {
           user_type: user.user.user_type,
           user_id: user.user.user_id,
           date: date,
+          ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
+          ...(typeof winner === 'string' && winner === 'true'
+            ? { winner: true }
+            : { winner: false }),
         });
       }
 
@@ -185,13 +189,14 @@ export class TicketRouter {
       return;
     } catch (error) {
       console.error(error);
+
       if (error instanceof Error) {
         let statusCode = 500;
         if (
           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+          error.message === ERROR_MESSAGE.TICKET_NOT_FOUND
         ) {
-          statusCode = 401;
+          statusCode = 404;
         }
 
         const response: APIResponse<null> = {
@@ -266,7 +271,7 @@ export class TicketRouter {
   }; */
 
   private deleteTicketHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { id: ticket_id } = req.params;
+    const { id: ticket_number } = req.params;
     const { user } = req;
     if (!user?.user) {
       const response: APIResponse<null> = {
@@ -280,11 +285,12 @@ export class TicketRouter {
     }
     try {
       await this.controller.delete({
-        ticket_id,
+        ticket_number,
         user_type: user?.user?.user_type,
         user_id: user.user.user_id,
       });
-      res.status(200);
+      res.sendStatus(200);
+      return;
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {

@@ -9,7 +9,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const ticketBase = (ticket: INewTicketEntity): INewTicketBaseEntity => {
-  const timestamp = dayjs().toISOString();
+  const timestamp = dayjs().tz('America/Argentina/Buenos_Aires');
   const ticket_id = uuidv4();
   const ticket_number = dayjs().tz('America/Argentina/Buenos_Aires').format('YYYYMMDDHHmmssSSS');
 
@@ -20,13 +20,14 @@ export const ticketBase = (ticket: INewTicketEntity): INewTicketBaseEntity => {
     ticket_id: ticket_id,
     total: total,
     ticket_number: ticket_number,
-    bets: ticket.bets.map((bet) => betBase(bet, ticket_id)),
+    bets: ticket.bets.map((bet) => betBase(bet, ticket_id, ticket_number)),
     winner: false,
     paid: false,
     deleted_at: null,
-    created_at: timestamp,
+    created_at: timestamp.toISOString(),
     deleted_by: null,
     total_prize: 0,
     hits: 0,
+    date: timestamp.format('YYYY-MM-DD'),
   };
 };

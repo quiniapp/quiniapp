@@ -1,13 +1,20 @@
-import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table';
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableRow,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { Flex } from '@/components/flex';
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { IBetEntityFront } from '../../../../helper/types/bet.type';
 interface TerminalTicketPlayTableProps {
   bets?: IBetEntityFront[];
+  isLoading?: boolean;
 }
 
-const TerminalTicketPlayTable = ({ bets }: TerminalTicketPlayTableProps) => {
-  const isLoading = bets === undefined || bets === null;
+const TerminalTicketPlayTable = ({ bets, isLoading }: TerminalTicketPlayTableProps) => {
   return (
     <>
       {isLoading ? (
@@ -36,7 +43,9 @@ const TerminalTicketPlayTable = ({ bets }: TerminalTicketPlayTableProps) => {
               ))}
             </TableBody>
           </Table>
-          <Flex className="text-right items-end justify-end">Total Jugadas: {bets.length}</Flex>
+          <Flex className="text-right items-end justify-end">
+            Total Jugadas: {bets?.length ?? 0}
+          </Flex>
         </>
       )}
     </>
