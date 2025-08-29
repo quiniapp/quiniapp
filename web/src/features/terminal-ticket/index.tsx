@@ -32,8 +32,10 @@ export const TerminalTicketContent = () => {
   const handleDeleteTicket = () => {
     runDeleteTicket(ticket_number, {
       onSuccess: () => {
-        searchParams.delete('ticket_number');
-        setSearchParams(searchParams);
+        const next = new URLSearchParams(searchParams); // ✅ crear nuevo
+        next.delete('ticket_number');
+        setSearchParams(next, { replace: true }); // ✅ asegura navegación sin push
+
         toast.success('Ticket eliminado correctamente');
       },
       onError: () => {
@@ -41,7 +43,6 @@ export const TerminalTicketContent = () => {
       },
     });
   };
-
 
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
