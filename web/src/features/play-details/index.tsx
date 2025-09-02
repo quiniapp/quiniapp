@@ -17,6 +17,7 @@ import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionar
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
+import { CloudCog } from 'lucide-react';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -131,6 +132,8 @@ const PlayDetailsContent = () => {
     }
   }, [userNumber, data]);
 
+  const isEnabledCreateBetByAdmin = user?.user_type!==USER_TYPE.CASHIER && !!cashier
+console.log(isEnabledCreateBetByAdmin)
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
       <HeaderPlayDetail cashier={cashier} setUserNumber={setUserNumber} userNumber={userNumber} />

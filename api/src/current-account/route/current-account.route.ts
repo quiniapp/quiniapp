@@ -75,7 +75,7 @@ export class CurrentAccountRouter {
 
   private calculateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date } = req.query;
+    const { date, leave } = req.query;
 
     if (!user?.user) {
       const response: APIResponse<null> = {
@@ -89,7 +89,10 @@ export class CurrentAccountRouter {
     }
 
     try {
-      const currentaccount = await this.controller.calculateCurrentAccountHandler(date as string);
+      const currentaccount = await this.controller.calculateCurrentAccountHandler(
+        date as string,
+        typeof leave === 'string' && leave === 'true'
+      );
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
           currentaccount: currentaccount,
@@ -123,6 +126,7 @@ export class CurrentAccountRouter {
     const { user } = req;
     const { id: current_account_id } = req.params;
     const { updateCurrentAccount } = req.body;
+    const { leave } = req.query;
     if (!user?.user || !updateCurrentAccount) {
       const response: APIResponse<null> = {
         error: {
@@ -146,9 +150,13 @@ export class CurrentAccountRouter {
       return;
     } */
     try {
-      const currentaccount = await this.controller.updateCurrentAccountHandler(current_account_id, {
-        ...updateCurrentAccount,
-      });
+      const currentaccount = await this.controller.updateCurrentAccountHandler(
+        current_account_id,
+        {
+          ...updateCurrentAccount,
+        },
+        typeof leave === 'string' && leave === 'true'
+      );
 
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
@@ -234,13 +242,16 @@ export class CurrentAccountRouter {
   };
   private bulkUpdateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date } = req.query; // DD-MM-YYYY
-    const { updateCurrentAccount } = req.body as {
+    const { date, leave } = req.query; // DD-MM-YYYY
+    const leaveFlag = typeof leave === 'string' && leave.toLowerCase() === 'true';
+
+    const body = req.body as {
       updateCurrentAccount?: Record<
         string,
         { claims?: number; paid?: number; collections?: number }
       >;
     };
+    const updateCurrentAccount = body?.updateCurrentAccount;
 
     if (!user?.user) {
       const response: APIResponse<null> = {
@@ -250,55 +261,73 @@ export class CurrentAccountRouter {
       return;
     }
 
-    // Validaciones básicas
+    // Validación de fecha si se va a calcular leave (o siempre si querés)
+    if (!date || typeof date !== 'string') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: 'Query param "date" (DD-MM-YYYY) es requerido',
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Validar formato de updateCurrentAccount SOLO si viene y no es objeto
     if (
-      !updateCurrentAccount ||
-      typeof updateCurrentAccount !== 'object' ||
-      Array.isArray(updateCurrentAccount)
+      updateCurrentAccount !== undefined &&
+      (typeof updateCurrentAccount !== 'object' || Array.isArray(updateCurrentAccount))
     ) {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
-          message: 'Body must include "updateCurrentAccount" as an object',
+          message: 'Body must include "updateCurrentAccount" as an object when provided',
         },
       };
       res.status(400).json(response);
       return;
     }
 
-    const entries = Object.entries(updateCurrentAccount); // [ [id, payload], ... ]
-    if (entries.length === 0) {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: '"updateCurrentAccount" must not be empty',
-        },
-      };
-      res.status(400).json(response);
-      return;
-    }
+    const entries = updateCurrentAccount ? Object.entries(updateCurrentAccount) : [];
 
     try {
-      const results = await Promise.allSettled(
-        entries.map(([id, payload]) =>
-          this.controller.updateCurrentAccountHandler(id, { ...payload })
-        )
-      );
+      let updated: ICurrentAccountEntityFront[] = [];
+      let failed: Array<{ id: string; error: string }> = [];
 
-      const updated: ICurrentAccountEntityFront[] = [];
-      const failed: Array<{ id: string; error: string }> = [];
+      if (entries.length > 0) {
+        const results = await Promise.allSettled(
+          entries.map(([id, payload]) =>
+            this.controller.updateCurrentAccountHandler(
+              id,
+              { ...payload },
+              leaveFlag // pasar flag por si también querés calcular leave en cada update
+            )
+          )
+        );
 
-      results.forEach((r, idx) => {
-        const [id] = entries[idx];
-        if (r.status === 'fulfilled') {
-          updated.push(r.value);
-        } else {
-          const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
-          failed.push({ id, error: reason });
-        }
-      });
+        results.forEach((r, idx) => {
+          const [id] = entries[idx];
+          if (r.status === 'fulfilled') updated.push(r.value);
+          else {
+            const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+            failed.push({ id, error: reason });
+          }
+        });
+      } else if (!leaveFlag) {
+        // No hay updates y no se pidió leave -> es un bad request
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: 'Debe enviar "updateCurrentAccount" o leave=true',
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
 
-      await this.controller.calculateCurrentAccountHandler(String(date));
+      // Ejecutar el cálculo masivo del día (siempre que llegó date; leaveFlag decide si calcula leave)
+      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag);
+
       const statusCode = failed.length ? 207 : 200;
       const response: APIResponse<{
         updated: ICurrentAccountEntityFront[];
@@ -312,24 +341,19 @@ export class CurrentAccountRouter {
       return;
     } catch (error) {
       console.error(error);
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
-
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      let statusCode = 500;
+      if (
+        message === ERROR_MESSAGE.USER_NOT_FOUND ||
+        message === ERROR_MESSAGE.INVALID_CREDENTIALS
+      ) {
+        statusCode = 401;
       }
+      const response: APIResponse<null> = {
+        error: { error: ERROR_TYPE.AUTH_ERROR, message },
+      };
+      res.status(statusCode).json(response);
+      return;
     }
   };
 }

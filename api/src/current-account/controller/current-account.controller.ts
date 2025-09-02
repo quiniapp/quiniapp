@@ -12,12 +12,15 @@ import {
   ICurrentAccountEntityFront,
 } from '@helper/types/current_account.type';
 
+type AllowedManualKeys = 'claims' | 'paid' | 'collections' | 'bills';
+
+type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys>>;
 export class CurrentAccountController {
   private repository = new CurrentAccountRepository();
 
-  calculateCurrentAccountHandler = async (date?: string) => {
+  calculateCurrentAccountHandler = async (date?: string, leave?: boolean) => {
     try {
-      const results = await this.repository.calculateCurrentAccountHandler(date);
+      const results = await this.repository.calculateCurrentAccountHandler(date, leave);
 
       return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
     } catch (error) {
@@ -50,12 +53,24 @@ export class CurrentAccountController {
   };
   updateCurrentAccountHandler = async (
     current_account_id: string,
-    props: IUpdateCurrentAccountEntity
+    props: IUpdateCurrentAccountEntity,
+    leave?: boolean
   ): Promise<ICurrentAccountEntityFront> => {
     try {
-      const currentAccount = await this.repository.updateCurrentAccountHandler(current_account_id, {
-        ...props,
-      });
+      // Construye payload solo con las keys permitidas y definidas
+      const payload: UpdatePayload = {};
+      if (props.claims !== undefined) payload.claims = Number(props.claims);
+      if (props.paid !== undefined) payload.paid = Number(props.paid);
+      if (props.collections !== undefined) payload.collections = Number(props.collections);
+      if (props.bills !== undefined) payload.bills = Number(props.bills);
+
+      // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
+
+      const currentAccount = await this.repository.updateCurrentAccountHandler(
+        current_account_id,
+        payload,
+        leave
+      );
 
       return parseCurrentAccount(currentAccount);
     } catch (error) {

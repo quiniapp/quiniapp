@@ -8,7 +8,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export class CurrentAccountRepository {
-  async calculateCurrentAccountHandler(date?: string) {
+  async calculateCurrentAccountHandler(date?: string, leave?: boolean) {
     // Si la fecha no se ha proporcionado (es undefined o null)
     let dateToProcess: string;
     if (!date) {
@@ -21,6 +21,7 @@ export class CurrentAccountRepository {
 
     const { data, error } = await supabase.rpc('calculate_current_account', {
       p_date_text: dateToProcess,
+      p_calculate_leave: leave,
     });
     if (error) throw error;
     return data;
@@ -72,15 +73,14 @@ export class CurrentAccountRepository {
 
   async updateCurrentAccountHandler(
     current_account_id: string,
-    props: IUpdateCurrentAccountEntity
+    props: IUpdateCurrentAccountEntity,
+    leave?: boolean
   ) {
-    const timestamp = dayjs().toISOString();
-    const { data, error } = await supabase
-      .from('current_accounts')
-      .update({ ...props, edited_at: timestamp })
-      .eq('current_account_id', current_account_id)
-      .select('*')
-      .single();
+    const { data, error } = await supabase.rpc('update_current_account_recompute', {
+      p_current_account_id: current_account_id,
+      p_props: props,
+      p_calculate_leave: leave,
+    });
     if (error) throw error;
     return data;
   }

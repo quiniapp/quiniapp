@@ -16,6 +16,10 @@ import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 import { IBetEntityFront } from '../../../../helper/types/bet.type';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
 import { useUpdateCurrentAcoountByUser } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutnByUser';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
+import { useState } from 'react';
+import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 
 interface UserCurrentAccountModalProps {
   isOpen: boolean;
@@ -29,6 +33,7 @@ const UserCurrentAccountModal = ({
   currentAccount,
 }: UserCurrentAccountModalProps) => {
   if (!isOpen) return null;
+  const [calcLeave, setCalcLeave] = useState<boolean>(false);
   const methods = useForm<ICurrentAccountEntityFront>({
     values: currentAccount
       ? { ...currentAccount }
@@ -56,8 +61,8 @@ const UserCurrentAccountModal = ({
         },
     mode: 'onChange',
   });
-
-  const { handleSubmit } = methods;
+  const { data: cashier } = useUsersByNumber(currentAccount?.user_number);
+  const { handleSubmit, setValue, getValues } = methods;
   const { data: bets, isLoading: isLoadingBets } = useBets({
     date: currentAccount?.date ?? '',
     cashier_id: currentAccount?.user_id ?? '',
@@ -74,8 +79,17 @@ const UserCurrentAccountModal = ({
       date: currentAccount?.date ?? '',
       current_account_id: currentAccount?.current_account_id ?? '',
       updateCurrentAccount: values,
+      leave: calcLeave,
     });
     onClose();
+  };
+  const handleCalcLeave = (enable: boolean) => {
+    if (enable) {
+      setValue('leave', 0);
+    } else {
+      setValue('leave', getValues('drag')*cashier?.fee_plus/100);
+    }
+    setCalcLeave(!enable);
   };
 
   return (
@@ -144,6 +158,10 @@ const UserCurrentAccountModal = ({
                 label="Arrastre nuevo"
                 type="number"
               />
+              <Flex className="items-center gap-1 sm:gap-3" onClick={() => {}}>
+                <Checkbox checked={calcLeave} onClick={() => handleCalcLeave(calcLeave)} />
+                <Label>Liquidar deje</Label>
+              </Flex>
               <LabelInputForm<ICurrentAccountEntityFront> name="leave" label="Deje" type="number" />
             </FlexCol>
           </Flex>
