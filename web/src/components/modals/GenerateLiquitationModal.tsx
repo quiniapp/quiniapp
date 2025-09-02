@@ -20,6 +20,8 @@ import { Input } from '../ui/input';
 import { useBulkUpdateCurrentAccount } from '@/hooks/mutations/current-account/useBulkUpdateCurrentAccount';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
 
 interface GenerateLiquitationModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export interface editPayloadObject {
 
 const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalProps) => {
   if (!isOpen) return null;
+  const [calcLeave, setCalcLeave] = useState<boolean>(false);
   const [editPayload, setEditPayload] = useState<Map<string, editPayloadObject>>(new Map());
   const [searchParams] = useSearchParams();
   const { data, isLoading, isPending } = useGetCurrentAccount(searchParams.get('date'));
@@ -56,6 +59,7 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
       {
         updateCurrentAccount: editPayload, // Map<string, editPayloadObject>
         date: data?.[0].date ?? '',
+        leave: calcLeave,
       },
       {
         onSuccess: () => {
@@ -95,6 +99,7 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
       }
     );
   }, [data]);
+
   return (
     <Modal
       title={`Generar liquidaciones del día ${dayjs(data?.[0].date).format('DD-MM-YYYY')}`}
@@ -102,6 +107,16 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
       onClose={onClose}
       className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
     >
+      <Flex
+        className="gap-1 sm:gap-3"
+        onClick={() => {
+          setCalcLeave((prev) => !prev);
+        }}
+      >
+        <Checkbox checked={calcLeave} />
+
+        <Label>Liquidar todos los dejes</Label>
+      </Flex>
       <FlexCol className="p-1 sm:p-3 gap-1 sm:gap-3 items-center">
         <Table className="overflow-hidden rounded-sm">
           <TableHeader className="border overflow-hidden rounded-sm">

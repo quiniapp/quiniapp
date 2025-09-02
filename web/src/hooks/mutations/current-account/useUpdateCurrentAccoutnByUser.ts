@@ -6,18 +6,20 @@ type UpdateVars = {
   date: string;
   current_account_id: string;
   updateCurrentAccount: IUpdateCurrentAccountEntity;
+  leave?: boolean;
 };
 
 const updateCurrentAccountByUser = async ({
   date,
   current_account_id,
   updateCurrentAccount,
+  leave,
 }: UpdateVars): Promise<void> => {
   if (!date || !current_account_id) {
     throw new Error('Faltan parámetros: "date" y "user_id" son requeridos.');
   }
 
-  const url = `${ROUTES.current_account.id(current_account_id)}?date=${encodeURIComponent(date)}`;
+  const url = `${ROUTES.current_account.id(current_account_id)}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
 
   const res = await fetch(url, {
     method: 'PUT',

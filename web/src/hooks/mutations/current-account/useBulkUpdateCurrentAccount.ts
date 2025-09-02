@@ -5,6 +5,7 @@ import { editPayloadObject } from '@/components/modals/GenerateLiquitationModal'
 type BulkVars = {
   updateCurrentAccount: Map<string, editPayloadObject>;
   date: string; // en formato DD-MM-YYYY
+  leave?: boolean;
 };
 
 type BulkResult = {
@@ -12,14 +13,16 @@ type BulkResult = {
   failed: Array<{ id: string; error: string }>;
 };
 
-async function bulkUpdateCurrentAccount({ updateCurrentAccount, date }: BulkVars): Promise<BulkResult> {
-  if (!updateCurrentAccount.size) return { updated: [], failed: [] };
-
-  const url = `${ROUTES.current_account.bulk}?date=${encodeURIComponent(date)}`;
+async function bulkUpdateCurrentAccount({
+  updateCurrentAccount,
+  date,
+  leave,
+}: BulkVars): Promise<BulkResult> {
+  
+  const url = `${ROUTES.current_account.bulk}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
   const body = {
     updateCurrentAccount: Object.fromEntries(updateCurrentAccount), // { [id]: {claims, paid, collections} }
   };
-
   const res = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -28,9 +31,11 @@ async function bulkUpdateCurrentAccount({ updateCurrentAccount, date }: BulkVars
   });
 
   // 200 o 207 entran como ok, pero queremos ver si hubo fallos parciales
-  const json = await res.json().catch(() => ({} as any));
+  const json = await res.json().catch(() => ({}) as any);
   if (!res.ok) {
-    throw new Error(`Error updating current-account: ${typeof json === 'object' ? JSON.stringify(json) : await res.text()}`);
+    throw new Error(
+      `Error updating current-account: ${typeof json === 'object' ? JSON.stringify(json) : await res.text()}`
+    );
   }
 
   // El backend responde { data: { updated, failed } }

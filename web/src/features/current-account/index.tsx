@@ -14,10 +14,9 @@ import { USER_TYPE } from '../../../../helper/types/user.type';
 import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 import React, { Suspense, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ICurrentAccountEntityFront } from '../../../../helper/types/current_account.type';
 import { downloadCurrentAccountTablePDF } from '../../../helper/function/printLiquidationAdmin';
 import { printUserSlipPDF } from '../../../helper/function/printLiquidationCashier';
-import { betsKey, fetchBets, useBets } from '@/hooks/fetchs/plays/useBets';
+import { betsKey, fetchBets } from '@/hooks/fetchs/plays/useBets';
 import {
   currentAccountKey,
   fetchCurrentAccount,
@@ -32,10 +31,7 @@ const CurrentAccountContent = () => {
   const { mutate } = useUpdateCurrentAcoount();
   const [printing, setPrinting] = useState(false);
   const date = searchParams.get('date'); // puede ser null: backend devuelve la última
-  const currentAccounts = queryClient.getQueryData<ICurrentAccountEntityFront[]>([
-    'getCurrentAccount',
-    date,
-  ]);
+
   const handleUpdateCurrentAccount = () => {
     mutate(searchParams.get('date'), {
       onSuccess: () => {
