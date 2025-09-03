@@ -17,7 +17,6 @@ import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionar
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
-import { CloudCog } from 'lucide-react';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -79,7 +78,7 @@ const PlayDetailsContent = () => {
       {
         onSuccess: (res) => {
           if (user?.user_type === USER_TYPE.CASHIER) {
-            makeTicketPdf({ bets: bets, ticket: res.data.ticket, cashier_number: cashier?.number });
+            makeTicketPdf({ bets: bets, ticket: res.data.ticket, cashier_number: user?.number });
           }
           setBets([]);
           setPartialAmount(0);
