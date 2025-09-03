@@ -126,13 +126,15 @@ const PlayDetailsContent = () => {
   };
 
   useEffect(() => {
+    if (!userNumber) setCashier(undefined);
     if (data) {
       setCashier(data);
     }
   }, [userNumber, data]);
 
-  const isEnabledCreateBetByAdmin = user?.user_type!==USER_TYPE.CASHIER && !!cashier
-console.log(isEnabledCreateBetByAdmin)
+  const isEnabledCreateBetByAdmin =
+    (user?.user_type !== USER_TYPE.CASHIER && !!cashier) || user?.user_type === USER_TYPE.CASHIER;
+
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
       <HeaderPlayDetail cashier={cashier} setUserNumber={setUserNumber} userNumber={userNumber} />
@@ -145,7 +147,7 @@ console.log(isEnabledCreateBetByAdmin)
         setLotteries={setLotteries}
         schedules={schedules}
         setSchedules={setSchedules}
-        isEnabled={isEnabledCreateBet}
+        isEnabled={isEnabledCreateBet && isEnabledCreateBetByAdmin}
         setIsEnabledCreateBet={setIsEnabledCreateBet}
       />
       <PlayDetailGameTable
@@ -160,7 +162,7 @@ console.log(isEnabledCreateBetByAdmin)
         handleResetBets={handleResetBets}
         onDeleteSelected={handleDeleteSelectedBets}
         hasSelection={selectedIndexes.length > 0}
-        isEnabled={isEnabledCreateBet}
+        isEnabled={isEnabledCreateBet && isEnabledCreateBetByAdmin}
       />
     </FlexCol>
   );
