@@ -208,8 +208,18 @@ interface MakeTicketPdfProps{
   ticket: ITicketEntityFront, bets: IBetTable[], cashier_number?:number
 }
 
+function addFeedLines(lines: string[], extraMm: number, lineHeightMm: number) {
+  // cuántas líneas agregar para alcanzar ~extraMm
+  const extraLines = Math.ceil(extraMm / lineHeightMm);
+  for (let i = 0; i < extraLines; i++) {
+    // guiones o vacío: elegí lo que prefieras
+    lines.push('-'.repeat(WIDTH));
+  }
+  return lines;
+}
+
 export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
-  const lines = buildTicketLines(
+  let lines = buildTicketLines(
     {
       user_name: cashier_number,
       ticket_number: ticket.ticket_number,
@@ -219,26 +229,25 @@ export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfPro
     bets
   );
 
-  // Config de ticket tipo rollo
-  const pageWidthMm = 58;      // ó 72, según tu impresora
+  const pageWidthMm = 58;
   const marginMm = 2;
   const topOffsetMm = marginMm + 3;
   const lineHeightMm = 4.5;
 
-  // Altura necesaria para TODAS las líneas (incluye márgenes)
-  const contentHeightMm = lines.length > 0 ? (lines.length - 1) * lineHeightMm : 0;
+  // 👇 Agregamos 1.5 cm en “líneas reales” para forzar feed
+  lines = addFeedLines(lines, 15, lineHeightMm);
+
+  const contentHeightMm = lines.length ? (lines.length - 1) * lineHeightMm : 0;
   const pageHeightMm = topOffsetMm + contentHeightMm + marginMm;
 
-  // Hoja con alto dinámico
   const doc = new jsPDF({
     unit: 'mm',
-    format: [pageWidthMm, Math.max(pageHeightMm, 40)], // 40mm mínimo para no tener PDFs vacíos
+    format: [pageWidthMm, Math.max(pageHeightMm, 40)],
   });
 
   doc.setFont('courier', 'normal');
   doc.setFontSize(8);
 
-  // Dibujo de líneas
   lines.forEach((text, i) => {
     const y = topOffsetMm + i * lineHeightMm;
     doc.text(text, marginMm, y);
@@ -246,4 +255,5 @@ export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfPro
 
   doc.save(`ticket-${ticket.ticket_number}.pdf`);
 }
+
 

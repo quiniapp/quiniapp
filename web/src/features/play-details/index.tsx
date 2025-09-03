@@ -50,7 +50,7 @@ const PlayDetailsContent = () => {
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
-    const newBets: INewBetEntity[] = bets.flatMap((bet) =>
+    const newBets: INewBetEntity[] = bets.reverse().flatMap((bet) =>
       bet.scheduleLottery.flatMap((schedLot) =>
         schedLot.lotteries.map((lot) => ({
           number: bet.number,
@@ -78,7 +78,7 @@ const PlayDetailsContent = () => {
       {
         onSuccess: (res) => {
           if (user?.user_type === USER_TYPE.CASHIER) {
-            makeTicketPdf({ bets: bets, ticket: res.data.ticket, cashier_number: user?.number });
+            makeTicketPdf({ bets: bets.reverse(), ticket: res.data.ticket, cashier_number: user?.number });
           }
           setBets([]);
           setPartialAmount(0);
