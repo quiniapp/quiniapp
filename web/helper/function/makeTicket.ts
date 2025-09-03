@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '../../../helper/types/ticket.type';
-import { IBetTable } from '@/features/play-details';
+import { IBetTable, ILotterySchedule } from '@/features/play-details';
 import { betPlaceDictionary } from '../../../helper/functions/betPlaceDictionary';
 
 // ======= width y utilidades base =======
@@ -9,7 +9,38 @@ const WIDTH = 32;
 const LINE = '='.repeat(WIDTH);
 
 const pad = (s: string) => (s.length > WIDTH ? s.slice(0, WIDTH) : s.padEnd(WIDTH, ' '));
+function comboKey(scheduleLottery: ILotterySchedule[]): string {
+  // Normaliza: ordena por schedule.id y por lottery.id para que combos iguales den la misma key
+  const parts = scheduleLottery
+    .map(sl => ({
+      sid: String((sl.schedule as any).id ?? sl.schedule.name),
+      sname: sl.schedule.name,
+      lids: sl.lotteries.map(l => String((l as any).id ?? l.name)).sort(),
+      lnames: sl.lotteries.map(l => l.name).sort(),
+    }))
+    .sort((a, b) => a.sid.localeCompare(b.sid))
+    .map(p => `${p.sid}:${p.lids.join(',')}`);
+  return parts.join('|');
+}
 
+type ComboHeader = Array<{ scheduleName: string; lotteryName: string }>;
+
+function comboHeader(scheduleLottery: ILotterySchedule[]): ComboHeader {
+  // “En:” + una línea por cada (Lottery - Schedule), como en la imagen
+  const rows: ComboHeader = [];
+  for (const sl of scheduleLottery) {
+    for (const lot of sl.lotteries) {
+      rows.push({ scheduleName: sl.schedule.name, lotteryName: lot.name });
+    }
+  }
+  // orden estable por lottery y luego schedule (para que no “salte” el orden)
+  rows.sort((a, b) =>
+    a.lotteryName === b.lotteryName
+      ? a.scheduleName.localeCompare(b.scheduleName)
+      : a.lotteryName.localeCompare(b.lotteryName)
+  );
+  return rows;
+}
 // word-wrap simple que mantiene palabras enteras
 function wrapWords(text: string, width = WIDTH): string[] {
   const out: string[] = [];
@@ -91,37 +122,80 @@ type Ticket = {
   total: number;
 };
 
+function formatEnBlock(rows: ComboHeader): string[] {
+  // Primera línea: "En:"
+  const out: string[] = [pad('En:')];
+  for (const r of rows) {
+    // Ej: "Nacional - noche"
+    const line = `${r.lotteryName} - ${r.scheduleName}`;
+    out.push(pad(line));
+  }
+  return out;
+}
+// ======= NUEVA buildTicketLines agrupada =======
 function buildTicketLines(ticket: Ticket, bets: IBetTable[]): string[] {
   const lines: string[] = [];
   lines.push(LINE);
   lines.push(pad(`Usuario: ${ticket.user_name}`));
   lines.push(pad(`Ticket: ${ticket.ticket_number}`));
-  // formateá la fecha antes si usás dayjs, acá va crudo:
   lines.push(pad(`Fecha: ${ticket.date}`));
   lines.push(pad(`Hora: ${dayjs().format('HH:mm')}`));
   lines.push(LINE);
 
-  for (const bet of bets) {
-    // 1) una o varias líneas "En: schedule - lot1, lot2"
-    for (const sl of bet.scheduleLottery) {
-      const lotNames = sl.lotteries.map((l) => l.name);
-      lines.push(formatEnLine(sl.schedule.name, lotNames));
-    }
-    // 2) línea del número principal alineada por unidades
-    lines.push(
-      formatNumberLine(
-        `${bet.number}${bet.with?`-${bet.with}`:''}`,
-        bet.amount,
-        `${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`,
-        { numWidth: 10 }
-      )
-    );
+  // 1) Agrupar por combinación completa de scheduleLottery
+  type Group = {
+    key: string;
+    header: ComboHeader;
+    items: IBetTable[];
+  };
+  const groupsMap = new Map<string, Group>();
 
-    // separador fino entre apuestas
+  for (const bet of bets) {
+    const key = comboKey(bet.scheduleLottery);
+    if (!groupsMap.has(key)) {
+      groupsMap.set(key, {
+        key,
+        header: comboHeader(bet.scheduleLottery),
+        items: [],
+      });
+    }
+    groupsMap.get(key)!.items.push(bet);
+  }
+
+  // 2) Orden sugerido de grupos: por primer “Lottery - Schedule” del header
+  const groups = Array.from(groupsMap.values()).sort((g1, g2) => {
+    const a = g1.header[0] ?? { lotteryName: '', scheduleName: '' };
+    const b = g2.header[0] ?? { lotteryName: '', scheduleName: '' };
+    return a.lotteryName === b.lotteryName
+      ? a.scheduleName.localeCompare(b.scheduleName)
+      : a.lotteryName.localeCompare(b.lotteryName);
+  });
+
+  // 3) Render de cada grupo
+  for (const g of groups) {
+    // Bloque “En: …”
+    lines.push(...formatEnBlock(g.header));
+    lines.push(''); // línea en blanco fina como separador visual
+
+    // Números (uno por línea). Si quisieras compactar “10-20-30…” en una sola,
+    // podemos hacerlo luego; por ahora, uno por línea como en tu foto de abajo.
+    for (const bet of g.items) {
+      lines.push(
+        formatNumberLine(
+          `${bet.number}${bet.with ? `-${bet.with}` : ''}`,
+          bet.amount,
+          `${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`.trim(),
+          { numWidth: 10 }
+        )
+      );
+      lines.push(''); // pequeño espaciado entre números del mismo grupo
+    }
+
+    // separador entre grupos
     lines.push('-'.repeat(WIDTH));
   }
 
-  // pie de ticket
+  // 4) Pie
   lines.push(LINE);
   lines.push(pad(`Total: $${ticket.total}`));
   lines.push(LINE);
@@ -134,7 +208,7 @@ interface MakeTicketPdfProps{
   ticket: ITicketEntityFront, bets: IBetTable[], cashier_number?:number
 }
 
-export function makeTicketPdf({ticket, bets, cashier_number}:MakeTicketPdfProps) {
+export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
   const lines = buildTicketLines(
     {
       user_name: cashier_number,
@@ -145,21 +219,31 @@ export function makeTicketPdf({ticket, bets, cashier_number}:MakeTicketPdfProps)
     bets
   );
 
-  // Tamaño exacto según contenido
+  // Config de ticket tipo rollo
+  const pageWidthMm = 58;      // ó 72, según tu impresora
   const marginMm = 2;
-  const lineHeightMm = 4.5;                    // un poco más compacto
+  const topOffsetMm = marginMm + 3;
+  const lineHeightMm = 4.5;
 
-  // 👉 usar el alto dinámico acá
-  const doc = new jsPDF();
+  // Altura necesaria para TODAS las líneas (incluye márgenes)
+  const contentHeightMm = lines.length > 0 ? (lines.length - 1) * lineHeightMm : 0;
+  const pageHeightMm = topOffsetMm + contentHeightMm + marginMm;
+
+  // Hoja con alto dinámico
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: [pageWidthMm, Math.max(pageHeightMm, 40)], // 40mm mínimo para no tener PDFs vacíos
+  });
 
   doc.setFont('courier', 'normal');
   doc.setFontSize(8);
 
-  let y = marginMm + 3;                        // leve offset visual
-  lines.forEach((text, i) => doc.text(text, marginMm, y + i * lineHeightMm));
-
-  // Si querés lanzar diálogo directo:
-  // doc.autoPrint(); doc.output('dataurlnewwindow');
+  // Dibujo de líneas
+  lines.forEach((text, i) => {
+    const y = topOffsetMm + i * lineHeightMm;
+    doc.text(text, marginMm, y);
+  });
 
   doc.save(`ticket-${ticket.ticket_number}.pdf`);
 }
+
