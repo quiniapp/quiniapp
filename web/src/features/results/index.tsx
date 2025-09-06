@@ -37,7 +37,7 @@ const ResultsContent = () => {
   const [onEdit, setOnEdit] = useState(false);
   const { mutate: createResults, isPending: isPendingResults } = useCreateResults();
   const { data: fetchSchedules } = useSchedules();
-  const { data: fetchLotteries } = useLotteries();
+  const { data: lotteries } = useLotteries();
   const { data: getResults, isSuccess } = useResults({
     lottery_id: selectedLottery,
     schedule_id: selectedSchedule,
@@ -50,8 +50,6 @@ const ResultsContent = () => {
   });
 
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
-  const schedules = fetchSchedules?.data?.schedule || [];
-  const lotteries = fetchLotteries?.data?.lottery || [];
 
   const handleScheduleSelect = (scheduleId: string) => {
     setSelectedSchedule(scheduleId);
@@ -156,8 +154,8 @@ const ResultsContent = () => {
         </Flex>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
           <FlexCol className="  rounded-xl   space-y-6">
-            <ResultShifts schedules={schedules} onScheduleSelect={handleScheduleSelect} />
-            <QuiniChecks quini={lotteries} onLotterySelect={handleLotterySelect} />
+            <ResultShifts schedules={fetchSchedules ?? []} onScheduleSelect={handleScheduleSelect} />
+            <QuiniChecks quini={lotteries ?? []} onLotterySelect={handleLotterySelect} />
           </FlexCol>
           <div className=" ">
             <HeaderTitleSection
@@ -222,7 +220,7 @@ const ResultsContent = () => {
         <GenerateWinnersModal
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}
-          schedules={schedules}
+          schedules={fetchSchedules ?? []}
           setScheduleWinners={setScheduleWinners}
           onClick={handleGenerate}
           isPendingWinners={isPendingWinners}

@@ -40,7 +40,7 @@ const PlayDetailsContent = () => {
   const [cashier, setCashier] = useState<IUserEntityFront | undefined>(undefined);
   const [lotteries, setLotteries] = useState<Map<string, ILotteryEntityFront>>(new Map());
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
-  const { mutate: createTicket, isPending } = useCreateTicket();
+  const { mutate: createTicket } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
@@ -78,7 +78,11 @@ const PlayDetailsContent = () => {
       {
         onSuccess: (res) => {
           if (user?.user_type === USER_TYPE.CASHIER) {
-            makeTicketPdf({ bets: bets.reverse(), ticket: res.data.ticket, cashier_number: user?.number });
+            makeTicketPdf({
+              bets: bets.reverse(),
+              ticket: res.data.ticket,
+              cashier_number: user?.number,
+            });
           }
           setBets([]);
           setPartialAmount(0);
@@ -125,6 +129,15 @@ const PlayDetailsContent = () => {
     setSelectedIndexes([]);
   };
 
+  const handleRecreateBet = (values: IBetTable[]) => {
+    setBets(values);
+    values.forEach((bet) => {
+      const combosCount = bet.scheduleLottery.reduce((sum, item) => sum + item.lotteries.length, 0);
+      setPartialAmount((p) => p + bet.amount * combosCount);
+      setTotalAmount((p) => p + bet.amount * combosCount);
+    });
+    setIsEnabledCreateBet(true);
+  };
   useEffect(() => {
     if (!userNumber) setCashier(undefined);
     if (data) {
@@ -134,10 +147,15 @@ const PlayDetailsContent = () => {
 
   const isEnabledCreateBetByAdmin =
     (user?.user_type !== USER_TYPE.CASHIER && !!cashier) || user?.user_type === USER_TYPE.CASHIER;
-
+  console.log({ isEnabledCreateBet, isEnabledCreateBetByAdmin });
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
-      <HeaderPlayDetail cashier={cashier} setUserNumber={setUserNumber} userNumber={userNumber} />
+      <HeaderPlayDetail
+        cashier={cashier}
+        setUserNumber={setUserNumber}
+        userNumber={userNumber}
+        handleRecreateBet={handleRecreateBet}
+      />
 
       <FillOutATicket
         setTotalAmount={setTotalAmount}

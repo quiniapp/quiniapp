@@ -10,14 +10,21 @@ import { Label } from '@/components/ui/label.tsx';
 import { useModalContext } from '@/providers/modal-provider';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
 import { useSessionStore } from '@/stores/sessionStore';
+import { IBetTable } from '.';
 
 interface HeaderPlayDetailProps {
   cashier?: IUserEntityFront;
   userNumber?: number;
   setUserNumber: React.Dispatch<React.SetStateAction<number | undefined>>;
+  handleRecreateBet: (values: IBetTable[]) => void;
 }
 
-const HeaderPlayDetail = ({ cashier, userNumber, setUserNumber }: HeaderPlayDetailProps) => {
+const HeaderPlayDetail = ({
+  cashier,
+  userNumber,
+  setUserNumber,
+  handleRecreateBet,
+}: HeaderPlayDetailProps) => {
   const { role } = useSessionStore();
 
   const handleSearch = (search: string) => {
@@ -28,10 +35,7 @@ const HeaderPlayDetail = ({ cashier, userNumber, setUserNumber }: HeaderPlayDeta
   const { isOpen, openModal, closeModal } = useModalContext();
   return (
     <HeaderSection title={' Realizar Jugadas'}>
-      {isOpen && (
-        <RepeatTicketModal isOpen={isOpen} title={'Repetir Ticket'} onClose={closeModal} />
-      )}
-      <Flex className={' items-center gap-2  justify-end w-full'}>
+      <Flex className={' items-center gap-2  justify-between w-full'}>
         {role !== USER_TYPE.CASHIER && (
           <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>
@@ -54,7 +58,7 @@ const HeaderPlayDetail = ({ cashier, userNumber, setUserNumber }: HeaderPlayDeta
           <Button className="sm:w-fit p-1" type={'button'} onClick={openModal}>
             <Repeat2Icon className="w-2 h-2 sm:w-3 sm:h-3" />
             <Typography className="text-xs text-wrap" variant={'small'}>
-              Repetir Ticker
+              Repetir Ticket
             </Typography>
           </Button>
           <Button className="text-xs sm:w-fit p-1" type={'button'} variant={'outline'}>
@@ -68,6 +72,14 @@ const HeaderPlayDetail = ({ cashier, userNumber, setUserNumber }: HeaderPlayDeta
           </Button>
         </Flex>
       </Flex>
+      {isOpen && (
+        <RepeatTicketModal
+          isOpen={isOpen}
+          title={'Repetir Ticket'}
+          onClose={closeModal}
+          handleRecreateBet={handleRecreateBet}
+        />
+      )}
     </HeaderSection>
   );
 };

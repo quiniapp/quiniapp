@@ -34,27 +34,27 @@ const GameTurns = ({
 }: IGameTurns) => {
   const { now, isLessThanTenMinutes } = useClock();
   const { role } = useSessionStore();
-  const { data } = useLotteries();
+  const { data: lotteries } = useLotteries();
   const { data: schedulesData } = useSchedules();
-  const lotteries = data?.data?.lottery ?? [];
-  const schedules = schedulesData?.data?.schedule ?? [];
 
   useEffect(() => {
-    const status = schedules?.some((sch: IScheduleEntityFront) => isLessThanTenMinutes(sch.time));
+    const status = schedulesData?.some((sch: IScheduleEntityFront) =>
+      isLessThanTenMinutes(sch.time)
+    );
     setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
-  }, [now, schedules]);
+  }, [now, schedulesData]);
 
   return (
     <FlexCol className="flex-col 1440:space-y-5 space-y-3 flex-1">
       <ScheduleCheckboxList
-        schedules={schedules}
+        schedules={schedulesData ?? []}
         setSchedules={setSchedules}
         checkedSchedules={checkedSchedules}
       />
       <FlexCol className=" border-2 p-4 rounded-[--rounded-form]">
         <HeaderTitleSection title={'Quniela'} icon={<TicketIcon size="16px" />} variant={'small'} />
         <Box className=" grid grid-cols-2 gap-[12px] w-fit">
-          {lotteries.map((lot: LotteryType) => (
+          {lotteries?.map((lot: LotteryType) => (
             <LotteryCheckboxList
               key={lot.lottery_id}
               lottery={lot}
