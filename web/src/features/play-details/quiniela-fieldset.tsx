@@ -5,14 +5,16 @@ import { Fieldset } from '@/components/fieldset';
 import { Flex, FlexCol } from '@/components/flex';
 import { Checkbox } from '@/components/ui/checkbox.tsx';
 import { Label } from '@/components/ui/label.tsx';
-import { PROVINCE, QUINIELA_PROVINCIAS } from '@/constants/LIstCommonBets.ts';
+import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { QUINIELA_PROVINCIAS } from '@/constants/LIstCommonBets';
 
 interface QuinielaFieldsetProps {
   legend: string;
   namePrefix: string;
+  lotteries?: ILotteryEntityFront[];
 }
 
-export const QuinielaFieldset = ({ legend, namePrefix }: QuinielaFieldsetProps) => {
+export const QuinielaFieldset = ({ legend, namePrefix, lotteries }: QuinielaFieldsetProps) => {
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggleAll = () => {
@@ -40,9 +42,9 @@ export const QuinielaFieldset = ({ legend, namePrefix }: QuinielaFieldsetProps) 
         />
         <Label htmlFor={`${namePrefix}-all`}>Todas</Label>
       </Box>
-      <FlexCol className="gap-3 max-h-[100px] overflow-y-scroll py-[20px]">
-        {QUINIELA_PROVINCIAS.map((province: PROVINCE) => {
-          const inputId = `${namePrefix}-${province.label}`;
+      <FlexCol className="gap-3 overflow-y-scroll py-[20px]">
+        {lotteries?.map((lot) => {
+          const inputId = `${namePrefix}-${lot.name}`;
           return (
             <Flex key={inputId} className="items-center gap-2">
               <Checkbox
@@ -58,7 +60,7 @@ export const QuinielaFieldset = ({ legend, namePrefix }: QuinielaFieldsetProps) 
                   'w-full hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out'
                 }
               >
-                {province.label}
+                {lot.name}
               </Label>
             </Flex>
           );

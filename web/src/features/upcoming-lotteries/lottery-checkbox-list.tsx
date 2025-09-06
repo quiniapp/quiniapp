@@ -25,7 +25,7 @@ export function LotteryCheckboxList({ onChange, lotteries = [] }: LotteryCheckbo
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data?.data?.lottery?.map((lot: ILotteryEntityFront) => {
+        {data?.map((lot: ILotteryEntityFront) => {
           return (
             <div key={lot.lottery_id} className="flex items-center gap-3">
               <Checkbox

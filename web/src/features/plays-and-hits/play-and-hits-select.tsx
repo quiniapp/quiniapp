@@ -94,7 +94,7 @@ const PlayAndHitsSelect = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}> {ALL}</SelectItem>
-            {schedules?.data?.schedule?.map((item: IScheduleEntityFront) => (
+            {schedules?.map((item: IScheduleEntityFront) => (
               <SelectItem key={item.schedule_id} value={item.schedule_id}>
                 {item.name} - {item.time}
               </SelectItem>
@@ -115,7 +115,7 @@ const PlayAndHitsSelect = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}> {ALL}</SelectItem>
-            {lotteries?.data?.lottery?.map((item: ILotteryEntityFront) => (
+            {lotteries?.map((item: ILotteryEntityFront) => (
               <SelectItem key={item.lottery_id} value={item.lottery_id}>
                 {item.name}
               </SelectItem>

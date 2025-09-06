@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../routes/routes';
+import { ILotteryEntityFront } from '../../../helper/types/lottery.type';
 
 const fetchLotteries = async (all?: boolean) => {
   const res = await fetch(`${ROUTES.lottery.base}${all ? '?all=true' : ''}`, {
@@ -7,8 +8,8 @@ const fetchLotteries = async (all?: boolean) => {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Error fetching lotteries');
-  return res.json();
+  return await res.json().then((res) => res.data.lottery);
 };
 
 export const useLotteries = (all?: boolean) =>
-  useQuery({ queryKey: ['lotteries'], queryFn: () => fetchLotteries(all) });
+  useQuery<ILotteryEntityFront[]>({ queryKey: ['lotteries'], queryFn: () => fetchLotteries(all) });

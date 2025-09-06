@@ -7,7 +7,7 @@ interface FieldsetProps extends React.HTMLAttributes<HTMLFieldSetElement> {
 
 export const Fieldset = ({ legend, children, className = '', ...props }: FieldsetProps) => {
   return (
-    <fieldset className={`border px-4 py-4 rounded-md ${className}`} {...props}>
+    <fieldset className={`border p-1 sm:p-3 rounded-md ${className}`} {...props}>
       {legend && (
         <legend className="text-sm font-medium px-2 text-muted-foreground">{legend}</legend>
       )}

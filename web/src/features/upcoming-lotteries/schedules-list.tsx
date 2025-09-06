@@ -28,7 +28,7 @@ export const ScheduleRadioList = ({ selectedSchedule, handleSchedule }: Schedule
       onValueChange={handleSchedule}
       value={selectedSchedule}
     >
-      {schedules?.data?.schedule?.map((schedule: IScheduleEntityFront) => (
+      {schedules?.map((schedule: IScheduleEntityFront) => (
         <Flex className={'gap-3 items-center'} key={schedule.schedule_id}>
           <RadioGroupItem
             id={schedule.schedule_id}
