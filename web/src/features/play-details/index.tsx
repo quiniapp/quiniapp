@@ -77,13 +77,16 @@ const PlayDetailsContent = () => {
       },
       {
         onSuccess: (res) => {
+          const lastTicket = {
+            bets: bets.reverse(),
+            ticket: res.data.ticket,
+            cashier_number: user?.number,
+          };
           if (user?.user_type === USER_TYPE.CASHIER) {
-            makeTicketPdf({
-              bets: bets.reverse(),
-              ticket: res.data.ticket,
-              cashier_number: user?.number,
-            });
+            makeTicketPdf(lastTicket);
           }
+
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
           setPartialAmount(0);
           setTotalAmount(0);
@@ -147,7 +150,7 @@ const PlayDetailsContent = () => {
 
   const isEnabledCreateBetByAdmin =
     (user?.user_type !== USER_TYPE.CASHIER && !!cashier) || user?.user_type === USER_TYPE.CASHIER;
-  console.log({ isEnabledCreateBet, isEnabledCreateBetByAdmin });
+
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
       <HeaderPlayDetail

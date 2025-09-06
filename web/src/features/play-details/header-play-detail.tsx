@@ -11,6 +11,9 @@ import { useModalContext } from '@/providers/modal-provider';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
 import { useSessionStore } from '@/stores/sessionStore';
 import { IBetTable } from '.';
+import toast from 'react-hot-toast';
+
+import { makeTicketPdf } from '../../../helper/function/makeTicket';
 
 interface HeaderPlayDetailProps {
   cashier?: IUserEntityFront;
@@ -33,6 +36,16 @@ const HeaderPlayDetail = ({
   };
 
   const { isOpen, openModal, closeModal } = useModalContext();
+  const handleRePrimtLast = () => {
+    const lastTicketStr = localStorage.getItem('lastTicket');
+    if (!lastTicketStr) {
+      toast.error('No hay ticket guardado para reimprimir');
+      return;
+    }
+    const lastTicket = JSON.parse(lastTicketStr);
+
+    makeTicketPdf(lastTicket);
+  };
   return (
     <HeaderSection title={' Realizar Jugadas'}>
       <Flex className={' items-center gap-2  justify-between w-full'}>
@@ -61,7 +74,12 @@ const HeaderPlayDetail = ({
               Repetir Ticket
             </Typography>
           </Button>
-          <Button className="text-xs sm:w-fit p-1" type={'button'} variant={'outline'}>
+          <Button
+            className="text-xs sm:w-fit p-1"
+            type={'button'}
+            variant={'outline'}
+            onClick={handleRePrimtLast}
+          >
             <PrinterIcon className="w-2 h-2 sm:w-3 sm:h-3" />
             <Typography className="text-xs text-wrap" variant={'small'}>
               Reimprimir Anterior
