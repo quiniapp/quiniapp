@@ -75,6 +75,7 @@ const UserCurrentAccountModal = ({
 
   const { mutate } = useUpdateCurrentAcoountByUser();
   const onSubmit = (values: ICurrentAccountEntityFront) => {
+
     mutate({
       date: currentAccount?.date ?? '',
       current_account_id: currentAccount?.current_account_id ?? '',
