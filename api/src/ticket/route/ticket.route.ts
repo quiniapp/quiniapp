@@ -17,6 +17,7 @@ export class TicketRouter {
   private setupRoutes() {
     // this.router.get('/:id', this.controller.get);
     this.router.get('/', this.getAllTicketHandler);
+    this.router.get('/deleted', this.getAllDeletedTicketHandler);
     this.router.get('/:id', this.getTicketHandler);
     this.router.post('/', this.newTicketHandler);
     this.router.delete('/:id', this.deleteTicketHandler);
@@ -181,6 +182,62 @@ export class TicketRouter {
       }
 
       const response: APIResponse<ITicketEntityFront[]> = {
+        data: {
+          ticket,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.TICKET_NOT_FOUND
+        ) {
+          statusCode = 404;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+  private getAllDeletedTicketHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { date, cashier_id } = req.query;
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+    if (typeof date !== 'string' || typeof cashier_id !== 'string') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+    try {
+      const ticket = await this.controller.getAllDeletedTickets({ date, user_id: cashier_id });
+
+      const response: APIResponse<number> = {
         data: {
           ticket,
         },

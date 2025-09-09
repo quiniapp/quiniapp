@@ -13,6 +13,9 @@ import { useLotteries } from '@/hooks/useLotteries';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
+import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+import dayjs from 'dayjs';
+import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 
 interface BasicModalProps {
   isOpen: boolean;
@@ -24,12 +27,18 @@ interface BasicModalProps {
 
 const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicModalProps) => {
   if (!isOpen) return null;
+  const today = dayjs().day();
+
   const [repeatBets, setRepeatBets] = useState<Map<string, IBetTable>>(new Map());
+  const [scheduleLotteriesToPlay, setScheduleLotteriesToPlay] = useState<Map<string, string[]>>(
+    new Map()
+  );
   const [ticketNumber, setTicketNumber] = useState<string>('');
   const { data } = getTicketByNumber(ticketNumber);
   const { data: schedules } = useSchedules();
   const { data: lotteries } = useLotteries();
-
+  const { data: scheduleLottery } = useScheduleLottery();
+  console.log(scheduleLottery.scheduleLotteries[dayParseToString[today]]);
   /* 
 
 export interface ILotterySchedule {

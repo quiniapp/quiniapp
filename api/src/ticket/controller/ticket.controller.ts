@@ -103,4 +103,17 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+  getAllDeletedTickets = async ({ user_id, date }: { user_id: string; date: string }) => {
+    try {
+      const tickets = await this.repository.getAllDeletedTickets({
+        user_id: user_id,
+        date: date,
+      });
+
+      return tickets;
+    } catch (error) {
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
 }

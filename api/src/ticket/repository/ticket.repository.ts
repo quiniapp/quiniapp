@@ -1,6 +1,7 @@
 import { supabase } from '@database/db.connection';
 import { IDeleteTicketEntity } from '@helper/request/ticket.response';
 import { ITicketEntityBack } from '@helper/types/ticket.type';
+import dayjs from 'dayjs';
 
 export class TicketRepository {
   async create(ticket: ITicketEntityBack) {
@@ -55,12 +56,45 @@ export class TicketRepository {
   }
 
   async delete(props: IDeleteTicketEntity) {
-    const { data, error } = await supabase
-      .from('tickets')
-      .delete()
-      .eq('ticket_number', props.ticket_number);
+    const today = dayjs().toISOString();
 
-    if (error) throw new Error(error.message);
-    return data;
+    // 1) Actualizo el ticket y me traigo sus IDs para actualizar las bets
+    const { data: ticket, error: ticketErr } = await supabase
+      .from('tickets')
+      .update({ deleted_at: today, updated_at: today })
+      .eq('ticket_number', props.ticket_number)
+      .select('ticket_id'); // importante para actualizar bets
+
+    if (ticketErr) throw new Error(ticketErr.message);
+    if (!ticket || ticket.length === 0) return { tickets: [], bets: [] };
+
+    const { data: bets, error: betsErr } = await supabase
+      .from('bets')
+      .update({ deleted_at: today, updated_at: today })
+      .in('ticket_id', ticket[0].ticket_id);
+
+    if (betsErr) throw new Error(betsErr.message);
+
+    return { ticket, bets };
+  }
+
+  async getAllDeletedTickets({
+    user_id,
+    date,
+  }: {
+    user_id: string;
+    date: string;
+  }): Promise<number> {
+    let query = supabase
+      .from('tickets')
+      // no traemos filas; solo count exacto
+      .select('ticket_id', { count: 'exact', head: true })
+      .eq('user_id', user_id)
+      .eq('date', date)
+      .not('deleted_at', 'is', null); // deleted_at IS NOT NULL
+
+    const { count, error } = await query;
+    if (error) throw error;
+    return count ?? 0;
   }
 }

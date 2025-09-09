@@ -12,7 +12,7 @@ import {
   ICurrentAccountEntityFront,
 } from '@helper/types/current_account.type';
 
-type AllowedManualKeys = 'claims' | 'paid' | 'collections' | 'bills';
+type AllowedManualKeys = 'claims' | 'paid' | 'collections' | 'bills' | 'drag' | 'previous_drag';
 
 type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys>>;
 export class CurrentAccountController {
@@ -58,12 +58,14 @@ export class CurrentAccountController {
   ): Promise<ICurrentAccountEntityFront> => {
     try {
       // Construye payload solo con las keys permitidas y definidas
+
       const payload: UpdatePayload = {};
       if (props.claims !== undefined) payload.claims = Number(props.claims);
       if (props.paid !== undefined) payload.paid = Number(props.paid);
       if (props.collections !== undefined) payload.collections = Number(props.collections);
       if (props.bills !== undefined) payload.bills = Number(props.bills);
-
+      if (props.drag !== undefined) payload.drag = Number(props.drag);
+      if (props.previous_drag !== undefined) payload.previous_drag = Number(props.previous_drag);
       // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
 
       const currentAccount = await this.repository.updateCurrentAccountHandler(
