@@ -61,19 +61,37 @@ export class TicketRepository {
     // 1) Actualizo el ticket y me traigo sus IDs para actualizar las bets
     const { data: ticket, error: ticketErr } = await supabase
       .from('tickets')
-      .update({ deleted_at: today, updated_at: today })
+      .update({ deleted_at: today })
       .eq('ticket_number', props.ticket_number)
       .select('ticket_id'); // importante para actualizar bets
 
-    if (ticketErr) throw new Error(ticketErr.message);
+    if (ticketErr) {
+      await supabase
+        .from('tickets')
+        .update({ deleted_at: null })
+        .eq('ticket_number', props.ticket_number);
+
+      throw new Error(ticketErr.message);
+    }
     if (!ticket || ticket.length === 0) return { tickets: [], bets: [] };
 
     const { data: bets, error: betsErr } = await supabase
       .from('bets')
-      .update({ deleted_at: today, updated_at: today })
-      .in('ticket_id', ticket[0].ticket_id);
+      .update({ deleted_at: today, edited_at: today })
+      .eq('ticket_id', ticket[0].ticket_id);
 
-    if (betsErr) throw new Error(betsErr.message);
+    if (betsErr) {
+      await supabase
+        .from('tickets')
+        .update({ deleted_at: null })
+        .eq('ticket_number', props.ticket_number);
+      await supabase
+        .from('bets')
+        .update({ deleted_at: null, edited_at: today })
+        .eq('ticket_id', ticket[0].ticket_id);
+
+      throw new Error(betsErr.message);
+    }
 
     return { ticket, bets };
   }
