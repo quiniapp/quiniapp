@@ -16,6 +16,7 @@ import dayjs from 'dayjs';
 import { useSchedules } from '@/hooks/useSchedules';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 import { DayKey } from '../../../../helper/types/schedule-lottery.type';
+import { IScheduleEntityFront } from 'helper/types/schedule.type';
 
 interface BasicModalProps {
   isOpen: boolean;
@@ -43,23 +44,56 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
     handleRecreateBet(selectedBets);
     onClose();
   };
+// índices auxiliares
+const schedulesById = useMemo(() => {
+  const map = new Map<string, IScheduleEntityFront>();
+  (schedules ?? []).forEach((s) => map.set(s.schedule_id, s));
+  return map;
+}, [schedules]);
 
-  const selectedBets = useMemo<IBetTable[]>(() => {
-    return Array.from(repeatBets.values())
-      .map((b) => {
-        const filteredSL = b.scheduleLottery
-          .map((s) => {
-            const sel = scheduleLotteriesToPlay.get(s.schedule.schedule_id);
-            if (!sel || sel.size === 0) return null;
-            const lots = s.lotteries.filter((l) => sel.has(l.lottery_id));
-            return lots.length ? { schedule: s.schedule, lotteries: lots } : null;
-          })
-          .filter(Boolean) as IBetTable['scheduleLottery'];
+const lotteryById = useMemo(() => {
+  // recolecta cualquier lottery conocida de las bets existentes
+  const map = new Map<string, { lottery_id: string; name?: string }>();
+  repeatBets.forEach((b) => {
+    b.scheduleLottery.forEach((sl) => {
+      sl.lotteries.forEach((lot) => {
+        map.set(lot.lottery_id, lot);
+      });
+    });
+  });
+  return map;
+}, [repeatBets]);
 
-        return { ...b, scheduleLottery: filteredSL };
-      })
-      .filter((b) => b.scheduleLottery.length > 0);
-  }, [repeatBets, scheduleLotteriesToPlay]);
+const selectedBets = useMemo<IBetTable[]>(() => {
+  // Para CADA bet, generamos la combinatoria a partir de lo seleccionado,
+  // no a partir de lo que ya existía en la bet original.
+  return Array.from(repeatBets.values())
+    .map((b) => {
+      const newSL: IBetTable['scheduleLottery'] = [];
+
+      scheduleLotteriesToPlay.forEach((lotIds, schId) => {
+        if (!lotIds || lotIds.size === 0) return;
+
+        const schedule = schedulesById.get(schId);
+        if (!schedule) return; // si no tenés el schedule, salteá (o podrías crear uno mínimo)
+
+        // mapear los ids seleccionados a objetos lottery; si alguno no existe, crear objeto mínimo
+        const lotteries = Array.from(lotIds).map((id) => {
+          const lot = lotteryById.get(id);
+          return lot ?? ({ lottery_id: id } as any);
+        });
+
+        if (lotteries.length > 0) {
+          newSL.push({ schedule, lotteries });
+        }
+      });
+
+      return { ...b, scheduleLottery: newSL };
+    })
+    .filter((b) => b.scheduleLottery.length > 0);
+}, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteryById]);
+
+
 
   const selectedTotal = useMemo(() => {
     return selectedBets.reduce((acc, b) => {
