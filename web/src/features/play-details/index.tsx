@@ -45,12 +45,32 @@ const PlayDetailsContent = () => {
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
+/*  */
+  const computeTotal = (bets: IBetTable[]) =>
+    bets.reduce((acc, bet) => {
+      const combos = bet.scheduleLottery.reduce((s, it) => s + it.lotteries.length, 0);
+      const amount =
+        typeof bet.amount === 'string' ? parseFloat(bet.amount as any) : (bet.amount ?? 0);
+      return acc + amount * combos;
+    }, 0);
+
+  const handleRecreateBet = (values: IBetTable[]) => {
+  setBets(values);
+
+  const total = computeTotal(values);
+  setPartialAmount(total);   // reemplaza, no suma
+  setTotalAmount(total);     // reemplaza, no suma
+
+  setSelectedIndexes([]);
+  setIsEnabledCreateBet(true);
+};
+
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
-    const newBets: INewBetEntity[] = bets.reverse().flatMap((bet) =>
+    const newBets: INewBetEntity[] = [...bets].reverse().flatMap((bet) =>
       bet.scheduleLottery.flatMap((schedLot) =>
         schedLot.lotteries.map((lot) => ({
           number: bet.number,
@@ -78,7 +98,7 @@ const PlayDetailsContent = () => {
       {
         onSuccess: (res) => {
           const lastTicket = {
-            bets: bets.reverse(),
+            bets: [...bets].reverse(),
             ticket: res.data.ticket,
             cashier_number: user?.number,
           };
@@ -132,15 +152,8 @@ const PlayDetailsContent = () => {
     setSelectedIndexes([]);
   };
 
-  const handleRecreateBet = (values: IBetTable[]) => {
-    setBets(values);
-    values.forEach((bet) => {
-      const combosCount = bet.scheduleLottery.reduce((sum, item) => sum + item.lotteries.length, 0);
-      setPartialAmount((p) => p + bet.amount * combosCount);
-      setTotalAmount((p) => p + bet.amount * combosCount);
-    });
-    setIsEnabledCreateBet(true);
-  };
+
+
   useEffect(() => {
     if (!userNumber) setCashier(undefined);
     if (data) {
