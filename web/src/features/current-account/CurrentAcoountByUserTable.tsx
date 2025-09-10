@@ -68,7 +68,7 @@ const CurrentAcoountByUserTable = () => {
   }, [currentAccount]);
   return (
     <FlexCol className="items-center justify-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]">
-      <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.[0].date).format('DD-MM-YYYY')}`}</Typography>
+      <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.[0]?.date).format('DD-MM-YYYY')}`}</Typography>
       <FormProvider {...methods}>
         <form className="w-full">
           <Flex className="justify-center gap-1 sm:gap-3">
