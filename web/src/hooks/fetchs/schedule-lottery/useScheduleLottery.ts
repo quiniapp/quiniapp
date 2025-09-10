@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ROUTES } from "../../../../routes/routes";
+import { IScheduleLotteryEntityFront } from "../../../../../helper/types/schedule-lottery.type";
 
 
 const fetchScheduleLottery = async () => {
@@ -14,12 +15,12 @@ const fetchScheduleLottery = async () => {
   if (!res.ok) throw new Error('Error fetching results');
   const { data } = await res.json();
 
-  return data;
+  return data.scheduleLotteries;
 };
 
 export const useScheduleLottery = () => {
 
-  return useQuery({
+  return useQuery<IScheduleLotteryEntityFront>({
     queryKey: ['schedule-lottery'],
     queryFn: () => fetchScheduleLottery(), 
   });

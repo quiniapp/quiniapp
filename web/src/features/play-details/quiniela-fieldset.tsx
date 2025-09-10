@@ -1,66 +1,73 @@
-import { useState } from 'react';
-
-import Box from '@/components/box';
+import { useMemo } from 'react';
 import { Fieldset } from '@/components/fieldset';
 import { Flex, FlexCol } from '@/components/flex';
-import { Checkbox } from '@/components/ui/checkbox.tsx';
-import { Label } from '@/components/ui/label.tsx';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
-import { QUINIELA_PROVINCIAS } from '@/constants/LIstCommonBets';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useLotteries } from '@/hooks/useLotteries';
+import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 
 interface QuinielaFieldsetProps {
   legend: string;
   namePrefix: string;
-  lotteries?: ILotteryEntityFront[];
+  schedule: IScheduleEntityFront;
+  availableLotteryIds: string[]; // habilitadas hoy para este turno
+  selectedLotteryIds: Set<string>; // seleccionadas (controlado)
+  onToggleLottery: (lotteryId: string) => void;
+  onToggleAll: (checked: boolean) => void; // true = seleccionar todas
 }
 
-export const QuinielaFieldset = ({ legend, namePrefix, lotteries }: QuinielaFieldsetProps) => {
-  const [selected, setSelected] = useState<string[]>([]);
+export const QuinielaFieldset = ({
+  legend,
+  namePrefix,
+  schedule,
+  availableLotteryIds,
+  selectedLotteryIds,
+  onToggleLottery,
+  onToggleAll,
+}: QuinielaFieldsetProps) => {
+  const { data: lotteries } = useLotteries();
 
-  const toggleAll = () => {
-    const allIds = QUINIELA_PROVINCIAS.map((p) => `${namePrefix}-${p.label}`);
-    const isAllSelected = allIds.every((id) => selected.includes(id));
-    setSelected(isAllSelected ? [] : allIds);
-  };
+  const allSelected =
+    availableLotteryIds.length > 0 && availableLotteryIds.every((id) => selectedLotteryIds.has(id));
 
-  const toggleOne = (id: string) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((val) => val !== id) : [...prev, id]));
-  };
-
-  const isChecked = (id: string) => selected.includes(id);
-
-  const allSelected = selected.length === QUINIELA_PROVINCIAS.length;
+  const nameById = useMemo(() => {
+    const map = new Map<string, string>();
+    lotteries?.forEach((l) => map.set(l.lottery_id, l.name));
+    return map;
+  }, [lotteries]);
 
   return (
     <Fieldset legend={legend}>
-      <Box className="flex items-center gap-2">
+      <Flex className="items-center gap-2">
         <Checkbox
-          id={`${namePrefix}-all`}
+          id={`${namePrefix}-${schedule.schedule_id}-all`}
           checked={allSelected}
-          onCheckedChange={toggleAll}
+          onCheckedChange={(v) => onToggleAll(Boolean(v))}
           className="border-primary border"
         />
-        <Label htmlFor={`${namePrefix}-all`}>Todas</Label>
-      </Box>
+        <Label htmlFor={`${namePrefix}-${schedule.schedule_id}-all`}>Todas</Label>
+      </Flex>
+
       <FlexCol className="gap-3 overflow-y-scroll py-[20px]">
-        {lotteries?.map((lot) => {
-          const inputId = `${namePrefix}-${lot.name}`;
+        {availableLotteryIds.map((lotId) => {
+          const inputId = `${namePrefix}-${lotId}`;
+          const checked = selectedLotteryIds.has(lotId);
+          const label = nameById.get(lotId) ?? lotId;
+
           return (
             <Flex key={inputId} className="items-center gap-2">
               <Checkbox
                 id={inputId}
                 name={inputId}
                 className="border-primary border"
-                checked={isChecked(inputId)}
-                onCheckedChange={() => toggleOne(inputId)}
+                checked={checked}
+                onCheckedChange={() => onToggleLottery(lotId)}
               />
               <Label
                 htmlFor={inputId}
-                className={
-                  'w-full hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out'
-                }
+                className="w-full hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out"
               >
-                {lot.name}
+                {label}
               </Label>
             </Flex>
           );

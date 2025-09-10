@@ -16,8 +16,8 @@ export interface IScheduleLotteryEntityBack {
   created_at: string;
 }
 
-export type IScheduleLotteryEntityFront = {
-  [day in keyof typeof SCHEDULE_DAY]?: {
-    [schedule_id: string]: string[];
-  };
-};
+// Solo las claves STRING del enum (evita 0|1|2...)
+export type EnumStringKeys<E> = Extract<keyof E, string>;
+export type DayKey = EnumStringKeys<typeof SCHEDULE_DAY>;
+
+export type IScheduleLotteryEntityFront = Partial<Record<DayKey, Record<string, string[]>>>;

@@ -8,14 +8,14 @@ import { QuinielaFieldset } from '@/features/play-details/quiniela-fieldset.tsx'
 import { useEffect, useState } from 'react';
 import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
 import { IBetTable } from '@/features/play-details';
-import { useSchedules } from '@/hooks/useSchedules';
-import { useLotteries } from '@/hooks/useLotteries';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
+import { useSchedules } from '@/hooks/useSchedules';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
+import { DayKey } from '../../../../helper/types/schedule-lottery.type';
 
 interface BasicModalProps {
   isOpen: boolean;
@@ -27,79 +27,112 @@ interface BasicModalProps {
 
 const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicModalProps) => {
   if (!isOpen) return null;
-  const today = dayjs().day();
 
+  const todayIdx = dayjs().day();
+  const todayKey: DayKey = dayParseToString[todayIdx];
   const [repeatBets, setRepeatBets] = useState<Map<string, IBetTable>>(new Map());
-  const [scheduleLotteriesToPlay, setScheduleLotteriesToPlay] = useState<Map<string, string[]>>(
+  const [scheduleLotteriesToPlay, setScheduleLotteriesToPlay] = useState<Map<string, Set<string>>>(
     new Map()
   );
   const [ticketNumber, setTicketNumber] = useState<string>('');
-  const { data } = getTicketByNumber(ticketNumber);
   const { data: schedules } = useSchedules();
-  const { data: lotteries } = useLotteries();
   const { data: scheduleLottery } = useScheduleLottery();
-  console.log(scheduleLottery.scheduleLotteries[dayParseToString[today]]);
-  /* 
+  const { data } = getTicketByNumber(ticketNumber);
 
-export interface ILotterySchedule {
-  schedule: IScheduleEntityFront;
-  lotteries: ILotteryEntityFront[];
-}
-export interface IBetTable {
-  number: string;
-  amount: number;
-  place: PLACE_TYPE;
-  with: string | null;
-  position?: PLACE_TYPE | null;
-  scheduleLottery: ILotterySchedule[];
-}
-*/
   const handleSetBets = () => {
-    handleRecreateBet(Array.from(repeatBets.values()));
+    const filtered = Array.from(repeatBets.values())
+      .map((b) => {
+        const filteredSL = b.scheduleLottery
+          .map((s) => {
+            const sel = scheduleLotteriesToPlay.get(s.schedule.schedule_id);
+            if (!sel || sel.size === 0) return null;
+            const lots = s.lotteries.filter((l) => sel.has(l.lottery_id));
+            return lots.length ? { schedule: s.schedule, lotteries: lots } : null;
+          })
+          .filter(Boolean) as IBetTable['scheduleLottery'];
+
+        return { ...b, scheduleLottery: filteredSL };
+      })
+      .filter((b) => b.scheduleLottery.length > 0);
+
+    handleRecreateBet(filtered);
     onClose();
   };
+
   useEffect(() => {
-    if (data) {
-      const newMap = new Map(repeatBets);
-      data.bets.map((bet) => {
-        if (newMap.has(bet.number)) {
-          const newBet = newMap.get(bet.number);
-          if (
-            newBet?.scheduleLottery.some(
-              (schLot) => schLot.schedule.schedule_id === bet.schedule.schedule_id
-            )
-          ) {
-            newBet.scheduleLottery.map((schLot) => {
-              if (schLot.schedule.schedule_id === bet.schedule.schedule_id) {
-                schLot.lotteries.push(bet.lottery);
-              }
-            });
-          } else {
-            newBet?.scheduleLottery.push({
-              schedule: bet.schedule,
-              lotteries: [bet.lottery],
-            });
-          }
-          newMap.set(bet.number, newBet as IBetTable);
-        } else {
-          newMap.set(bet.number, {
-            number: bet.number,
-            amount: bet.amount,
-            place: bet.place,
-            with: bet.with,
-            position: bet.position,
-            scheduleLottery: [
-              {
-                schedule: bet.schedule,
-                lotteries: [bet.lottery],
-              },
-            ],
-          });
+    if (!data) return;
+
+    const betsByNumber = new Map<string, IBetTable>();
+    const selectedBySchedule = new Map<string, Set<string>>();
+
+    for (const b of data.bets) {
+      const num = b.number;
+      const schId = b.schedule.schedule_id;
+      const lotId = String(b.lottery_id);
+
+      // preselección por turno/lot
+      if (!selectedBySchedule.has(schId)) selectedBySchedule.set(schId, new Set());
+      selectedBySchedule.get(schId)!.add(lotId);
+
+      // agrupar jugadas por número con schedule/lottery
+      const existing = betsByNumber.get(num);
+      if (existing) {
+        let entry = existing.scheduleLottery.find((s) => s.schedule.schedule_id === schId);
+        if (!entry) {
+          entry = { schedule: b.schedule, lotteries: [] };
+          existing.scheduleLottery.push(entry);
         }
-      });
-      setRepeatBets(newMap);
+        if (!entry.lotteries.some((l) => l.lottery_id === lotId)) {
+          entry.lotteries.push(b.lottery);
+        }
+      } else {
+        betsByNumber.set(num, {
+          number: b.number,
+          amount: b.amount,
+          place: b.place,
+          with: b.with,
+          position: b.position,
+          scheduleLottery: [{ schedule: b.schedule, lotteries: [b.lottery] }],
+        });
+      }
     }
+
+    setRepeatBets(betsByNumber);
+    setScheduleLotteriesToPlay(selectedBySchedule);
   }, [data]);
+  const handleToggleLottery = (scheduleId: string, lotteryId: string) => {
+    setScheduleLotteriesToPlay((prev) => {
+      const copy = new Map(prev);
+      const set = new Set(copy.get(scheduleId) ?? []);
+      set.has(lotteryId) ? set.delete(lotteryId) : set.add(lotteryId);
+      copy.set(scheduleId, set);
+      return copy;
+    });
+  };
+
+  const handleToggleAllForSchedule = (scheduleId: string, allIds: string[], checked: boolean) => {
+    setScheduleLotteriesToPlay((prev) => {
+      const copy = new Map(prev);
+      copy.set(scheduleId, checked ? new Set(allIds) : new Set());
+      return copy;
+    });
+  };
+  const handleSelectAllAllSchedules = () => {
+    if (!scheduleLottery) return;
+    const map = new Map<string, Set<string>>();
+    for (const sch of schedules ?? []) {
+      const ids = scheduleLottery?.[todayKey]?.[sch.schedule_id] ?? [];
+      map.set(sch.schedule_id, new Set(ids));
+    }
+    setScheduleLotteriesToPlay(map);
+  };
+
+  const handleClearAllAllSchedules = () => {
+    setScheduleLotteriesToPlay(new Map());
+  };
+  
+  console.log('scheduleLotteries');
+  console.log('scheduleLotteriesToPlay', scheduleLotteriesToPlay);
   return (
     <Modal
       title={title}
@@ -117,28 +150,48 @@ export interface IBetTable {
           onChange={(e) => setTicketNumber(e.target.value)}
         />
       </Box>
-      <Flex className={'p-1 sm:p-3 justify-center gap-1 sm:gap-3'}>
+      <Flex className="p-1 sm:p-3 justify-center gap-1 sm:gap-3">
         {schedules?.map((sch) => {
+          const available = scheduleLottery?.[todayKey]?.[sch.schedule_id] ?? []; // lottery_ids habilitadas hoy
+          const selected = scheduleLotteriesToPlay.get(sch.schedule_id) ?? new Set<string>();
           return (
             <QuinielaFieldset
               key={sch.schedule_id}
               legend={`${sch.name}-${sch.time.slice(0, 5)}`}
-              namePrefix={'tone'}
-              lotteries={lotteries ?? []}
+              namePrefix="tone"
+              schedule={sch}
+              availableLotteryIds={available}
+              selectedLotteryIds={selected}
+              onToggleLottery={(lotId) => handleToggleLottery(sch.schedule_id, lotId)}
+              onToggleAll={(checked) =>
+                handleToggleAllForSchedule(sch.schedule_id, available, checked)
+              }
             />
           );
         })}
       </Flex>
+
       <FlexCol className={'gap-1 sm:gap-3 items-center'}>
         <Flex>
           <span className="min-w-52 ">Monto total: ${data?.total ?? 0}</span>
-          <Button variant={'outline'} type={'button'} className={'  flex justify-center'}>
+
+          <Button
+            variant="outline"
+            type="button"
+            className={'  flex justify-center'}
+            onClick={handleSelectAllAllSchedules}
+          >
             Selecionar todas
           </Button>
           <Button variant={'outline'} type={'button'} className={' flex justify-center'}>
             Modificar monto
           </Button>
-          <Button variant={'outline'} type={'reset'} className={'   flex justify-center'}>
+          <Button
+            variant="outline"
+            type="reset"
+            className={'  flex justify-center'}
+            onClick={handleClearAllAllSchedules}
+          >
             Quitar todas
           </Button>
         </Flex>

@@ -24,48 +24,34 @@ import { dayParseToString, dayDictionary } from '../../../../helper/functions/da
 import { useSaveScheduleLottery } from '@/hooks/mutations/schedule-lottery/useSaveScheduleLottery';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import toast from 'react-hot-toast';
+import { DayKey } from '../../../../helper/types/schedule-lottery.type';
 
+type DayMap = Partial<Record<DayKey, Record<string, string[]>>>;
 const UpcomingLotteriesContent = () => {
-  const [savedData, setSavedData] = useState<Record<string, Record<string, string[]>>>({});
-  const [selectedDay, setSelectedDay] = useState<string>(''); // 'LUNES'
-  const [selectedSchedule, setSelectedSchedule] = useState<string>(''); // 'schedule_id'
+  const [savedData, setSavedData] = useState<DayMap>({});
   const { mutate: saveScheduleLottery, isPending: isPendingSave } = useSaveScheduleLottery();
   const { data: scheduleLottery, isPending } = useScheduleLottery();
-  // const isLargeScreen = useMediaQuery('(min-width: 1366px)');
-  const handleSchedule = useCallback(
-    (id: string) => {
-      setSelectedSchedule(id);
-    },
-    [selectedDay]
-  );
 
-  const handleDay = (day: string) => {
-    setSelectedDay(day);
-    setSelectedSchedule('');
-  };
+  const [selectedDay, setSelectedDay] = useState<DayKey | ''>('');
+  const [selectedSchedule, setSelectedSchedule] = useState<string>('');
 
+  // Toggle SIEMPRE (agrega si no está; quita si está)
   const handleLotteries = (id: string) => {
-    if (savedData?.[selectedDay]?.[selectedSchedule]?.includes(id)) {
-      setSavedData((prevData) => {
-        const updatedData = { ...prevData };
-        updatedData[selectedDay] = {
-          ...updatedData[selectedDay],
-          [selectedSchedule]: updatedData[selectedDay][selectedSchedule].filter(
-            (lotteryId) => lotteryId !== id
-          ),
-        };
-        return updatedData;
-      });
-    } else {
-      setSavedData((prevData) => {
-        const updatedData = { ...prevData };
-        updatedData[selectedDay] = {
-          ...updatedData[selectedDay],
-          [selectedSchedule]: [...(updatedData[selectedDay]?.[selectedSchedule] || []), id],
-        };
-        return updatedData;
-      });
-    }
+    if (!selectedDay || !selectedSchedule) return;
+
+    setSavedData((prev) => {
+      const dayMap = prev[selectedDay] ?? {};
+      const current = dayMap[selectedSchedule] ?? [];
+      const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+
+      return {
+        ...prev,
+        [selectedDay]: {
+          ...dayMap,
+          [selectedSchedule]: next,
+        },
+      };
+    });
   };
   const handleSave = () => {
     saveScheduleLottery(savedData, {
@@ -77,8 +63,20 @@ const UpcomingLotteriesContent = () => {
       },
     });
   };
+
+  const handleSchedule = useCallback(
+    (id: string) => {
+      setSelectedSchedule(id);
+    },
+    [selectedDay]
+  );
+
+  const handleDay = (day: DayKey) => {
+    setSelectedDay(day);
+    setSelectedSchedule('');
+  };
   useEffect(() => {
-    setSavedData(scheduleLottery?.scheduleLotteries);
+    if (scheduleLottery) setSavedData(scheduleLottery);
   }, [isPending]);
   return (
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
@@ -100,7 +98,7 @@ const UpcomingLotteriesContent = () => {
                       <Flex className={'w-[200px]'}>
                         <Select
                           value={selectedDay}
-                          onValueChange={(value) => {
+                          onValueChange={(value: DayKey) => {
                             handleDay(value);
                           }}
                         >
@@ -145,7 +143,11 @@ const UpcomingLotteriesContent = () => {
                   <LotteryCheckboxList
                     selectedDay={selectedDay}
                     selectedSchedule={selectedSchedule}
-                    lotteries={savedData?.[selectedDay]?.[selectedSchedule]}
+                    lotteries={
+                      selectedDay && selectedSchedule
+                        ? (savedData?.[selectedDay]?.[selectedSchedule] ?? [])
+                        : []
+                    }
                     onChange={handleLotteries}
                   />
                 </div>
