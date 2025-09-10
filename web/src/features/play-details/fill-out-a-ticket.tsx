@@ -14,6 +14,7 @@ import { placeTypeParse } from '../../../../helper/functions/placeTypeParse';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
+import { DayKey } from '../../../../helper/types/schedule-lottery.type';
 
 export interface IBetForm {
   number: string;
@@ -120,7 +121,8 @@ const FillOutATicket = ({
   const handleCreateBet = () => {
     if (isAddButtonEnabled) {
       // Mapeo day -> { [schedule_id]: string[] }
-      const schLotPerDate = scheduleLotteryPerDate.scheduleLotteries[dayParseToString[today]] as
+      const todayKey: DayKey = dayParseToString[today];
+      const schLotPerDate = scheduleLotteryPerDate?.[todayKey] as
         | Record<string, string[] | undefined>
         | undefined;
 

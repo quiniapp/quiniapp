@@ -6,8 +6,9 @@ export const dayParseToString = [
   'THURSDAY',
   'FRIDAY',
   'SATURDAY',
-];
+] as const;
 
+export type DayLiteral = (typeof dayParseToString)[number]; // == DayKey
 export const dayDictionary = {
   SUNDAY: 'Domingo',
   MONDAY: 'Lunes',
