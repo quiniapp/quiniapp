@@ -5,24 +5,26 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
 import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
-
+export type ScheduleLotteryPayload = {
+  scheduleLotteries: IScheduleLotteryEntityFront;
+};
 // ====== Cache simple en memoria ======
 type SchedCache = {
-  payload: IScheduleLotteryEntityFront['scheduleLotteries'];
+  payload: IScheduleLotteryEntityFront; // el mapa por día
   etag: string;
   expiresAt: number;
 };
-const TTL_MS = 5 * 60 * 1000; // 5 minutos (ajustable)
+
+const TTL_MS = 24 * 60 * 60 * 1000; // 1 dia (ajustable)
 let cache: SchedCache | null = null;
 
 // Recalcula y guarda en cache
 async function refreshCache(controller: ScheduleLotteryController): Promise<SchedCache> {
-  const data = await controller.getAllScheduleLotteries();
-  // Generamos ETag a partir del contenido
+  const data = await controller.getAllScheduleLotteries(); // devuelve IScheduleLotteryEntityFront
   const bodyString = JSON.stringify(data ?? {});
   const etag = `W/"${crypto.createHash('sha1').update(bodyString).digest('hex')}"`;
   cache = {
-    payload: data!,
+    payload: data!, // << ya es IScheduleLotteryEntityFront
     etag,
     expiresAt: Date.now() + TTL_MS,
   };
@@ -84,7 +86,7 @@ export class ScheduleLotteryRouter {
 
       await Promise.all(deletePromises);
 
-      let data: IScheduleLotteryEntityFront['scheduleLotteries'] | undefined;
+      let data: IScheduleLotteryEntityFront | undefined;
       if (insertData.length) {
         data = await this.controller.bulkInsert(insertData);
       }
@@ -95,7 +97,7 @@ export class ScheduleLotteryRouter {
       cache = null; // aseguramos que el próximo GET refresque desde DB
 
       const response: APIResponse<IScheduleLotteryEntityFront> = {
-        data: { scheduleLotteries: data! },
+        data: { scheduleLotteries: data! }, // data!: IScheduleLotteryEntityFront
       };
       res.status(200).json(response);
     } catch (error) {
