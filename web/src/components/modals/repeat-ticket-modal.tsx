@@ -5,7 +5,7 @@ import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { QuinielaFieldset } from '@/features/play-details/quiniela-fieldset.tsx';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
 import { IBetTable } from '@/features/play-details';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
@@ -40,7 +40,12 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const { data } = getTicketByNumber(ticketNumber);
 
   const handleSetBets = () => {
-    const filtered = Array.from(repeatBets.values())
+    handleRecreateBet(selectedBets);
+    onClose();
+  };
+
+  const selectedBets = useMemo<IBetTable[]>(() => {
+    return Array.from(repeatBets.values())
       .map((b) => {
         const filteredSL = b.scheduleLottery
           .map((s) => {
@@ -54,10 +59,15 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
         return { ...b, scheduleLottery: filteredSL };
       })
       .filter((b) => b.scheduleLottery.length > 0);
+  }, [repeatBets, scheduleLotteriesToPlay]);
 
-    handleRecreateBet(filtered);
-    onClose();
-  };
+  const selectedTotal = useMemo(() => {
+    return selectedBets.reduce((acc, b) => {
+      const lotCount = b.scheduleLottery.reduce((c, s) => c + s.lotteries.length, 0);
+      const amount = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount ?? 0);
+      return acc + amount * lotCount;
+    }, 0);
+  }, [selectedBets]);
 
   useEffect(() => {
     if (!data) return;
@@ -130,9 +140,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const handleClearAllAllSchedules = () => {
     setScheduleLotteriesToPlay(new Map());
   };
-  
-  console.log('scheduleLotteries');
-  console.log('scheduleLotteriesToPlay', scheduleLotteriesToPlay);
+
   return (
     <Modal
       title={title}
@@ -140,7 +148,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
       onClose={onClose}
       className="!max-w-[980px]  w-full m-auto bg-[#060813] p-1 sm:p-3"
     >
-      <Box className={'grid grid-cols-[1fr_3fr_1fr_5fr] items-center gap-5'}>
+      <Box className={'grid grid-cols-[1fr_3fr_1fr_5fr] items-center gap-1 sm:gap-3'}>
         <Flex className={'justify-end'}>
           <Typography variant={'small'}> Ticket N°: </Typography>
         </Flex>
@@ -173,7 +181,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
 
       <FlexCol className={'gap-1 sm:gap-3 items-center'}>
         <Flex>
-          <span className="min-w-52 ">Monto total: ${data?.total ?? 0}</span>
+          <span className="min-w-52 ">Monto total: ${selectedTotal}</span>
 
           <Button
             variant="outline"
@@ -182,9 +190,6 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
             onClick={handleSelectAllAllSchedules}
           >
             Selecionar todas
-          </Button>
-          <Button variant={'outline'} type={'button'} className={' flex justify-center'}>
-            Modificar monto
           </Button>
           <Button
             variant="outline"
@@ -196,7 +201,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
           </Button>
         </Flex>
 
-        <div className="flex-1 overflow-y-auto min-h-40">
+        <div className="flex-1 overflow-y-auto min-h-40 max-h-60">
           <Table className=" ">
             <TableHeader>
               <TableRow>
