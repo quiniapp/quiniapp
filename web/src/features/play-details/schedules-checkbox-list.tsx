@@ -87,15 +87,17 @@ const ScheduleCheckboxList = ({
   return (
     <FlexCol className="border-2  p-2 sm:p-4 rounded-[--rounded-form]">
       <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
-      <Box className=" grid grid-cols-2  gap-[12px] w-fit">
+      <Box className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
         {schedules.map((schedule, index) => {
           const keyHandler = keyboardMap[index];
-
           if (!keyHandler) return null;
+
           const enabled =
             (isScheduleAfter(schedule.time) && !isLessThanTenMinutes(schedule.time)) ||
             role !== USER_TYPE.CASHIER;
+
           if (!enabled) checkedSchedules.delete(schedule.schedule_id);
+
           return (
             <Flex key={schedule.schedule_id} className="items-center gap-2">
               <Checkbox

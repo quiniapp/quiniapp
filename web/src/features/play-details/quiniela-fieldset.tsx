@@ -27,14 +27,35 @@ export const QuinielaFieldset = ({
 }: QuinielaFieldsetProps) => {
   const { data: lotteries } = useLotteries();
 
-  const allSelected =
-    availableLotteryIds.length > 0 && availableLotteryIds.every((id) => selectedLotteryIds.has(id));
-
+  // mapa: id -> nombre (para labels y fallback sort)
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
     lotteries?.forEach((l) => map.set(l.lottery_id, l.name));
     return map;
   }, [lotteries]);
+
+  // mapa: id -> índice en el orden maestro
+  const orderIndex = useMemo(() => {
+    const map = new Map<string, number>();
+    lotteries?.forEach((l, i) => map.set(l.lottery_id, i));
+    return map;
+  }, [lotteries]);
+
+  // normalizo el orden de las habilitadas según el orden maestro
+  const orderedAvailableIds = useMemo(() => {
+    return [...availableLotteryIds].sort((a, b) => {
+      const ia = orderIndex.get(a);
+      const ib = orderIndex.get(b);
+      if (ia != null && ib != null) return ia - ib;
+      // fallback estable por nombre si algún id no está en 'lotteries'
+      const na = nameById.get(a) ?? '';
+      const nb = nameById.get(b) ?? '';
+      return na.localeCompare(nb, 'es');
+    });
+  }, [availableLotteryIds, orderIndex, nameById]);
+
+  const allSelected =
+    availableLotteryIds.length > 0 && availableLotteryIds.every((id) => selectedLotteryIds.has(id));
 
   return (
     <Fieldset legend={legend}>
@@ -49,7 +70,7 @@ export const QuinielaFieldset = ({
       </Flex>
 
       <FlexCol className="gap-3 overflow-y-scroll py-[20px]">
-        {availableLotteryIds.map((lotId) => {
+        {orderedAvailableIds.map((lotId) => {
           const inputId = `${namePrefix}-${lotId}`;
           const checked = selectedLotteryIds.has(lotId);
           const label = nameById.get(lotId) ?? lotId;
