@@ -75,34 +75,39 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
     return map;
   }, [repeatBets]);
 
+  const disabledSchedules = useMemo(() => {
+    if (!isCashier) return new Set<string>();
+    const set = new Set<string>();
+    (schedules ?? []).forEach((sch) => {
+      const hhmmss = toHHMMSS(sch.time);
+      const enabled = isScheduleEnabled(hhmmss, 10); // windowMin = 0 → deshabilita apenas llega la hora
+      if (!enabled) set.add(sch.schedule_id);
+    });
+    return set;
+  }, [isCashier, schedules, isScheduleEnabled, time]);
+
   const selectedBets = useMemo<IBetTable[]>(() => {
-    // Para CADA bet, generamos la combinatoria a partir de lo seleccionado,
-    // no a partir de lo que ya existía en la bet original.
     return Array.from(repeatBets.values())
       .map((b) => {
         const newSL: IBetTable['scheduleLottery'] = [];
 
         scheduleLotteriesToPlay.forEach((lotIds, schId) => {
+          if (disabledSchedules.has(schId)) return; // ⬅️ filtro clave
           if (!lotIds || lotIds.size === 0) return;
 
           const schedule = schedulesById.get(schId);
-          if (!schedule) return; // si no tenés el schedule, salteá (o podrías crear uno mínimo)
+          if (!schedule) return;
 
-          // mapear los ids seleccionados a objetos lottery; si alguno no existe, crear objeto mínimo
-          const lotteries = Array.from(lotIds).map((id) => {
-            const lot = lotteryById.get(id);
-            return lot ?? ({ lottery_id: id } as any);
-          });
-
-          if (lotteries.length > 0) {
-            newSL.push({ schedule, lotteries });
-          }
+          const lotteries = Array.from(lotIds).map(
+            (id) => lotteryById.get(id) ?? ({ lottery_id: id } as any)
+          );
+          if (lotteries.length > 0) newSL.push({ schedule, lotteries });
         });
 
         return { ...b, scheduleLottery: newSL };
       })
       .filter((b) => b.scheduleLottery.length > 0);
-  }, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteryById]);
+  }, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteryById, disabledSchedules]); // ⬅️ agregar dependencia
 
   const selectedTotal = useMemo(() => {
     return selectedBets.reduce((acc, b) => {
@@ -144,6 +149,11 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   };
 
   //////////////////
+
+  const handleClearAllAllSchedules = () => {
+    setScheduleLotteriesToPlay(new Map());
+  };
+
   useEffect(() => {
     if (!data) return;
 
@@ -154,7 +164,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
       const num = b.number;
       const schId = b.schedule.schedule_id;
       const lotId = String(b.lottery_id);
-
+      if (disabledSchedules.has(schId)) continue; // ⬅️ no sumar cerrados
       // preselección por turno/lot
       if (!selectedBySchedule.has(schId)) selectedBySchedule.set(schId, new Set());
       selectedBySchedule.get(schId)!.add(lotId);
@@ -186,19 +196,16 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
     setScheduleLotteriesToPlay(selectedBySchedule);
   }, [data]);
 
-  const handleClearAllAllSchedules = () => {
-    setScheduleLotteriesToPlay(new Map());
-  };
-  const disabledSchedules = useMemo(() => {
-    if (!isCashier) return new Set<string>();
-    const set = new Set<string>();
-    (schedules ?? []).forEach((sch) => {
-      const hhmmss = toHHMMSS(sch.time);
-      const enabled = isScheduleEnabled(hhmmss, 10); // windowMin = 0 → deshabilita apenas llega la hora
-      if (!enabled) set.add(sch.schedule_id);
+  useEffect(() => {
+    setScheduleLotteriesToPlay((prev) => {
+      const copy = new Map(prev);
+      for (const schId of copy.keys()) {
+        if (disabledSchedules.has(schId)) copy.delete(schId);
+      }
+      return copy;
     });
-    return set;
-  }, [isCashier, schedules, isScheduleEnabled, time]);
+  }, [disabledSchedules]);
+
   return (
     <Modal
       title={title}
