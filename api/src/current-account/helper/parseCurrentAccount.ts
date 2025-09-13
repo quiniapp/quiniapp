@@ -26,5 +26,6 @@ export const parseCurrentAccount = (
     cashier_commission: currentAccount.cashier_commission,
     previous_drag: currentAccount.previous_drag,
     revenue: currentAccount.revenue,
+    is_liquidated: currentAccount.is_liquidated,
   };
 };

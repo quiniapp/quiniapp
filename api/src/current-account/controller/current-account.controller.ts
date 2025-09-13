@@ -18,9 +18,9 @@ type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys
 export class CurrentAccountController {
   private repository = new CurrentAccountRepository();
 
-  calculateCurrentAccountHandler = async (date?: string, leave?: boolean) => {
+  calculateCurrentAccountHandler = async (date?: string, leave?: boolean, liquidated?: boolean) => {
     try {
-      const results = await this.repository.calculateCurrentAccountHandler(date, leave);
+      const results = await this.repository.calculateCurrentAccountHandler(date, leave, liquidated);
 
       return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
     } catch (error) {
@@ -64,7 +64,6 @@ export class CurrentAccountController {
       if (props.paid !== undefined) payload.paid = Number(props.paid);
       if (props.collections !== undefined) payload.collections = Number(props.collections);
       if (props.bills !== undefined) payload.bills = Number(props.bills);
-      if (props.drag !== undefined) payload.drag = Number(props.drag);
       if (props.previous_drag !== undefined) payload.previous_drag = Number(props.previous_drag);
       // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
 

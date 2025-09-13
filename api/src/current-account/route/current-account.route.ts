@@ -240,10 +240,20 @@ export class CurrentAccountRouter {
       }
     }
   };
+
   private bulkUpdateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, leave } = req.query; // DD-MM-YYYY
-    const leaveFlag = typeof leave === 'string' && leave.toLowerCase() === 'true';
+    const { date, leave, liquidated } = req.query; // DD-MM-YYYY
+
+    // Helper opcional para parsear booleanos
+    const toBool = (v: unknown) => {
+      if (typeof v !== 'string') return false;
+      const s = v.trim().toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    };
+
+    const leaveFlag = toBool(leave);
+    const liquidatedFlag = toBool(liquidated);
 
     const body = req.body as {
       updateCurrentAccount?: Record<
@@ -261,7 +271,7 @@ export class CurrentAccountRouter {
       return;
     }
 
-    // Validación de fecha si se va a calcular leave (o siempre si querés)
+    // fecha requerida siempre (seguimos tu regla actual)
     if (!date || typeof date !== 'string') {
       const response: APIResponse<null> = {
         error: {
@@ -273,7 +283,7 @@ export class CurrentAccountRouter {
       return;
     }
 
-    // Validar formato de updateCurrentAccount SOLO si viene y no es objeto
+    // validar formato de updateCurrentAccount solo si viene y no es objeto
     if (
       updateCurrentAccount !== undefined &&
       (typeof updateCurrentAccount !== 'object' || Array.isArray(updateCurrentAccount))
@@ -294,13 +304,14 @@ export class CurrentAccountRouter {
       let updated: ICurrentAccountEntityFront[] = [];
       let failed: Array<{ id: string; error: string }> = [];
 
+      // 1) Si hay updates, los aplico (si no, lo salto sin error)
       if (entries.length > 0) {
         const results = await Promise.allSettled(
           entries.map(([id, payload]) =>
             this.controller.updateCurrentAccountHandler(
               id,
               { ...payload },
-              leaveFlag // pasar flag por si también querés calcular leave en cada update
+              leaveFlag // si querés que cada update ya recalcule leave individualmente
             )
           )
         );
@@ -313,20 +324,11 @@ export class CurrentAccountRouter {
             failed.push({ id, error: reason });
           }
         });
-      } else if (!leaveFlag) {
-        // No hay updates y no se pidió leave -> es un bad request
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.BAD_REQUEST,
-            message: 'Debe enviar "updateCurrentAccount" o leave=true',
-          },
-        };
-        res.status(400).json(response);
-        return;
       }
 
-      // Ejecutar el cálculo masivo del día (siempre que llegó date; leaveFlag decide si calcula leave)
-      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag);
+      // 2) Siempre ejecuto el cálculo del día (regla nueva: aunque no haya updates y leave=false)
+      //    `liquidatedFlag` viaja al controller para tu lógica de “liquidado” del día.
+      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag, liquidatedFlag);
 
       const statusCode = failed.length ? 207 : 200;
       const response: APIResponse<{
