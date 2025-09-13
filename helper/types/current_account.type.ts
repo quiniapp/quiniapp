@@ -21,6 +21,7 @@ export interface ICurrentAccountEntityBack {
   bills: number;
   revenue: number; //deja
   previous_drag: number;
+  is_liquidated: boolean;
 }
 
 export type ICurrentAccountEntityFront = Omit<

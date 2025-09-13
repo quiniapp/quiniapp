@@ -8,8 +8,9 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export class CurrentAccountRepository {
-  async calculateCurrentAccountHandler(date?: string, leave?: boolean) {
+  async calculateCurrentAccountHandler(date?: string, leave?: boolean, liquidated?: boolean) {
     // Si la fecha no se ha proporcionado (es undefined o null)
+    console.log(liquidated);
     let dateToProcess: string;
     if (!date) {
       // Usa la fecha del día anterior en la zona horaria del servidor
@@ -22,6 +23,7 @@ export class CurrentAccountRepository {
     const { data, error } = await supabase.rpc('calculate_current_account', {
       p_date_text: dateToProcess,
       p_calculate_leave: leave,
+      // p_liquidated:liquidated
     });
     if (error) throw error;
     return data;
