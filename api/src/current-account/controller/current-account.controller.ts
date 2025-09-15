@@ -74,7 +74,7 @@ export class CurrentAccountController {
       if (props.previous_balance !== undefined)
         payload.previous_balance = Number(props.previous_balance);
       // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
-      console.log('payload', payload);
+
       const currentAccount = await this.repository.updateCurrentAccountHandler(
         current_account_id,
         payload,

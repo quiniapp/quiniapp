@@ -78,7 +78,6 @@ export class CurrentAccountRepository {
     props: IUpdateCurrentAccountEntity,
     leave?: boolean
   ) {
-    console.log('first', props);
     const { data, error } = await supabase.rpc('update_current_account_recompute', {
       p_current_account_id: current_account_id,
       p_props: props,
