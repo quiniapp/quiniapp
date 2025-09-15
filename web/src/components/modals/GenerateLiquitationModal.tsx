@@ -159,8 +159,8 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
                 <TableRow key={account.current_account_id}>
                   <TableCell>{account.user_number}</TableCell>
                   <TableCell>{account.user_name}</TableCell>
-                  <TableCell>{account.pass}</TableCell>
-                  <TableCell>{account.successes}</TableCell>
+                  <TableCell>{Math.floor(account.pass)}</TableCell>
+                  <TableCell>{Math.floor(account.successes)}</TableCell>
                   <TableCell>
                     <Input
                       className="text-white"
@@ -172,11 +172,11 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
                           key: 'claims',
                         });
                       }}
-                      defaultValue={account.claims}
+                      defaultValue={Math.floor(account.claims)}
                     />
                   </TableCell>
-                  <TableCell>{account.subtotal}</TableCell>
-                  <TableCell>{account.previous_balance}</TableCell>
+                  <TableCell>{Math.floor(account.subtotal)}</TableCell>
+                  <TableCell>{Math.floor(account.previous_balance)}</TableCell>
                   <TableCell>
                     <Input
                       className="text-white"
@@ -188,7 +188,7 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
                           key: 'collections',
                         });
                       }}
-                      defaultValue={account.collections}
+                      defaultValue={Math.floor(account.collections)}
                     />
                   </TableCell>
                   <TableCell>
@@ -202,12 +202,12 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
                           key: 'paid',
                         });
                       }}
-                      defaultValue={account.paid}
+                      defaultValue={Math.floor(account.paid)}
                     />
                   </TableCell>
-                  <TableCell>{account.total}</TableCell>
-                  <TableCell>{account.drag}</TableCell>
-                  <TableCell>{account.leave}</TableCell>
+                  <TableCell>{Math.floor(account.total)}</TableCell>
+                  <TableCell>{Math.floor(account.drag)}</TableCell>
+                  <TableCell>{Math.floor(account.leave)}</TableCell>
                 </TableRow>
               ))
             )}
