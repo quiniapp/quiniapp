@@ -62,6 +62,8 @@ const CurrentAccountTable = ({ data, isLoading, isPending }: CurrentAccountTable
     setCurrentAccount(currentAccount);
   };
 
+
+
   return (
     <Box className="p-1 sm:p-3">
       <Table className="overflow-hidden rounded-[16px_16px_0_0]">
