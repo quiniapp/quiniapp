@@ -12,7 +12,13 @@ import {
   ICurrentAccountEntityFront,
 } from '@helper/types/current_account.type';
 
-type AllowedManualKeys = 'claims' | 'paid' | 'collections' | 'bills' | 'drag' | 'previous_drag';
+type AllowedManualKeys =
+  | 'claims'
+  | 'paid'
+  | 'collections'
+  | 'bills'
+  | 'previous_balance'
+  | 'previous_drag';
 
 type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys>>;
 export class CurrentAccountController {
@@ -65,8 +71,10 @@ export class CurrentAccountController {
       if (props.collections !== undefined) payload.collections = Number(props.collections);
       if (props.bills !== undefined) payload.bills = Number(props.bills);
       if (props.previous_drag !== undefined) payload.previous_drag = Number(props.previous_drag);
+      if (props.previous_balance !== undefined)
+        payload.previous_balance = Number(props.previous_balance);
       // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
-
+      console.log('payload', payload);
       const currentAccount = await this.repository.updateCurrentAccountHandler(
         current_account_id,
         payload,
@@ -98,6 +106,28 @@ export class CurrentAccountController {
       });
     } catch (error) {
       console.error('getCurrentAccountHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+  updateCurrentAccountByUserHandler = async (
+    current_account_id: string,
+    props: IUpdateCurrentAccountEntity
+  ): Promise<ICurrentAccountEntityFront> => {
+    try {
+      const payload: UpdatePayload = {};
+
+      if (props.claims !== undefined) payload.claims = Number(props.claims);
+      if (props.paid !== undefined) payload.paid = Number(props.paid);
+      if (props.collections !== undefined) payload.collections = Number(props.collections);
+      if (props.bills !== undefined) payload.bills = Number(props.bills);
+      if (props.previous_drag !== undefined) payload.previous_drag = Number(props.previous_drag);
+      if (props.previous_balance !== undefined)
+        payload.previous_balance = Number(props.previous_balance);
+
+      // IMPORTANTE: devolvemos la fila actualizada
+      return await this.repository.updateCurrentAccountByUserHandler(current_account_id, payload);
+    } catch (error) {
+      console.error('updateCurrentAccountByUserHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

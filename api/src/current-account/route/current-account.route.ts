@@ -5,6 +5,12 @@ import { CurrentAccountController } from '../controller/current-account.controll
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 // import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
+// Helper opcional para parsear booleanos
+const toBool = (v: unknown) => {
+  if (typeof v !== 'string') return false;
+  const s = v.trim().toLowerCase();
+  return s === 'true' || s === '1' || s === 'yes';
+};
 export class CurrentAccountRouter {
   public router: Router;
   private controller: CurrentAccountController;
@@ -243,17 +249,9 @@ export class CurrentAccountRouter {
 
   private bulkUpdateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, leave, liquidated } = req.query; // DD-MM-YYYY
-
-    // Helper opcional para parsear booleanos
-    const toBool = (v: unknown) => {
-      if (typeof v !== 'string') return false;
-      const s = v.trim().toLowerCase();
-      return s === 'true' || s === '1' || s === 'yes';
-    };
+    const { date, leave } = req.query; // DD-MM-YYYY
 
     const leaveFlag = toBool(leave);
-    const liquidatedFlag = toBool(liquidated);
 
     const body = req.body as {
       updateCurrentAccount?: Record<
@@ -308,11 +306,7 @@ export class CurrentAccountRouter {
       if (entries.length > 0) {
         const results = await Promise.allSettled(
           entries.map(([id, payload]) =>
-            this.controller.updateCurrentAccountHandler(
-              id,
-              { ...payload },
-              leaveFlag // si querés que cada update ya recalcule leave individualmente
-            )
+            this.controller.updateCurrentAccountByUserHandler(id, { ...payload })
           )
         );
 
@@ -328,7 +322,7 @@ export class CurrentAccountRouter {
 
       // 2) Siempre ejecuto el cálculo del día (regla nueva: aunque no haya updates y leave=false)
       //    `liquidatedFlag` viaja al controller para tu lógica de “liquidado” del día.
-      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag, liquidatedFlag);
+      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag, true);
 
       const statusCode = failed.length ? 207 : 200;
       const response: APIResponse<{

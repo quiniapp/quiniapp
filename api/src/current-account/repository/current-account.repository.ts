@@ -10,7 +10,7 @@ dayjs.extend(timezone);
 export class CurrentAccountRepository {
   async calculateCurrentAccountHandler(date?: string, leave?: boolean, liquidated?: boolean) {
     // Si la fecha no se ha proporcionado (es undefined o null)
-    console.log(liquidated);
+
     let dateToProcess: string;
     if (!date) {
       // Usa la fecha del día anterior en la zona horaria del servidor
@@ -23,7 +23,7 @@ export class CurrentAccountRepository {
     const { data, error } = await supabase.rpc('calculate_current_account', {
       p_date_text: dateToProcess,
       p_calculate_leave: leave,
-      // p_liquidated:liquidated
+      p_liquidated: liquidated,
     });
     if (error) throw error;
     return data;
@@ -78,12 +78,29 @@ export class CurrentAccountRepository {
     props: IUpdateCurrentAccountEntity,
     leave?: boolean
   ) {
+    console.log('first', props);
     const { data, error } = await supabase.rpc('update_current_account_recompute', {
       p_current_account_id: current_account_id,
       p_props: props,
       p_calculate_leave: leave,
     });
     if (error) throw error;
+    return data;
+  }
+  async updateCurrentAccountByUserHandler(
+    current_account_id: string,
+    props: IUpdateCurrentAccountEntity
+  ) {
+    const timestamp = dayjs().toISOString();
+
+    const { data, error } = await supabase
+      .from('current_accounts')
+      .update({ ...props, edited_at: timestamp })
+      .eq('current_account_id', current_account_id)
+      .single(); // esperamos una sola fila
+
+    if (error) throw error;
+    // data es la fila actualizada
     return data;
   }
 }
