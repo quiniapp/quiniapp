@@ -11,6 +11,7 @@ import {
   ICurrentAccountEntityBack,
   ICurrentAccountEntityFront,
 } from '@helper/types/current_account.type';
+import { ERROR_MESSAGE } from '@helper/types/errors.type';
 
 type AllowedManualKeys =
   | 'claims'
@@ -87,28 +88,27 @@ export class CurrentAccountController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+
   getCurrentAccountHandler = async (
     props: IGetCurrentAccountEntity
-  ): Promise<ICurrentAccountEntityFront[]> => {
-    let currentaccounts;
+  ): Promise<ICurrentAccountEntityFront> => {
     try {
-      if (props.user_type === USER_TYPE.CASHIER) {
-        currentaccounts = await this.repository.getAllCurrentAccountHandler({
-          user_id: props.user_id,
-          date: props.date,
-        });
-      } else {
-        currentaccounts = await this.repository.getAllCurrentAccountHandler({ date: props.date });
+      const currentaccounts = await this.repository.getCurrentAccountByUserHandler(
+        props.user_id,
+        props.date
+      );
+
+      if (!currentaccounts) {
+        throw new Error(ERROR_MESSAGE.NOT_FOUND);
       }
 
-      return currentaccounts.map((currentaccount) => {
-        return parseCurrentAccount(currentaccount);
-      });
+      return parseCurrentAccount(currentaccounts);
     } catch (error) {
       console.error('getCurrentAccountHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+
   updateCurrentAccountByUserHandler = async (
     current_account_id: string,
     props: IUpdateCurrentAccountEntity

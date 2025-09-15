@@ -197,7 +197,7 @@ export class CurrentAccountRouter {
   private getCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { date } = req.query;
-    // const { id } = req.params;
+    const { id } = req.params;
 
     if (!user?.user) {
       const response: APIResponse<null> = {
@@ -213,11 +213,11 @@ export class CurrentAccountRouter {
     try {
       const currentAccount = await this.controller.getCurrentAccountHandler({
         user_type: user.user.user_type,
-        user_id: user.user.user_id,
-        date: date as string,
+        user_id: id,
+        date: typeof date === 'string' ? date : undefined,
       });
 
-      const response: APIResponse<ICurrentAccountEntityFront[]> = {
+      const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
           currentAccount,
         },

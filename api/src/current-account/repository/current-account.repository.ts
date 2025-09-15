@@ -3,6 +3,7 @@ import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { ICurrentAccountEntityBack } from '@helper/types/current_account.type';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -29,80 +30,41 @@ export class CurrentAccountRepository {
     return data;
   }
 
-  async getAllCurrentAccountHandler({
-    user_id,
-    date,
-    liquidated,
-  }: {
-    user_id?: string;
-    date?: string;
-    liquidated?: boolean;
-  }) {
-    // base con join a users y filtro de borrados
-    const base = supabase
+  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
+    // Base query to select current accounts and join with users table
+    let query = supabase
       .from('current_accounts')
       .select('*, users!inner(*)')
-      .is('users.deleted_at', null);
-
-    // === CASO 1: viene user_id ===
+      .is('users.deleted_at', null)
+      .order('date', { ascending: false })
+      .order('user_number', { ascending: true });
+    // The .order() method already ensures the newest record is first.
     if (user_id) {
-      let q = base.eq('user_id', user_id);
-
-      if (date) {
-        // 1.a) user_id + date -> ese día
-        q = q
-          .eq('date', dayjs(date).format('YYYY-MM-DD'))
-          .order('date', { ascending: false })
-          .order('user_number', { ascending: true });
-        const { data, error } = await q;
-        if (error) throw error;
-        return data; // array (0..n), normalmente 1
-      } else {
-        // 1.b) user_id sin date -> última liquidada
-        q = q.eq('is_liquidated', true).order('date', { ascending: false }).limit(1);
-        const { data, error } = await q;
-        if (error) throw error;
-
-        // Fallback opcional: si no hay liquidada, traer la última cualquiera
-        // if (!data || data.length === 0) {
-        //   const { data: fallback, error: err2 } = await base
-        //     .eq('user_id', user_id)
-        //     .order('date', { ascending: false })
-        //     .limit(1);
-        //   if (err2) throw err2;
-        //   return fallback ?? [];
-        // }
-
-        return data ?? [];
-      }
+      query = query.eq('user_id', user_id).limit(1);
     }
-
-    // === CASO 2: no viene user_id y sí viene date ===
+    // If a date is provided, filter the results for that specific date.
     if (date) {
-      let q = base.eq('date', dayjs(date).format('YYYY-MM-DD'));
-      if (typeof liquidated === 'boolean') q = q.eq('is_liquidated', liquidated);
-      q = q.order('user_number', { ascending: true });
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      query = query.eq('date', dayjs(date).format('YYYY-MM-DD'));
     }
-
-    // === CASO 3: no user_id y no date -> última por usuario (dedup)
-    {
-      let q = base.order('date', { ascending: false }).order('user_number', { ascending: true });
-      if (typeof liquidated === 'boolean') q = q.eq('is_liquidated', liquidated);
-
-      const { data, error } = await q;
-      if (error) throw error;
-
-      const byUser: Record<string, (typeof data)[number]> = {};
-      for (const row of data ?? []) {
-        if (!byUser[row.user_id]) byUser[row.user_id] = row; // ya viene ordenado: primera es la más reciente
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    } // If a specific date or user_id was provided, we don't need to deduplicate.
+    // // We can return the results directly.
+    if (date || user_id) {
+      return data;
+    }
+    // If neither a user_id nor a date was provided,
+    // // we need to return the *most recent* current account for *each* user.
+    // // The .order() method already has the most recent one at the beginning of the array.
+    const byUser: Record<string, (typeof data)[number]> = {};
+    for (const row of data ?? []) {
+      if (!byUser[row.user_id]) {
+        byUser[row.user_id] = row;
       }
-      return Object.values(byUser);
     }
+    return Object.values(byUser);
   }
-
   async updateCurrentAccountHandler(
     current_account_id: string,
     props: IUpdateCurrentAccountEntity,
@@ -131,5 +93,26 @@ export class CurrentAccountRepository {
     if (error) throw error;
     // data es la fila actualizada
     return data;
+  }
+  async getCurrentAccountByUserHandler(
+    user_id: string,
+    date?: string
+  ): Promise<ICurrentAccountEntityBack | undefined> {
+    const query = supabase.from('current_accounts').select('*').eq('user_id', user_id);
+    if (date) {
+      // Fila de ese día (si existe)
+      const { data, error } = await query.eq('date', date).maybeSingle(); // 0..1
+
+      if (error) throw error;
+      return data ?? undefined;
+    } else {
+      // Última LIQUIDADA
+      const { data, error } = await query
+        .eq('is_liquidated', true)
+        .order('date', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      return data?.[0];
+    }
   }
 }
