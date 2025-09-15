@@ -14,9 +14,7 @@ import toast from 'react-hot-toast';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
 
 // 👇 Lazy import del modal (se carga sólo cuando se renderiza)
-const RepeatTicketModal = React.lazy(
-  () => import('@/components/modals/repeat-ticket-modal.tsx')
-);
+const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));
 
 interface HeaderPlayDetailProps {
   cashier?: IUserEntityFront;
@@ -56,7 +54,7 @@ const HeaderPlayDetail = ({
 
   return (
     <HeaderSection title={' Realizar Jugadas'}>
-      <Flex className={' items-center gap-2  justify-between w-full'}>
+      <Flex className={' items-center gap-2  justify-end w-full'}>
         {role !== USER_TYPE.CASHIER && (
           <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>

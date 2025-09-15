@@ -21,18 +21,18 @@ import dayjs from 'dayjs';
 import { useSessionStore } from '@/stores/sessionStore';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useEffect, useState } from 'react';
-import { useGetCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import { useSearchParams } from 'react-router-dom';
 import { printUserSlipPDF } from '../../../helper/function/printLiquidationCashier';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SelectDayToSearch } from '../plays-and-hits/select-day-to-search';
+import { useGetCurrentAccountByUser } from '@/hooks/fetchs/current-account/useGetCurrentAccountByUser';
 
 const CurrentAcoountByUserTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [printing, setPrinting] = useState<boolean>(false);
   const today = dayjs().format('YYYY-MM-DD');
-  const date = searchParams.get('date') ?? today;
+  const date = searchParams.get('date');
   const { user } = useSessionStore();
 
   const methods = useForm<ICurrentAccountEntityFront>({
@@ -60,23 +60,25 @@ const CurrentAcoountByUserTable = () => {
     },
   });
 
-  const { data: currentAccount } = useGetCurrentAccount(date);
+  const { data: currentAccount } = useGetCurrentAccountByUser(user?.user_id, date);
+
+  
   const { data: bets, isLoading: isLoadingBets } = useBets({
-    date: date,
+    date: currentAccount?.date ?? null,
     cashier_id: user?.user_id,
     winners: 'true',
   });
   const { data: tickets, isLoading: isLoadingTickets } = useTickets({
     user_id: user?.user_id,
-    date: date,
+    date: currentAccount?.date,
   });
 
   const handlePrintLiquidationCashier = async () => {
-    if (currentAccount?.length) {
+    if (currentAccount) {
       setPrinting(true);
       await printUserSlipPDF({
-        account: currentAccount?.[0],
-        date: date,
+        account: currentAccount,
+        date: currentAccount?.date,
         bets,
       });
       setPrinting(false);
@@ -89,7 +91,7 @@ const CurrentAcoountByUserTable = () => {
     setSearchParams(params);
   };
   useEffect(() => {
-    if (currentAccount?.length) methods.reset(currentAccount[0]);
+    if (currentAccount) methods.reset(currentAccount);
   }, [currentAccount]);
   return (
     <FlexCol className="items-center justify-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]">
@@ -100,14 +102,14 @@ const CurrentAcoountByUserTable = () => {
         <Flex className="items-center">
           <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
           <SelectDayToSearch
-            selectedDay={date}
+            selectedDay={date ?? today}
             onDayChange={handleDayChange}
             toDate={dayjs().toDate()}
           />
         </Flex>
       </Flex>
 
-      <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.[0]?.date).format('DD-MM-YYYY')}`}</Typography>
+      <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.date).format('DD-MM-YYYY')}`}</Typography>
       <FormProvider {...methods}>
         <form className="w-full">
           <Flex className="justify-center gap-1 sm:gap-3">
