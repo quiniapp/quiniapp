@@ -57,47 +57,64 @@ const HeaderPlayDetail = ({
       <Flex className={' items-center gap-2  justify-end w-full'}>
         {role !== USER_TYPE.CASHIER && (
           <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
-            <Label htmlFor={'user'}> Usuario</Label>
-            <Input
-              type={'text'}
-              id={'user'}
-              name={'user'}
-              className={'max-w-[100px]'}
-              value={userNumber?.toString() ?? ''}
-              onChange={(e) => {
-                handleSearch(e.target.value);
-              }}
-            />
-            <div className="w-40">
-              <Label htmlFor={'user'}> {cashier?.name}</Label>
-            </div>
+            <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
+              <Label htmlFor={'user'}> Usuario</Label>
+              <Input
+                type={'text'}
+                id={'user'}
+                name={'user'}
+                className={'max-w-[100px]'}
+                value={userNumber?.toString() ?? ''}
+                onChange={(e) => {
+                  handleSearch(e.target.value);
+                }}
+              />
+              <div className="w-40">
+                <Label htmlFor={'user'}> {cashier?.name}</Label>
+              </div>
+            </Flex>
+            <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
+              <Label htmlFor={'user'}> Ticket</Label>
+              <Input
+                type={'text'}
+                id={'user'}
+                name={'user'}
+                className={'max-w-[100px]'}
+                value={userNumber?.toString() ?? ''}
+                onChange={(e) => {
+                  handleSearch(e.target.value);
+                }}
+              />
+            </Flex>
           </Flex>
         )}
 
-        <Flex className={'flex-col sm:flex-row w-fit gap-1 sm:gap-3 justify-center'}>
-          <Button className="sm:w-fit p-1" type={'button'} onClick={openRepeatModal}>
-            <Repeat2Icon className="w-2 h-2 sm:w-3 sm:h-3" />
-            <Typography className="text-xs text-wrap" variant={'small'}>
-              Repetir Ticket
-            </Typography>
-          </Button>
+        {role === USER_TYPE.CASHIER && (
+          <Flex className={'flex-col sm:flex-row w-fit gap-1 sm:gap-3 justify-center'}>
+            <Button className="sm:w-fit p-1" type={'button'} onClick={openRepeatModal}>
+              <Repeat2Icon className="w-2 h-2 sm:w-3 sm:h-3" />
+              <Typography className="text-xs text-wrap" variant={'small'}>
+                Repetir Ticket
+              </Typography>
+            </Button>
 
-          <Button
-            className="text-xs sm:w-fit p-1"
-            type={'button'}
-            variant={'outline'}
-            onClick={handleRePrimtLast}
-          >
-            <PrinterIcon className="w-2 h-2 sm:w-3 sm:h-3" />
-            <Typography className="text-xs text-wrap" variant={'small'}>
-              Reimprimir Anterior
-            </Typography>
-          </Button>
+            <Button
+              className="text-xs sm:w-fit p-1"
+              type={'button'}
+              variant={'outline'}
+              onClick={handleRePrimtLast}
+            >
+              <PrinterIcon className="w-2 h-2 sm:w-3 sm:h-3" />
+              <Typography className="text-xs text-wrap" variant={'small'}>
+                Reimprimir Anterior
+              </Typography>
+            </Button>
 
-          <Button type={'button'} className={'text-xs sm:w-fit p-1'} variant={'outline'}>
-            Cancelar Ticket
-          </Button>
-        </Flex>
+            <Button type={'button'} className={'text-xs sm:w-fit p-1'} variant={'outline'}>
+              Cancelar Ticket
+            </Button>
+          </Flex>
+        )}
       </Flex>
 
       {/* 👇 Render condicional + Suspense para cargar el modal sólo cuando se abre */}
