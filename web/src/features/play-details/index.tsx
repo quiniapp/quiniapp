@@ -2,7 +2,7 @@ import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
 import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
 import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
-import { useCreateTicket } from '@/hooks/useTicket';
+import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
 import PlayDetailGameTable from './play-detail-game-table';
 import { FlexCol } from '@/components/flex';
@@ -17,6 +17,9 @@ import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionar
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
+import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
+import { set } from 'date-fns';
+import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -34,6 +37,7 @@ export interface IBetTable {
 
 const PlayDetailsContent = () => {
   const { user } = useSessionStore();
+  const [ticketId, setTicketId] = useState<string | undefined>(undefined);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [partialAmount, setPartialAmount] = useState<number>(0);
   const [bets, setBets] = useState<IBetTable[]>([]);
@@ -45,7 +49,7 @@ const PlayDetailsContent = () => {
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const { data } = useUsersByNumber(userNumber);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
-/*  */
+  const { mutate: editTicket } = useEditTicket();
   const computeTotal = (bets: IBetTable[]) =>
     bets.reduce((acc, bet) => {
       const combos = bet.scheduleLottery.reduce((s, it) => s + it.lotteries.length, 0);
@@ -55,15 +59,15 @@ const PlayDetailsContent = () => {
     }, 0);
 
   const handleRecreateBet = (values: IBetTable[]) => {
-  setBets(values);
+    setBets(values);
 
-  const total = computeTotal(values);
-  setPartialAmount(total);   // reemplaza, no suma
-  setTotalAmount(total);     // reemplaza, no suma
+    const total = computeTotal(values);
+    setPartialAmount(total); // reemplaza, no suma
+    setTotalAmount(total); // reemplaza, no suma
 
-  setSelectedIndexes([]);
-  setIsEnabledCreateBet(true);
-};
+    setSelectedIndexes([]);
+    setIsEnabledCreateBet(true);
+  };
 
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
@@ -76,9 +80,9 @@ const PlayDetailsContent = () => {
           number: bet.number,
           amount: +bet.amount!,
           place: bet.place,
-          with: bet.with,
-          position: bet.position,
-          bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length),
+          with: bet?.with,
+          position: bet?.position,
+          bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length)!,
           lottery_id: lot.lottery_id,
           schedule_id: schedLot.schedule.schedule_id,
           user_id: cashier?.user_id ?? user?.user_id!,
@@ -88,40 +92,96 @@ const PlayDetailsContent = () => {
         }))
       )
     );
-    createTicket(
-      {
-        bets: newBets,
-        date: today,
-        user_id: cashier?.user_id ?? user?.user_id!,
-        user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-      },
-      {
-        onSuccess: (res) => {
-          const lastTicket = {
-            bets: [...bets].reverse(),
-            ticket: res.data.ticket,
-            cashier_number: user?.number,
-          };
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            makeTicketPdf(lastTicket);
-          }
+    if (!ticketId) {
+      createTicket(
+        {
+          bets: newBets,
+          date: today,
+          user_id: cashier?.user_id ?? user?.user_id!,
+          user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
+        },
+        {
+          onSuccess: (res) => {
+            const lastTicket = {
+              bets: [...bets].reverse(),
+              ticket: res.data.ticket,
+              cashier_number: user?.number,
+            };
+            if (user?.user_type === USER_TYPE.CASHIER) {
+              makeTicketPdf(lastTicket);
+            }
 
-          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-          setBets([]);
-          setPartialAmount(0);
-          setTotalAmount(0);
-          setCashier(undefined);
-          setLotteries(new Map());
-          setSchedules(new Map());
-          setUserNumber(undefined);
-          setIsEnabledCreateBet(true);
-          toast.success('Ticket creado correctamente');
-        },
-        onError: () => {
-          setIsEnabledCreateBet(true);
-          toast.error('Ocurrió un error, intente de nuevo');
-        },
-      }
+            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+            setBets([]);
+            setPartialAmount(0);
+            setTotalAmount(0);
+            setCashier(undefined);
+            setLotteries(new Map());
+            setSchedules(new Map());
+            setUserNumber(undefined);
+            setIsEnabledCreateBet(true);
+            setSelectedIndexes([]);
+            setTicketId(undefined);
+            toast.success('Ticket creado correctamente');
+          },
+          onError: (err) => {
+            console.error(err)
+            setIsEnabledCreateBet(true);
+            toast.error('Ocurrió un error, intente de nuevo');
+          },
+        }
+      );
+    } else {
+      editTicket(
+        { ticket_id: ticketId, bets: newBets },
+        {
+          onSuccess: () => {
+
+
+            setBets([]);
+            setPartialAmount(0);
+            setTotalAmount(0);
+            setCashier(undefined);
+            setLotteries(new Map());
+            setSchedules(new Map());
+            setUserNumber(undefined);
+            setIsEnabledCreateBet(true);
+            setSelectedIndexes([]);
+            setTicketId(undefined);
+            toast.success('Ticket modificado correctamente');
+          },
+          onError: (err) => {
+            console.error(err)
+            setIsEnabledCreateBet(true);
+            toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
+          },
+        }
+      );
+    }
+  };
+
+  const handleEditTicket = (ticket: ITicketEntityFront) => {
+    setTicketId(ticket.ticket_id);
+    setSelectedIndexes([]);
+    setTotalAmount(0);
+    setPartialAmount(0);
+    setBets(
+      ticket.bets.map((bet) => {
+        setTotalAmount((prev) => prev + bet.amount);
+        return {
+          number: bet.number,
+          amount: bet.amount,
+          place: bet.place,
+          with: bet.with,
+          position: bet.position,
+          scheduleLottery: [
+            {
+              schedule: bet.schedule,
+              lotteries: [bet.lottery],
+            },
+          ],
+        };
+      })
     );
   };
 
@@ -145,14 +205,11 @@ const PlayDetailsContent = () => {
       }
       return true;
     });
-
     setBets(updatedBets);
-    setPartialAmount((prev) => (prev - reduction >= 0 ? prev - reduction : 0));
+    setPartialAmount((prev) => prev - reduction);
     setTotalAmount((prev) => prev - reduction);
     setSelectedIndexes([]);
   };
-
-
 
   useEffect(() => {
     if (!userNumber) setCashier(undefined);
@@ -171,6 +228,9 @@ const PlayDetailsContent = () => {
         setUserNumber={setUserNumber}
         userNumber={userNumber}
         handleRecreateBet={handleRecreateBet}
+        handleEditTicket={handleEditTicket}
+        setTotalAmount={setTotalAmount}
+        setPartialAmount={setPartialAmount}
       />
 
       <FillOutATicket

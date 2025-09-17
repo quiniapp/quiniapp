@@ -1,6 +1,7 @@
 import { TicketRepository } from '../repository/ticket.repository';
 import {
   IDeleteTicketEntity,
+  IEditTicketEntity,
   IGetAllTicketByUserEntity,
   IGetAllTicketEntity,
   IGetTicketEntity,
@@ -111,6 +112,16 @@ export class TicketController {
       });
 
       return tickets;
+    } catch (error) {
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+  update = async (props: IEditTicketEntity) => {
+    try {
+      const ticket = await this.repository.update(props);
+
+      return parseTicket(ticket);
     } catch (error) {
       console.error('GetAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

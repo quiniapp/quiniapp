@@ -4,6 +4,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { newTicketSchema } from '@helper/schemas/ticket.schema';
+import { USER_TYPE } from '@helper/types/user.type';
 
 export class TicketRouter {
   public router: Router;
@@ -15,10 +16,10 @@ export class TicketRouter {
   }
 
   private setupRoutes() {
-    // this.router.get('/:id', this.controller.get);
     this.router.get('/', this.getAllTicketHandler);
     this.router.get('/deleted', this.getAllDeletedTicketHandler);
     this.router.get('/:id', this.getTicketHandler);
+    this.router.put('/:id', this.updateTicketHandler);
     this.router.post('/', this.newTicketHandler);
     this.router.delete('/:id', this.deleteTicketHandler);
   }
@@ -267,10 +268,11 @@ export class TicketRouter {
       }
     }
   };
-  /*   private updateTicketHandler: RequestHandler = async (req: Request, res: Response) => {
+
+  private updateTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: ticket_id } = req.params;
-    const { updateTicket } = req.body;
+    const { bets } = req.body;
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: {
@@ -282,8 +284,8 @@ export class TicketRouter {
       return;
     }
 
-    const result = updateTicketSchema.safeParse(updateTicket);
-    if (!result.success) {
+    /* const result = updateTicketSchema.safeParse(updateTicket);
+     if (!result.success) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -293,10 +295,10 @@ export class TicketRouter {
       res.status(400).json(response); // <-- SIN return
 
       return;
-    }
+    } */
 
     try {
-      const ticket = await this.controller.update(ticket_id, updateTicket);
+      const ticket = await this.controller.update({ ticket_id, bets });
       const response: APIResponse<ITicketEntityFront> = {
         data: {
           ticket,
@@ -325,7 +327,7 @@ export class TicketRouter {
         return;
       }
     }
-  }; */
+  };
 
   private deleteTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { id: ticket_number } = req.params;

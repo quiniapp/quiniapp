@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../routes/routes';
-import {INewTicketEntity} from '../../../helper/request/ticket.response'
+import { ROUTES } from '../../../../routes/routes';
+import {INewTicketEntity} from '../../../../../helper/request/ticket.response'
 
 
 const createTicket = async (payload:INewTicketEntity) => {
