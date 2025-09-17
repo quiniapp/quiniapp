@@ -1,5 +1,5 @@
 import { supabase } from '@database/db.connection';
-import { IDeleteTicketEntity } from '@helper/request/ticket.response';
+import { IDeleteTicketEntity, IEditTicketEntity } from '@helper/request/ticket.response';
 import { ITicketEntityBack } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
 
@@ -114,5 +114,14 @@ export class TicketRepository {
     const { count, error } = await query;
     if (error) throw error;
     return count ?? 0;
+  }
+
+  async update(props: IEditTicketEntity): Promise<ITicketEntityBack> {
+    const { data, error } = await supabase.rpc('edit_ticket_replace_bets', {
+      p_ticket_id: props.ticket_id,
+      p_bets: props.bets,
+    });
+    if (error) throw error;
+    return data;
   }
 }

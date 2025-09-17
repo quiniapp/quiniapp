@@ -6,7 +6,9 @@ import { INewBetEntity } from './bet.response';
 export type INewTicketEntity = Pick<ITicketEntityBack, 'user_id' | 'user_name' | 'date'> & {
   bets: INewBetEntity[];
 };
-
+export type IEditTicketEntity = Pick<ITicketEntityBack, 'ticket_id'> & {
+  bets: INewBetEntity[];
+};
 export interface INewTicketBaseEntity extends ITicketEntityBase {
   bets: IBetEntityBase[];
 }

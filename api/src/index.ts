@@ -5,7 +5,7 @@ import { isAuthenticated } from '../middlewares/auth.middleware';
 import { publicRouter, router } from './router';
 import { PORT, URL } from 'api/envs';
 import cookieParser from 'cookie-parser';
-
+// import listEndpoints from 'express-list-endpoints';
 const app = express();
 
 const allowedOrigins = ['http://localhost:5173', 'https://quiniapp-web.vercel.app'];
@@ -29,7 +29,7 @@ app.use(cookieParser());
 // Rutas
 app.use('/api/private', isAuthenticated, express.json({ limit: '5mb' }), router);
 app.use('/api', express.json({ limit: '200kb' }), publicRouter);
-
+// console.table(listEndpoints(app));
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en ${URL}:${PORT}`);
 });

@@ -1,4 +1,4 @@
-import { IBetEntityBack, IBetEntityBase } from '../types/bet.type';
+import { IBetEntityBase } from '../types/bet.type';
 
 export type INewBetEntity = Omit<
   IBetEntityBase,
