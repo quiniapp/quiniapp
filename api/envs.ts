@@ -5,8 +5,8 @@ const DATABASE_ENVIROMENT = process.env.SUPABASE_ENVIROMENT;
 
 export const JWT_SECRET_USER = process.env.JWT_SECRET_USER!;
 //api
-export const PORT = ENVIROMENT === 'DEVELOPMENT' ? process.env.PORT : 3000;
-export const URL = ENVIROMENT === 'DEVELOPMENT' ? process.env.URL : 'http://localhost';
+export const PORT = ENVIROMENT === 'LOCAL' ? 3000 : process.env.PORT;
+export const URL = ENVIROMENT === 'LOCAL' ? 'http://localhost' : process.env.URL;
 
 //database
 export const SUPABASE_URL =
