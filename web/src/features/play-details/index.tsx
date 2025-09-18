@@ -18,8 +18,8 @@ import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
-import { set } from 'date-fns';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
+import {groupTicketBetsByNumber} from '../../../helper/function/groupNumber'
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -165,24 +165,36 @@ const PlayDetailsContent = () => {
     setSelectedIndexes([]);
     setTotalAmount(0);
     setPartialAmount(0);
-    setBets(
-      ticket.bets.map((bet) => {
-        setTotalAmount((prev) => prev + bet.amount);
-        return {
-          number: bet.number,
-          amount: bet.amount,
-          place: bet.place,
-          with: bet.with,
-          position: bet.position,
-          scheduleLottery: [
-            {
-              schedule: bet.schedule,
-              lotteries: [bet.lottery],
-            },
-          ],
-        };
-      })
-    );
+     const groupedBets = groupTicketBetsByNumber(ticket);
+
+  // 2) setear bets ya agrupadas
+  setBets(groupedBets);
+
+  // 3) total: similar a RepeatTicketModal (amount * #loterías seleccionadas por jugada)
+  const total = groupedBets.reduce((acc, b) => {
+    const lotCount = b.scheduleLottery.reduce((c, s) => c + s.lotteries.length, 0);
+    const amount = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount ?? 0);
+    return acc + amount * lotCount;
+  }, 0);
+  setTotalAmount(total);
+    // setBets(
+    //   ticket.bets.map((bet) => {
+    //     setTotalAmount((prev) => prev + bet.amount);
+    //     return {
+    //       number: bet.number,
+    //       amount: bet.amount,
+    //       place: bet.place,
+    //       with: bet.with,
+    //       position: bet.position,
+    //       scheduleLottery: [
+    //         {
+    //           schedule: bet.schedule,
+    //           lotteries: [bet.lottery],
+    //         },
+    //       ],
+    //     };
+    //   })
+    // );
   };
 
   const handleResetBets = () => {

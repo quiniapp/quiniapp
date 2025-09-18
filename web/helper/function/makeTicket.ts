@@ -42,50 +42,50 @@ function comboHeader(scheduleLottery: ILotterySchedule[]): ComboHeader {
   return rows;
 }
 // word-wrap simple que mantiene palabras enteras
-function wrapWords(text: string, width = WIDTH): string[] {
-  const out: string[] = [];
-  let line = '';
-  for (const word of text.split(/\s+/)) {
-    if (!word) continue;
-    if ((line ? line.length + 1 : 0) + word.length <= width) {
-      line = line ? line + ' ' + word : word;
-    } else {
-      out.push(line.padEnd(width, ' '));
-      line = word;
-    }
-  }
-  if (line) out.push(line.padEnd(width, ' '));
-  return out.length ? out : [''.padEnd(width, ' ')];
-}
+// function wrapWords(text: string, width = WIDTH): string[] {
+//   const out: string[] = [];
+//   let line = '';
+//   for (const word of text.split(/\s+/)) {
+//     if (!word) continue;
+//     if ((line ? line.length + 1 : 0) + word.length <= width) {
+//       line = line ? line + ' ' + word : word;
+//     } else {
+//       out.push(line.padEnd(width, ' '));
+//       line = word;
+//     }
+//   }
+//   if (line) out.push(line.padEnd(width, ' '));
+//   return out.length ? out : [''.padEnd(width, ' ')];
+// }
 
-// envuelve un “head” fijo + “tail” largo, indentando las siguientes líneas
-function wrapHeadTail(head: string, tail: string, width = WIDTH): string[] {
-  const headLen = Math.min(head.length, width);
-  const firstRoom = width - headLen;
-  const words = tail.split(/\s+/);
-  let cur = '';
-  const lines: string[] = [];
+// // envuelve un “head” fijo + “tail” largo, indentando las siguientes líneas
+// function wrapHeadTail(head: string, tail: string, width = WIDTH): string[] {
+//   const headLen = Math.min(head.length, width);
+//   const firstRoom = width - headLen;
+//   const words = tail.split(/\s+/);
+//   let cur = '';
+//   const lines: string[] = [];
 
-  // primera línea con el head
-  while (words.length && (cur ? cur.length + 1 : 0) + words[0].length <= firstRoom) {
-    cur = cur ? cur + ' ' + words.shift() : words.shift()!;
-  }
-  lines.push((head.slice(0, headLen) + (cur || '')).padEnd(width, ' '));
+//   // primera línea con el head
+//   while (words.length && (cur ? cur.length + 1 : 0) + words[0].length <= firstRoom) {
+//     cur = cur ? cur + ' ' + words.shift() : words.shift()!;
+//   }
+//   lines.push((head.slice(0, headLen) + (cur || '')).padEnd(width, ' '));
 
-  // resto con indent = headLen espacios
-  const indent = ' '.repeat(headLen);
-  cur = '';
-  while (words.length) {
-    if ((cur ? cur.length + 1 : 0) + words[0].length <= width - headLen) {
-      cur = cur ? cur + ' ' + words.shift() : words.shift()!;
-    } else {
-      lines.push((indent + cur).padEnd(width, ' '));
-      cur = '';
-    }
-  }
-  if (cur) lines.push((indent + cur).padEnd(width, ' '));
-  return lines;
-}
+//   // resto con indent = headLen espacios
+//   const indent = ' '.repeat(headLen);
+//   cur = '';
+//   while (words.length) {
+//     if ((cur ? cur.length + 1 : 0) + words[0].length <= width - headLen) {
+//       cur = cur ? cur + ' ' + words.shift() : words.shift()!;
+//     } else {
+//       lines.push((indent + cur).padEnd(width, ' '));
+//       cur = '';
+//     }
+//   }
+//   if (cur) lines.push((indent + cur).padEnd(width, ' '));
+//   return lines;
+// }
 
 // ======= alineación por unidades para el número =======
 // numWidth: ancho reservado para el número (p.ej. 10 dígitos). Unidades = última columna del bloque.
@@ -109,11 +109,11 @@ function formatNumberLine(
 }
 
 // ======= "En: schedule - lot1, lot2" =======
-function formatEnLine(scheduleName: string, lotteryNames: string[]): string {
-  const head = `En: ${scheduleName} - `;
-  const tail = lotteryNames.join(', ');
-  return head + ' ' + tail;
-}
+// function formatEnLine(scheduleName: string, lotteryNames: string[]): string {
+//   const head = `En: ${scheduleName} - `;
+//   const tail = lotteryNames.join(', ');
+//   return head + ' ' + tail;
+// }
 
 type Ticket = {
   user_name?: number;
