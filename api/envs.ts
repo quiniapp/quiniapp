@@ -1,8 +1,7 @@
 import 'dotenv/config';
-
+//ENVIROMENTS
 const ENVIROMENT = process.env.ENVIROMENT;
 const DATABASE_ENVIROMENT = process.env.SUPABASE_ENVIROMENT;
-
 const FRONT_URL_ENVIROMENT = process.env.FRONT_URL_ENVIROMENT;
 
 export const JWT_SECRET_USER = process.env.JWT_SECRET_USER!;
@@ -25,7 +24,5 @@ export const JWT_SECRET_SUPABASE =
 
 export const FRONT_URL =
   FRONT_URL_ENVIROMENT === 'PRODUCTION'
-    ? process.env.FRONT_ENVIROMET_PRODUCTION
-    : FRONT_URL_ENVIROMENT === 'DEVELOP'
-      ? process.env.FRONT_ENVIROMET_DEVELOP
-      : 'http://localhost:5173';
+    ? process.env.FRONT_URL_PRODUCTION
+    : process.env.FRONT_URL_DEVELOP;

@@ -7,7 +7,7 @@ import { FRONT_URL, PORT, URL } from 'api/envs';
 import cookieParser from 'cookie-parser';
 // import listEndpoints from 'express-list-endpoints';
 const app = express();
-const allowedOrigins = [FRONT_URL];
+const allowedOrigins = ['http://localhost:5173', FRONT_URL];
 
 // Middlewares globales
 app.use(
