@@ -49,11 +49,12 @@ export class AuthRouter {
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: username === 'admin' ? 'quini.app.leo@gmail.com' : generateEmail(username),
+        email: generateEmail(username),
         password: password,
       });
 
       if (error) {
+        console.error(error);
         throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
       }
       res.cookie('access_token', data.session.access_token, {

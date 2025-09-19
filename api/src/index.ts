@@ -3,12 +3,11 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { isAuthenticated } from '../middlewares/auth.middleware';
 import { publicRouter, router } from './router';
-import { PORT, URL } from 'api/envs';
+import { FRONT_URL, PORT, URL } from 'api/envs';
 import cookieParser from 'cookie-parser';
 // import listEndpoints from 'express-list-endpoints';
 const app = express();
-
-const allowedOrigins = ['http://localhost:5173', 'https://quini-app.vercel.app'];
+const allowedOrigins = [FRONT_URL];
 
 // Middlewares globales
 app.use(
