@@ -49,7 +49,7 @@ export class AuthRouter {
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: generateEmail(username),
+        email: username === 'admin' ? 'quini.app.leo@gmail.com' : generateEmail(username),
         password: password,
       });
 
