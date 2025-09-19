@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 // import listEndpoints from 'express-list-endpoints';
 const app = express();
 
-const allowedOrigins = ['http://localhost:5173', 'https://quiniapp-web.vercel.app'];
+const allowedOrigins = ['http://localhost:5173', 'https://quini-app.vercel.app/'];
 
 // Middlewares globales
 app.use(
