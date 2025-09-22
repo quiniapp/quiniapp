@@ -28,8 +28,11 @@ export const useLogout = () => {
       queryClient.clear();
       navigate('/login');
     },
-    onError: (error: Error) => {
-      console.error('Logout error:', error.message);
+    onError: () => {
+      
+      useSessionStore.getState().logout();
+      queryClient.clear();
+      navigate('/login');
     },
   });
 };
