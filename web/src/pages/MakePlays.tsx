@@ -1,7 +1,7 @@
 import PlayDetailsContent from '@/features/play-details';
 
-const PlayDetailsPage = () => {
+const MakePlaysPage = () => {
   return <PlayDetailsContent />;
 };
 
-export default PlayDetailsPage;
+export default MakePlaysPage;

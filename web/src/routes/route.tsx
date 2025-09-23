@@ -8,7 +8,7 @@ import NotFound from '@/pages/NotFound';
 
 // @Page
 import UserListPage from '@/pages/user-list';
-import PlayDetailsPage from '@/pages/play-details';
+import PlayDetailsPage from '@/pages/MakePlays';
 import PlaysAndHitsPage from '@/pages/plays-and-hits';
 import { TerminalTicketPage } from '@/pages/terminal-ticket';
 
@@ -51,8 +51,8 @@ export const RoutesContent = [
         element: <PlaysPage />,
       },
       {
-        path: ROUTES.PLAY_DETAILS,
-        id: 'PlayDetails',
+        path: ROUTES.MAKE_PLAYS,
+        id: 'MakePlays',
         element: <PlayDetailsPage />,
       },
       {

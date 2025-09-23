@@ -1,8 +1,6 @@
-
-import { useQuery } from "@tanstack/react-query";
-import { ROUTES } from "../../../../routes/routes";
-import { IScheduleLotteryEntityFront } from "../../../../../helper/types/schedule-lottery.type";
-
+import { useQuery } from '@tanstack/react-query';
+import { ROUTES } from '../../../../routes/routes';
+import { IScheduleLotteryEntityFront } from '../../../../../helper/types/schedule-lottery.type';
 
 const fetchScheduleLottery = async () => {
   const url = ROUTES.schedule_lottery.base;
@@ -19,9 +17,14 @@ const fetchScheduleLottery = async () => {
 };
 
 export const useScheduleLottery = () => {
-
   return useQuery<IScheduleLotteryEntityFront>({
     queryKey: ['schedule-lottery'],
-    queryFn: () => fetchScheduleLottery(), 
+    queryFn: () => fetchScheduleLottery(),
+    staleTime: 12 * 60 * 60 * 1000, // 12 horas sin refetch por foco/mount
+    gcTime: 60 * 60 * 1000, // 60 minutos en caché aunque no haya subscriptores
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    refetchOnMount: false,
+    retry: 1,
   });
 };

@@ -23,6 +23,8 @@ import { usePlatform } from '@/hooks/use-platform';
 
 import { useLoginMutation } from '@/hooks/useLogin';
 import { useSessionStore } from '@/stores/sessionStore';
+import { ROUTES } from '@/types/routes.type';
+import { useClock } from '@/providers/ClockProvider';
 
 interface FormData {
   username: string;
@@ -38,6 +40,7 @@ const LoginContent = () => {
   const isAuth = useSessionStore((state) => state.isAuth);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { refresh } = useClock(); // <-- tomamos refresh()
   const {
     control,
     handleSubmit,
@@ -67,7 +70,8 @@ const LoginContent = () => {
 
   useEffect(() => {
     if (isAuth) {
-      navigate('/', { replace: true });
+      void refresh();   
+      navigate(ROUTES.MAKE_PLAYS, { replace: true });
     }
   }, [isAuth]);
 
