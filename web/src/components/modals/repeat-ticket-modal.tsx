@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
-import { useSchedules } from '@/hooks/useSchedules';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 import { DayKey } from '../../../../helper/types/schedule-lottery.type';
 import { IScheduleEntityFront } from 'helper/types/schedule.type';

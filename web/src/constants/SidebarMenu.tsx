@@ -20,7 +20,7 @@ const MENU_ITEMS: MENU_ITEM[] = [
       {
         id: 'PlayDetails',
         name: 'Realizar Jugadas',
-        route: ROUTES.PLAY_DETAILS,
+        route: ROUTES.MAKE_PLAYS,
         icon: <FileTextIcon size={20} />,
       },
       {

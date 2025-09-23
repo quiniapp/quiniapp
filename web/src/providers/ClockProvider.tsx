@@ -33,7 +33,7 @@ type ClockContext = {
   isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean; // <---
 
   /** forzar resincronización manual */
-  refresh: () => Promise<() => void>;
+  refresh: () => Promise<void>;
 };
 
 const ClockContext = createContext<ClockContext | null>(null);
@@ -54,12 +54,16 @@ export function ClockProvider({
   syncEveryMs = 30 * 60 * 1000,
   timeApiUrl,
 }: ClockProviderProps) {
+  const intervalRef = useRef<number | null>(null);
+  const acRef = useRef<AbortController | null>(null);
+  const syncingRef = useRef(false);
+  const tickId = useRef<number | null>(null);
+
   // offset contra el reloj del cliente, en ms. Se calcula con tiempo de red del servidor.
   const [offsetMs, setOffsetMs] = useState(0);
 
   // ‘tick’ para re-renderizar cada segundo
   const [, setTick] = useState(0);
-  const tickId = useRef<number>(null);
 
   const computeNow = useCallback(() => dayjs.utc(Date.now() + offsetMs).tz(tz), [offsetMs, tz]);
 
@@ -100,10 +104,21 @@ export function ClockProvider({
   );
 
   const sync = useCallback(async () => {
+    if (syncingRef.current) return; // evita solapados
+    syncingRef.current = true;
+
+    // aborta fetch previo si hubiera
+    acRef.current?.abort();
     const ac = new AbortController();
-    const ms = await fetchNetworkOffset(ac.signal);
-    if (typeof ms === 'number') setOffsetMs(ms);
-    return () => ac.abort();
+    acRef.current = ac;
+
+    try {
+      const ms = await fetchNetworkOffset(ac.signal);
+      if (typeof ms === 'number') setOffsetMs(ms);
+    } finally {
+      if (acRef.current === ac) acRef.current = null;
+      syncingRef.current = false;
+    }
   }, [fetchNetworkOffset]);
 
   // tick de 1s
@@ -116,32 +131,25 @@ export function ClockProvider({
     };
   }, []);
 
-  // sync inicial + periódica + cuando vuelve el foco o la pestaña
+  // Intervalo estricto (solo 30 min). Sin eventos del browser.
   useEffect(() => {
-    let intervalId: number | undefined;
+    // limpia si existiera (StrictMode / cambios de props)
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-    const run = async () => {
-      await sync();
-      intervalId = window.setInterval(() => {
-        sync();
-      }, syncEveryMs) as unknown as number;
-    };
-    run();
-
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') sync();
-    };
-    const onFocus = () => sync();
-    const onOnline = () => sync();
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('online', onOnline);
+    // crea el intervalo ya (no esperamos al primer sync)
+    intervalRef.current = window.setInterval(() => {
+      void sync();
+    }, syncEveryMs);
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('online', onOnline);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      acRef.current?.abort();
     };
   }, [sync, syncEveryMs]);
 
@@ -206,7 +214,7 @@ export function ClockProvider({
       isScheduleEnabled, // <---
       refresh: sync,
     }),
-    [time, date, now, tz, isScheduleAfter,isLessThanTenMinutes, isScheduleEnabled,  sync]
+    [time, date, now, tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, sync]
   );
 
   return <ClockContext.Provider value={value}>{children}</ClockContext.Provider>;

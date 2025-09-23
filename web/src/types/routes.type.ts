@@ -2,7 +2,7 @@ export enum ROUTES {
   HOME = '/',
   NOT_FOUND = '/not-found',
   PLAYS = '/plays',
-  PLAY_DETAILS = '/play-details',
+  MAKE_PLAYS = '/make-plays',
   PLAYS_AND_HITS = '/plays-and-hits',
   TERMINAL_TICKET = '/terminal-ticket',
   RESULTS = '/results',

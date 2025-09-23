@@ -3,8 +3,8 @@ import { TicketIcon } from 'lucide-react';
 import { FlexCol } from '@/components/flex';
 import HeaderTitleSection from '@/components/header-title-section';
 
-import { useLotteries } from '@/hooks/useLotteries.ts';
-import { useSchedules } from '@/hooks/useSchedules.ts';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import ScheduleCheckboxList from '@/features/play-details/schedules-checkbox-list.tsx';
 import LotteryCheckboxList from '@/features/play-details/lottery-checkbox-list.tsx';
 import Box from '@/components/box';

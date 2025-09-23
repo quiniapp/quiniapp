@@ -7,8 +7,8 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { TypographyMuted } from '@/components/ui/typography-muted';
-import { useLotteries } from '@/hooks/useLotteries';
-import { useSchedules } from '@/hooks/useSchedules';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { IScheduleEntityFront } from 'helper/types/schedule.type';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';

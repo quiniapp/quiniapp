@@ -16,8 +16,8 @@ import QuiniChecks from '@/features/results/quini-check';
 import ResultShifts from '@/features/results/shifts';
 
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useSchedules } from '@/hooks/useSchedules';
-import { useLotteries } from '@/hooks/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useResults } from '@/hooks/fetchs/results/useResults';
 import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mutation';
 
