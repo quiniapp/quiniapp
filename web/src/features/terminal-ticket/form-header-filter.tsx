@@ -24,7 +24,7 @@ import { useSearchParams } from 'react-router-dom';
 const FormHeaderFilter = () => {
   const { role } = useSessionStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: cashiers } = useUsers();
+  const { data: cashiers } = useUsers(role);
   const [inputValue, setInputValue] = useState('');
 
   const selectValue = searchParams.get('cashier_id') ?? undefined;

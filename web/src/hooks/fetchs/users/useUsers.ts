@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { ROUTES } from '../../../../routes/routes.ts';
-import { IUserEntityFront } from '../../../../../helper/types/user.type.ts';
+import { IUserEntityFront, USER_TYPE } from '../../../../../helper/types/user.type.ts';
 
-const fetchUsers = async () => {
+const fetchUsers = async ( ) => {
   const response = await fetch(ROUTES.user.base, {
     method: 'GET',
     headers: {
@@ -18,10 +18,11 @@ const fetchUsers = async () => {
   return data.users;
 };
 
-export const useUsers = () => {
+export const useUsers = (role: USER_TYPE | null) => {
   return useQuery<IUserEntityFront[]>({
-    queryKey: ['users'],
-    queryFn: fetchUsers,
+    queryKey: ['users', role], // incluyo role en la key por si cambia
+    queryFn:  fetchUsers,
+    enabled: !!role && role !== USER_TYPE.CASHIER, // deshabilita si es cashier
     retry: false,
     refetchOnWindowFocus: false,
   });
