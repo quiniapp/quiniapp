@@ -7,6 +7,43 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 
+// ====== Cache en memoria, estático hasta mutación ======
+type LotteriesCacheEntry = {
+  payload: ILotteryEntityFront[];
+  etag: string;
+};
+const cache = new Map<string, LotteriesCacheEntry>(); // key por variante (all=true/false)
+
+function keyFor(allFlag: boolean) {
+  return `lotteries:all=${allFlag ? 'true' : 'false'}`;
+}
+
+function makeEtag() {
+  return `W/"${Date.now()}"`;
+}
+
+async function loadAndSet(
+  controller: LotteryController,
+  allFlag: boolean
+): Promise<LotteriesCacheEntry> {
+  const data = await controller.getAll(allFlag);
+  const entry = { payload: data, etag: makeEtag() };
+  cache.set(keyFor(allFlag), entry);
+  return entry;
+}
+
+async function ensureCache(controller: LotteryController, allFlag: boolean) {
+  const k = keyFor(allFlag);
+  const snap = cache.get(k);
+  if (snap) return snap;
+  return await loadAndSet(controller, allFlag); // sólo carga en frío
+}
+
+function invalidateAllLotteries() {
+  cache.delete(keyFor(true));
+  cache.delete(keyFor(false));
+}
+
 export class LotteryRouter {
   public router: Router;
   private controller: LotteryController;
@@ -27,35 +64,29 @@ export class LotteryRouter {
   private newLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { name } = req.body;
     const user = req.user;
+
     if (!name || typeof name !== 'string') {
       const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.NAME_IS_REQUIRED,
-          message: ERROR_MESSAGE.NAME_IS_REQUIRED,
-        },
+        error: { error: ERROR_TYPE.NAME_IS_REQUIRED, message: ERROR_MESSAGE.NAME_IS_REQUIRED },
       };
-      res.status(400).json(response); // <-- SIN return
-
+      res.status(400).json(response);
       return;
     }
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
-      res.status(400).json(response); // <-- SIN return
-
+      res.status(403).json(response);
       return;
     }
+
     try {
       const lottery = await this.controller.create({ name });
-      const response: APIResponse<ILotteryEntityFront> = {
-        data: {
-          lottery: lottery,
-        },
-      };
+
+      // invalidación (ambas variantes all=true/false)
+      invalidateAllLotteries();
+
+      const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
     } catch (error) {
       console.error(error);
@@ -64,45 +95,49 @@ export class LotteryRouter {
         if (
           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
+        )
           statusCode = 401;
-        }
 
         const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
+          error: { error: ERROR_TYPE.AUTH_ERROR, message: error.message },
         };
         res.status(statusCode).json(response);
-        return;
       }
     }
   };
 
   private getAllLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { all } = req.query;
+    const allFlag = !!req.query.all;
+
     if (!user?.user) {
       const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
+        error: { error: ERROR_TYPE.BAD_REQUEST, message: ERROR_MESSAGE.BAD_REQUEST },
       };
       res.status(500).json(response);
       return;
     }
 
     try {
-      const lottery = await this.controller.getAll(!!all);
+      const snap = await ensureCache(this.controller, allFlag);
+
+      // 304 si el cliente tiene la misma versión
+      const inm = req.headers['if-none-match'];
+      if (inm && inm === snap.etag) {
+        res.status(304).end();
+        return;
+      }
+
       const response: APIResponse<ILotteryEntityFront[]> = {
-        data: {
-          lottery,
-        },
+        data: { lottery: snap.payload },
       };
+
+      // “sin TTL”: forzá revalidación de cliente/proxy via ETag
+      // (el ETag sólo cambia en mutaciones)
+      res.setHeader('ETag', snap.etag);
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+
       res.status(200).json(response);
-      return;
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
@@ -110,18 +145,13 @@ export class LotteryRouter {
         if (
           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
+        )
           statusCode = 401;
-        }
 
         const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
+          error: { error: ERROR_TYPE.AUTH_ERROR, message: error.message },
         };
         res.status(statusCode).json(response);
-        return;
       }
     }
   };
@@ -130,12 +160,10 @@ export class LotteryRouter {
     const { user } = req;
     const { id: lottery_id } = req.params;
     const { updateLottery } = req.body;
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
       res.status(403).json(response);
       return;
@@ -144,25 +172,19 @@ export class LotteryRouter {
     const result = updateLotterySchema.safeParse(updateLottery);
     if (!result.success) {
       const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: String(result.error.message),
-        },
+        error: { error: ERROR_TYPE.BAD_REQUEST, message: String(result.error.message) },
       };
-      res.status(400).json(response); // <-- SIN return
-
+      res.status(400).json(response);
       return;
     }
 
     try {
       const lottery = await this.controller.update(lottery_id, updateLottery);
-      const response: APIResponse<ILotteryEntityFront> = {
-        data: {
-          lottery,
-        },
-      };
+
+      invalidateAllLotteries();
+
+      const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
-      return;
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
@@ -170,30 +192,24 @@ export class LotteryRouter {
         if (
           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
+        )
           statusCode = 401;
-        }
 
         const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
+          error: { error: ERROR_TYPE.AUTH_ERROR, message: error.message },
         };
         res.status(statusCode).json(response);
-        return;
       }
     }
   };
+
   private deleteLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: lottery_id } = req.params;
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
       res.status(403).json(response);
       return;
@@ -201,7 +217,10 @@ export class LotteryRouter {
 
     try {
       await this.controller.delete({ lottery_id });
-      res.status(200);
+
+      invalidateAllLotteries();
+
+      res.status(200).json({ data: { deleted: true } });
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
@@ -209,18 +228,13 @@ export class LotteryRouter {
         if (
           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
+        )
           statusCode = 401;
-        }
 
         const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
+          error: { error: ERROR_TYPE.AUTH_ERROR, message: error.message },
         };
         res.status(statusCode).json(response);
-        return;
       }
     }
   };
