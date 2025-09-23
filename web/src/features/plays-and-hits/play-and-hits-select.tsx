@@ -23,7 +23,7 @@ const PlayAndHitsSelect = () => {
   const { role } = useSessionStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lotteries } = useLotteries();
-  const { data } = useUsers();
+  const { data } = useUsers(role);
   const { data: schedules } = useSchedules();
 
   const selectedSchedule = searchParams.get('schedule_id');
