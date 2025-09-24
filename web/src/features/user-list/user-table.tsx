@@ -18,11 +18,13 @@ import React, { Suspense, useState } from 'react';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
 import { cashierTypeDictionary } from '../../../../helper/functions/cashierTypeDictionary';
 import { userTypeDictionary } from '../../../../helper/functions/userTypeDictionary';
+import { useSessionStore } from '@/stores/sessionStore';
 
 const UsersTable = () => {
+  const {role} = useSessionStore()
   const [open, setOpen] = useState<boolean>(false);
   const [update, setUpdate] = useState<boolean>(false);
-  const { data, isLoading, error } = useUsers();
+  const { data, isLoading, error } = useUsers(role);
   const [user, setUser] = useState<IUserEntityFront | undefined>(undefined);
   const { mutate: deleteUser, isPending } = useDeleteUsers();
   const handleDeleteUser = (id: string) => {
