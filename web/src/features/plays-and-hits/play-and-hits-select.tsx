@@ -13,14 +13,14 @@ import { IScheduleEntityFront } from 'helper/types/schedule.type';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import { Fragment } from 'react/jsx-runtime';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ALL = 'Todos';
 
 const PlayAndHitsSelect = () => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lotteries } = useLotteries();
   const { data } = useUsers(role);
