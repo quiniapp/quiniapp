@@ -13,13 +13,13 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
-import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import {groupTicketBetsByNumber} from '../../../helper/function/groupNumber'
 import { useAuth } from '@/contexts/AuthContext';
+import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -47,7 +47,7 @@ const PlayDetailsContent = () => {
   const { mutate: createTicket } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-  const { data } = useUsersByNumber(userNumber);
+  const { data } = useGetUserByNumber(userNumber);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
   const { mutate: editTicket } = useEditTicket();
   const computeTotal = (bets: IBetTable[]) =>

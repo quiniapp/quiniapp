@@ -23,7 +23,12 @@ export const useUsers = (role: USER_TYPE | null) => {
     queryKey: ['users', role], // incluyo role en la key por si cambia
     queryFn:  fetchUsers,
     enabled: !!role && role !== USER_TYPE.CASHIER, // deshabilita si es cashier
-    retry: false,
+
+    staleTime: 12 * 60 * 60 * 1000, // 12 horas sin refetch por foco/mount
+    gcTime: 60 * 60 * 1000, // 60 minutos en caché aunque no haya subscriptores
     refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    refetchOnMount: false,
+    retry: 1,
   });
 };

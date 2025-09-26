@@ -19,7 +19,7 @@ const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityF
   return data.users[0] ?? null
 };
 
-export const useUsersByNumber = (cashier_number?: number) => {
+export const useGetUserByNumber = (cashier_number?: number) => {
   return useQuery<IUserEntityFront | undefined>({
     queryKey: ['users', cashier_number],
     queryFn: () => fetchUsersByNumber(cashier_number),
