@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
-import { useSessionStore } from '@/stores/sessionStore';
+
 import { IBetTable } from '.';
 import toast from 'react-hot-toast';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 👇 Lazy import del modal (se carga sólo cuando se renderiza)
 const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));
@@ -44,7 +45,7 @@ const HeaderPlayDetail = ({
   handleRecreateBet,
   handleEditTicket,
 }: HeaderPlayDetailProps) => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
 
   // 👇 Estado local para abrir/cerrar el modal
   const [isRepeatOpen, setIsRepeatOpen] = useState(false);

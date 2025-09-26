@@ -14,11 +14,11 @@ import {
 } from '@/components/ui/select';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../helper/types/user.type.ts';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
+import { useAuth } from '@/contexts/AuthContext.tsx';
 
 interface FilterSectionProps {
   group: string;
@@ -30,7 +30,7 @@ const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const isMobile = useIsMobile();
-  const { role } = useSessionStore();
+  const { role } = useAuth();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date') ?? undefined;

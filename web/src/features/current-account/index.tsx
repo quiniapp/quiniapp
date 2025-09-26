@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import HeaderSection from '@/components/header-section';
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
 
-import { useSessionStore } from '@/stores/sessionStore';
 
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
@@ -22,11 +21,12 @@ import {
   fetchCurrentAccount,
 } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import dayjs from 'dayjs';
+import { useAuth } from '@/contexts/AuthContext';
 
 const CurrentAccountContent = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<boolean>(false);
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   const [searchParams] = useSearchParams();
   const { mutate } = useUpdateCurrentAcoount();
   const [printing, setPrinting] = useState(false);

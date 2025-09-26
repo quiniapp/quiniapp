@@ -18,7 +18,6 @@ import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDiction
 import { useBets } from '@/hooks/fetchs/plays/useBets';
 import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 import dayjs from 'dayjs';
-import { useSessionStore } from '@/stores/sessionStore';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -27,13 +26,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SelectDayToSearch } from '../plays-and-hits/select-day-to-search';
 import { useGetCurrentAccountByUser } from '@/hooks/fetchs/current-account/useGetCurrentAccountByUser';
+import { useAuth } from '@/contexts/AuthContext';
 
 const CurrentAcoountByUserTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [printing, setPrinting] = useState<boolean>(false);
   const today = dayjs().format('YYYY-MM-DD');
   const date = searchParams.get('date');
-  const { user } = useSessionStore();
+  const { user } = useAuth();
 
   const methods = useForm<ICurrentAccountEntityFront>({
     defaultValues: {

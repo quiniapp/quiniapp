@@ -10,8 +10,8 @@ import HeaderTitleSection from '@/components/header-title-section';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { useEffect, useRef } from 'react';
 import { useClock } from '@/providers/ClockProvider';
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SchedulesProps {
   time: string;
@@ -29,7 +29,7 @@ const ScheduleCheckboxList = ({
   setSchedules,
   checkedSchedules,
 }: SchedulesCheckboxListProps) => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   const { isScheduleAfter, isLessThanTenMinutes } = useClock();
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);

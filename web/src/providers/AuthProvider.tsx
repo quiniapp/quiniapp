@@ -1,12 +1,10 @@
-// src/auth/AuthProvider.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
-import { ROUTES } from 'routes/routes';
+import { ROUTES } from '../../routes/routes';
 
-// ===== Config cliente =====
-const VALIDATE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutos (ligeramente menor al throttle del server)
+
+const VALIDATE_INTERVAL_MS = 4 * 60 * 1000;
 const VALIDATE_ON_VISIBILITY = true;
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -14,8 +12,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [role, setRole] = useState<USER_TYPE | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
   const intervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
 
@@ -32,23 +28,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, []);
 
   const validate = useCallback(async () => {
-    // throttle mínimo por si muchas vistas llaman a la vez
     const now = Date.now();
     if (now - lastValidateRef.current < 1500) return;
     lastValidateRef.current = now;
 
     try {
-      const res = await fetch(ROUTES.auth.validate /* o /auth/me */, {
+      const res = await fetch(ROUTES.auth.validate, {
         method: 'GET',
         credentials: 'include',
       });
       if (!res.ok) throw new Error('No autenticado');
       const { data } = await res.json();
-      if (data?.user) {
-        setSession(data.user);
-      } else {
-        setSession(null);
-      }
+      if (data?.user) setSession(data.user);
+      else setSession(null);
     } catch {
       setSession(null);
     } finally {
@@ -73,48 +65,36 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const { data } = await res.json();
         if (!data?.user) throw new Error('Respuesta inválida del servidor');
         setSession(data.user);
-        // Redirigí a la ruta que el usuario quiso originalmente o al home
-        const from = (location.state as any)?.from?.pathname || '/';
-        navigate(from, { replace: true });
-      } catch (e) {
-        setSession(null);
-        throw e;
       } finally {
         setLoading(false);
       }
     },
-    [location.state, navigate, setSession]
+    [setSession]
   );
 
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      await fetch(ROUTES.auth.logout, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await fetch(ROUTES.auth.logout, { method: 'POST', credentials: 'include' });
     } catch {
-      /* no-op, igual limpiamos estado */
+      // no-op
     } finally {
       setSession(null);
       setLoading(false);
-      navigate('/login', { replace: true });
+      // 👈 ya no navegamos acá; que lo haga el caller
     }
-  }, [navigate, setSession]);
+  }, [setSession]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
 
-  // Validación al montar
   useEffect(() => {
     validate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Revalidación periódica (para “tocar” sesión en backend)
   useEffect(() => {
     if (intervalRef.current) window.clearInterval(intervalRef.current);
     intervalRef.current = window.setInterval(() => {
-      // solo revalidamos si está autenticado
       if (isAuth) validate();
     }, VALIDATE_INTERVAL_MS) as unknown as number;
 
@@ -123,7 +103,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [isAuth, validate]);
 
-  // Revalidar al recuperar foco/visibilidad (opcional)
   useEffect(() => {
     if (!VALIDATE_ON_VISIBILITY) return;
     const onVisibility = () => {

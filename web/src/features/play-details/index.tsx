@@ -6,7 +6,6 @@ import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
 import PlayDetailGameTable from './play-detail-game-table';
 import { FlexCol } from '@/components/flex';
-import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
@@ -20,6 +19,7 @@ import { makeTicketPdf } from '../../../helper/function/makeTicket';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import {groupTicketBetsByNumber} from '../../../helper/function/groupNumber'
+import { useAuth } from '@/contexts/AuthContext';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -36,7 +36,7 @@ export interface IBetTable {
 }
 
 const PlayDetailsContent = () => {
-  const { user } = useSessionStore();
+  const { user } = useAuth();
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [partialAmount, setPartialAmount] = useState<number>(0);

@@ -1,6 +1,7 @@
+// src/features/login/index.tsx (o donde esté LoginContent)
 import { useEffect } from 'react';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom'; // Importa el hook useLogin
+import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { LogInIcon } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,23 +9,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Flex } from '@/components/flex';
 import Logo from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePlatform } from '@/hooks/use-platform';
-
-import { useLoginMutation } from '@/hooks/useLogin';
-import { useSessionStore } from '@/stores/sessionStore';
 import { ROUTES } from '@/types/routes.type';
 import { useClock } from '@/providers/ClockProvider';
+import { useAuth } from '@/contexts/AuthContext'; // ⬅️ nuevo
 
 interface FormData {
   username: string;
@@ -37,60 +29,45 @@ const validationSchemaLogin = z.object({
 });
 
 const LoginContent = () => {
-  const isAuth = useSessionStore((state) => state.isAuth);
+  const { login, isAuth, loading } = useAuth(); // ⬅️ usamos el provider
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { refresh } = useClock(); // <-- tomamos refresh()
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(validationSchemaLogin),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
-  });
-
+  const { refresh } = useClock();
   const platform = usePlatform();
 
-  const { mutateAsync: loginMutationAsync, isPending, isError, error } = useLoginMutation();
+  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(validationSchemaLogin),
+    defaultValues: { username: '', password: '' },
+  });
 
   const onSubmit = async (data: FormData) => {
     try {
-      await loginMutationAsync({ username: data.username, password: data.password });
-    } catch (error) {
-      console.error('Error en el login:', error);
-      // El error ya se está manejando en el onError del useMutation,
-      // pero podrías agregar lógica adicional aquí si es necesario.
+      await login({ username: data.username, password: data.password });
+      navigate(ROUTES.MAKE_PLAYS, { replace: true });
+    } catch (err) {
+      console.error('Error en el login:', err);
     }
   };
 
-
   useEffect(() => {
     if (isAuth) {
-      void refresh();   
+      void refresh();
       navigate(ROUTES.MAKE_PLAYS, { replace: true });
     }
-  }, [isAuth]);
-
-
+  }, [isAuth, navigate, refresh]);
 
   return (
     <Flex className="h-screen flex-col md:flex-row">
       {!isMobile && (
         <Flex className="flex-1 items-center justify-center w-full hidden md:flex">
-          <img src={'/bg-login.svg'} alt={''} className={' w-[200px] md:w-[860px] md:h-[860px]'} />
+          <img src={'/bg-login.svg'} alt={''} className={' w-[200px] md:w-[860px] md:h-[860px]'} loading="lazy" />
         </Flex>
       )}
 
       <Flex className="flex-1 justify-center items-center gap-4 border-l-2">
         <Card className="bg-transparent w-[480px]">
           <CardHeader>
-            <Flex className={'pb-[56px]'}>
-              <Logo />
-            </Flex>
+            <Flex className={'pb-[56px]'}><Logo /></Flex>
             <CardTitle className="text-2xl text-white">Iniciar Sesión</CardTitle>
             <CardDescription>Un nuevo día, nuevas oportunidades</CardDescription>
           </CardHeader>
@@ -102,11 +79,9 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label className={'text-white'}>Nombre</Label>
-                      <Input {...field} type="text" placeholder="Nombre de usuario" />
-                      {errors.username && (
-                        <p className="text-red-500 text-sm">{errors.username.message}</p>
-                      )}
+                      <Label className="text-white">Nombre</Label>
+                      <Input {...field} type="text" placeholder="Nombre de usuario" autoComplete="username" />
+                      {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
                     </Flex>
                   )}
                 />
@@ -115,22 +90,19 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label className={'text-white'}>Contraseña</Label>
-                      <Input {...field} type="password" placeholder="******" />
-                      {errors.password && (
-                        <p className="text-red-500 text-sm">{errors.password.message}</p>
-                      )}
+                      <Label className="text-white">Contraseña</Label>
+                      <Input {...field} type="password" placeholder="******" autoComplete="current-password" />
+                      {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
                     </Flex>
                   )}
                 />
-                {isError && <p className="text-red-500 text-sm">Error: {error?.message}</p>}
               </Flex>
             </CardContent>
             <CardFooter className="justify-between pt-[48px]">
-              <Button className="flex-1" type="submit" disabled={isPending}>
-                <LogInIcon /> {isPending ? 'Iniciando Sesión...' : 'Iniciar Sesión'}
+              <Button className="flex-1" type="submit" disabled={loading}>
+                <LogInIcon /> {loading ? 'Iniciando Sesión…' : 'Iniciar Sesión'}
               </Button>
-              {platform === 'desktop' && <Button variant="outline">Cancelar</Button>}
+              {platform === 'desktop' && <Button variant="outline" type="button">Cancelar</Button>}
             </CardFooter>
           </form>
         </Card>

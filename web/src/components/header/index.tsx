@@ -2,14 +2,14 @@ import { LayoutIcon, UserIcon } from 'lucide-react';
 
 import { FlexCol } from '@/components/flex';
 import { useSidebar } from '@/components/ui/sidebar';
-import { useSessionStore } from '@/stores/sessionStore.ts';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
   setIsOpen: (isOpen: (prev: boolean) => boolean) => void;
 }
 
 const Header = ({ setIsOpen }: HeaderProps) => {
-  const { user } = useSessionStore();
+  const { user } = useAuth();
   const { toggleSidebar, isMobile } = useSidebar();
 
   const handleToggle = () => {

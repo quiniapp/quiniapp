@@ -17,10 +17,10 @@ import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 import { DayKey } from '../../../../helper/types/schedule-lottery.type';
 import { IScheduleEntityFront } from 'helper/types/schedule.type';
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useClock } from '@/providers/ClockProvider';
+import { useAuth } from '@/contexts/AuthContext';
 
 dayjs.extend(customParseFormat);
 const toHHMMSS = (t: string) => (t.length === 5 ? `${t}:00` : t);
@@ -35,7 +35,7 @@ interface BasicModalProps {
 const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicModalProps) => {
   if (!isOpen) return null;
 
-  const { user } = useSessionStore();
+  const { user } = useAuth();
   const isCashier = user?.user_type === USER_TYPE.CASHIER;
   const { time, isScheduleEnabled, isLessThanTenMinutes } = useClock();
 

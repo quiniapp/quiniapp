@@ -1,4 +1,4 @@
-import { useSessionStore } from '@/stores/sessionStore';
+
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import { useSearchParams } from 'react-router-dom';
 import { Flex } from '@/components/flex';
@@ -6,9 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { betTypeParse } from '../../../../helper/functions/betTypeParse';
 import { BET_TYPE } from '../../../../helper/types/bet.type';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SelectBetType = () => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   if (role === USER_TYPE.CASHIER) return null;
   const [searchParams, setSearchParams] = useSearchParams();
 
