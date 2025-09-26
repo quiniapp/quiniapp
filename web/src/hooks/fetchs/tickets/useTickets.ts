@@ -35,7 +35,6 @@ export const useTickets = ({
       const { data } = await res.json();
       return data.ticket;
     },
-    staleTime: 60 * 1000, // opcional: 1 min en caché para evitar tantos refetch
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 };

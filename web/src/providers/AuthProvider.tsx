@@ -3,7 +3,6 @@ import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { ROUTES } from '../../routes/routes';
 
-
 const VALIDATE_INTERVAL_MS = 4 * 60 * 1000;
 const VALIDATE_ON_VISIBILITY = true;
 
@@ -39,8 +38,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       });
       if (!res.ok) throw new Error('No autenticado');
       const { data } = await res.json();
-      if (data?.user) setSession(data.user);
-      else setSession(null);
+      if (!data?.user) throw new Error('Respuesta inválida del servidor');
+      setSession(data.user);
+
+      // asegura cookie ok y estado en servidor
+      await validate();
     } catch {
       setSession(null);
     } finally {
