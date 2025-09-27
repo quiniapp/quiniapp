@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
-import { ROUTES } from '../../routes/routes';
+import { BACKEND_ROUTES } from '../../routes/routes';
 
 
 const VALIDATE_INTERVAL_MS = 4 * 60 * 1000;
@@ -12,6 +12,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [role, setRole] = useState<USER_TYPE | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
+
   const intervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
 
@@ -29,18 +30,25 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const validate = useCallback(async () => {
     const now = Date.now();
-    if (now - lastValidateRef.current < 1500) return;
+    if (now - lastValidateRef.current < 1500) return; // anti-spam
     lastValidateRef.current = now;
 
     try {
-      const res = await fetch(ROUTES.auth.validate, {
+      const res = await fetch(BACKEND_ROUTES.auth.validate, {
         method: 'GET',
         credentials: 'include',
       });
+
+      if (res.status === 401) {
+        setSession(null);
+        return;
+      }
+
       if (!res.ok) throw new Error('No autenticado');
+
       const { data } = await res.json();
-      if (data?.user) setSession(data.user);
-      else setSession(null);
+      if (!data?.user) throw new Error('Respuesta inválida del servidor');
+      setSession(data.user);
     } catch {
       setSession(null);
     } finally {
@@ -52,50 +60,57 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     async (payload: LoginPayload) => {
       setLoading(true);
       try {
-        const res = await fetch(ROUTES.auth.login, {
+        const res = await fetch(BACKEND_ROUTES.auth.login, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload),
         });
+
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err?.message || 'Login failed');
         }
+
         const { data } = await res.json();
         if (!data?.user) throw new Error('Respuesta inválida del servidor');
+
+        // seteo inmediato para actualizar UI
         setSession(data.user);
+        // una sola validación posterior para asegurar cookies/estado del server
+        await validate();
       } finally {
         setLoading(false);
       }
     },
-    [setSession]
+    [setSession, validate]
   );
 
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      await fetch(ROUTES.auth.logout, { method: 'POST', credentials: 'include' });
+      await fetch(BACKEND_ROUTES.auth.logout, { method: 'POST', credentials: 'include' });
     } catch {
       // no-op
     } finally {
       setSession(null);
       setLoading(false);
-      // 👈 ya no navegamos acá; que lo haga el caller
     }
   }, [setSession]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
 
+  // Primer validate al montar
   useEffect(() => {
-    validate();
+    void validate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Revalidate periódico
   useEffect(() => {
     if (intervalRef.current) window.clearInterval(intervalRef.current);
     intervalRef.current = window.setInterval(() => {
-      if (isAuth) validate();
+      if (isAuth) void validate();
     }, VALIDATE_INTERVAL_MS) as unknown as number;
 
     return () => {
@@ -103,10 +118,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [isAuth, validate]);
 
+  // Revalidate al volver a la pestaña/ventana
   useEffect(() => {
     if (!VALIDATE_ON_VISIBILITY) return;
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && isAuth) validate();
+      if (document.visibilityState === 'visible' && isAuth) void validate();
     };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', onVisibility);

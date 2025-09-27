@@ -5,10 +5,15 @@
       "NPM_CONFIG_FROZEN_LOCKFILE": "false"
     }
   },
+  "functions": {
+    "api/api-proxy.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "/api/api-proxy"
     },
     {
       "source": "/(.*)",

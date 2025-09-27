@@ -20,7 +20,7 @@ import {
 import type { INewUserEntityForm } from '@/types/user.type';
 
 // @Hooks
-import { useAddNewUser } from '@/hooks/useAddNewUser';
+import { useAddNewUser } from '@/hooks/mutations/users/useAddNewUser.ts';
 
 import { toast } from 'react-hot-toast';
 import { CASHIER_TYPE, USER_TYPE } from '../../../helper/types/user.type.ts';

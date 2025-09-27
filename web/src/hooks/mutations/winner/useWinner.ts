@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 const generateWinners = async ({schedule_id, date}:{schedule_id?:string, date:string}) => {
   if(!schedule_id) return
-  const response = await fetch(`${ROUTES.winners.base}/${schedule_id}?date=${date}`, {
+  const response = await fetch(`${BACKEND_ROUTES.winners.base}/${schedule_id}?date=${date}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

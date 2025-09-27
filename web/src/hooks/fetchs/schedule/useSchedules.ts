@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IScheduleEntityFront } from '../../../../../helper/types/schedule.type';
 
 const fetchSchedules = async () => {
-  const res = await fetch(ROUTES.schedule.base, {
+  const res = await fetch(BACKEND_ROUTES.schedule.base, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });

@@ -70,6 +70,7 @@ const HeaderPlayDetail = ({
   const { data: tickets } = useTickets({
     user_id: cashier?.user_id,
     date: dayjs().format('YYYY-MM-DD'),
+    enabled: !!cashier?.user_id,
   });
   const handleSelectTicket = (value: string) => {
     if (tickets?.length) {

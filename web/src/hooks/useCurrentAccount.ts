@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../routes/routes';
+import { BACKEND_ROUTES } from '../../routes/routes';
 
 const fetchCurrentAccount = async () => {
-  const res = await fetch(ROUTES.current_account.base, {
+  const res = await fetch(BACKEND_ROUTES.current_account.base, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });

@@ -49,7 +49,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
   const { data } = getTicketByNumber(ticketNumber);
-
+  console.log('data',data)
   const handleSetBets = () => {
     handleRecreateBet(selectedBets);
     onClose();
