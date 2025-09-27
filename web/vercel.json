@@ -5,11 +5,6 @@
       "NPM_CONFIG_FROZEN_LOCKFILE": "false"
     }
   },
-  "functions": {
-    "api/*.ts": {
-      "runtime": "nodejs22.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
