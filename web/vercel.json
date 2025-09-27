@@ -1,13 +1,13 @@
 {
-  "buildCommand": "npm install --legacy-peer-deps && npm run build",
+  "buildCommand": "npm ci && npm run build",
   "build": {
     "env": {
       "NPM_CONFIG_FROZEN_LOCKFILE": "false"
     }
   },
   "functions": {
-    "api/api-proxy.ts": {
-      "runtime": "nodejs18.x"
+    "api/*.ts": {
+      "runtime": "nodejs22.x"
     }
   },
   "rewrites": [
