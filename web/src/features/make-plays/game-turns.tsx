@@ -5,8 +5,8 @@ import HeaderTitleSection from '@/components/header-title-section';
 
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
-import ScheduleCheckboxList from '@/features/play-details/schedules-checkbox-list.tsx';
-import LotteryCheckboxList from '@/features/play-details/lottery-checkbox-list.tsx';
+import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list';
+import LotteryCheckboxList from '@/features/make-plays/lottery-checkbox-list';
 import Box from '@/components/box';
 import { LotteryType } from '@/types/lottery.type.ts';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';

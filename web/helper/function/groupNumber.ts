@@ -1,5 +1,5 @@
 import { ITicketEntityFront } from '../../../helper/types/ticket.type';
-import { IBetTable } from '../../src/features/play-details/index';
+import { IBetTable } from '../../src/features/make-plays/index';
 
 export function groupTicketBetsByNumber(ticket: ITicketEntityFront): IBetTable[] {
   const byNumber = new Map<string, IBetTable>();
