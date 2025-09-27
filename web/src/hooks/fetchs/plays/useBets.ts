@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '../../../../../helper/types/bet.type.ts';
 
 export interface FetchBetsProps {
@@ -41,7 +41,7 @@ export async function fetchBets({
   if (grouped) params.append('grouped', grouped);
   if (winners) params.append('winners', winners);
 
-  const url = `${ROUTES.bet.base}?${params.toString()}`;
+  const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

@@ -1,5 +1,5 @@
 import { useQuery, QueryFunctionContext } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type.ts';
 
 export const CURRENT_ACCOUNT_LATEST = 'latest' as const;
@@ -20,7 +20,7 @@ async function fetchCurrentAccountByUserFn(
   const date = dateOrLatest === CURRENT_ACCOUNT_LATEST ? null : dateOrLatest;
 
   const url =
-    `${ROUTES.current_account.id(user_id)}` +
+    `${BACKEND_ROUTES.current_account.id(user_id)}` +
     (date ? `?date=${encodeURIComponent(date)}` : '');
 
   const res = await fetch(url, {

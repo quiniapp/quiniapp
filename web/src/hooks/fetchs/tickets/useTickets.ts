@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 
 interface UseTicketsParams {
   user_id?: string;
@@ -27,7 +27,7 @@ export const useTickets = ({
       if (user_id) params.append('cashier_id', user_id);
       if (winner) params.append('winner', 'true');
 
-      const res = await fetch(`${ROUTES.ticket.base}?${params.toString()}`, {
+      const res = await fetch(`${BACKEND_ROUTES.ticket.base}?${params.toString()}`, {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });

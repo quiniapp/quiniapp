@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IUserEntityFront, USER_TYPE } from '../../../../../helper/types/user.type.ts';
 
 const fetchUsers = async ( ) => {
-  const response = await fetch(ROUTES.user.base, {
+  const response = await fetch(BACKEND_ROUTES.user.base, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

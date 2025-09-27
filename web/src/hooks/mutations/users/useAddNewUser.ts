@@ -1,8 +1,8 @@
 import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 const addUser = async (newUser: Record<string, any>) => {
-  const response = await fetch(ROUTES.user.base, {
+  const response = await fetch(BACKEND_ROUTES.user.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

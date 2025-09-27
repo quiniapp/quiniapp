@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
 
 const fetchTicketsByNumber = async (
   ticket_number: string | null
 ): Promise<ITicketEntityFront | undefined> => {
-  const res = await fetch(`${ROUTES.ticket.base}?ticket_number=${ticket_number}`, {
+  const res = await fetch(`${BACKEND_ROUTES.ticket.base}?ticket_number=${ticket_number}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });

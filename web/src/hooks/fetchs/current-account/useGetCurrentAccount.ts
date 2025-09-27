@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type.ts';
 
 export const CURRENT_ACCOUNT_LATEST = 'latest';
@@ -12,7 +12,7 @@ type ApiResponse = { data?: { currentAccount?: ICurrentAccountEntityFront[] } };
 export async function fetchCurrentAccount(date?: string | null): Promise<ICurrentAccountEntityFront[]> {
   // si hay date, la mandamos; si no, dejamos que el backend devuelva la última
   const url =
-    `${ROUTES.current_account.base}` +
+    `${BACKEND_ROUTES.current_account.base}` +
     (date ? `?date=${encodeURIComponent(date)}` : '');
 
   const res = await fetch(url, {

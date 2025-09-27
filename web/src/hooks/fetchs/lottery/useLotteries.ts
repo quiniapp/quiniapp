@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { ILotteryEntityFront } from '../../../../../helper/types/lottery.type';
 
 const fetchLotteries = async (all?: boolean) => {
-  const res = await fetch(`${ROUTES.lottery.base}${all ? '?all=true' : ''}`, {
+  const res = await fetch(`${BACKEND_ROUTES.lottery.base}${all ? '?all=true' : ''}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 const doDeleteTicket = async (ticketId: string) => {
-  const res = await fetch(ROUTES.ticket.id(ticketId), {
+  const res = await fetch(BACKEND_ROUTES.ticket.id(ticketId), {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

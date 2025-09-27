@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { INewResultsEntity  } from '../../../../helper/request/results.response.ts';
 
 
@@ -7,7 +7,7 @@ const performCreateResults = async (
 
   createResults: INewResultsEntity
 ): Promise<void> => {
-  const res = await fetch(ROUTES.results.base, {
+  const res = await fetch(BACKEND_ROUTES.results.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

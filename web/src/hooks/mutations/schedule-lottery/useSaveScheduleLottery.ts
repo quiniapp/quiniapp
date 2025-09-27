@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IScheduleLotteryEntityFront } from '../../../../../helper/types/schedule-lottery.type.ts';
 
 const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<void> => {
    
-  const res = await fetch(ROUTES.schedule_lottery.base, {
+  const res = await fetch(BACKEND_ROUTES.schedule_lottery.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

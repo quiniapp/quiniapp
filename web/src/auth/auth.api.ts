@@ -1,12 +1,12 @@
 // src/auth/auth.api.ts
 import { IUserEntityFront } from '../../../helper/types/user.type';
-import { ROUTES } from '../../routes/routes';
+import { BACKEND_ROUTES } from '../../routes/routes';
 
 type ApiUser = { data?: { user?: IUserEntityFront } }; // tipá con IUserEntityFront si querés
 type LoginPayload = { username?: string; password?: string };
 
 export async function authMe(): Promise<ApiUser> {
-  const res = await fetch(ROUTES.auth.validate, {
+  const res = await fetch(BACKEND_ROUTES.auth.validate, {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Not authenticated');
@@ -14,7 +14,7 @@ export async function authMe(): Promise<ApiUser> {
 }
 
 export async function authLogin(payload: LoginPayload): Promise<ApiUser> {
-  const res = await fetch(ROUTES.auth.login, {
+  const res = await fetch(BACKEND_ROUTES.auth.login, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -28,7 +28,7 @@ export async function authLogin(payload: LoginPayload): Promise<ApiUser> {
 }
 
 export async function authLogout(): Promise<void> {
-  const res = await fetch(ROUTES.auth.logout, {
+  const res = await fetch(BACKEND_ROUTES.auth.logout, {
     method: 'POST',
     credentials: 'include',
   });

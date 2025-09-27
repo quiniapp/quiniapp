@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IScheduleLotteryEntityFront } from '../../../../../helper/types/schedule-lottery.type';
 
 const fetchScheduleLottery = async () => {
-  const url = ROUTES.schedule_lottery.base;
+  const url = BACKEND_ROUTES.schedule_lottery.base;
 
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },

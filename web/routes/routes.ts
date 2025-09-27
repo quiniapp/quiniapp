@@ -1,10 +1,8 @@
-import { BACKEND_URL, ENVIRONMENT } from '@/env.ts';
-
-const URL = ENVIRONMENT === 'develop' ? 'http://localhost:3000' : BACKEND_URL;
-const BASE = `${URL}/api`;
+// src/routes/routes.ts (frontend)
+const BASE = '/api';
 const PRIVATE = `${BASE}/private`;
 
-export const ROUTES = {
+export const BACKEND_ROUTES = {
   auth: {
     login: `${BASE}/auth/login`,
     logout: `${PRIVATE}/auth/logout`,
@@ -37,13 +35,13 @@ export const ROUTES = {
   current_account: {
     base: `${PRIVATE}/current_account`,
     id: (id: string) => `${PRIVATE}/current_account/${id}`,
-    bulk: `${PRIVATE}/current_account/bulk`
+    bulk: `${PRIVATE}/current_account/bulk`,
   },
   results: {
     base: `${PRIVATE}/results`,
     id: (id: string) => `${PRIVATE}/results/${id}`,
   },
-  schedule_lottery:{
+  schedule_lottery: {
     base: `${PRIVATE}/schedule_lottery`,
-  }
+  },
 };

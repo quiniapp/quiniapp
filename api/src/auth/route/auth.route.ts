@@ -178,7 +178,7 @@ export class AuthRouter {
           message: 'Unexpected error',
         },
       };
-      res.status(500).json(response);
+      res.status(401).json(response);
     }
     try {
       const response: APIResponse<IUserEntityFront> = {
