@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '../../../helper/types/ticket.type';
-import { IBetTable, ILotterySchedule } from '@/features/play-details';
+import { IBetTable, ILotterySchedule } from '@/features/make-plays';
 import { betPlaceDictionary } from '../../../helper/functions/betPlaceDictionary';
 
 // ======= width y utilidades base =======

@@ -1,5 +1,5 @@
-import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
-import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
+import FillOutATicket from '@/features/make-plays/fill-out-a-ticket';
+import HeaderPlayDetail from '@/features/make-plays/header-play-detail';
 import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';

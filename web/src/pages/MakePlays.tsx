@@ -1,4 +1,4 @@
-import PlayDetailsContent from '@/features/play-details';
+import PlayDetailsContent from '@/features/make-plays';
 
 const MakePlaysPage = () => {
   return <PlayDetailsContent />;
