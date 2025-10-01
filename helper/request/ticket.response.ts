@@ -1,4 +1,4 @@
-import { IBetEntityBase } from 'types/bet.type';
+import { IBetEntityBase } from '../types/bet.type';
 import { ITicketEntityBack, ITicketEntityBase } from '../types/ticket.type';
 import { IUserEntityBack } from '../types/user.type';
 import { INewBetEntity } from './bet.response';
