@@ -53,14 +53,14 @@ export class TicketController {
       if (props.user_type === USER_TYPE.CASHIER) {
         tickets = await this.repository.getAll({
           user_id: props.user_id,
-          date: props.date,
-          winner: props.winner,
+          date: props.date ?? '',
+          winner: !!props.winner,
         });
       } else {
         tickets = await this.repository.getAll({
-          date: props.date,
+          date: props.date ?? '',
           user_id: props?.cashier_id,
-          winner: props.winner,
+          winner: !!props.winner,
         });
       }
 
