@@ -9,9 +9,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     'http://localhost:3000';
 
   const originalUrl = req.url || '/';
-  const path = originalUrl.replace(/^\/api\//, '');
+
+  // ✅ Parsear correctamente
+  const url = new URL(originalUrl, 'http://proxy.local'); // base dummy
+  const path = url.pathname.replace(/^\/api\//, '');
+
+  // Opción A: reconstruir del objeto query (suele ser lo más predecible)
   const search = buildSearch(req);
+
+  // Opción B (alternativa): usar lo que vino tal cual en la URL:
+  // const search = url.search || '';
+
   const targetUrl = `${stripTrailingSlash(targetBase)}/api/${path}${search}`;
+
+  // (opcional) te dejo un log útil para verificar
+  // console.log({ originalUrl, path, search, targetUrl });
 
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
@@ -25,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method && !['GET', 'HEAD'].includes(req.method)) {
     const chunks: Buffer[] = [];
-    for await (const c of req as any as AsyncIterable<Buffer | string>) {
+    for await (const c of (req as any as AsyncIterable<Buffer | string>)) {
       chunks.push(typeof c === 'string' ? Buffer.from(c) : c);
     }
     init.body = Buffer.concat(chunks);
@@ -35,25 +47,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   res.status(resp.status);
 
-  // Copiá todos los headers, excepto hop-by-hop
   resp.headers.forEach((value, key) => {
-    if (!['transfer-encoding', 'content-length'].includes(key.toLowerCase())) {
-      // Set-Cookie lo tratamos aparte
-      if (key.toLowerCase() !== 'set-cookie') {
-        res.setHeader(key, value);
-      }
+    if (!['transfer-encoding', 'content-length', 'set-cookie'].includes(key.toLowerCase())) {
+      res.setHeader(key, value);
     }
   });
 
-  // Manejo de múltiples Set-Cookie
   const anyHeaders = resp.headers as any;
   const setCookies: string[] =
     (typeof anyHeaders.getSetCookie === 'function' && anyHeaders.getSetCookie()) ||
     (anyHeaders.raw && anyHeaders.raw()['set-cookie']) ||
     (resp.headers.get('set-cookie') ? [resp.headers.get('set-cookie') as string] : []);
-  if (setCookies && setCookies.length) {
-    res.setHeader('Set-Cookie', setCookies);
-  }
+  if (setCookies?.length) res.setHeader('Set-Cookie', setCookies);
 
   const buf = Buffer.from(await resp.arrayBuffer());
   res.end(buf);
