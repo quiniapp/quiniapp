@@ -32,6 +32,8 @@ export class CurrentAccountRepository {
 
   async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
     // Base query to select current accounts and join with users table
+
+    console.log('repo', date);
     let query = supabase
       .from('current_accounts')
       .select('*, users!inner(*)')

@@ -31,6 +31,7 @@ export class CurrentAccountRouter {
   private getAllCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { date } = req.query;
+    console.log('route', date);
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
