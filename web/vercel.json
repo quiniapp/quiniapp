@@ -1,10 +1,5 @@
 {
-  "buildCommand": "npm ci && npm run build",
-  "build": {
-    "env": {
-      "NPM_CONFIG_FROZEN_LOCKFILE": "false"
-    }
-  },
+  
   "rewrites": [
     {
       "source": "/api/(.*)",
