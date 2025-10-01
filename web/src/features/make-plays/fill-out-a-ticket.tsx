@@ -4,7 +4,7 @@ import { Flex, FlexCol } from '@/components/flex';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
-import GameTurns from '@/features/play-details/game-turns.tsx';
+import GameTurns from '@/features/make-plays/game-turns';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
@@ -236,6 +236,7 @@ const FillOutATicket = ({
                   ref={numberRef}
                   id="number"
                   name={'ticket-number'}
+                  inputMode="numeric"
                   type={'string'}
                   maxLength={10}
                   placeholder={'0000000000'}
@@ -279,6 +280,7 @@ const FillOutATicket = ({
                   ref={withRef}
                   id="with"
                   name={'ticket-with'}
+                  inputMode="numeric"
                   type={'string'}
                   maxLength={2}
                   value={bet.with}
@@ -345,5 +347,5 @@ const FillOutATicket = ({
 export default FillOutATicket;
 
 const ResetPartialModal = React.lazy(
-  () => import('../../../src/components/modals/ResetPartialModal')
+  () => import('../../components/modals/ResetPartialModal')
 );

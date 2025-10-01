@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IUpdateUserEntity } from '../../../../../helper/request/user.response';
 
 const updateUser = async (payload: IUpdateUserEntity) => {
 
   const { user_id, ...rest } = payload;
-  const response = await fetch(ROUTES.user.id(user_id), {
+  const response = await fetch(BACKEND_ROUTES.user.id(user_id), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IUpdateResultsEntity } from '../../../../helper/request/results.response.ts';
 
 
@@ -7,7 +7,7 @@ const performUpdateResults = async (
   id: string,
   updateResults: IUpdateResultsEntity
 ): Promise<void> => {
-  const res = await fetch(ROUTES.results.id(id), {
+  const res = await fetch(BACKEND_ROUTES.results.id(id), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

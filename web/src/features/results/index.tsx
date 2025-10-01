@@ -16,18 +16,18 @@ import QuiniChecks from '@/features/results/quini-check';
 import ResultShifts from '@/features/results/shifts';
 
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useSchedules } from '@/hooks/useSchedules';
-import { useLotteries } from '@/hooks/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useResults } from '@/hooks/fetchs/results/useResults';
 import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mutation';
 
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../helper/types/user.type';
 import { useCreateResults } from '@/hooks/mutations/results/useCreateresults.mutation';
 import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ResultsContent = () => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [results, setResults] = useState<string[]>(Array(20).fill(''));
   const [selectedSchedule, setSelectedSchedule] = useState<string | undefined>();

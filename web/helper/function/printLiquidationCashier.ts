@@ -60,12 +60,8 @@ export async function printUserSlipPDF(opts: {
       `Saldo: ${money(account.previous_balance)}`,
       `Gastos: ${money(account.bills)}`,
     ],
-    [
-      `Aciertos: ${money(account.successes)}`,
-      `Pague: ${money(account.paid)}`,
-      `Cobre: ${money(account.collections)}`,
-    ],
-    [`Reclamos: ${money(account.claims)}`, '', ''],
+    [`Aciertos: ${money(account.successes)}`, `Pague: ${money(account.paid)}`, ''],
+    [`Reclamos: ${money(account.claims)}`, `Cobre: ${money(account.collections)}`, account?.leave?`Deje: ${account.leave}`:''],
   ];
 
   autoTable(doc, {

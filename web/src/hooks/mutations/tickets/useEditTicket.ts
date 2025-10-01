@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IEditTicketEntity } from '../../../../../helper/request/ticket.response.ts';
 
 const doEditTicket = async ({ ticket_id, bets }: IEditTicketEntity) => {
-  const res = await fetch(ROUTES.ticket.id(ticket_id), {
+  const res = await fetch(BACKEND_ROUTES.ticket.id(ticket_id), {
     method: 'PUT',  
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

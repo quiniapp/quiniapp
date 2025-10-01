@@ -19,7 +19,7 @@ import { useUpdateCurrentAcoountByUser } from '@/hooks/mutations/current-account
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { useState } from 'react';
-import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
+import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 
 interface UserCurrentAccountModalProps {
   isOpen: boolean;
@@ -61,7 +61,7 @@ const UserCurrentAccountModal = ({
         },
     mode: 'onChange',
   });
-  const { data: cashier } = useUsersByNumber(currentAccount?.user_number);
+  const { data: cashier } = useGetUserByNumber(currentAccount?.user_number);
   const { handleSubmit, setValue, getValues } = methods;
   const { data: bets, isLoading: isLoadingBets } = useBets({
     date: currentAccount?.date ?? '',

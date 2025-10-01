@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IUpdateCurrentAccountEntity } from '../../../../../helper/request/current_account.response.ts';
 
 type UpdateVars = {
@@ -19,7 +19,7 @@ const updateCurrentAccountByUser = async ({
     throw new Error('Faltan parámetros: "date" y "user_id" son requeridos.');
   }
 
-  const url = `${ROUTES.current_account.id(current_account_id)}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
+  const url = `${BACKEND_ROUTES.current_account.id(current_account_id)}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
 
   const res = await fetch(url, {
     method: 'PUT',

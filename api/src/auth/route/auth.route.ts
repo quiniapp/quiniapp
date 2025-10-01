@@ -61,6 +61,7 @@ export class AuthRouter {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        path: '/', // <- añade esto
       });
       const loginResponse = await this.controller.login({ username, password });
       const response: APIResponse<IUserEntityFront> = {
@@ -72,6 +73,7 @@ export class AuthRouter {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        path: '/', // <- añade esto
       });
       res.status(200).json(response); // <-- SIN return
     } catch (error) {
@@ -125,17 +127,15 @@ export class AuthRouter {
           data: result,
         },
       };
+
       res.clearCookie('access_token', {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
+        secure: true,
+        sameSite: 'none',
+        path: '/',
       });
+      res.clearCookie('user_token', { httpOnly: true, secure: true, sameSite: 'none', path: '/' });
 
-      res.clearCookie('user_token', {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
-      });
       res.status(200).json(response);
     } catch (error) {
       console.error('Login route error', error);
@@ -178,7 +178,7 @@ export class AuthRouter {
           message: 'Unexpected error',
         },
       };
-      res.status(500).json(response);
+      res.status(401).json(response);
     }
     try {
       const response: APIResponse<IUserEntityFront> = {

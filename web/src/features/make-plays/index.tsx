@@ -1,12 +1,11 @@
-import FillOutATicket from '@/features/play-details/fill-out-a-ticket.tsx';
-import HeaderPlayDetail from '@/features/play-details/header-play-detail.tsx';
+import FillOutATicket from '@/features/make-plays/fill-out-a-ticket';
+import HeaderPlayDetail from '@/features/make-plays/header-play-detail';
 import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import { INewBetEntity } from '../../../../helper/request/bet.response';
 import PlayDetailGameTable from './play-detail-game-table';
 import { FlexCol } from '@/components/flex';
-import { useSessionStore } from '@/stores/sessionStore';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
@@ -14,12 +13,13 @@ import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
 import { PLACE_TYPE } from '../../../../helper/types/bet.type';
 import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
-import { useUsersByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { makeTicketPdf } from '../../../helper/function/makeTicket';
 import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import {groupTicketBetsByNumber} from '../../../helper/function/groupNumber'
+import { useAuth } from '@/contexts/AuthContext';
+import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -36,7 +36,7 @@ export interface IBetTable {
 }
 
 const PlayDetailsContent = () => {
-  const { user } = useSessionStore();
+  const { user } = useAuth();
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [partialAmount, setPartialAmount] = useState<number>(0);
@@ -47,7 +47,7 @@ const PlayDetailsContent = () => {
   const { mutate: createTicket } = useCreateTicket();
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-  const { data } = useUsersByNumber(userNumber);
+  const { data } = useGetUserByNumber(userNumber);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
   const { mutate: editTicket } = useEditTicket();
   const computeTotal = (bets: IBetTable[]) =>

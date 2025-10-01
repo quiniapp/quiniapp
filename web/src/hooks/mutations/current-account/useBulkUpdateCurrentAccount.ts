@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { editPayloadObject } from '@/components/modals/GenerateLiquitationModal';
 
 type BulkVars = {
@@ -19,7 +19,7 @@ async function bulkUpdateCurrentAccount({
   leave,
 }: BulkVars): Promise<BulkResult> {
   
-  const url = `${ROUTES.current_account.bulk}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
+  const url = `${BACKEND_ROUTES.current_account.bulk}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
   const body = {
     updateCurrentAccount: Object.fromEntries(updateCurrentAccount), // { [id]: {claims, paid, collections} }
   };

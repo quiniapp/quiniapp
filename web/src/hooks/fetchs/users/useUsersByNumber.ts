@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IUserEntityFront } from '../../../../../helper/types/user.type';
 
 const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityFront | undefined> => {
   if (!cashier_number) return;
-  const response = await fetch(`${ROUTES.user.base}?cashier_number=${cashier_number}`, {
+  const response = await fetch(`${BACKEND_ROUTES.user.base}?cashier_number=${cashier_number}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityF
   return data.users[0] ?? null
 };
 
-export const useUsersByNumber = (cashier_number?: number) => {
+export const useGetUserByNumber = (cashier_number?: number) => {
   return useQuery<IUserEntityFront | undefined>({
     queryKey: ['users', cashier_number],
     queryFn: () => fetchUsersByNumber(cashier_number),

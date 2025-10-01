@@ -14,17 +14,18 @@ import {
 } from '@/components/ui/select.tsx';
 import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
-import { useSessionStore } from '@/stores/sessionStore.ts';
+
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useState } from 'react';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const FormHeaderFilter = () => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: cashiers } = useUsers();
+  const { data: cashiers } = useUsers(role);
   const [inputValue, setInputValue] = useState('');
 
   const selectValue = searchParams.get('cashier_id') ?? undefined;

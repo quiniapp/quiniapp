@@ -1,8 +1,8 @@
 import { useMutation,  useQueryClient } from '@tanstack/react-query';
-import { ROUTES } from '../../../../routes/routes';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 
 const deleteUsers = async (id:string) => {
-  const response = await fetch(ROUTES.user.id(id), {
+  const response = await fetch(BACKEND_ROUTES.user.id(id), {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',

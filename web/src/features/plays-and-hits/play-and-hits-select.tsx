@@ -7,23 +7,23 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { TypographyMuted } from '@/components/ui/typography-muted';
-import { useLotteries } from '@/hooks/useLotteries';
-import { useSchedules } from '@/hooks/useSchedules';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { IScheduleEntityFront } from 'helper/types/schedule.type';
 import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import { Fragment } from 'react/jsx-runtime';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ALL = 'Todos';
 
 const PlayAndHitsSelect = () => {
-  const { role } = useSessionStore();
+  const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lotteries } = useLotteries();
-  const { data } = useUsers();
+  const { data } = useUsers(role);
   const { data: schedules } = useSchedules();
 
   const selectedSchedule = searchParams.get('schedule_id');

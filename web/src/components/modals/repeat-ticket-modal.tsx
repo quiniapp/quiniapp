@@ -4,23 +4,23 @@ import Modal from '@/components/modals/custom-modal.tsx';
 import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
-import { QuinielaFieldset } from '@/features/play-details/quiniela-fieldset.tsx';
+import { QuinielaFieldset } from '@/features/make-plays/quiniela-fieldset';
 import { useEffect, useMemo, useState } from 'react';
 import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
-import { IBetTable } from '@/features/play-details';
+import { IBetTable } from '@/features/make-plays';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
-import { useSchedules } from '@/hooks/useSchedules';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 import { DayKey } from '../../../../helper/types/schedule-lottery.type';
 import { IScheduleEntityFront } from 'helper/types/schedule.type';
-import { useSessionStore } from '@/stores/sessionStore';
 import { USER_TYPE } from '../../../../helper/types/user.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useClock } from '@/providers/ClockProvider';
+import { useAuth } from '@/contexts/AuthContext';
 
 dayjs.extend(customParseFormat);
 const toHHMMSS = (t: string) => (t.length === 5 ? `${t}:00` : t);
@@ -35,7 +35,7 @@ interface BasicModalProps {
 const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicModalProps) => {
   if (!isOpen) return null;
 
-  const { user } = useSessionStore();
+  const { user } = useAuth();
   const isCashier = user?.user_type === USER_TYPE.CASHIER;
   const { time, isScheduleEnabled, isLessThanTenMinutes } = useClock();
 
@@ -49,7 +49,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
   const { data } = getTicketByNumber(ticketNumber);
-
+  console.log('data',data)
   const handleSetBets = () => {
     handleRecreateBet(selectedBets);
     onClose();
