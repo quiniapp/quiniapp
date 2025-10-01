@@ -41,7 +41,6 @@ export class CurrentAccountController {
   ): Promise<ICurrentAccountEntityFront[]> => {
     let currentaccounts;
 
-    console.log('controller', props?.date);
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
         currentaccounts = await this.repository.getAllCurrentAccountHandler({
