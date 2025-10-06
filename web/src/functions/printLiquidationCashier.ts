@@ -1,9 +1,9 @@
 'use client';
 
 import dayjs from 'dayjs';
-import type { ICurrentAccountEntityFront } from '../../../helper/types/current_account.type';
-import type { IBetEntityFront } from '../../../helper/types/bet.type';
-import { betPlaceDictionary } from '../../../helper/functions/betPlaceDictionary';
+import type { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import type { IBetEntityFront } from '@helper/types/bet.type';
+import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 
 const money = (n?: number | null) =>
   Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IScheduleLotteryEntityFront } from '../../../../../helper/types/schedule-lottery.type.ts';
+import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type.ts';
 
 const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<void> => {
    

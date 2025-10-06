@@ -1,7 +1,7 @@
 import { Flex, FlexCol } from '@/components/flex';
 import LabelInputForm from '@/components/molecules/LabelInputForm';
 
-import { ICurrentAccountEntityFront } from '../../../../helper/types/current_account.type';
+import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import {
   Table,
   TableBody,
@@ -12,21 +12,21 @@ import {
 } from '@/components/ui/table';
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { Typography } from '@/components/typography';
-import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
-import { IBetEntityFront } from '../../../../helper/types/bet.type';
-import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { IBetEntityFront } from '@helper/types/bet.type';
+import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import { useBets } from '@/hooks/fetchs/plays/useBets';
 import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 import dayjs from 'dayjs';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { printUserSlipPDF } from '../../../helper/function/printLiquidationCashier';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SelectDayToSearch } from '../plays-and-hits/select-day-to-search';
 import { useGetCurrentAccountByUser } from '@/hooks/fetchs/current-account/useGetCurrentAccountByUser';
 import { useAuth } from '@/contexts/AuthContext';
+import { printUserSlipPDF } from '@/functions/printLiquidationCashier';
 
 const CurrentAcoountByUserTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();

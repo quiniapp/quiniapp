@@ -21,10 +21,10 @@ import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useResults } from '@/hooks/fetchs/results/useResults';
 import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mutation';
 
-import { USER_TYPE } from '../../../helper/types/user.type';
 import { useCreateResults } from '@/hooks/mutations/results/useCreateresults.mutation';
 import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
 
 const ResultsContent = () => {
   const { role } = useAuth();

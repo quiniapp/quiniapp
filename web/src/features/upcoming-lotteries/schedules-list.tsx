@@ -3,7 +3,7 @@ import SkeletonList from '@/components/skeletons/skeleton-list';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import { Flex } from '@/components/flex';
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 
 export interface ScheduleProps {

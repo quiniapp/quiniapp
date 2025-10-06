@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
 

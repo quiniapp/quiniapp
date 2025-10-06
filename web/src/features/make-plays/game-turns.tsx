@@ -9,11 +9,11 @@ import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list'
 import LotteryCheckboxList from '@/features/make-plays/lottery-checkbox-list';
 import Box from '@/components/box';
 import { LotteryType } from '@/types/lottery.type.ts';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { useClock } from '@/providers/ClockProvider';
 import { useEffect } from 'react';
-import { USER_TYPE } from '../../../../helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface IGameTurns {

@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
-import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 
 interface TableTerminalTicketProps {
   data?: ITicketEntityFront[];

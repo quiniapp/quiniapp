@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { ILotteryEntityFront } from '../../../../../helper/types/lottery.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
 
 const fetchLotteries = async (all?: boolean) => {
   const res = await fetch(`${BACKEND_ROUTES.lottery.base}${all ? '?all=true' : ''}`, {

@@ -10,7 +10,7 @@ import {
 import SkeletonList from '../skeletons/skeleton-list';
 import { Flex, FlexCol } from '../flex';
 import { Typography } from '../typography';
-import { ICurrentAccountEntityFront } from '../../../../helper/types/current_account.type';
+import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { Button } from '../ui/button';
 import Modal from './custom-modal';
 import { useSearchParams } from 'react-router-dom';

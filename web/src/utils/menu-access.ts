@@ -1,4 +1,4 @@
-import { USER_TYPE } from '../../../helper/types/user.type.ts';
+import { USER_TYPE } from '@helper/types/user.type.ts';
 import { MENU_ITEM } from '@/types/menu-item';
 
 const PUBLIC_MENU_IDS = ['Home', 'Results', 'CurrentAccount'];

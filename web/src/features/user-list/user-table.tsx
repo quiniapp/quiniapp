@@ -15,9 +15,9 @@ import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { useDeleteUsers } from '@/hooks/mutations/users/useDeleteUser';
 import { toast } from 'react-hot-toast';
 import React, { Suspense, useState } from 'react';
-import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
-import { cashierTypeDictionary } from '../../../../helper/functions/cashierTypeDictionary';
-import { userTypeDictionary } from '../../../../helper/functions/userTypeDictionary';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { cashierTypeDictionary } from '@helper/functions/cashierTypeDictionary';
+import { userTypeDictionary } from '@helper/functions/userTypeDictionary';
 import { useAuth } from '@/contexts/AuthContext';
 
 const UsersTable = () => {

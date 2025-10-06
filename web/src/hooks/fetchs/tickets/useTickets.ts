@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 
 interface UseTicketsParams {

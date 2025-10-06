@@ -2,7 +2,7 @@ import Modal from './custom-modal';
 import { Flex, FlexCol } from '../flex';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
-import { IUserEntityFront } from '../../../../helper/types/user.type';
+import { IUserEntityFront } from '@helper/types/user.type';
 
 
 interface DeleteUsersModalProps {
