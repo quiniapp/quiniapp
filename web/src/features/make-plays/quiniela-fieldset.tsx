@@ -4,7 +4,7 @@ import { Flex, FlexCol } from '@/components/flex';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 
 interface QuinielaFieldsetProps {
   legend: string;

@@ -8,7 +8,7 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
-import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
+import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import { IBetTable } from '.';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';

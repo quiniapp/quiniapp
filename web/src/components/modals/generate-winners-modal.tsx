@@ -5,7 +5,7 @@ import { RadioGroup } from '@radix-ui/react-radio-group';
 import { Flex, FlexCol } from '../flex';
 import { RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { Button } from '../ui/button';
 type Shift = {
   schedule_id: string;

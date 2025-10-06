@@ -1,6 +1,6 @@
 import { useQuery, QueryFunctionContext } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { ICurrentAccountEntityFront } from '../../../../../helper/types/current_account.type.ts';
+import { ICurrentAccountEntityFront } from '@helper/types/current_account.type.ts';
 
 export const CURRENT_ACCOUNT_LATEST = 'latest' as const;
 

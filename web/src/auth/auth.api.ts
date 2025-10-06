@@ -1,5 +1,5 @@
 // src/auth/auth.api.ts
-import { IUserEntityFront } from '../../../helper/types/user.type';
+import { IUserEntityFront } from '@helper/types/user.type';
 import { BACKEND_ROUTES } from '../../routes/routes';
 
 type ApiUser = { data?: { user?: IUserEntityFront } }; // tipá con IUserEntityFront si querés
