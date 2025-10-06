@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 
 const fetchTicketsByNumber = async (
   ticket_number: string | null

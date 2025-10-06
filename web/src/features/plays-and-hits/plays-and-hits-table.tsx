@@ -8,8 +8,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { IBetEntityFront } from '../../../../helper/types/bet.type';
-import { betPlaceDictionary } from '../../../../helper/functions/betPlaceDictionary';
+import { IBetEntityFront } from '@helper/types/bet.type';
+import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 
 const PlaysAndHitsTable = ({ bets = [] }: { bets?: IBetEntityFront[] }) => {
   return (

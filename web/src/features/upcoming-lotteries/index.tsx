@@ -20,11 +20,11 @@ import {
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { LotteryCheckboxList } from '@/features/upcoming-lotteries/lottery-checkbox-list';
 import { ScheduleRadioList } from '@/features/upcoming-lotteries/schedules-list.tsx';
-import { dayParseToString, dayDictionary } from '../../../../helper/functions/dayDictionary';
+import { dayParseToString, dayDictionary } from '@helper/functions/dayDictionary';
 import { useSaveScheduleLottery } from '@/hooks/mutations/schedule-lottery/useSaveScheduleLottery';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import toast from 'react-hot-toast';
-import { DayKey } from '../../../../helper/types/schedule-lottery.type';
+import { DayKey } from '@helper/types/schedule-lottery.type';
 
 type DayMap = Partial<Record<DayKey, Record<string, string[]>>>;
 const UpcomingLotteriesContent = () => {

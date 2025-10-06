@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/table';
 import { Flex } from '@/components/flex';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
-import { IBetEntityFront } from '../../../../helper/types/bet.type';
+import { IBetEntityFront } from '@helper/types/bet.type';
 
 interface TerminalTicketMatchesTableProps {
   bets?: IBetEntityFront[];

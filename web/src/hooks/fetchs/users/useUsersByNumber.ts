@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IUserEntityFront } from '../../../../../helper/types/user.type';
+import { IUserEntityFront } from '@helper/types/user.type';
 
 const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityFront | undefined> => {
   if (!cashier_number) return;

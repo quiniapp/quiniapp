@@ -5,16 +5,16 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/make-plays/game-turns';
-import { PLACE_TYPE } from '../../../../helper/types/bet.type';
+import { PLACE_TYPE } from '@helper/types/bet.type';
 import React, { Suspense, useEffect, useRef, useState } from 'react';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { IBetTable, ILotterySchedule } from '.';
-import { placeTypeParse } from '../../../../helper/functions/placeTypeParse';
+import { placeTypeParse } from '@helper/functions/placeTypeParse';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
-import { dayParseToString } from '../../../../helper/functions/dayDictionary';
-import { DayKey } from '../../../../helper/types/schedule-lottery.type';
+import { DayKey } from '@helper/types/schedule-lottery.type';
+import { dayParseToString } from '@helper/functions/dayDictionary';
 
 export interface IBetForm {
   number: string;
@@ -346,6 +346,4 @@ const FillOutATicket = ({
 
 export default FillOutATicket;
 
-const ResetPartialModal = React.lazy(
-  () => import('../../components/modals/ResetPartialModal')
-);
+const ResetPartialModal = React.lazy(() => import('../../components/modals/ResetPartialModal'));

@@ -3,23 +3,23 @@ import HeaderPlayDetail from '@/features/make-plays/header-play-detail';
 import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
-import { INewBetEntity } from '../../../../helper/request/bet.response';
+import { INewBetEntity } from '@helper/request/bet.response';
 import PlayDetailGameTable from './play-detail-game-table';
 import { FlexCol } from '@/components/flex';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
-import { IUserEntityFront, USER_TYPE } from '../../../../helper/types/user.type';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
-import { PLACE_TYPE } from '../../../../helper/types/bet.type';
-import { betTypeDictionary } from '../../../../helper/functions/betTypeDictionary';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { PLACE_TYPE } from '@helper/types/bet.type';
+import { betTypeDictionary } from '@helper/functions/betTypeDictionary';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { makeTicketPdf } from '../../../helper/function/makeTicket';
-import { ITicketEntityFront } from '../../../../helper/types/ticket.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
-import {groupTicketBetsByNumber} from '../../../helper/function/groupNumber'
 import { useAuth } from '@/contexts/AuthContext';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
+import { groupTicketBetsByNumber } from '@/functions/groupNumber';
+import { makeTicketPdf } from '@/functions/makeTicket';
 
 dayjs.extend(customParseFormat);
 export interface ILotterySchedule {
@@ -177,24 +177,7 @@ const PlayDetailsContent = () => {
     return acc + amount * lotCount;
   }, 0);
   setTotalAmount(total);
-    // setBets(
-    //   ticket.bets.map((bet) => {
-    //     setTotalAmount((prev) => prev + bet.amount);
-    //     return {
-    //       number: bet.number,
-    //       amount: bet.amount,
-    //       place: bet.place,
-    //       with: bet.with,
-    //       position: bet.position,
-    //       scheduleLottery: [
-    //         {
-    //           schedule: bet.schedule,
-    //           lotteries: [bet.lottery],
-    //         },
-    //       ],
-    //     };
-    //   })
-    // );
+
   };
 
   const handleResetBets = () => {

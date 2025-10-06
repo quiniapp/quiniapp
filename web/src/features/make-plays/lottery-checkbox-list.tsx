@@ -2,7 +2,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Flex } from '@/components/flex';
 import { Label } from '@/components/ui/label.tsx';
 import { LotteryType } from '@/types/lottery.type.ts';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
 
 interface LotteryCheckboxListProps {
   lottery: LotteryType;

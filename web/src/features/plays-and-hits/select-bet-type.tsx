@@ -1,11 +1,11 @@
 
-import { USER_TYPE } from '../../../../helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import { useSearchParams } from 'react-router-dom';
 import { Flex } from '@/components/flex';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { betTypeParse } from '../../../../helper/functions/betTypeParse';
-import { BET_TYPE } from '../../../../helper/types/bet.type';
+import { betTypeParse } from '@helper/functions/betTypeParse';
+import { BET_TYPE } from '@helper/types/bet.type';
 import { useAuth } from '@/contexts/AuthContext';
 
 const SelectBetType = () => {

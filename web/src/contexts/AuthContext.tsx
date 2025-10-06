@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { IUserEntityFront, USER_TYPE } from '../../../helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 
 export type LoginPayload = { username?: string; password?: string };
 

@@ -9,11 +9,11 @@ import {
 import { TypographyMuted } from '@/components/ui/typography-muted';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
-import { IScheduleEntityFront } from 'helper/types/schedule.type';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
-import { USER_TYPE } from '../../../../helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import { Fragment } from 'react/jsx-runtime';
 import { useAuth } from '@/contexts/AuthContext';
 
