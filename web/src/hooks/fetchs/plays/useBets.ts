@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IBetEntityFront } from '../../../../../helper/types/bet.type.ts';
+import { IBetEntityFront } from '@helper/types/bet.type.ts';
 
 export interface FetchBetsProps {
   lottery_id?: string | null;

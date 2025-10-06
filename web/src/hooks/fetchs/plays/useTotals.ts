@@ -9,7 +9,7 @@ export const totalAmountKey = (p: FetchBetsProps) =>
 export const totalPrizeKey = (p: FetchBetsProps) =>
   ['bets-total-prize', ...betsKey(p)] as const;
 
-// ---------- helpers comunes ----------
+// ---------- @helpers comunes ----------
 function buildSearchParams(p: FetchBetsProps) {
   const params = new URLSearchParams();
   if (p.date) params.set('date', p.date);

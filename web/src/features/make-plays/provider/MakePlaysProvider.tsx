@@ -6,12 +6,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { IScheduleEntityFront } from '../../../../../helper/types/schedule.type';
-import { ILotteryEntityFront } from '../../../../../helper/types/lottery.type';
-import { IUserEntityFront, USER_TYPE } from '../../../../../helper/types/user.type';
-import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
-import { INewBetEntity } from '../../../../../helper/request/bet.response';
-import { betTypeDictionary } from '../../../../../helper/functions/betTypeDictionary';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { INewBetEntity } from '@helper/request/bet.response';
+import { betTypeDictionary } from '@helper/functions/betTypeDictionary';
 import { Ctx, IBetTable, PlayDetailsContext } from '../context/MakePlaysContext';
 import { groupTicketBetsByNumber } from '@/functions/groupNumber';
 import { makeTicketPdf } from '@/functions/makeTicket';
@@ -44,7 +44,7 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
   const { mutate: createTicket } = useCreateTicket();
   const { mutate: editTicket } = useEditTicket();
 
-  // ---- helpers
+  // ---- @helpers
   const computeTotal = useCallback((list: IBetTable[]) => {
     return list.reduce((acc, bet) => {
       const combos = bet.scheduleLottery.reduce((s, it) => s + it.lotteries.length, 0);

@@ -1,12 +1,12 @@
-import React, { Fragment, useMemo } from 'react';
+import  { Fragment, useMemo } from 'react';
 import { Flex, FlexCol } from '../flex';
 import { Controller, ControllerProps, FieldValues, SubmitHandler, UseFormReturn } from 'react-hook-form';
 import { Input } from '../ui/input';
 import { Label } from '@radix-ui/react-label';
 import { BanIcon, Box, SaveIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { USER_TYPE } from 'helper/types/user.type';
-import { CASHIER_TYPE } from '../../../../helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
+import { CASHIER_TYPE } from '@helper/types/user.type';
 import { Button } from '../ui/button';
 import { Typography } from '../typography';
 interface UserFormProps<T extends FieldValues> {
@@ -18,7 +18,6 @@ interface UserFormProps<T extends FieldValues> {
 export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, onCancel }: UserFormProps<T>) => {
   const {
     control,
-    register,
     handleSubmit,
     formState: { errors },
     watch,

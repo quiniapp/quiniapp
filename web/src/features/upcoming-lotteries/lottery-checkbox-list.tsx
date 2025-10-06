@@ -2,7 +2,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
-import { ILotteryEntityFront } from '../../../../helper/types/lottery.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
 
 export interface ILottery {
   lottery_id: string;

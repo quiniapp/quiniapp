@@ -24,7 +24,7 @@ import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mut
 import { useCreateResults } from '@/hooks/mutations/results/useCreateresults.mutation';
 import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { USER_TYPE } from 'helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 
 const ResultsContent = () => {
   const { role } = useAuth();

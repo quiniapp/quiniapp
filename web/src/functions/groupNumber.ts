@@ -1,4 +1,4 @@
-import { ITicketEntityFront } from 'helper/types/ticket.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { IBetTable } from '../features/make-plays/index';
 
 export function groupTicketBetsByNumber(ticket: ITicketEntityFront): IBetTable[] {

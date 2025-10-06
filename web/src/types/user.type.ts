@@ -1,4 +1,4 @@
-import { CASHIER_TYPE, USER_TYPE } from '../../../helper/types/user.type.ts';
+import { CASHIER_TYPE, USER_TYPE } from '../../../@helper/types/user.type.ts';
 
 export interface AddNewUserFormValues {
   pinNumber: string;

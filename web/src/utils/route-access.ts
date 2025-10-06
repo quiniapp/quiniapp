@@ -1,6 +1,6 @@
 import { RoutesContent } from '@/routes/route';
 import { ROUTES } from '@/types/routes.type';
-import { USER_TYPE } from '../../../helper/types/user.type.ts';
+import { USER_TYPE } from '../../../@helper/types/user.type.ts';
 
 const PUBLIC_ROUTES = [ROUTES.HOME, ROUTES.RESULTS, ROUTES.CURRENT_ACCOUNT];
 

@@ -1,11 +1,11 @@
 
 import React, { createContext, useContext } from 'react';
 
-import { IScheduleEntityFront } from '../../../../../helper/types/schedule.type';
-import { ILotteryEntityFront } from '../../../../../helper/types/lottery.type';
-import { PLACE_TYPE } from '../../../../../helper/types/bet.type';
-import { IUserEntityFront } from '../../../../../helper/types/user.type';
-import { ITicketEntityFront } from '../../../../../helper/types/ticket.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { PLACE_TYPE } from '@helper/types/bet.type';
+import { IUserEntityFront } from '@helper/types/user.type';
+import { ITicketEntityFront } from '@helper/types/ticket.type';
 
 
 
@@ -43,7 +43,7 @@ type PlayDetailsActions = {
   setSchedules: React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>;
   setIsEnabledCreateBet: (v: boolean) => void;
 
-  // helpers/acciones
+  // @helpers/acciones
   handleRecreateBet: (values: IBetTable[]) => void;
   handleCreateBet: () => void;
   handleEditTicket: (ticket: ITicketEntityFront) => void;

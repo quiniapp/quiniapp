@@ -7,10 +7,10 @@ import { Flex, FlexCol } from '@/components/flex';
 import Box from '@/components/box';
 import HeaderTitleSection from '@/components/header-title-section';
 // Hooks
-import { IScheduleEntityFront } from '../../../../helper/types/schedule.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { useEffect, useRef } from 'react';
 import { useClock } from '@/providers/ClockProvider';
-import { USER_TYPE } from '../../../../helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SchedulesProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import dayjs from 'dayjs';
-import { ICurrentAccountEntityFront } from 'helper/types/current_account.type';
+import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 const BASE_LINE = 0.15; // probá 0.15–0.2 hasta que lo veas igual
 const BORDER_CELL = { lineWidth: BASE_LINE, lineColor: [0, 0, 0] as [number, number, number] };
 const BORDER_TABLE = {

@@ -9,7 +9,7 @@ import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUp
 import { useSearchParams } from 'react-router-dom';
 
 import toast from 'react-hot-toast';
-import { USER_TYPE } from '../../../../helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 import React, { Suspense, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';

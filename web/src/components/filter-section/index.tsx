@@ -18,7 +18,7 @@ import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
-import { USER_TYPE } from 'helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 
 interface FilterSectionProps {
   group: string;
