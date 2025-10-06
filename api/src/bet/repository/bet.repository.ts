@@ -1,4 +1,5 @@
 import { supabase } from '@database/db.connection';
+import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
 
 export class BetRepository {
   async getAllBets({
@@ -7,6 +8,8 @@ export class BetRepository {
     cashier_id,
     lottery_id,
     winners,
+    quatern,
+    tern,
   }: {
     schedule_id?: string;
     date: string;
@@ -14,6 +17,8 @@ export class BetRepository {
     lottery_id?: string;
 
     winners?: boolean;
+    quatern?: boolean;
+    tern?: boolean;
   }) {
     let query = supabase
       .from('bets')
@@ -21,6 +26,12 @@ export class BetRepository {
       .eq('date', date)
       .is('deleted_at', null);
 
+    if (quatern) {
+      query = query.eq('bet_type', BET_TYPE.QUATERN);
+    }
+    if (tern) {
+      query = query.eq('bet_type', BET_TYPE.TERN);
+    }
     if (schedule_id) {
       query = query.eq('schedule_id', schedule_id);
     }
@@ -43,12 +54,16 @@ export class BetRepository {
     cashier_id,
     lottery_id,
     winners,
+    quatern,
+    tern,
   }: {
     schedule_id?: string;
     date: string;
     cashier_id?: string;
     lottery_id?: string;
     winners?: boolean;
+    quatern?: boolean;
+    tern?: boolean;
   }) {
     const { data, error } = await supabase.rpc('get_grouped_bets_for_parse', {
       p_date: date,
@@ -57,9 +72,64 @@ export class BetRepository {
       p_lottery_id: lottery_id ?? null,
       p_winners_only: !!winners,
     });
+
     if (error) throw error;
 
-    // Normalizamos el nombre del campo sum
+    if (quatern) {
+      if (tern) {
+        return data.filter(
+          (bet: IBetEntityBack) =>
+            bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
+        );
+      }
+      return data.filter((bet: IBetEntityBack) => bet.bet_type === BET_TYPE.QUATERN);
+    }
+    if (tern) {
+      return data.filter((bet: IBetEntityBack) => bet.bet_type === BET_TYPE.TERN);
+    }
+
     return data;
+  }
+
+  async getTotalAmount({
+    date,
+    schedule_id,
+    cashier_id,
+    lottery_id,
+  }: {
+    date: string;
+    schedule_id?: string;
+    cashier_id?: string;
+    lottery_id?: string;
+  }) {
+    const { data, error } = await supabase.rpc('bets_total_amount', {
+      p_date: date,
+      p_schedule_id: schedule_id ?? null,
+      p_cashier_id: cashier_id ?? null,
+      p_lottery_id: lottery_id ?? null,
+    });
+    if (error) throw error;
+    return data as number; // total en moneda
+  }
+
+  async getTotalPrize({
+    date,
+    schedule_id,
+    cashier_id,
+    lottery_id,
+  }: {
+    date: string;
+    schedule_id?: string;
+    cashier_id?: string;
+    lottery_id?: string;
+  }) {
+    const { data, error } = await supabase.rpc('bets_total_prize', {
+      p_date: date,
+      p_schedule_id: schedule_id ?? null,
+      p_cashier_id: cashier_id ?? null,
+      p_lottery_id: lottery_id ?? null,
+    });
+    if (error) throw error;
+    return data as number; // cantidad de aciertos
   }
 }

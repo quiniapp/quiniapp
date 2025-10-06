@@ -13,8 +13,6 @@ import { USER_TYPE } from '../../../../helper/types/user.type';
 import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 import React, { Suspense, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { downloadCurrentAccountTablePDF } from '../../../helper/function/printLiquidationAdmin';
-import { printUserSlipPDF } from '../../../helper/function/printLiquidationCashier';
 import { betsKey, fetchBets } from '@/hooks/fetchs/plays/useBets';
 import {
   currentAccountKey,
@@ -22,6 +20,8 @@ import {
 } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
+import { downloadCurrentAccountTablePDF } from '@/functions/printLiquidationAdmin';
+import { printUserSlipPDF } from '@/functions/printLiquidationCashier';
 
 const CurrentAccountContent = () => {
   const queryClient = useQueryClient();

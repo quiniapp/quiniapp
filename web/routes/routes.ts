@@ -15,6 +15,8 @@ export const BACKEND_ROUTES = {
   bet: {
     base: `${PRIVATE}/bet`,
     id: (id: string) => `${PRIVATE}/bet/${id}`,
+    totalAmount: `${PRIVATE}/bet/total`,
+    totalPrize: `${PRIVATE}/bet/prize`
   },
   lottery: {
     base: `${PRIVATE}/lottery`,

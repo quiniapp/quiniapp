@@ -14,11 +14,11 @@ import {
 } from '@/components/ui/select';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { USER_TYPE } from '../../../helper/types/user.type.ts';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
+import { USER_TYPE } from 'helper/types/user.type';
 
 interface FilterSectionProps {
   group: string;

@@ -23,8 +23,8 @@ import type { INewUserEntityForm } from '@/types/user.type';
 import { useAddNewUser } from '@/hooks/mutations/users/useAddNewUser.ts';
 
 import { toast } from 'react-hot-toast';
-import { CASHIER_TYPE, USER_TYPE } from '../../../helper/types/user.type.ts';
 import { useMemo } from 'react';
+import { CASHIER_TYPE, USER_TYPE } from 'helper/types/user.type';
 
 export default function UserListAddNewUserForm() {
   const {

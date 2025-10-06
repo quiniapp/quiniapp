@@ -13,8 +13,8 @@ import { IBetTable, ILotterySchedule } from '.';
 import { placeTypeParse } from '../../../../helper/functions/placeTypeParse';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
-import { dayParseToString } from '../../../../helper/functions/dayDictionary';
 import { DayKey } from '../../../../helper/types/schedule-lottery.type';
+import { dayParseToString } from 'helper/functions/dayDictionary';
 
 export interface IBetForm {
   number: string;
@@ -346,6 +346,4 @@ const FillOutATicket = ({
 
 export default FillOutATicket;
 
-const ResetPartialModal = React.lazy(
-  () => import('../../components/modals/ResetPartialModal')
-);
+const ResetPartialModal = React.lazy(() => import('../../components/modals/ResetPartialModal'));
