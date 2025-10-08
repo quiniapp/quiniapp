@@ -9,18 +9,7 @@ import { ITicketEntityFront } from '@helper/types/ticket.type';
 
 
 
-export interface ILotterySchedule {
-  schedule: IScheduleEntityFront;
-  lotteries: ILotteryEntityFront[];
-}
-export interface IBetTable {
-  number: string;
-  amount: number;
-  place: PLACE_TYPE;
-  with: string | null;
-  position?: PLACE_TYPE | null;
-  scheduleLottery: ILotterySchedule[];
-}
+
 
 type PlayDetailsState = {
   ticketId?: string;
