@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 
-import { IBetTable } from '.';
+
 import toast from 'react-hot-toast';
 import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 import dayjs from 'dayjs';
@@ -23,6 +23,7 @@ import {
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useAuth } from '@/contexts/AuthContext';
 import { makeTicketPdf } from '@/functions/makeTicket';
+import { IBetTable } from '@helper/request/ticket.response';
 
 // 👇 Lazy import del modal (se carga sólo cuando se renderiza)
 const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));

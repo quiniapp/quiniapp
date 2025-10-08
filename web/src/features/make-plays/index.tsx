@@ -3,7 +3,6 @@ import HeaderPlayDetail from '@/features/make-plays/header-play-detail';
 import { useEffect, useMemo, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
-import { INewBetEntity } from '@helper/request/bet.response';
 import PlayDetailGameTable from './play-detail-game-table';
 import { FlexCol } from '@/components/flex';
 import dayjs from 'dayjs';
@@ -11,29 +10,17 @@ import toast from 'react-hot-toast';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { PLACE_TYPE } from '@helper/types/bet.type';
-import { betTypeDictionary } from '@helper/functions/betTypeDictionary';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { groupTicketBetsByNumber } from '@/functions/groupNumber';
 import { makeTicketPdf } from '@/functions/makeTicket';
+import { CreateTicketCompact, IBetTable } from '@helper/request/ticket.response';
+import { toCompactBets } from '@helper/functions/groupNumber';
 
 dayjs.extend(customParseFormat);
-export interface ILotterySchedule {
-  schedule: IScheduleEntityFront;
-  lotteries: ILotteryEntityFront[];
-}
-export interface IBetTable {
-  number: string;
-  amount: number;
-  place: PLACE_TYPE;
-  with: string | null;
-  position?: PLACE_TYPE | null;
-  scheduleLottery: ILotterySchedule[];
-}
+
 
 const PlayDetailsContent = () => {
   const { user } = useAuth();
@@ -77,24 +64,12 @@ const PlayDetailsContent = () => {
 
   const today = dayjs().format('YYYY-MM-DD');
 
-  const newBets: INewBetEntity[] = [...bets].reverse().flatMap((bet) =>
-    bet.scheduleLottery.flatMap((schedLot) =>
-      schedLot.lotteries.map((lot) => ({
-        number: bet.number,
-        amount: +bet.amount!,
-        place: bet.place,
-        with: bet?.with,
-        position: bet?.position,
-        bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length)!,
-        lottery_id: lot.lottery_id,
-        schedule_id: schedLot.schedule.schedule_id,
-        user_id: cashier?.user_id ?? user?.user_id!,
-        date: today,
-        user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-        cashier_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-      }))
-    )
-  );
+  const compact: CreateTicketCompact = {
+  date: today,
+  user_id: cashier?.user_id ?? user!.user_id,
+  user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
+  bets: toCompactBets(bets),
+};
 
   const endLog = (label: string) => {
     const endTime = performance.now();
@@ -104,12 +79,7 @@ const PlayDetailsContent = () => {
 
   if (!ticketId) {
     createTicket(
-      {
-        bets: newBets,
-        date: today,
-        user_id: cashier?.user_id ?? user?.user_id!,
-        user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-      },
+      compact,
       {
         onSuccess: (res) => {
           const lastTicket = {
@@ -143,7 +113,7 @@ const PlayDetailsContent = () => {
     );
   } else {
     editTicket(
-      { ticket_id: ticketId, bets: newBets },
+      { ticket_id: ticketId, bets: compact.bets },
       {
         onSuccess: () => {
           setBets([]);

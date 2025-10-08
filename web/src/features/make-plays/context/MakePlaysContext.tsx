@@ -3,9 +3,9 @@ import React, { createContext, useContext } from 'react';
 
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { PLACE_TYPE } from '@helper/types/bet.type';
 import { IUserEntityFront } from '@helper/types/user.type';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { IBetTable } from '@helper/request/ticket.response';
 
 
 

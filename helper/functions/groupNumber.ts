@@ -1,5 +1,5 @@
-import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { IBetTable } from '../features/make-plays/index';
+import { CompactBet, IBetTable } from 'request/ticket.response';
+import { ITicketEntityFront } from 'types/ticket.type';
 
 export function groupTicketBetsByNumber(ticket: ITicketEntityFront): IBetTable[] {
   const byNumber = new Map<string, IBetTable>();
@@ -40,3 +40,15 @@ export function groupTicketBetsByNumber(ticket: ITicketEntityFront): IBetTable[]
 
   return Array.from(byNumber.values());
 }
+
+export const toCompactBets = (bets: IBetTable[]): CompactBet[] => {
+  return bets.map((bet) => ({
+    number: bet.number,
+    amount: +bet.amount,
+    place: bet.place,
+    with: bet.with ?? null,
+    position: bet.position ?? null,
+    schedule_ids: bet.scheduleLottery.map((s) => s.schedule.schedule_id),
+    lottery_ids: bet.scheduleLottery.flatMap((s) => s.lotteries.map((l) => l.lottery_id)),
+  }));
+};
