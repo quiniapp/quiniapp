@@ -9,7 +9,7 @@ export type INewTicketEntity = Pick<ITicketEntityBase, 'user_id' | 'user_name' |
   bets: INewBetEntity[];
 };
 export type IEditTicketEntity = Pick<ITicketEntityBase, 'ticket_id'> & {
-  bets: INewBetEntity[];
+  bets: CompactBet[];
 };
 export interface INewTicketBaseEntity extends ITicketEntityBase {
   bets: IBetEntityBase[];
@@ -37,3 +37,21 @@ export interface IBetTable {
   position?: PLACE_TYPE | null;
   scheduleLottery: ILotterySchedule[];
 }
+
+// tipos del front (payload nuevo)
+export type CompactBet = {
+  number: string;
+  amount: number;
+  place: PLACE_TYPE;
+  with: string | null;
+  position?: PLACE_TYPE | null;
+  schedule_ids: string[]; // IDs solamente
+  lottery_ids: string[]; // IDs solamente
+};
+
+export type CreateTicketCompact = {
+  date: string; // YYYY-MM-DD
+  user_id: string;
+  user_name: string;
+  bets: CompactBet[];
+};
