@@ -23,6 +23,7 @@ const ResultsOverview = ({
 
   isEnabled: boolean;
 }) => {
+  console.log({ isEnabled, totalAmount });
   return (
     <Flex
       className={
@@ -58,7 +59,7 @@ const ResultsOverview = ({
         </FlexCol>
       </Flex>
       <Flex className={'gap-4 items-center '}>
-        <Button onClick={() => handleCreateBet()} disabled={totalAmount === 0 || !isEnabled}>
+        <Button onClick={() => handleCreateBet()} disabled={ !isEnabled}>
           Cerrar Ticket{' '}
         </Button>
         <Button onClick={onDeleteSelected} variant="destructive" disabled={!hasSelection}>
