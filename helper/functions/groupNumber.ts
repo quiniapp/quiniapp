@@ -48,7 +48,11 @@ export const toCompactBets = (bets: IBetTable[]): CompactBet[] => {
     place: bet.place,
     with: bet.with ?? null,
     position: bet.position ?? null,
-    schedule_ids: bet.scheduleLottery.map((s) => s.schedule.schedule_id),
-    lottery_ids: bet.scheduleLottery.flatMap((s) => s.lotteries.map((l) => l.lottery_id)),
+    combinations: bet.scheduleLottery.map((schLot) => {
+      return {
+        schedule_id: schLot.schedule.schedule_id,
+        lotteries_id: schLot.lotteries.map((lot) => lot.lottery_id),
+      };
+    }),
   }));
 };

@@ -73,6 +73,30 @@ export class TicketController {
     }
   };
 
+  getAllTicketNumber = async (props: IGetAllTicketEntity): Promise<string[]> => {
+    let tickets;
+    try {
+      if (props.user_type === USER_TYPE.CASHIER) {
+        tickets = await this.repository.getAllTicketNumber({
+          user_id: props.user_id,
+          date: props.date ?? '',
+          winner: !!props.winner,
+        });
+      } else {
+        tickets = await this.repository.getAllTicketNumber({
+          date: props.date ?? '',
+          user_id: props?.cashier_id,
+          winner: !!props.winner,
+        });
+      }
+
+      return tickets.map((t) => t.ticket_number);
+    } catch (error) {
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
   delete = async (props: IDeleteTicketEntity) => {
     try {
       const ticket = await this.repository.getByNumber(props.ticket_number);
@@ -104,7 +128,7 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  getAllDeletedTickets = async ({ user_id, date }: { user_id: string; date: string }) => {
+  getAllDeletedTickets = async ({ user_id, date }: { user_id?: string; date: string }) => {
     try {
       const tickets = await this.repository.getAllDeletedTickets({
         user_id: user_id,
@@ -113,7 +137,7 @@ export class TicketController {
 
       return tickets;
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('getAllDeletedTickets error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

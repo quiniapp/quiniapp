@@ -21,7 +21,6 @@ export const useGetDeletedTickets = ({
       if (!res.ok) throw new Error('Error fetching tickets');
       const { data } = await res.json();
       return data.ticket;
-    },
-    enabled: !!user_id,
+    }
   });
 };

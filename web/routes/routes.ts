@@ -29,6 +29,7 @@ export const BACKEND_ROUTES = {
   ticket: {
     base: `${PRIVATE}/ticket`,
     id: (id: string) => `${PRIVATE}/ticket/${id}`,
+    number:`${PRIVATE}/ticket/number`,
   },
   winners: {
     base: `${PRIVATE}/winners`,

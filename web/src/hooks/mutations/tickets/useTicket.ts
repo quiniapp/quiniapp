@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { CreateTicketCompact} from '@helper/request/ticket.response'
+import {  INewTicketEntity} from '@helper/request/ticket.response'
 
 
-const createTicket = async (payload:CreateTicketCompact) => {
+const createTicket = async (payload:INewTicketEntity) => {
 
   const res = await fetch(BACKEND_ROUTES.ticket.base, {
     method: 'POST',
