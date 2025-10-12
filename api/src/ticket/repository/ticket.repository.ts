@@ -1,10 +1,14 @@
 import { supabase } from '@database/db.connection';
-import { IDeleteTicketEntity, IEditTicketEntity } from '@helper/request/ticket.response';
-import { ITicketEntityBack, ITicketEntityBase } from '@helper/types/ticket.type';
+import {
+  IDeleteTicketEntity,
+  IEditTicketEntity,
+  INewTicketBaseEntity,
+} from '@helper/request/ticket.response';
+import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
 
 export class TicketRepository {
-  async create(ticket: ITicketEntityBase) {
+  async create(ticket: INewTicketBaseEntity) {
     const { data, error } = await supabase.rpc('create_ticket_with_bets', {
       ticket: ticket,
       bets: ticket.bets,
@@ -39,7 +43,7 @@ export class TicketRepository {
   async getAll({ user_id, date, winner }: { user_id?: string; date: string; winner: boolean }) {
     let query = supabase
       .from('tickets')
-      .select('*, bets(*, lotteries(*), schedules(*))')
+      .select('*')
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -100,19 +104,21 @@ export class TicketRepository {
     user_id,
     date,
   }: {
-    user_id: string;
+    user_id?: string;
     date: string;
   }): Promise<number> {
     let query = supabase
       .from('tickets')
-      // no traemos filas; solo count exacto
       .select('ticket_id', { count: 'exact', head: true })
-      .eq('user_id', user_id)
       .eq('date', date)
-      .not('deleted_at', 'is', null); // deleted_at IS NOT NULL
+      .not('deleted_at', 'is', null); // deleted_at IS NOT NULLF
+
+    if (user_id) query.eq('user_id', user_id);
 
     const { count, error } = await query;
-    if (error) throw error;
+    console.log({ count, error });
+
+    if (error && error.message) throw error;
     return count ?? 0;
   }
 
@@ -121,6 +127,33 @@ export class TicketRepository {
       p_ticket_id: props.ticket_id,
       p_bets: props.bets,
     });
+    if (error) throw error;
+    return data;
+  }
+
+  async getAllTicketNumber({
+    user_id,
+    date,
+    winner,
+  }: {
+    user_id?: string;
+    date: string;
+    winner: boolean;
+  }) {
+    let query = supabase
+      .from('tickets')
+      .select('ticket_number')
+      .eq('date', date)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (user_id !== undefined) {
+      query = query.eq('user_id', user_id);
+    }
+    if (winner) {
+      query = query.is('winner', true);
+    }
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   }

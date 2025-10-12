@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import TerminalTicketPlayTable from './termina-ticket-play-table';
 import TerminalTicketMatchesTable from './terminal-ticket-matches-table';
 import { useSearchParams } from 'react-router-dom';
-import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
+import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetTicketByNumber';
 
 const TicketDetails = () => {
   const [searchParams] = useSearchParams();

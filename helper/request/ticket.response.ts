@@ -1,18 +1,17 @@
 import { IScheduleEntityFront } from 'types/schedule.type';
-import { IBetEntityBase, PLACE_TYPE } from '../types/bet.type';
+import { PLACE_TYPE } from '../types/bet.type';
 import { ITicketEntityBase } from '../types/ticket.type';
 import { IUserEntityBack } from '../types/user.type';
-import { INewBetEntity } from './bet.response';
 import { ILotteryEntityFront } from 'types/lottery.type';
 
 export type INewTicketEntity = Pick<ITicketEntityBase, 'user_id' | 'user_name' | 'date'> & {
-  bets: INewBetEntity[];
+  bets: IBetTable[];
 };
 export type IEditTicketEntity = Pick<ITicketEntityBase, 'ticket_id'> & {
-  bets: CompactBet[];
+  bets: IBetTable[];
 };
 export interface INewTicketBaseEntity extends ITicketEntityBase {
-  bets: IBetEntityBase[];
+  bets: IBetTableBase[];
 }
 export type IDeleteTicketEntity = Pick<ITicketEntityBase, 'ticket_number'> &
   Partial<Pick<IUserEntityBack, 'user_type' | 'user_id'>>;
@@ -33,25 +32,24 @@ export interface IBetTable {
   number: string;
   amount: number;
   place: PLACE_TYPE;
-  with: string | null;
+  with?: string | null;
   position?: PLACE_TYPE | null;
   scheduleLottery: ILotterySchedule[];
 }
 
-// tipos del front (payload nuevo)
-export type CompactBet = {
-  number: string;
-  amount: number;
-  place: PLACE_TYPE;
-  with: string | null;
-  position?: PLACE_TYPE | null;
-  schedule_ids: string[]; // IDs solamente
-  lottery_ids: string[]; // IDs solamente
+export type IBetTableBase = Omit<IBetTable, 'scheduleLottery'> & {
+  scheduleLottery: {
+    schedule: string;
+    lotteries: string[];
+  }[];
 };
 
-export type CreateTicketCompact = {
-  date: string; // YYYY-MM-DD
-  user_id: string;
-  user_name: string;
-  bets: CompactBet[];
+export type ITicketEntityFrontCompact = Omit<
+  ITicketEntityBase,
+  'created_at' | 'deleted_at' | 'edited_at' | 'bets'
+> & {
+  bets: IBetTable[];
 };
+
+export type IGetAllTicketNumberEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
+  Partial<Pick<ITicketEntityBase, 'date' | 'winner'>> & { cashier_id?: string };

@@ -1,11 +1,10 @@
-import { ITicketEntityBack, ITicketEntityFront } from '@helper/types/ticket.type';
-import { parseBet } from 'api/src/bet/helper/parseBet';
+import { ITicketEntityFrontCompact } from '@helper/request/ticket.response';
+import { ITicketEntityBack } from '@helper/types/ticket.type';
+// import { parseBet } from 'api/src/bet/helper/parseBet';
 
-export const parseTicket = (ticket: ITicketEntityBack): ITicketEntityFront => {
+export const parseTicket = (ticket: ITicketEntityBack): ITicketEntityFrontCompact => {
   return {
-    bets: ticket.bets.map((bet) => {
-      return parseBet(bet);
-    }),
+    bets: ticket.bets,
     date: ticket.date,
     deleted_by: ticket.deleted_by,
     paid: ticket.paid,

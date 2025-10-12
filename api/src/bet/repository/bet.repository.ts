@@ -24,7 +24,8 @@ export class BetRepository {
       .from('bets')
       .select('*, lotteries(*), schedules(*)')
       .eq('date', date)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
     if (quatern) {
       query = query.eq('bet_type', BET_TYPE.QUATERN);
