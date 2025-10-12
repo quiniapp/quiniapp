@@ -44,7 +44,7 @@ const PlayDetailsContent = () => {
       return acc + amount * combos;
     }, 0);
 
-  const handleRecreateBet =  (values: IBetTable[]) => {
+  const handleRecreateBet = (values: IBetTable[]) => {
     setBets(values);
 
     const total = computeTotal(values);
@@ -57,9 +57,7 @@ const PlayDetailsContent = () => {
 
   //! ResultsOverview crea el ticket
   const handleCreateBet = () => {
-    const startTime = performance.now();
     setIsEnabledCreateBet(false);
-    console.log('⏱️ [START] handleCreateBet', isEnabledCreateBet);
 
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -70,48 +68,40 @@ const PlayDetailsContent = () => {
       bets: bets,
     };
 
-    const endLog = (label: string) => {
-      const endTime = performance.now();
-      const duration = (endTime - startTime).toFixed(2);
-      console.log(`⏱️ [END - ${label}] handleCreateBet took ${duration} ms`);
-    };
-
     if (!ticketId) {
-      createTicket(
-        payload,
-        {
-          onSuccess: (res) => {
-            const lastTicket = {
-              bets: bets,
-              ticket: res.data.ticket,
-              cashier_number: user?.number,
-            };
-            if (user?.user_type === USER_TYPE.CASHIER) {
-              makeTicketPdf(lastTicket);
-            }
+      createTicket(payload, {
+        onSuccess: (res) => {
+          const lastTicket = {
+            bets: bets,
+            ticket: res.data.ticket,
+            cashier_number: user?.number,
+          };
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            makeTicketPdf(lastTicket);
+          }
 
-            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-            setBets([]);
-            setPartialAmount(0);
-            setTotalAmount(0);
-            setCashier(undefined);
-            setLotteries(new Map());
-            setSchedules(new Map());
-            setUserNumber(undefined);
-            setSelectedIndexes([]);
-            setTicketId(undefined);
-            toast.success('Ticket creado correctamente');
-            endLog('createTicket success');
-          },
-          onError: (err) => {
-            console.error(err);
-            toast.error('Ocurrió un error, intente de nuevo');
-            endLog('createTicket error');
-          },
-        }
-      );
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+          setBets([]);
+          setPartialAmount(0);
+          setTotalAmount(0);
+          setCashier(undefined);
+          setLotteries(new Map());
+          setSchedules(new Map());
+          setUserNumber(undefined);
+          setSelectedIndexes([]);
+          setTicketId(undefined);
+          toast.success('Ticket creado correctamente');
+        },
+        onError: (err) => {
+          console.error(err);
+          toast.error('Ocurrió un error, intente de nuevo');
+        },
+        onSettled: () => {
+          setIsEnabledCreateBet(true);
+        },
+      });
     } else {
-   editTicket(
+      editTicket(
         { ticket_id: ticketId, bets: payload.bets },
         {
           onSuccess: () => {
@@ -125,19 +115,17 @@ const PlayDetailsContent = () => {
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
-            endLog('editTicket success');
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-            endLog('editTicket error');
+          },
+          onSettled: () => {
+            setIsEnabledCreateBet(true);
           },
         }
       );
     }
-
-    setIsEnabledCreateBet(true);
-    console.log('✅ [FINISH CALL] handleCreateBet', isEnabledCreateBet);
   };
 
   const handleEditTicket = (ticket: ITicketEntityFront) => {
@@ -195,10 +183,12 @@ const PlayDetailsContent = () => {
   const isEnabledCreateBetByAdmin =
     (user?.user_type !== USER_TYPE.CASHIER && !!cashier) || user?.user_type === USER_TYPE.CASHIER;
 
-  const isButtonCloseTicketEnabled = (
-      totalAmount === 0 ||
-      (isEnabledCreateBet && isEnabledCreateBetByAdmin && !(isPendingCreate || isPendingEdit))
-    )
+  // 1) Derivado para saber si hay mutación en curso
+  const isBusy = isPendingCreate || isPendingEdit;
+
+  // 2) Tu regla de habilitación del botón (sin el or de totalAmount===0)
+const isButtonCloseTicketEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin && !isBusy;
+
 
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>

@@ -23,7 +23,7 @@ const ResultsOverview = ({
 
   isEnabled: boolean;
 }) => {
-  console.log({ isEnabled, totalAmount });
+
   return (
     <Flex
       className={
