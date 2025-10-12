@@ -14,7 +14,7 @@ const TotalAmountPlayAndHits = ({
   const date = searchParams.get('date');
   const user_id = searchParams.get('cashier_id');
   const { data } = useGetDeletedTickets({ date, user_id });
-  console.log('cancelados',data)
+
   return (
     <Flex className="max-w-96 justify-between">
       <FlexCol
