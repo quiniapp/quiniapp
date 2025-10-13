@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 
-
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 import {
@@ -78,76 +77,83 @@ const HeaderPlayDetail = ({
       handleEditTicket(value);
     }
   };
-  
+
   return (
     <HeaderSection title={' Realizar Jugadas'}>
-      <Flex className={' items-center gap-2  justify-end w-full'}>
-        {role !== USER_TYPE.CASHIER && (
+      {role !== USER_TYPE.CASHIER && (
+        <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
           <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
-            <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
-              <Label htmlFor={'user'}> Usuario</Label>
-              <Input
-                type={'text'}
-                id={'user'}
-                name={'user'}
-                className={'max-w-[100px]'}
-                value={userNumber?.toString() ?? ''}
-                onChange={(e) => {
-                  handleSearch(e.target.value);
-                }}
-              />
-              <div className="w-40">
-                <Label htmlFor={'user'}> {cashier?.name}</Label>
-              </div>
-            </Flex>
-            <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
-              <Label htmlFor={'user'}> Ticket</Label>
-              <Select onValueChange={(value) => handleSelectTicket(value)} value={''}>
-                <SelectTrigger className="w-full border-dark-lighter">
-                  <SelectValue placeholder="Seleccione uno" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cashier &&
-                    tickets?.map((ticket) => (
-                      <SelectItem key={ticket.ticket_id} value={ticket.ticket_id}>
-                        {ticket.ticket_number}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </Flex>
+            <Label htmlFor={'user'}> Usuario</Label>
+            <Input
+              type={'text'}
+              id={'user'}
+              name={'user'}
+              className={'max-w-[100px]'}
+              value={userNumber?.toString() ?? ''}
+              onChange={(e) => {
+                handleSearch(e.target.value);
+              }}
+            />
+            <div className="w-40">
+              <Label htmlFor={'user'}> {cashier?.name}</Label>
+            </div>
           </Flex>
-        )}
+          <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
+            <Label htmlFor={'user'}> Ticket</Label>
+            <Select onValueChange={(value) => handleSelectTicket(value)} value={''}>
+              <SelectTrigger className="w-full border-dark-lighter">
+                <SelectValue placeholder="Seleccione uno" />
+              </SelectTrigger>
+              <SelectContent>
+                {cashier &&
+                  tickets?.map((ticket) => (
+                    <SelectItem key={ticket.ticket_id} value={ticket.ticket_id}>
+                      {ticket.ticket_number}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </Flex>
+        </Flex>
+      )}
 
-        {role === USER_TYPE.CASHIER && (
-          <Flex className={'flex-col sm:flex-row w-fit gap-1 sm:gap-3 justify-center'}>
-            <Button className="sm:w-fit p-1" type={'button'} onClick={openRepeatModal}>
-              <Repeat2Icon className="w-2 h-2 sm:w-3 sm:h-3" />
-              <Typography className="text-xs text-wrap" variant={'small'}>
-                Repetir Ticket
-              </Typography>
-            </Button>
+      {role === USER_TYPE.CASHIER && (
+        <Flex className="flex-row w-full flex-wrap justify-center  sm:justify-end gap-3">
+          <Button
+            type="button"
+            onClick={openRepeatModal}
+            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
+          >
+            <Repeat2Icon className="hidden sm:flex w-3 h-3" />
+            <Typography className="text-[10px] sm:text-xs" variant="small">
+              Repetir Ticket
+            </Typography>
+          </Button>
 
-            <Button
-              className="text-xs sm:w-fit p-1"
-              type={'button'}
-              variant={'outline'}
-              onClick={handleRePrimtLast}
-            >
-              <PrinterIcon className="w-2 h-2 sm:w-3 sm:h-3" />
-              <Typography className="text-xs text-wrap" variant={'small'}>
-                Reimprimir Anterior
-              </Typography>
-            </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleRePrimtLast}
+            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
+          >
+            <PrinterIcon className="hidden sm:flex w-3 h-3" />
+            <Typography className="text-[10px] sm:text-xs" variant="small">
+              Reimprimir Anterior
+            </Typography>
+          </Button>
 
-            <Button type={'button'} className={'text-xs sm:w-fit p-1'} variant={'outline'}>
+          <Button
+            type="button"
+            variant="destructive"
+            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
+          >
+            <Typography className="text-[10px] sm:text-xs" variant="small">
               Cancelar Ticket
-            </Button>
-          </Flex>
-        )}
-      </Flex>
+            </Typography>
+          </Button>
+        </Flex>
+      )}
 
-      {/* 👇 Render condicional + Suspense para cargar el modal sólo cuando se abre */}
       {isRepeatOpen && (
         <Suspense fallback={<div className="p-4 text-sm text-slate-300">Cargando…</div>}>
           <RepeatTicketModal
@@ -156,8 +162,7 @@ const HeaderPlayDetail = ({
             onClose={closeRepeatModal}
             handleRecreateBet={(values) => {
               handleRecreateBet(values);
-              // Si preferís cerrar desde acá al confirmar:
-              // closeRepeatModal();
+
             }}
           />
         </Suspense>

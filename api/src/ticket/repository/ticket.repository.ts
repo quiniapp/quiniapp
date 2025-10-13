@@ -1,7 +1,7 @@
 import { supabase } from '@database/db.connection';
 import {
   IDeleteTicketEntity,
-  IEditTicketEntity,
+  IEditTicketBaseEntity,
   INewTicketBaseEntity,
 } from '@helper/request/ticket.response';
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
@@ -122,7 +122,7 @@ export class TicketRepository {
     return count ?? 0;
   }
 
-  async update(props: IEditTicketEntity): Promise<ITicketEntityBack> {
+  async update(props: IEditTicketBaseEntity): Promise<ITicketEntityBack> {
     const { data, error } = await supabase.rpc('edit_ticket_replace_bets', {
       p_ticket_id: props.ticket_id,
       p_bets: props.bets,
