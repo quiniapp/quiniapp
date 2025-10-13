@@ -1,36 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
-
-export interface FetchBetsProps {
-  lottery_id?: string | null;
-  schedule_id?: string | null;
-  date: string | null;
-  cashier_id?: string | null;
-  grouped?: string | null;
-  winners?: string | null; // 'true' | 'false'
-  tern?: string | null;
-  quatern?: string | null;
-  ticket_number?: string | null;
-}
-
-// ⬇️ Incluir TODOS los filtros en el key (con fallback a '')
-export const betsKey = (p: FetchBetsProps) =>
-  [
-    'bets',
-    p.date ?? '',
-    p.cashier_id ?? '',
-    p.schedule_id ?? '',
-    p.lottery_id ?? '',
-    p.grouped ?? '',
-    p.winners ?? '',
-    p.quatern ?? '',
-    p.tern ?? '',
-    p.ticket_number ?? '',
-  ] as const;
+import { betsKey, FetchBetsProps } from './useBets.ts';
 
 // ⬇️ Exportá el fetch para usarlo fuera del hook
-export async function fetchBets({
+export async function fetchBetsByTicketNumber({
   date,
   schedule_id,
   lottery_id,
@@ -66,10 +40,10 @@ export async function fetchBets({
   return json?.data?.bets ?? [];
 }
 
-export const useBets = (p: FetchBetsProps) => {
+export const useGetBetysByTicketNumber = (p: FetchBetsProps) => {
   return useQuery<IBetEntityFront[]>({
     queryKey: betsKey(p),
-    queryFn: () => fetchBets(p),
-    enabled: Boolean(p.date), // sólo si hay fecha
+    queryFn: () => fetchBetsByTicketNumber(p),
+    enabled: Boolean(p.date && p.ticket_number), // sólo si hay fecha
   });
 };

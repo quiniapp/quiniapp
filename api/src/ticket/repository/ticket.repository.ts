@@ -28,13 +28,17 @@ export class TicketRepository {
   }
 
   async getByNumber(ticket_number: string) {
-    const { data, error } = await supabase
+    const { data: ticket_id, error: error_ticket_number } = await supabase
       .from('tickets')
-
-      .select('*, bets(*, lotteries(*), schedules(*))')
+      .select('ticket_id')
       .eq('ticket_number', ticket_number)
       .maybeSingle();
-
+    if (!ticket_id || error_ticket_number) {
+      console.error({ ticket_id, error_ticket_number });
+    }
+    const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
+      p_ticket_id: ticket_id,
+    });
     if (error) throw error;
     return data;
   }

@@ -14,6 +14,7 @@ export class BetController {
     grouped,
     tern,
     quatern,
+    ticket_number,
   }: {
     schedule_id?: string;
     date: string;
@@ -23,6 +24,7 @@ export class BetController {
     grouped?: boolean;
     tern?: boolean;
     quatern?: boolean;
+    ticket_number?: string;
   }): Promise<IBetEntityFront[]> => {
     let bets: IBetEntityBack[];
     try {
@@ -45,9 +47,9 @@ export class BetController {
           winners,
           tern,
           quatern,
+          ticket_number,
         });
       }
-
       return bets.map((bet) => {
         return parseBet(bet);
       });
