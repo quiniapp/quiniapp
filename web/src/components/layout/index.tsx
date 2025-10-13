@@ -35,7 +35,13 @@ const Layout = () => {
         >
           <Header setIsOpen={toggleSidebar} />
 
-          <main className="flex flex-1 w-full max-w-[980px] mx-auto min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-1 sm:p-2 justify-center">
+          <main
+            className="flex flex-1 w-full max-w-[980px] mx-auto min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-1 sm:p-2 justify-center"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#666 transparent',
+            }}
+          >
             {isRouteLoading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center">
                 <p>cargando</p>
@@ -43,7 +49,7 @@ const Layout = () => {
             )}
 
             {/* 🔧 centra contenido y limita ancho */}
-              <Outlet />
+            <Outlet />
           </main>
           <Footer />
         </FlexCol>
