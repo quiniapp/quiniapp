@@ -44,6 +44,7 @@ const HeaderPlayDetail = ({
   handleRecreateBet,
   handleEditTicket,
 }: HeaderPlayDetailProps) => {
+  const [selectedValue, setSelectedValue] = useState<string>('')
   const { role } = useAuth();
 
   // 👇 Estado local para abrir/cerrar el modal
@@ -75,14 +76,15 @@ const HeaderPlayDetail = ({
   const handleSelectTicket = (value: string) => {
     if (tickets?.length) {
       handleEditTicket(value);
+      setSelectedValue(value)
     }
   };
 
   return (
     <HeaderSection title={' Realizar Jugadas'}>
       {role !== USER_TYPE.CASHIER && (
-        <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
-          <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
+        <Flex className="flex-row w-full flex-wrap justify-start  sm:justify-end gap-3">
+          <Flex className={'flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>
             <Input
               type={'text'}
@@ -98,10 +100,10 @@ const HeaderPlayDetail = ({
               <Label htmlFor={'user'}> {cashier?.name}</Label>
             </div>
           </Flex>
-          <Flex className={'flex-col sm:flex-row items-center justify-center gap-4 sm:px-3'}>
+          <Flex className={'flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Ticket</Label>
-            <Select onValueChange={(value) => handleSelectTicket(value)} value={''}>
-              <SelectTrigger className="w-full border-dark-lighter">
+            <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
+              <SelectTrigger className="min-w-48 border-dark-lighter">
                 <SelectValue placeholder="Seleccione uno" />
               </SelectTrigger>
               <SelectContent>
