@@ -1,4 +1,4 @@
-import { IBetTable } from 'request/ticket.response';
+import { IBetTable } from '../request/ticket.response';
 
 export interface ITicketEntityBase {
   ticket_id: string;

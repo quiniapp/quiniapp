@@ -1,8 +1,8 @@
-import { IScheduleEntityFront } from 'types/schedule.type';
+import { IScheduleEntityFront } from '../types/schedule.type';
 import { PLACE_TYPE } from '../types/bet.type';
 import { ITicketEntityBase } from '../types/ticket.type';
 import { IUserEntityBack } from '../types/user.type';
-import { ILotteryEntityFront } from 'types/lottery.type';
+import { ILotteryEntityFront } from '../types/lottery.type';
 
 export type INewTicketEntity = Pick<ITicketEntityBase, 'user_id' | 'user_name' | 'date'> & {
   bets: IBetTable[];
@@ -10,9 +10,13 @@ export type INewTicketEntity = Pick<ITicketEntityBase, 'user_id' | 'user_name' |
 export type IEditTicketEntity = Pick<ITicketEntityBase, 'ticket_id'> & {
   bets: IBetTable[];
 };
+export type IEditTicketBaseEntity = Pick<ITicketEntityBase, 'ticket_id'> & {
+  bets: IBetTableBase[];
+};
 export interface INewTicketBaseEntity extends ITicketEntityBase {
   bets: IBetTableBase[];
 }
+
 export type IDeleteTicketEntity = Pick<ITicketEntityBase, 'ticket_number'> &
   Partial<Pick<IUserEntityBack, 'user_type' | 'user_id'>>;
 

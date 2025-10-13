@@ -206,7 +206,7 @@ const PlayDetailsContent = () => {
   const isButtonCloseTicketEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin && !isBusy;
 
   return (
-    <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
+    <FlexCol className={'h-full w-[356px] sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
       <HeaderPlayDetail
         cashier={cashier}
         setUserNumber={setUserNumber}

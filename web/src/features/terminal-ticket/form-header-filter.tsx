@@ -31,7 +31,7 @@ const FormHeaderFilter = () => {
   const selectValue = searchParams.get('cashier_id') ?? undefined;
 
   const handleSearch = () => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams);
     params.set('ticket_number', inputValue.trim());
     setSearchParams(params);
     setInputValue('');
@@ -54,6 +54,7 @@ const FormHeaderFilter = () => {
     setSearchParams({ date: date ?? dayjs().format('YYYY-MM-DD') });
   };
   const onChangeFilter = (value: string) => {
+    searchParams.delete('ticket_number');
     searchParams.set('filter', value);
     setSearchParams(searchParams);
   };
