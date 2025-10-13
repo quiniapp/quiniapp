@@ -9,12 +9,12 @@ import { PLACE_TYPE } from '@helper/types/bet.type';
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { IBetTable, ILotterySchedule } from '.';
 import { placeTypeParse } from '@helper/functions/placeTypeParse';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
 import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
 
 export interface IBetForm {
   number: string;

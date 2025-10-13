@@ -9,9 +9,8 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 
-import { IBetTable } from '.';
+
 import toast from 'react-hot-toast';
-import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 import dayjs from 'dayjs';
 import {
   Select,
@@ -20,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useAuth } from '@/contexts/AuthContext';
 import { makeTicketPdf } from '@/functions/makeTicket';
+import { IBetTable } from '@helper/request/ticket.response';
+import { useGetTicketsNumber } from '@/hooks/fetchs/tickets/useGetTicketNumber';
 
 // 👇 Lazy import del modal (se carga sólo cuando se renderiza)
 const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));
@@ -32,7 +32,7 @@ interface HeaderPlayDetailProps {
   userNumber?: number;
   setUserNumber: React.Dispatch<React.SetStateAction<number | undefined>>;
   handleRecreateBet: (values: IBetTable[]) => void;
-  handleEditTicket: (ticket: ITicketEntityFront) => void;
+  handleEditTicket: (ticket_id: string) => void;
 
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
@@ -67,17 +67,18 @@ const HeaderPlayDetail = ({
     const lastTicket = JSON.parse(lastTicketStr);
     makeTicketPdf(lastTicket);
   };
-  const { data: tickets } = useTickets({
+  const { data: tickets } = useGetTicketsNumber({
     user_id: cashier?.user_id,
     date: dayjs().format('YYYY-MM-DD'),
     enabled: !!cashier?.user_id,
   });
+
   const handleSelectTicket = (value: string) => {
     if (tickets?.length) {
-      const fountdTicket = tickets?.find((ticket) => ticket.ticket_id === value);
-      if (fountdTicket) handleEditTicket(fountdTicket);
+      handleEditTicket(value);
     }
   };
+  
   return (
     <HeaderSection title={' Realizar Jugadas'}>
       <Flex className={' items-center gap-2  justify-end w-full'}>

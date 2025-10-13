@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { QuinielaFieldset } from '@/features/make-plays/quiniela-fieldset';
 import { useEffect, useMemo, useState } from 'react';
-import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
-import { IBetTable } from '@/features/make-plays';
+import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetTicketByNumber';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -21,6 +20,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useClock } from '@/providers/ClockProvider';
 import { useAuth } from '@/contexts/AuthContext';
+import { IBetTable } from '@helper/request/ticket.response';
 
 dayjs.extend(customParseFormat);
 const toHHMMSS = (t: string) => (t.length === 5 ? `${t}:00` : t);
@@ -49,7 +49,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
   const { data } = getTicketByNumber(ticketNumber);
-  console.log('data',data)
+
   const handleSetBets = () => {
     handleRecreateBet(selectedBets);
     onClose();

@@ -3,9 +3,11 @@ import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
 
-
 const VALIDATE_INTERVAL_MS = 4 * 60 * 1000;
 const VALIDATE_ON_VISIBILITY = true;
+
+const VISIBILITY_MIN_GAP_MS = 10 * 60 * 1000; // 10 min
+const INACTIVITY_LOGOUT_MS = 10 * 60 * 1000; // 10 min
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<IUserEntityFront | null>(null);
@@ -15,6 +17,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const intervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
+  const lastActivityRef = useRef<number>(Date.now());
+  const inactivityTimerRef = useRef<number | null>(null);
 
   const setSession = useCallback((u: IUserEntityFront | null) => {
     if (u) {
@@ -30,7 +34,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const validate = useCallback(async () => {
     const now = Date.now();
-    if (now - lastValidateRef.current < 1500) return; // anti-spam
+    if (now - lastValidateRef.current < 1500) return; // anti-spam local
     lastValidateRef.current = now;
 
     try {
@@ -98,6 +102,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
   }, [setSession]);
 
+  const armInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+    inactivityTimerRef.current = window.setTimeout(() => {
+      // si sigue autenticado y se cumplió el tiempo, cerrar sesión
+      if (isAuth) void logout();
+    }, INACTIVITY_LOGOUT_MS) as unknown as number;
+  }, [isAuth, logout]);
+
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
 
   // Primer validate al montar
@@ -118,19 +130,65 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [isAuth, validate]);
 
-  // Revalidate al volver a la pestaña/ventana
+  // Revalidate al volver a la pestaña/ventana, con throttle + cierre por inactividad
   useEffect(() => {
     if (!VALIDATE_ON_VISIBILITY) return;
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible' && isAuth) void validate();
+
+    const onVisibilityOrFocus = () => {
+      if (!isAuth) return;
+
+      const now = Date.now();
+
+      // 1) Si hubo más de INACTIVITY_LOGOUT_MS sin actividad, cerrar sesión
+      if (now - lastActivityRef.current >= INACTIVITY_LOGOUT_MS) {
+        void logout();
+        return;
+      }
+
+      // 2) Si la pestaña está visible, validar como máximo cada VISIBILITY_MIN_GAP_MS
+      if (
+        document.visibilityState === 'visible' &&
+        now - lastValidateRef.current >= VISIBILITY_MIN_GAP_MS
+      ) {
+        void validate();
+      }
     };
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('focus', onVisibility);
+
+    document.addEventListener('visibilitychange', onVisibilityOrFocus);
+    window.addEventListener('focus', onVisibilityOrFocus);
+
     return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('focus', onVisibility);
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      window.removeEventListener('focus', onVisibilityOrFocus);
     };
-  }, [isAuth, validate]);
+  }, [isAuth, validate, logout]);
+
+  useEffect(() => {
+    // función que marca actividad y reinicia watchdog
+    const onUserActivity = () => {
+      lastActivityRef.current = Date.now();
+      armInactivityTimer();
+    };
+
+    // eventos que consideramos como “actividad”
+    const events: (keyof WindowEventMap)[] = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'click',
+    ];
+
+    events.forEach((ev) => window.addEventListener(ev, onUserActivity, { passive: true }));
+    // armar timer al montar
+    armInactivityTimer();
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, onUserActivity));
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+    };
+  }, [armInactivityTimer]);
 
   const value: AuthContextValue = {
     isAuth,

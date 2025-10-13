@@ -16,7 +16,7 @@ import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
 import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
 
 import IsRoleCashier from '@/components/is-role-cashier';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
@@ -51,16 +51,16 @@ const FormHeaderFilter = () => {
     setSearchParams(searchParams);
   };
   const handleSelectDate = (date?: string) => {
-    if (date) {
-      searchParams.set('date', date);
-      setSearchParams(searchParams);
-    }
+    setSearchParams({ date: date ?? dayjs().format('YYYY-MM-DD') });
   };
   const onChangeFilter = (value: string) => {
     searchParams.set('filter', value);
     setSearchParams(searchParams);
   };
 
+  useEffect(() => {
+    handleSelectDate();
+  }, []);
   return (
     <form>
       <Flex className={' space-y-4'}>

@@ -10,6 +10,7 @@ export class BetRepository {
     winners,
     quatern,
     tern,
+    ticket_number,
   }: {
     schedule_id?: string;
     date: string;
@@ -19,12 +20,24 @@ export class BetRepository {
     winners?: boolean;
     quatern?: boolean;
     tern?: boolean;
+
+    ticket_number?: string;
   }) {
     let query = supabase
       .from('bets')
       .select('*, lotteries(*), schedules(*)')
       .eq('date', date)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+    if (ticket_number) {
+      const { data: ticket, error: errorTicketNumber } = await supabase
+        .from('tickets')
+        .select('ticket_id')
+        .eq('ticket_number', ticket_number)
+        .single();
+      if (errorTicketNumber) throw errorTicketNumber;
+      query = query.eq('ticket_id', ticket?.ticket_id);
+    }
 
     if (quatern) {
       query = query.eq('bet_type', BET_TYPE.QUATERN);
@@ -131,5 +144,47 @@ export class BetRepository {
     });
     if (error) throw error;
     return data as number; // cantidad de aciertos
+  }
+
+  async getWinnerBets({
+    date,
+    schedule_id,
+    cashier_id,
+    lottery_id,
+    ticket_number,
+  }: {
+    date: string;
+    schedule_id?: string;
+    cashier_id?: string;
+    lottery_id?: string;
+    ticket_number?: string;
+  }) {
+    let query = supabase
+      .from('bets')
+      .select('*, lotteries(*), schedules(*)')
+      .eq('date', date)
+      .eq('winner', true)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (ticket_number) {
+      const ticket = supabase
+        .from('tickets')
+        .select('ticket_id')
+        .eq('ticket_number', ticket_number);
+      query = query.eq('ticket_id', ticket);
+    }
+    if (schedule_id) {
+      query = query.eq('schedule_id', schedule_id);
+    }
+    if (cashier_id) {
+      query = query.eq('user_id', cashier_id);
+    }
+
+    if (lottery_id) query = query.eq('lottery_id', lottery_id);
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data;
   }
 }

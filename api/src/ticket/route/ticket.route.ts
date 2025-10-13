@@ -17,6 +17,7 @@ export class TicketRouter {
 
   private setupRoutes() {
     this.router.get('/', this.getAllTicketHandler);
+    this.router.get('/number', this.getAllTicketNumberHandler);
     this.router.get('/deleted', this.getAllDeletedTicketHandler);
     this.router.get('/:id', this.getTicketHandler);
     this.router.put('/:id', this.updateTicketHandler);
@@ -27,6 +28,7 @@ export class TicketRouter {
   private newTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { newTicket } = req.body;
     const { user } = req;
+
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -139,6 +141,7 @@ export class TicketRouter {
       }
     }
   };
+
   private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { date, ticket_number, cashier_id, winner } = req.query;
@@ -212,6 +215,73 @@ export class TicketRouter {
       }
     }
   };
+
+  private getAllTicketNumberHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { date, cashier_id, winner } = req.query;
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    try {
+      let ticket;
+
+      if (typeof date !== 'string') {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: ERROR_MESSAGE.BAD_REQUEST,
+          },
+        };
+        res.status(500).json(response);
+        return;
+      }
+      ticket = await this.controller.getAllTicketNumber({
+        user_type: user.user.user_type,
+        user_id: user.user.user_id,
+        date: date,
+        ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
+        ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
+      });
+
+      const response: APIResponse<{ ticket_id: string; ticket_number: string }[]> = {
+        data: {
+          ticket,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.TICKET_NOT_FOUND
+        ) {
+          statusCode = 404;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+
   private getAllDeletedTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { date, cashier_id } = req.query;
@@ -225,7 +295,7 @@ export class TicketRouter {
       res.status(500).json(response);
       return;
     }
-    if (typeof date !== 'string' || typeof cashier_id !== 'string') {
+    if (typeof date !== 'string') {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -236,7 +306,10 @@ export class TicketRouter {
       return;
     }
     try {
-      const ticket = await this.controller.getAllDeletedTickets({ date, user_id: cashier_id });
+      const ticket = await this.controller.getAllDeletedTickets({
+        date,
+        user_id: typeof cashier_id === 'string' ? cashier_id : undefined,
+      });
 
       const response: APIResponse<number> = {
         data: {
