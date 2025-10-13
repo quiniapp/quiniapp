@@ -28,16 +28,16 @@ export class TicketRepository {
   }
 
   async getByNumber(ticket_number: string) {
-    const { data: ticket_id, error: error_ticket_number } = await supabase
+    const { data: ticket, error: error_ticket_number } = await supabase
       .from('tickets')
       .select('ticket_id')
       .eq('ticket_number', ticket_number)
       .maybeSingle();
-    if (!ticket_id || error_ticket_number) {
-      console.error({ ticket_id, error_ticket_number });
+    if (!ticket || error_ticket_number) {
+      console.error({ ticket, error_ticket_number });
     }
     const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
-      p_ticket_id: ticket_id,
+      p_ticket_id: ticket?.ticket_id,
     });
     if (error) throw error;
     return data;
@@ -63,7 +63,6 @@ export class TicketRepository {
 
   async delete(props: IDeleteTicketEntity) {
     const today = dayjs().toISOString();
-
     // 1) Actualizo el ticket y me traigo sus IDs para actualizar las bets
     const { data: ticket, error: ticketErr } = await supabase
       .from('tickets')
@@ -118,7 +117,6 @@ export class TicketRepository {
     if (user_id) query.eq('user_id', user_id);
 
     const { count, error } = await query;
-    console.log({ count, error });
 
     if (error && error.message) throw error;
     return count ?? 0;

@@ -108,7 +108,6 @@ export class TicketController {
         if (dayjs().diff(ticket.created_at, 'minutes') > 2)
           throw new Error(ERROR_MESSAGE.INVALID_DELETE_TIME);
       }
-
       await this.repository.delete(props);
       return;
     } catch (error) {
