@@ -26,6 +26,8 @@ export const TerminalTicketContent = () => {
     date: date,
     user_id: cashier_id,
     winner: filter === 'winner' ? true : undefined,
+    paid: filter === 'paid' ? true : undefined,
+    not_paid: filter === 'not_paid' ? true : undefined,
   });
   const { mutate: runDeleteTicket } = useDeleteTicket();
 

@@ -7,6 +7,8 @@ interface UseTicketsParams {
   user_id?: string;
   date?: string;
   winner?: boolean;
+  paid?: boolean | null;
+  not_paid?: boolean | null;
   enabled?: boolean; // 👈 parámetro opcional para controlar el query
 }
 
@@ -15,17 +17,21 @@ export const useTickets = ({
   date,
   winner,
   enabled = true, // por default habilitado
+  paid,
+  not_paid,
 }: UseTicketsParams) => {
   const normalizedDate = date ?? dayjs().format('YYYY-MM-DD');
 
   return useQuery<ITicketEntityFront[]>({
-    queryKey: ['tickets', user_id ?? null, normalizedDate, winner],
+    queryKey: ['tickets', user_id ?? null, normalizedDate, winner, paid ?? null, not_paid ?? null],
     enabled, // 👈 se puede deshabilitar desde afuera si querés
     queryFn: async () => {
       const params = new URLSearchParams({ date: normalizedDate });
 
       if (user_id) params.append('cashier_id', user_id);
       if (winner) params.append('winner', 'true');
+      if (paid) params.append('paid', 'true');
+      if (not_paid) params.append('not_paid', 'true');
 
       const res = await fetch(`${BACKEND_ROUTES.ticket.base}?${params.toString()}`, {
         headers: { 'Content-Type': 'application/json' },
