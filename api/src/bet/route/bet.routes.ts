@@ -28,8 +28,17 @@ export class BetRouter {
   }
 
   private getAllBets: RequestHandler = async (req: Request, res: Response) => {
-    const { date, schedule_id, cashier_id, lottery_id, winners, grouped, tern, quatern } =
-      req.query;
+    const {
+      date,
+      schedule_id,
+      cashier_id,
+      lottery_id,
+      winners,
+      grouped,
+      tern,
+      quatern,
+      ticket_number,
+    } = req.query;
     const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
@@ -57,6 +66,7 @@ export class BetRouter {
         grouped: grouped === 'true' ? true : false,
         tern: tern === 'true' ? true : false,
         quatern: quatern === 'true' ? true : false,
+        ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
       });
       const response: APIResponse<IBetEntityFront[]> = {
         data: {

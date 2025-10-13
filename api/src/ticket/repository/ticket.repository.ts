@@ -18,25 +18,27 @@ export class TicketRepository {
   }
 
   async getById(id: string) {
-    const { data, error } = await supabase
-      .from('tickets')
-
-      .select('*, bets(*, lotteries(*), schedules(*))')
-      .eq('ticket_id', id)
-      .single();
+    const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
+      p_ticket_id: id,
+    });
 
     if (error) throw error;
+    // data es jsonb -> castealo a tu tipo si querés
     return data;
   }
 
   async getByNumber(ticket_number: string) {
-    const { data, error } = await supabase
+    const { data: ticket, error: error_ticket_number } = await supabase
       .from('tickets')
-
-      .select('*, bets(*, lotteries(*), schedules(*))')
+      .select('ticket_id')
       .eq('ticket_number', ticket_number)
       .maybeSingle();
-
+    if (!ticket || error_ticket_number) {
+      console.error({ ticket, error_ticket_number });
+    }
+    const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
+      p_ticket_id: ticket?.ticket_id,
+    });
     if (error) throw error;
     return data;
   }
@@ -61,7 +63,6 @@ export class TicketRepository {
 
   async delete(props: IDeleteTicketEntity) {
     const today = dayjs().toISOString();
-
     // 1) Actualizo el ticket y me traigo sus IDs para actualizar las bets
     const { data: ticket, error: ticketErr } = await supabase
       .from('tickets')
@@ -116,7 +117,6 @@ export class TicketRepository {
     if (user_id) query.eq('user_id', user_id);
 
     const { count, error } = await query;
-    console.log({ count, error });
 
     if (error && error.message) throw error;
     return count ?? 0;
@@ -127,6 +127,7 @@ export class TicketRepository {
       p_ticket_id: props.ticket_id,
       p_bets: props.bets,
     });
+
     if (error) throw error;
     return data;
   }
@@ -142,7 +143,7 @@ export class TicketRepository {
   }) {
     let query = supabase
       .from('tickets')
-      .select('ticket_number')
+      .select('ticket_id,ticket_number')
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });

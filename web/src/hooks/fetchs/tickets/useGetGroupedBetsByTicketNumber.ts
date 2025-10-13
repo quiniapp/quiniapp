@@ -3,7 +3,7 @@ import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 
 const fetchTicketsByNumber = async (
-  ticket_number: string | null
+  ticket_number?: string | null
 ): Promise<ITicketEntityFront | undefined> => {
   const res = await fetch(`${BACKEND_ROUTES.ticket.base}?ticket_number=${ticket_number}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -15,7 +15,7 @@ const fetchTicketsByNumber = async (
   return data.ticket[0];
 };
 
-export const useGetGroupedBetsByTicketNumber = (ticket_number: string | null) =>
+export const useGetGroupedBetsByTicketNumber = (ticket_number?: string | null) =>
   useQuery({
     queryKey: ['grouped_ticket_number', ticket_number],
     queryFn: () => fetchTicketsByNumber(ticket_number),
