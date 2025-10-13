@@ -25,5 +25,6 @@ export const useGetDeletedTickets = ({
       const { data } = await res.json();
       return data.ticket;
     },
+    enabled: !!date
   });
 };

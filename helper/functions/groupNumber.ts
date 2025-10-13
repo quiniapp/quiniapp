@@ -1,4 +1,4 @@
-import { CompactBet, IBetTable } from 'request/ticket.response';
+/* import { CompactBet, IBetTable } from 'request/ticket.response';
 import { ITicketEntityFront } from 'types/ticket.type';
 
 export function groupTicketBetsByNumber(ticket: ITicketEntityFront): IBetTable[] {
@@ -21,7 +21,7 @@ export function groupTicketBetsByNumber(ticket: ITicketEntityFront): IBetTable[]
     const entry = byNumber.get(key)!;
 
     // (opcional) Si detectás montos distintos para el mismo número, elegí estrategia:
-    // if (entry.amount !== bet.amount) { /* mantener primero, último, sumar, etc. */ }
+    // if (entry.amount !== bet.amount) { mantener primero, último, sumar, etc.  }
 
     // merge por schedule
     const schId = bet.schedule.schedule_id;
@@ -56,3 +56,4 @@ export const toCompactBets = (bets: IBetTable[]): CompactBet[] => {
     }),
   }));
 };
+ */

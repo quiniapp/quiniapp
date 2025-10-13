@@ -16,7 +16,7 @@ const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
     <Flex
       className={`${cn(className)} items-center lg:flex-row flex-col justify-between  border-b p-1 sm:p-3`}
     >
-      <Flex className={' items-center gap-4'}>
+      <Flex className={' hidden sm:flex items-center gap-4'}>
         <span>
           <Combine
             className={'text-[--text-secondary]'}
