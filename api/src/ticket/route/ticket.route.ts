@@ -243,7 +243,7 @@ export class TicketRouter {
         res.status(500).json(response);
         return;
       }
-      ticket = await this.controller.getAll({
+      ticket = await this.controller.getAllTicketNumber({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date,
@@ -251,7 +251,7 @@ export class TicketRouter {
         ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
       });
 
-      const response: APIResponse<ITicketEntityFront[]> = {
+      const response: APIResponse<{ ticket_id: string; ticket_number: string }[]> = {
         data: {
           ticket,
         },

@@ -1,6 +1,6 @@
 import FillOutATicket from '@/features/make-plays/fill-out-a-ticket';
 import HeaderPlayDetail from '@/features/make-plays/header-play-detail';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import PlayDetailGameTable from './play-detail-game-table';
@@ -11,13 +11,12 @@ import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { makeTicketPdf } from '@/functions/makeTicket';
-import { IBetTable } from '@helper/request/ticket.response';
-import { groupTicketBetsByNumber } from '@helper/functions/groupNumber';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
 
 dayjs.extend(customParseFormat);
 
@@ -36,6 +35,7 @@ const PlayDetailsContent = () => {
   const { data } = useGetUserByNumber(userNumber);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
   const { mutate: editTicket, isPending: isPendingEdit } = useEditTicket();
+  const { data: ticketGroupedBets } = useGetGroupedBetsByTicketId(ticketId);
   const computeTotal = (bets: IBetTable[]) =>
     bets.reduce((acc, bet) => {
       const combos = bet.scheduleLottery.reduce((s, it) => s + it.lotteries.length, 0);
@@ -128,23 +128,13 @@ const PlayDetailsContent = () => {
     }
   };
 
-  const handleEditTicket = (ticket: ITicketEntityFront) => {
-    setTicketId(ticket.ticket_id);
+  const handleEditTicket = (ticket_id: string) => {
+    setTicketId(ticket_id);
     setSelectedIndexes([]);
     setTotalAmount(0);
     setPartialAmount(0);
-    const groupedBets = groupTicketBetsByNumber(ticket);
-
-    // 2) setear bets ya agrupadas
-    setBets(groupedBets);
 
     // 3) total: similar a RepeatTicketModal (amount * #loterías seleccionadas por jugada)
-    const total = groupedBets.reduce((acc, b) => {
-      const lotCount = b.scheduleLottery.reduce((c, s) => c + s.lotteries.length, 0);
-      const amount = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount ?? 0);
-      return acc + amount * lotCount;
-    }, 0);
-    setTotalAmount(total);
   };
 
   const handleResetBets = () => {
@@ -174,11 +164,37 @@ const PlayDetailsContent = () => {
   };
 
   useEffect(() => {
-    if (!userNumber) setCashier(undefined);
+    if (!userNumber) {
+      setCashier(undefined);
+    }
+    
     if (data) {
       setCashier(data);
     }
+    
+    setBets([]);
+    setTicketId(undefined);
+    setSelectedIndexes([]);
+    setTotalAmount(0);
+    setPartialAmount(0);
   }, [userNumber, data]);
+
+  useEffect(() => {
+    if (ticketGroupedBets) {
+      setBets(ticketGroupedBets.bets);
+      const total = ticketGroupedBets.bets.reduce((acc: number, b: IBetTable) => {
+        return (
+          acc +
+          b.amount *
+            b.scheduleLottery.reduce(
+              (quantity: number, ls: ILotterySchedule) => quantity + ls.lotteries.length,
+              0
+            )
+        );
+      }, 0);
+      setTotalAmount(total);
+    }
+  }, [ticketGroupedBets]);
 
   const isEnabledCreateBetByAdmin =
     (user?.user_type !== USER_TYPE.CASHIER && !!cashier) || user?.user_type === USER_TYPE.CASHIER;
@@ -187,8 +203,7 @@ const PlayDetailsContent = () => {
   const isBusy = isPendingCreate || isPendingEdit;
 
   // 2) Tu regla de habilitación del botón (sin el or de totalAmount===0)
-const isButtonCloseTicketEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin && !isBusy;
-
+  const isButtonCloseTicketEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin && !isBusy;
 
   return (
     <FlexCol className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>

@@ -1,5 +1,6 @@
 import { TicketRepository } from '../repository/ticket.repository';
 import {
+  IBetTable,
   IDeleteTicketEntity,
   IEditTicketEntity,
   IGetAllTicketByUserEntity,
@@ -13,6 +14,7 @@ import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
+import { betBase } from 'src/bet/helper/betBase';
 
 export class TicketController {
   private repository = new TicketRepository();
@@ -73,7 +75,9 @@ export class TicketController {
     }
   };
 
-  getAllTicketNumber = async (props: IGetAllTicketEntity): Promise<string[]> => {
+  getAllTicketNumber = async (
+    props: IGetAllTicketEntity
+  ): Promise<{ ticket_id: string; ticket_number: string }[]> => {
     let tickets;
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
@@ -90,7 +94,7 @@ export class TicketController {
         });
       }
 
-      return tickets.map((t) => t.ticket_number);
+      return tickets;
     } catch (error) {
       console.error('GetAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -143,11 +147,12 @@ export class TicketController {
   };
   update = async (props: IEditTicketEntity) => {
     try {
-      const ticket = await this.repository.update(props);
+      const updateBase = props.bets.map((b: IBetTable) => betBase(b));
+      const ticket = await this.repository.update({ bets: updateBase, ticket_id: props.ticket_id });
 
       return parseTicket(ticket);
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('update error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

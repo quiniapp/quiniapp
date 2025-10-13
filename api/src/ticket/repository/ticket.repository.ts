@@ -18,14 +18,12 @@ export class TicketRepository {
   }
 
   async getById(id: string) {
-    const { data, error } = await supabase
-      .from('tickets')
-
-      .select('*, bets(*, lotteries(*), schedules(*))')
-      .eq('ticket_id', id)
-      .single();
+    const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
+      p_ticket_id: id,
+    });
 
     if (error) throw error;
+    // data es jsonb -> castealo a tu tipo si querés
     return data;
   }
 
@@ -127,6 +125,7 @@ export class TicketRepository {
       p_ticket_id: props.ticket_id,
       p_bets: props.bets,
     });
+
     if (error) throw error;
     return data;
   }
@@ -142,7 +141,7 @@ export class TicketRepository {
   }) {
     let query = supabase
       .from('tickets')
-      .select('ticket_number')
+      .select('ticket_id,ticket_number')
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });

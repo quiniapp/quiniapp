@@ -9,7 +9,7 @@ interface UseTicketsParams {
   enabled?: boolean; // 👈 parámetro opcional para controlar el query
 }
 
-export const useTickets = ({
+export const useGetTicketsNumber = ({
   user_id,
   date,
   winner,
@@ -17,7 +17,7 @@ export const useTickets = ({
 }: UseTicketsParams) => {
   const normalizedDate = date ?? dayjs().format('YYYY-MM-DD');
 
-  return useQuery<string[]>({
+  return useQuery<{ticket_id:string, ticket_number:string}[]>({
     queryKey: ['get_ticket_number', user_id ?? null, normalizedDate, winner],
     enabled, // 👈 se puede deshabilitar desde afuera si querés
     queryFn: async () => {
