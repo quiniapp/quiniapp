@@ -23,7 +23,7 @@ const HeaderTitleSection = ({
   titleClassName,
 }: HeaderTitleSectionProps) => {
   return (
-    <Flex className={`${cn(className)} gap-2  items-center mb-4`}>
+    <Flex className={`${cn(className)} gap-2  items-center mb-1 sm:mb-4`}>
       {icon && <span className={`${iconClassName} text-[--text-secondary]`}>{icon}</span>}
       <Typography variant={variant || 'small'} className={titleClassName}>
         {title}
