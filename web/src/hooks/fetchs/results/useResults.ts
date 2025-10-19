@@ -20,7 +20,7 @@ export const useResults = (params: IGetResultsEntity) => {
   const { lottery_id, schedule_id, date } = params;
 
   return useQuery({
-    queryKey: ['results', params],
+    queryKey: ['results', lottery_id, schedule_id, date],
     queryFn: () => fetchResults(params),
     
     enabled: Boolean(lottery_id && schedule_id && date), // ⛔ evita que se ejecute con datos incompletos

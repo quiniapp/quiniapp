@@ -88,7 +88,7 @@ export async function printUserSlipPDF(opts: {
     [
       `Deja: ${money(account.revenue)}`,
       `Subtotal: ${money(account.subtotal)}`,
-      `Debe: ${money(account.total)}`, // si preferís otro cálculo, reemplazá por el valor correcto
+      `${account.total>0? 'Debe': 'Cobra'}: ${money(Math.abs(account.total))}`, // si preferís otro cálculo, reemplazá por el valor correcto
     ],
   ];
 
