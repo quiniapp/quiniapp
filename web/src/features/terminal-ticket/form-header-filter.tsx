@@ -137,7 +137,9 @@ const FormHeaderFilter = () => {
           <Fieldset legend="Buscar por número de Ticket:" className="w-full gap-3">
             <Flex className="gap-4">
               <Input
-                type="text"
+                type="number"
+                
+              inputMode='numeric'
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ej: 20250619..."
