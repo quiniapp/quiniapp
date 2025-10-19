@@ -58,4 +58,15 @@ export class ResultsController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+
+  delete = async (id: string): Promise<IResultsEntityFront> => {
+    try {
+      const results = await this.repository.delete(id);
+
+      return parseResults(results);
+    } catch (error) {
+      console.error('Update error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
 }

@@ -25,6 +25,7 @@ export class ResultsRouter {
     this.router.get('/', this.getResultsHandler);
     this.router.post('/', this.newResultshandler);
     this.router.put('/:id', this.updateResultsHandler);
+    this.router.delete('/:id', this.deleteResultsHandler);
   }
 
   private newResultshandler: RequestHandler = async (req: Request, res: Response) => {
@@ -184,6 +185,52 @@ export class ResultsRouter {
     }
     try {
       const results = await this.controller.update(results_id, updateResults);
+      const response: APIResponse<IResultsEntityFront> = {
+        data: {
+          results,
+        },
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+
+  private deleteResultsHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { id: results_id } = req.params;
+    if (user?.user.user_type === USER_TYPE.CASHIER) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: ERROR_MESSAGE.FORBIDDEN,
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const results = await this.controller.delete(results_id);
       const response: APIResponse<IResultsEntityFront> = {
         data: {
           results,

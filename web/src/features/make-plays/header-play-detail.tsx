@@ -1,5 +1,5 @@
 import { PrinterIcon, Repeat2Icon } from 'lucide-react';
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
@@ -44,7 +44,7 @@ const HeaderPlayDetail = ({
   handleRecreateBet,
   handleEditTicket,
 }: HeaderPlayDetailProps) => {
-  const [selectedValue, setSelectedValue] = useState<string>('')
+  const [selectedValue, setSelectedValue] = useState<string>('');
   const { role } = useAuth();
 
   // 👇 Estado local para abrir/cerrar el modal
@@ -57,7 +57,7 @@ const HeaderPlayDetail = ({
     const parsed = parseInt(search);
     setUserNumber(isNaN(parsed) ? undefined : parsed);
   };
-
+  
   const handleRePrimtLast = () => {
     const lastTicketStr = localStorage.getItem('lastTicket');
     if (!lastTicketStr) {
@@ -76,10 +76,16 @@ const HeaderPlayDetail = ({
   const handleSelectTicket = (value: string) => {
     if (tickets?.length) {
       handleEditTicket(value);
-      setSelectedValue(value)
+      setSelectedValue(value);
     }
   };
 
+
+  useEffect(()=>{
+    if(!userNumber) setSelectedValue('');
+  },[userNumber])
+
+  
   return (
     <HeaderSection title={' Realizar Jugadas'}>
       {role !== USER_TYPE.CASHIER && (
@@ -164,7 +170,6 @@ const HeaderPlayDetail = ({
             onClose={closeRepeatModal}
             handleRecreateBet={(values) => {
               handleRecreateBet(values);
-
             }}
           />
         </Suspense>

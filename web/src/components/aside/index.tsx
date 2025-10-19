@@ -7,7 +7,17 @@ import { Flex } from '@/components/flex';
 import Logo from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
 import MENU_ITEMS from '@/constants/SidebarMenu';
 import { cn } from '@/lib/utils';
 import { filterMenuItemsByRole } from '@/utils/menu-access';
@@ -28,6 +38,20 @@ const Aside = ({ isOpen }: AsideProps) => {
   // Menú visible según rol (memo para evitar recalcular cada render)
   const visibleMenu = useMemo(() => filterMenuItemsByRole(role, MENU_ITEMS), [role]);
 
+  const goTo = (route: string, id: string) => {
+    setOpenId(null);
+    setActiveId(id);
+
+    if (location.pathname === route) {
+      // Re-monta la misma ruta
+      // (si usás Data Routers, también revalida loaders)
+      navigate(route, { replace: true });
+      navigate(0); // 👈 Soft reload
+    } else {
+      navigate(route);
+    }
+  };
+
   // Marcar activo por URL (opcional, mejora UX si se recarga la página)
   // Si cada item tiene route único podés sincronizar activeId así:
   useMemo(() => {
@@ -37,11 +61,10 @@ const Aside = ({ isOpen }: AsideProps) => {
     setActiveId(current?.id ?? null);
   }, [location.pathname, visibleMenu]);
 
-const handleLogoutClick = async () => {
-  await logout();
-  navigate('/login', { replace: true }); // 👈 mover la navegación acá
-};
-
+  const handleLogoutClick = async () => {
+    await logout();
+    navigate('/login', { replace: true }); // 👈 mover la navegación acá
+  };
 
   return (
     <Sidebar
@@ -53,7 +76,9 @@ const handleLogoutClick = async () => {
       )}
     >
       <SidebarHeader className="p-3">
-        <Link to="/"><Logo /></Link>
+        <Link to="/">
+          <Logo />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
@@ -98,8 +123,7 @@ const handleLogoutClick = async () => {
                           <SidebarMenuItem key={child.id}>
                             <SidebarMenuButton
                               onClick={() => {
-                                setActiveId(child.id);
-                                navigate(child.route);
+                                goTo(child.route, child.id);
                               }}
                               className={cn(
                                 'text-neutral-300 !text-[14px] !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors',
@@ -130,9 +154,7 @@ const handleLogoutClick = async () => {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => {
-                      setOpenId(null);
-                      setActiveId(item.id);
-                      navigate(item.route);
+                      setOpenId(null);goTo(item.route, item.id)
                     }}
                     className={cn(
                       'h-[36px] !text-[14px] px-3 !rounded-none transition-colors cursor-pointer',
