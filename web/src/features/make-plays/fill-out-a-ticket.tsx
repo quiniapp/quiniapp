@@ -239,7 +239,6 @@ const FillOutATicket = ({
                   inputMode="numeric"
                   type={'string'}
                   maxLength={10}
-                  placeholder={'0000000000'}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   value={bet.number ?? undefined}
                   onChange={(e) => handleBet('number', e.target.value)}
@@ -253,7 +252,7 @@ const FillOutATicket = ({
                   id="amount"
                   name={'ticket-amount'}
                   type={'number'}
-                  placeholder={'000000'}
+                  inputMode="numeric"
                   value={bet?.amount ?? ''}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('amount', e.target.value)}
@@ -267,7 +266,7 @@ const FillOutATicket = ({
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
-                  placeholder={'1, 5, 10, 20'}
+                  inputMode="numeric"
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   value={bet.place ?? undefined}
                   onChange={(e) => handleBet('place', e.target.value)}
@@ -284,7 +283,6 @@ const FillOutATicket = ({
                   type={'string'}
                   maxLength={2}
                   value={bet.with}
-                  placeholder={'00'}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
@@ -297,7 +295,7 @@ const FillOutATicket = ({
                   id="position"
                   name={'ticket-position'}
                   type={'number'}
-                  placeholder={'5, 10, 20'}
+                  inputMode="numeric"
                   value={bet.position}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('position', e.target.value)}

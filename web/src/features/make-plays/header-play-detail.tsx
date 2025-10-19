@@ -93,7 +93,8 @@ const HeaderPlayDetail = ({
           <Flex className={'flex-row items-center justify-center gap-4 sm:px-3'}>
             <Label htmlFor={'user'}> Usuario</Label>
             <Input
-              type={'text'}
+              type={'number'}
+              inputMode='numeric'
               id={'user'}
               name={'user'}
               className={'max-w-[100px]'}
