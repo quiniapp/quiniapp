@@ -239,7 +239,6 @@ const FillOutATicket = ({
                   inputMode="numeric"
                   type={'string'}
                   maxLength={10}
-                  placeholder={'0000000000'}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   value={bet.number ?? undefined}
                   onChange={(e) => handleBet('number', e.target.value)}
@@ -254,7 +253,6 @@ const FillOutATicket = ({
                   name={'ticket-amount'}
                   type={'number'}
                   inputMode="numeric"
-                  placeholder={'000000'}
                   value={bet?.amount ?? ''}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('amount', e.target.value)}
@@ -269,7 +267,6 @@ const FillOutATicket = ({
                   name={'ticket-place'}
                   type={'number'}
                   inputMode="numeric"
-                  placeholder={'1, 5, 10, 20'}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   value={bet.place ?? undefined}
                   onChange={(e) => handleBet('place', e.target.value)}
@@ -286,7 +283,6 @@ const FillOutATicket = ({
                   type={'string'}
                   maxLength={2}
                   value={bet.with}
-                  placeholder={'00'}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
@@ -300,7 +296,6 @@ const FillOutATicket = ({
                   name={'ticket-position'}
                   type={'number'}
                   inputMode="numeric"
-                  placeholder={'5, 10, 20'}
                   value={bet.position}
                   className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
                   onChange={(e) => handleBet('position', e.target.value)}
