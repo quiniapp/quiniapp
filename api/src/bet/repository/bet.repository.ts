@@ -16,11 +16,9 @@ export class BetRepository {
     date: string;
     cashier_id?: string;
     lottery_id?: string;
-
     winners?: boolean;
     quatern?: boolean;
     tern?: boolean;
-
     ticket_number?: string;
   }) {
     let query = supabase
@@ -28,7 +26,10 @@ export class BetRepository {
       .select('*, lotteries(*), schedules(*)')
       .eq('date', date)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) // 1° por fecha de creación (tickets más nuevos primero)
+      .order('bet_order', { ascending: true }); // 2° por bloque dentro del ticket
+    // .order('created_at', { ascending: true, referencedTable : 'lotteries' }); // 3️⃣ Dentro del bloque, orden por creación de la lotería
+
     if (ticket_number) {
       const { data: ticket, error: errorTicketNumber } = await supabase
         .from('tickets')
@@ -39,22 +40,13 @@ export class BetRepository {
       query = query.eq('ticket_id', ticket?.ticket_id);
     }
 
-    if (quatern) {
-      query = query.eq('bet_type', BET_TYPE.QUATERN);
-    }
-    if (tern) {
-      query = query.eq('bet_type', BET_TYPE.TERN);
-    }
-    if (schedule_id) {
-      query = query.eq('schedule_id', schedule_id);
-    }
-    if (cashier_id) {
-      query = query.eq('user_id', cashier_id);
-    }
-    if (winners) {
-      query = query.eq('winner', true);
-    }
+    if (quatern) query = query.eq('bet_type', BET_TYPE.QUATERN);
+    if (tern) query = query.eq('bet_type', BET_TYPE.TERN);
+    if (schedule_id) query = query.eq('schedule_id', schedule_id);
+    if (cashier_id) query = query.eq('user_id', cashier_id);
+    if (winners) query = query.eq('winner', true);
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
+
     const { data, error } = await query;
 
     if (error) throw error;
