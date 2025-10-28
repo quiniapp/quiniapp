@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import ResultsOverview from './results-overview';
 import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import PlayDetailGameTable from './play-detail-game-table';
-import { FlexCol } from '@/components/flex';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
@@ -17,10 +16,11 @@ import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { makeTicketPdf } from '@/functions/makeTicket';
 import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 dayjs.extend(customParseFormat);
 
-const PlayDetailsContent = () => {
+const MakePlaysContent = () => {
   const { user } = useAuth();
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);
   const [totalAmount, setTotalAmount] = useState<number>(0);
@@ -206,7 +206,7 @@ const PlayDetailsContent = () => {
   const isButtonCloseTicketEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin && !isBusy;
 
   return (
-    <FlexCol className={'h-full w-[356px] sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden'}>
+    <PageWrapper>
       <HeaderPlayDetail
         cashier={cashier}
         setUserNumber={setUserNumber}
@@ -242,8 +242,8 @@ const PlayDetailsContent = () => {
         hasSelection={selectedIndexes.length > 0}
         isEnabled={isButtonCloseTicketEnabled}
       />
-    </FlexCol>
+    </PageWrapper>
   );
 };
 
-export default PlayDetailsContent;
+export default MakePlaysContent;

@@ -125,7 +125,7 @@ const ResultsContent = () => {
         {
           onSuccess: () => {
             toast.success('Resultados borrados correctamente');
-            setIsOpenDeleteResult(false)
+            setIsOpenDeleteResult(false);
           },
           onError: (error) => {
             toast.error(`Error al borrar: ${error.message}`);
@@ -199,6 +199,7 @@ const ResultsContent = () => {
                       inputRefs.current[i] = el;
                     }}
                     type="text"
+                    inputMode="numeric"
                     maxLength={4}
                     value={value}
                     onChange={(e) => {
