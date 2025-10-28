@@ -8,6 +8,7 @@ import SelectBetType from './select-bet-type';
 import PlayAndHitsToggleSelect from './play-and-hits-toggle-select';
 import PlayAndHitsSelect from './play-and-hits-select';
 import { useTotalAmount, useTotalPrize } from '@/hooks/fetchs/plays/useTotals';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 const PlaysAndHitsContent = () => {
 
@@ -49,13 +50,11 @@ const PlaysAndHitsContent = () => {
 
 
   return (
-    <FlexCol
-      className={'h-full sm:w-[1000px] 1440:w-full overflow-y-auto sm:overflow-hidden gap-1'}
-    >
+    <PageWrapper>
       <HeaderPlayAndHits />
       <FlexCol className={'p-1 sm:p-2 gap-2 '}>
         <PlayAndHitsToggleSelect />
-        <Flex className="w-full">
+        <Flex className="flex-col sm:flex w-full">
           <SelectBetType />
           <PlayAndHitsSelect />
         </Flex>
@@ -65,7 +64,7 @@ const PlaysAndHitsContent = () => {
         totalPlaysAmount={totalPlaysAmount}
         totalHitsAmount={totalHitsAmount}
       />
-    </FlexCol>
+    </PageWrapper>
   );
 };
 
