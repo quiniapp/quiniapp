@@ -54,7 +54,7 @@ const PlaysAndHitsContent = () => {
       <HeaderPlayAndHits />
       <FlexCol className={'p-1 sm:p-2 gap-2 '}>
         <PlayAndHitsToggleSelect />
-        <Flex className="flex-col sm:flex w-full">
+        <Flex className="flex-col sm:flex-row w-full">
           <SelectBetType />
           <PlayAndHitsSelect />
         </Flex>
