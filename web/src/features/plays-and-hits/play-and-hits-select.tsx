@@ -38,7 +38,7 @@ const PlayAndHitsSelect = () => {
   };
 
   return (
-    <Flex className={'items-center justify-center space-x-4 w-full'}>
+    <Flex className="p-1 items-center justify-center flex-wrap gap-x-6 gap-y-4 w-full">
       {role !== USER_TYPE.CASHIER && (
         <Fragment>
           <Flex className={'flex-1 gap-3 items-center'}>
