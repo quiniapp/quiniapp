@@ -1,16 +1,189 @@
+import { useState } from 'react';
+import { toast } from 'react-hot-toast';
+
 import HeaderSection from '@/components/header-section';
-import InProgressSection from '@/components/in-progress-section';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+
+type UsageCard = {
+  id: string;
+  headline: string;
+  subline?: string;
+  usedPct: number;
+};
+
+const USAGE_CARDS: UsageCard[] = [
+  { id: 'opt-1', headline: '2% usado', subline: 'de 7 GB', usedPct: 2 },
+  { id: 'opt-2', headline: '98% libre', subline: 'de 7 GB', usedPct: 2 },
+  { id: 'opt-3', headline: '35 MB / 7 GB', subline: '(0.5% usado)', usedPct: 1 },
+  { id: 'opt-4', headline: '99% libre de 7 GB', usedPct: 1 },
+  { id: 'opt-5', headline: '3.2 GB usados de 7 GB', subline: '(45.7% usado)', usedPct: 46 },
+  { id: 'opt-6', headline: 'Quedan 1.8 GB libres', subline: '(de 7 GB)', usedPct: 74 },
+];
+
+type RetentionKey = 'last-month' | 'two-months' | 'three-months';
+
 const SettingsContent = () => {
+  const [selectedUsage, setSelectedUsage] = useState<string>('opt-2');
+  const [retention, setRetention] = useState<RetentionKey>('last-month');
+
+  const handleChooseUsage = (id: string) => {
+    setSelectedUsage(id);
+    const opt = USAGE_CARDS.find((o) => o.id === id);
+    toast.success(`Elegiste: ${opt?.headline} ${opt?.subline ?? ''}`.trim());
+  };
+
+  const handleCleanup = () => {
+    const label =
+      retention === 'last-month'
+        ? 'Mes pasado'
+        : retention === 'two-months'
+        ? '2 meses'
+        : '3 meses';
+
+    const t = toast.loading('Borrando datos viejos… (mock)');
+    setTimeout(() => {
+      toast.success(`Se eliminaron datos del período: ${label} (mock)`, { id: t });
+    }, 900);
+  };
+
   return (
     <PageWrapper>
-      <HeaderSection title={'Configuración'} />
-      <InProgressSection
-        title={'Funcionalidad en desarrollo.'}
-        text={'Estamos trabajando para habilitar esta sección en próximas actualizaciones.'}
-        iconSize={120}
-      />
+      <HeaderSection title="Configuración" />
+
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 overflow-y-auto">
+        {USAGE_CARDS.map((opt) => (
+          <Card
+            key={opt.id}
+            className={`transition border ${
+              selectedUsage === opt.id ? 'border-primary shadow-lg' : 'border-border'
+            } bg-[#10121A] text-white`}
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg text-white">
+                  Espacio en Base de Datos
+                </CardTitle>
+                <Badge
+                  variant={selectedUsage === opt.id ? 'default' : 'outline'}
+                  className={`${
+                    selectedUsage === opt.id
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-white text-white'
+                  }`}
+                >
+                  {selectedUsage === opt.id ? 'Seleccionada' : 'Elegir'}
+                </Badge>
+              </div>
+              <CardDescription className="text-xs sm:text-sm text-white/80">
+                Vista de ejemplo (maqueta)
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-3 text-white">
+              <div>
+                <div className="text-xl font-semibold leading-6 text-white">
+                  {opt.headline}
+                </div>
+                {opt.subline && (
+                  <div className="text-sm text-white/70">{opt.subline}</div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs text-white/70">
+                  <span>Uso del espacio</span>
+                  <span>{opt.usedPct}%</span>
+                </div>
+                <Progress value={opt.usedPct} className="h-2 bg-white/20" />
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => handleChooseUsage(opt.id)}
+              >
+                Usar este formato
+              </Button>
+              <Button variant="outline" className="text-white border-white">
+                Detalles
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+
+        {/* Card de mantenimiento */}
+        <Card className="xl:col-span-1 md:col-span-2 bg-[#10121A] text-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base sm:text-lg text-white">
+              Borrar datos (mock)
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm text-white/80">
+              Elimina datos antiguos para liberar espacio.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4 text-white">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'last-month', label: 'Mes pasado' },
+                { key: 'two-months', label: '2 meses' },
+                { key: 'three-months', label: '3 meses' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setRetention(key as RetentionKey)}
+                  className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                    retention === key
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-transparent border-white hover:bg-white/10'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-white/30 p-3">
+              <div className="text-sm font-medium mb-1 text-white">
+                Período seleccionado
+              </div>
+              <div className="text-xs text-white/70">
+                {retention === 'last-month'
+                  ? 'Mes pasado'
+                  : retention === 'two-months'
+                  ? '2 meses'
+                  : '3 meses'}
+                .
+              </div>
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex items-center gap-3">
+            <Button
+              onClick={handleCleanup}
+              className="w-full sm:w-auto bg-primary text-white"
+            >
+              Borrar datos
+            </Button>
+            <span className="text-xs text-white/60">
+              * Acción simulada solo para maquetado.
+            </span>
+          </CardFooter>
+        </Card>
+      </div>
     </PageWrapper>
   );
 };
