@@ -1,4 +1,4 @@
-import { Flex, FlexCol } from '@/components/flex';
+import { FlexCol } from '@/components/flex';
 import TerminalTicketPlayTable from './termina-ticket-play-table';
 import TerminalTicketMatchesTable from './terminal-ticket-matches-table';
 import { useSearchParams } from 'react-router-dom';

@@ -1,7 +1,6 @@
 import { TicketX } from 'lucide-react';
 
 // @Components
-import Box from '@/components/box';
 import { Button } from '@/components/ui/button';
 import { Flex, FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';

@@ -29,7 +29,7 @@ const QuiniChecks = ({ quini, onLotterySelect }: ResultQuinisProps) => {
         />
 
         <RadioGroup onValueChange={onLotterySelect}>
-          <Box className="grid 1440:grid-cols-4 grid-cols-4 1440:gap-4 gap-1">
+          <Box className="grid grid-cols-2 1440:grid-cols-4 sm:grid-cols-4 1440:gap-4 gap-1">
             {quini.map((turno: Quini) => (
               <Flex key={turno.lottery_id} className=" h-[36px] items-center space-x-4">
                 <RadioGroupItem
