@@ -28,7 +28,7 @@ const PlayAndHitsToggleSelect = () => {
     setSearchParams(newParams);
   };
   return (
-    <Flex className={'flex-col sm:flex sm:space-x-5'}>
+    <Flex className={'flex-col sm:flex-row sm:space-x-5'}>
       <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3 gap-3'}>
         <HeaderTitleSection
           title={'Ver'}
