@@ -38,7 +38,7 @@ export function SelectDayToSearch({ selectedDay, onDayChange, className,toDate }
         <Button
           variant="outline"
           className={cn(
-            'w-[240px] justify-start text-left font-normal',
+            'sm:w-[240px] justify-start text-left font-normal',
             !date && 'text-muted-foreground',
             className
           )}
