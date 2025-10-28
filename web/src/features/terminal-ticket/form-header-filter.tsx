@@ -63,8 +63,8 @@ const FormHeaderFilter = () => {
     handleSelectDate();
   }, []);
   return (
-    <Flex className={' space-y-4'}>
-      <FlexCol className={' mb-1 sm:mb-4 1440:gap-6  gap-2 '}>
+    <Flex className={' space-y-4 sm:w-full'}>
+      <FlexCol className={'mb-1 sm:mb-4 1440:gap-6  gap-2 '}>
         <Fieldset legend={'Pasador:'} className={'sm:w-full gap-1 sm:gap-3'}>
           <FlexCol className={'space-y-4'}>
             <IsRoleCashier role={role}>
