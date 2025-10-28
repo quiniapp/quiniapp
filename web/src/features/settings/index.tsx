@@ -24,12 +24,7 @@ type UsageCard = {
 };
 
 const USAGE_CARDS: UsageCard[] = [
-  { id: 'opt-1', headline: '2% usado', subline: 'de 7 GB', usedPct: 2 },
-  { id: 'opt-2', headline: '98% libre', subline: 'de 7 GB', usedPct: 2 },
-  { id: 'opt-3', headline: '35 MB / 7 GB', subline: '(0.5% usado)', usedPct: 1 },
-  { id: 'opt-4', headline: '99% libre de 7 GB', usedPct: 1 },
   { id: 'opt-5', headline: '3.2 GB usados de 7 GB', subline: '(45.7% usado)', usedPct: 46 },
-  { id: 'opt-6', headline: 'Quedan 1.8 GB libres', subline: '(de 7 GB)', usedPct: 74 },
 ];
 
 type RetentionKey = 'last-month' | 'two-months' | 'three-months';
