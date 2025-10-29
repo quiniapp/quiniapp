@@ -15,7 +15,6 @@ import { TerminalTicketPage } from '@/pages/terminal-ticket';
 // @Types
 import ProtectedRoute from '@/protected/protected-routes.tsx';
 import { ROUTES } from '@/types/routes.type';
-import PlaysPage from '@/pages/plays.tsx';
 import ReportsPage from '@/pages/reports';
 import ResultsPage from '@/pages/results';
 import SettingsPage from '@/pages/settings';
@@ -44,11 +43,6 @@ export const RoutesContent = [
         path: ROUTES.HOME,
         id: 'Home',
         element: <Index />,
-      },
-      {
-        path: ROUTES.PLAYS,
-        id: 'Plays',
-        element: <PlaysPage />,
       },
       {
         path: ROUTES.MAKE_PLAYS,

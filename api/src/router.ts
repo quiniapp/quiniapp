@@ -9,6 +9,7 @@ import { BetRouter } from './bet/route/bet.routes';
 import { WinnerRouter } from './winners/route/winners.route';
 import { CurrentAccountRouter } from './current-account/route/current-account.route';
 import { ScheduleLotteryRouter } from './schedule-lottery/route/schedule-lottery.route';
+import { SettingsLotteryRouter } from './settings/route/settings.route';
 
 export const router = Router();
 export const publicRouter = Router();
@@ -28,6 +29,7 @@ router.use('/bet', new BetRouter().router);
 router.use('/winners', new WinnerRouter().router);
 router.use('/current_account', new CurrentAccountRouter().router);
 router.use('/schedule_lottery', new ScheduleLotteryRouter().router);
+router.use('/settings', new SettingsLotteryRouter().router);
 router.use('/test', (req, res) => {
   res.send('ok');
 });

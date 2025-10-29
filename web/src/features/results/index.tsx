@@ -26,6 +26,7 @@ import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useDeleteResults } from '@/hooks/mutations/results/useDeleteResults';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 const ResultsContent = () => {
   const { role } = useAuth();
@@ -125,7 +126,7 @@ const ResultsContent = () => {
         {
           onSuccess: () => {
             toast.success('Resultados borrados correctamente');
-            setIsOpenDeleteResult(false)
+            setIsOpenDeleteResult(false);
           },
           onError: (error) => {
             toast.error(`Error al borrar: ${error.message}`);
@@ -147,11 +148,11 @@ const ResultsContent = () => {
   }, [isSuccess, selectedLottery, selectedDate, selectedSchedule, isOpenDeleteResult]);
 
   return (
-    <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
+    <PageWrapper>
       <HeaderSection title={'Resultados'} />
-      <FlexCol className="w-full items-center space-x-[36px] max-h-[60px] justify-between">
-        <Flex className="w-full  mt-8 items-center space-x-[36px] max-h-[60px] justify-between">
-          <Flex className={'  w-full items-center space-x-[24px] '}>
+      <FlexCol className="w-full items-center sm:space-x-[36px] max-h-[60px] justify-between">
+        <FlexCol className="w-full sm:flex-row mt-8 items-center sm:space-x-[36px] max-h-[60px] justify-between">
+          <Flex className={'  w-full items-center sm:space-x-[24px] '}>
             <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
             <SelectDayToSearch
               onDayChange={(date) => {
@@ -174,7 +175,7 @@ const ResultsContent = () => {
               </Button>
             )}
           </Flex>
-        </Flex>
+        </FlexCol>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
           <FlexCol className="  rounded-xl   space-y-6">
             <ResultShifts
@@ -190,7 +191,7 @@ const ResultsContent = () => {
               variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
               className={'pb-2'}
             />
-            <Box className="grid grid-flow-col grid-rows-5 gap-6 p-8 justify-between bg-card">
+            <Box className="grid grid-flow-col grid-rows-10 sm:grid-rows-5 gap-6 p-8 justify-between bg-card">
               {results.map((value, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
@@ -199,6 +200,7 @@ const ResultsContent = () => {
                       inputRefs.current[i] = el;
                     }}
                     type="text"
+                    inputMode="numeric"
                     maxLength={4}
                     value={value}
                     onChange={(e) => {
@@ -223,7 +225,7 @@ const ResultsContent = () => {
               ))}
             </Box>
             {role !== USER_TYPE.CASHIER && (
-              <Box className=" grid grid-cols-3 py-2 mt-6 gap-[12px] ">
+              <Box className=" grid grid-cols-1 sm:grid-cols-3 py-2 mt-6 gap-[12px] ">
                 <Button
                   variant={'destructive'}
                   className="  hover:bg-[var(--bg-card)] text-dark w-full font-medium"
@@ -271,7 +273,7 @@ const ResultsContent = () => {
           onClose={() => setIsOpenDeleteResult(false)}
         />
       </Suspense>
-    </Box>
+    </PageWrapper>
   );
 };
 

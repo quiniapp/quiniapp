@@ -1,4 +1,4 @@
-import { Flex, FlexCol } from '@/components/flex';
+import { FlexCol } from '@/components/flex';
 import TerminalTicketPlayTable from './termina-ticket-play-table';
 import TerminalTicketMatchesTable from './terminal-ticket-matches-table';
 import { useSearchParams } from 'react-router-dom';
@@ -9,7 +9,7 @@ const TicketDetails = () => {
   const ticket_number = searchParams.get('ticket_number');
   const date = searchParams.get('date');
   const { data: bets, isLoading } = useGetBetysByTicketNumber({
-    date: date ,
+    date: date,
     ticket_number: ticket_number,
   });
 
@@ -20,7 +20,7 @@ const TicketDetails = () => {
   });
 
   return (
-    <Flex className={'1440:py-8 py-3 space-x-8 '}>
+    <FlexCol className="flex-col-reverse sm:flex-row 1440:py-8 py-3 sm:space-x-8">
       <FlexCol className={'flex-1  space-y-4'}>
         <p> Jugadas {`${ticket_number ? `ticket ${ticket_number}` : ''}`}</p>
         <TerminalTicketPlayTable bets={bets} isLoading={isLoading} />
@@ -29,7 +29,7 @@ const TicketDetails = () => {
         <p> Aciertos</p>
         <TerminalTicketMatchesTable bets={winnersBets} isLoading={isLoadingWinners} />
       </FlexCol>
-    </Flex>
+    </FlexCol>
   );
 };
 

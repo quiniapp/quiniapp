@@ -1,7 +1,6 @@
 import { TicketX } from 'lucide-react';
 
 // @Components
-import Box from '@/components/box';
 import { Button } from '@/components/ui/button';
 import { Flex, FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';
@@ -15,6 +14,7 @@ import TicketDetails from './TicketDetails';
 import { useSearchParams } from 'react-router-dom';
 import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket';
 import toast from 'react-hot-toast';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 export const TerminalTicketContent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,10 +47,10 @@ export const TerminalTicketContent = () => {
   };
 
   return (
-    <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
+    <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-[16px]'}>
-        <Flex className={'gap-8'}>
+        <FlexCol className={'sm:flex sm:flex-row gap-8'}>
           <FormHeaderFilter />
           <FlexCol>
             <FlexCol>
@@ -61,7 +61,7 @@ export const TerminalTicketContent = () => {
               </Typography>
             </FlexCol>
           </FlexCol>
-        </Flex>
+        </FlexCol>
         <TicketDetails />
       </FlexCol>
       <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
@@ -70,6 +70,6 @@ export const TerminalTicketContent = () => {
         </Button>
         <Button variant={'outline'}> Cerrar </Button>
       </Flex>
-    </Box>
+    </PageWrapper>
   );
 };
