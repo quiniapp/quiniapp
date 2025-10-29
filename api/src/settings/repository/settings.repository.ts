@@ -1,11 +1,16 @@
-// import { supabase } from '@database/db.connection';
+import { supabase } from '@database/db.connection';
 
-export class ScheduleRepository {
-  async getStorageStatus() {
-    /*     const { data, error } = await supabase.
+export class SettingsRepository {
+  async getStorageStatus(): Promise<number> {
+    const { data, error } = await supabase
+      .from('total_storage_view') // El nombre de tu VIEW
+      .select('total_gb')
+      .single(); // .single() porque sabemos que solo es una fila
+    console.log(error);
+    if (error) {
+      throw new Error(error.message);
+    }
 
-
-    if (error) throw new Error(error.details);
-    return data; */
+    return data.total_gb;
   }
 }

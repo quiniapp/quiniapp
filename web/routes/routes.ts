@@ -47,4 +47,7 @@ export const BACKEND_ROUTES = {
   schedule_lottery: {
     base: `${PRIVATE}/schedule_lottery`,
   },
+  settings:{
+    storage:  `${PRIVATE}/settings/storage`
+  }
 };
