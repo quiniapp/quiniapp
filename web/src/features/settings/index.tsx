@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 import HeaderSection from '@/components/header-section';
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
+import { useGetUsedStorage } from '@/hooks/fetchs/settings/useGetUsedStorage';
 
 type UsageCard = {
   id: string;
@@ -30,22 +30,17 @@ const USAGE_CARDS: UsageCard[] = [
 type RetentionKey = 'last-month' | 'two-months' | 'three-months';
 
 const SettingsContent = () => {
-  const [selectedUsage, setSelectedUsage] = useState<string>('opt-2');
   const [retention, setRetention] = useState<RetentionKey>('last-month');
 
-  const handleChooseUsage = (id: string) => {
-    setSelectedUsage(id);
-    const opt = USAGE_CARDS.find((o) => o.id === id);
-    toast.success(`Elegiste: ${opt?.headline} ${opt?.subline ?? ''}`.trim());
-  };
+  const {data:usedStorage} = useGetUsedStorage()
 
   const handleCleanup = () => {
     const label =
       retention === 'last-month'
         ? 'Mes pasado'
         : retention === 'two-months'
-        ? '2 meses'
-        : '3 meses';
+          ? '2 meses'
+          : '3 meses';
 
     const t = toast.loading('Borrando datos viejos… (mock)');
     setTimeout(() => {
@@ -53,6 +48,10 @@ const SettingsContent = () => {
     }, 900);
   };
 
+  const usedPercentage = useMemo(()=>{
+    if(usedStorage)
+    return String(usedStorage/7).slice(0,5)
+  },[usedStorage])
   return (
     <PageWrapper>
       <HeaderSection title="Configuración" />
@@ -61,60 +60,40 @@ const SettingsContent = () => {
         {USAGE_CARDS.map((opt) => (
           <Card
             key={opt.id}
-            className={`transition border ${
-              selectedUsage === opt.id ? 'border-primary shadow-lg' : 'border-border'
-            } bg-[#10121A] text-white`}
+            className={`transition border 
+             'border-border'
+             bg-[#10121A] text-white`}
           >
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base sm:text-lg text-white">
                   Espacio en Base de Datos
                 </CardTitle>
-                <Badge
-                  variant={selectedUsage === opt.id ? 'default' : 'outline'}
-                  className={`${
-                    selectedUsage === opt.id
-                      ? 'bg-primary text-white border-primary'
-                      : 'border-white text-white'
-                  }`}
-                >
-                  {selectedUsage === opt.id ? 'Seleccionada' : 'Elegir'}
-                </Badge>
+             
               </div>
-              <CardDescription className="text-xs sm:text-sm text-white/80">
-                Vista de ejemplo (maqueta)
-              </CardDescription>
+
             </CardHeader>
 
             <CardContent className="space-y-3 text-white">
               <div>
-                <div className="text-xl font-semibold leading-6 text-white">
-                  {opt.headline}
-                </div>
-                {opt.subline && (
-                  <div className="text-sm text-white/70">{opt.subline}</div>
-                )}
+                <div className="text-xl font-semibold leading-6 text-white">{`${usedStorage} usados de 7 GB`}</div>
+                {usedPercentage&&<div className="text-sm text-white/70">{`(${usedPercentage}% usado)`}</div>}
               </div>
 
-              <div className="space-y-1">
+              {usedPercentage&&<div className="space-y-1">
                 <div className="flex items-center justify-between text-xs text-white/70">
                   <span>Uso del espacio</span>
-                  <span>{opt.usedPct}%</span>
+                  <span>{usedPercentage}%</span>
                 </div>
-                <Progress value={opt.usedPct} className="h-2 bg-white/20" />
-              </div>
+                <Progress value={+usedPercentage} className="h-2 bg-white/20" />
+              </div>}
             </CardContent>
 
             <CardFooter className="flex gap-2">
-              <Button
-                className="flex-1"
-                onClick={() => handleChooseUsage(opt.id)}
-              >
-                Usar este formato
-              </Button>
-              <Button variant="outline" className="text-white border-white">
+
+          {/*     <Button variant="outline" className="text-white border-white">
                 Detalles
-              </Button>
+              </Button> */}
             </CardFooter>
           </Card>
         ))}
@@ -122,9 +101,7 @@ const SettingsContent = () => {
         {/* Card de mantenimiento */}
         <Card className="xl:col-span-1 md:col-span-2 bg-[#10121A] text-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base sm:text-lg text-white">
-              Borrar datos (mock)
-            </CardTitle>
+            <CardTitle className="text-base sm:text-lg text-white">Borrar datos (mock)</CardTitle>
             <CardDescription className="text-xs sm:text-sm text-white/80">
               Elimina datos antiguos para liberar espacio.
             </CardDescription>
@@ -152,30 +129,23 @@ const SettingsContent = () => {
             </div>
 
             <div className="rounded-lg border border-white/30 p-3">
-              <div className="text-sm font-medium mb-1 text-white">
-                Período seleccionado
-              </div>
+              <div className="text-sm font-medium mb-1 text-white">Período seleccionado</div>
               <div className="text-xs text-white/70">
                 {retention === 'last-month'
                   ? 'Mes pasado'
                   : retention === 'two-months'
-                  ? '2 meses'
-                  : '3 meses'}
+                    ? '2 meses'
+                    : '3 meses'}
                 .
               </div>
             </div>
           </CardContent>
 
           <CardFooter className="flex items-center gap-3">
-            <Button
-              onClick={handleCleanup}
-              className="w-full sm:w-auto bg-primary text-white"
-            >
+            <Button onClick={handleCleanup} className="w-full sm:w-auto bg-primary text-white">
               Borrar datos
             </Button>
-            <span className="text-xs text-white/60">
-              * Acción simulada solo para maquetado.
-            </span>
+            <span className="text-xs text-white/60">* Acción simulada solo para maquetado.</span>
           </CardFooter>
         </Card>
       </div>
