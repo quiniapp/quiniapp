@@ -13,7 +13,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { makeTicketPdf } from '@/functions/makeTicket';
+import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
@@ -70,7 +70,7 @@ const MakePlaysContent = () => {
 
     if (!ticketId) {
       createTicket(payload, {
-        onSuccess: (res) => {
+        /* (res) => {
           const lastTicket = {
             bets: bets,
             ticket: res.data.ticket,
@@ -80,6 +80,47 @@ const MakePlaysContent = () => {
             makeTicketPdf(lastTicket);
           }
 
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+          setBets([]);
+          setPartialAmount(0);
+          setTotalAmount(0);
+          setCashier(undefined);
+          setLotteries(new Map());
+          setSchedules(new Map());
+          setUserNumber(undefined);
+          setSelectedIndexes([]);
+          setTicketId(undefined);
+          toast.success('Ticket creado correctamente');
+        }, */
+        onSuccess: async (res) => {
+          const lastTicket = {
+            bets,
+            ticket: res.data.ticket,
+            cashier_number: user?.number,
+          };
+
+          // Generar PDF en memoria
+          const { blob, fileName } = makeTicketPdf(lastTicket);
+
+          // Heurística simple: si es mobile, priorizo compartir; si desktop, imprimir
+          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+          try {
+            if (isMobile) {
+              // 1) Intentá compartir el archivo directamente (Chrome Android)
+              await sharePdfBlob(blob, fileName, {
+                text: `Ticket ${res.data.ticket.ticket_number}`,
+              });
+            } else {
+              // Desktop: imprimir directo
+              printPdfBlob(blob);
+            }
+          } catch {
+            // Garantizá una salida
+            printPdfBlob(blob);
+          }
+
+          // 🧠 tu lógica existente
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
           setPartialAmount(0);
@@ -167,11 +208,11 @@ const MakePlaysContent = () => {
     if (!userNumber) {
       setCashier(undefined);
     }
-    
+
     if (data) {
       setCashier(data);
     }
-    
+
     setBets([]);
     setTicketId(undefined);
     setSelectedIndexes([]);
