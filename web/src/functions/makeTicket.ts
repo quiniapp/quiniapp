@@ -218,6 +218,48 @@ function addFeedLines(lines: string[], extraMm: number, lineHeightMm: number) {
   return lines;
 }
 
+// export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
+//   let lines = buildTicketLines(
+//     {
+//       user_name: cashier_number,
+//       ticket_number: ticket.ticket_number,
+//       date: dayjs(ticket.date).format('DD-MM-YYYY'),
+//       total: ticket.total,
+//     },
+//     bets
+//   );
+
+//   const pageWidthMm = 58;
+//   const marginMm = 2;
+//   const topOffsetMm = marginMm + 3;
+//   const lineHeightMm = 4.5;
+
+//   // 👇 Agregamos 1.5 cm en “líneas reales” para forzar feed
+//   lines = addFeedLines(lines, 15, lineHeightMm);
+
+//   const contentHeightMm = lines.length ? (lines.length - 1) * lineHeightMm : 0;
+//   const pageHeightMm = topOffsetMm + contentHeightMm + marginMm;
+
+//   const doc = new jsPDF({
+//     unit: 'mm',
+//     format: [pageWidthMm, Math.max(pageHeightMm, 40)],
+//   });
+
+//   doc.setFont('courier', 'normal');
+//   doc.setFontSize(8);
+
+//   lines.forEach((text, i) => {
+//     const y = topOffsetMm + i * lineHeightMm;
+//     doc.text(text, marginMm, y);
+//   });
+
+//   doc.save(`ticket-${ticket.ticket_number}.pdf`);
+// }
+
+
+// makeTicket.ts
+
+//blob 
 export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
   let lines = buildTicketLines(
     {
@@ -234,7 +276,6 @@ export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfPro
   const topOffsetMm = marginMm + 3;
   const lineHeightMm = 4.5;
 
-  // 👇 Agregamos 1.5 cm en “líneas reales” para forzar feed
   lines = addFeedLines(lines, 15, lineHeightMm);
 
   const contentHeightMm = lines.length ? (lines.length - 1) * lineHeightMm : 0;
@@ -253,7 +294,59 @@ export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfPro
     doc.text(text, marginMm, y);
   });
 
-  doc.save(`ticket-${ticket.ticket_number}.pdf`);
+  // 👇 en vez de doc.save(...) devolvemos el Blob
+  const blob = doc.output('blob'); // application/pdf
+  const fileName = `ticket-${ticket.ticket_number}.pdf`;
+  return { blob, fileName };
 }
 
 
+// pdfActions.ts
+export function printPdfBlob(blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+
+
+
+  iframe.onload = () => {
+    // algunos navegadores requieren focus
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+
+  };
+}
+
+/** Web Share API (Chrome Android) → comparte archivo directamente
+ * Fallback: abre wa.me con texto y (opcional) un URL público si lo tenés
+ */
+export async function sharePdfBlob(blob: Blob, fileName: string, opts?: { text?: string; urlForWa?: string }) {
+  try {
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({
+        title: 'Ticket',
+        text: opts?.text ?? 'Te comparto el ticket',
+        files: [file],
+      });
+      return true;
+    }
+  } catch (e) {
+    // continua al fallback
+  }
+
+  // Fallback: WhatsApp con texto + URL si lo tenés (wa.me no acepta adjuntar archivos)
+  const message = encodeURIComponent(opts?.text ?? 'Te comparto el ticket');
+  const link = opts?.urlForWa ? `%0A${encodeURIComponent(opts.urlForWa)}` : '';
+  const waUrl = `https://wa.me/?text=${message}${link}`;
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  return false;
+}
