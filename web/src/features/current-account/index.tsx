@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import HeaderSection from '@/components/header-section';
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
 
-
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
 import { useSearchParams } from 'react-router-dom';
@@ -22,6 +21,7 @@ import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadCurrentAccountTablePDF } from '@/functions/printLiquidationAdmin';
 import { printUserSlipPDF } from '@/functions/printLiquidationCashier';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 const CurrentAccountContent = () => {
   const queryClient = useQueryClient();
@@ -122,7 +122,7 @@ const CurrentAccountContent = () => {
 
   if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable />;
   return (
-    <Box className={'grid grid-rows-[auto_1fr_auto] h-full  '}>
+    <PageWrapper>
       <HeaderSection title={'Cuenta Corriente'}>
         <IsRoleCashier role={role}>
           <Box className={'grid grid-cols-2 gap-4'}>
@@ -145,7 +145,7 @@ const CurrentAccountContent = () => {
       <Suspense>
         <GenerateLiquitationModal isOpen={open} onClose={() => setOpen(false)} />
       </Suspense>
-    </Box>
+    </PageWrapper>
   );
 };
 
