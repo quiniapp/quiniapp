@@ -1,6 +1,5 @@
 import { Flex, FlexCol } from '@/components/flex';
 import LabelInputForm from '@/components/molecules/LabelInputForm';
-
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import {
   Table,
@@ -27,6 +26,7 @@ import { SelectDayToSearch } from '../plays-and-hits/select-day-to-search';
 import { useGetCurrentAccountByUser } from '@/hooks/fetchs/current-account/useGetCurrentAccountByUser';
 import { useAuth } from '@/contexts/AuthContext';
 import { printUserSlipPDF } from '@/functions/printLiquidationCashier';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 const CurrentAcoountByUserTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,28 +41,26 @@ const CurrentAcoountByUserTable = () => {
       user_id: '',
       user_name: '',
       user_number: 0,
-      // group_id: "",
-      pass: 0, //sp
-      successes: 0, // sp
-      claims: 0, // sp
-      subtotal: 0, // sp
-      previous_balance: 0, // sp
-      collections: 0, // sp
-      paid: 0, // sp
-      total: 0, // sp
-      drag: 0, // sp
-      leave: 0, //deje
+      pass: 0,
+      successes: 0,
+      claims: 0,
+      subtotal: 0,
+      previous_balance: 0,
+      collections: 0,
+      paid: 0,
+      total: 0,
+      drag: 0,
+      leave: 0,
       date: '',
       cashier_commission: 0,
       bills: 0,
-      revenue: 0, //deja
+      revenue: 0,
       previous_drag: 0,
     },
   });
 
   const { data: currentAccount } = useGetCurrentAccountByUser(user?.user_id, date);
 
-  
   const { data: bets, isLoading: isLoadingBets } = useBets({
     date: currentAccount?.date ?? null,
     cashier_id: user?.user_id,
@@ -84,23 +82,38 @@ const CurrentAcoountByUserTable = () => {
       setPrinting(false);
     }
   };
+
   const handleDayChange = (newDate?: string) => {
     if (!newDate) return;
     const params = new URLSearchParams(searchParams);
     params.set('date', newDate);
     setSearchParams(params);
   };
+
   useEffect(() => {
     if (currentAccount) methods.reset(currentAccount);
   }, [currentAccount]);
+
   return (
-    <FlexCol className="items-center justify-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]">
-      <Flex className="w-full gap-1 sm:gap-3">
-        <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing}>
+    <PageWrapper>
+      {/* Header responsive */}
+      <Flex
+        className={
+          // en mobile apilado y full width
+          'w-full gap-2 sm:gap-3 max-sm:flex-col max-sm:px-3'
+        }
+      >
+        <Button
+          variant="outline"
+          onClick={handlePrintLiquidationCashier}
+          disabled={printing}
+          className="w-full sm:w-auto" // ⬅️ full width en mobile
+        >
           Exportar Liquidación
         </Button>
-        <Flex className="items-center">
-          <Label className="text-sm mr-2 text-muted-foreground">A la Fecha:</Label>
+
+        <Flex className="items-center max-sm:flex-col max-sm:items-start w-full sm:w-auto">
+          <Label className="text-sm mr-2 text-muted-foreground max-sm:mb-1">A la Fecha:</Label>
           <SelectDayToSearch
             selectedDay={date ?? today}
             onDayChange={handleDayChange}
@@ -109,180 +122,276 @@ const CurrentAcoountByUserTable = () => {
         </Flex>
       </Flex>
 
-      <Typography variant="large">{`Fecha de Liquidación: ${dayjs(currentAccount?.date).format('DD-MM-YYYY')}`}</Typography>
+      <Typography className="mt-3 px-3 sm:px-0" variant="large">
+        {`Fecha de Liquidación: ${dayjs(currentAccount?.date).format('DD-MM-YYYY')}`}
+      </Typography>
+
       <FormProvider {...methods}>
         <form className="w-full">
-          <Flex className="justify-center gap-1 sm:gap-3">
-            <FlexCol className="items-between pt-2">
+          {/* Inputs: de dos columnas a una en mobile */}
+          <Flex className={'justify-center gap-3 sm:gap-6 mt-2 px-3 sm:px-0 ' + 'max-sm:flex-col'}>
+            <FlexCol className="items-between pt-2 gap-2">
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="pass"
                 label="Pase"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="cashier_commission"
-                label={`Comisión`}
+                label="Comisión"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="successes"
                 label="Aciertos"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="claims"
                 label="Reclamos"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="bills"
                 label="Gastos"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="revenue"
                 label="Deja"
                 type="number"
-                disabled={true}
+                disabled
               />
             </FlexCol>
 
-            <FlexCol className="items-between pt-2">
+            <FlexCol className="items-between pt-2 gap-2">
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="previous_balance"
                 label="Saldo Anterior"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="collections"
                 label="Cobro al pasador"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="paid"
                 label="Pago al pasador"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="previous_drag"
                 label="Arrastre anterior"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="drag"
                 label="Arrastre nuevo"
                 type="number"
-                disabled={true}
+                disabled
               />
               <LabelInputForm<ICurrentAccountEntityFront>
                 name="leave"
                 label="Deje"
                 type="number"
-                disabled={true}
+                disabled
               />
             </FlexCol>
           </Flex>
 
-          <Flex className="h-60 gap-1 sm:gap-3 items-center justify-center">
-            <FlexCol>
-              <span className="text-nowrap">Tickets a liquidar</span>
-              <Table className="overflow-hidden">
-                <TableHeader className="border overflow-hidden">
-                  <TableRow>
-                    <TableHead>Número </TableHead>
-                    <TableHead>Monto </TableHead>
-                    <TableHead>Liquidar</TableHead>
-                  </TableRow>
-                </TableHeader>
+          {/* Listas: tablas en desktop, tarjetas en mobile */}
+          <Flex className="flex-col sm:flex-row gap-3 sm:gap-6 items-start justify-center mt-4 px-3 sm:px-0">
+            {/* -------- Tickets a liquidar -------- */}
+            <FlexCol className="w-full sm:w-auto">
+              <span className="text-nowrap mb-2">Tickets a liquidar</span>
 
-                <TableBody className="border">
-                  {isLoadingTickets ? (
+              {/* Mobile cards (≤640) */}
+              <div className="sm:hidden space-y-2">
+                {isLoadingTickets ? (
+                  <SkeletonList />
+                ) : tickets?.length === 0 ? (
+                  <div className="text-center py-4 rounded-md border border-dashed">
+                    <Typography variant="large">No se encontraron tickets</Typography>
+                  </div>
+                ) : (
+                  tickets?.map((t: ITicketEntityFront) => (
+                    <div key={t.ticket_id} className="rounded-lg border p-3 bg-background/30">
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Número</span>
+                        <span className="font-medium">{t.ticket_number}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Monto</span>
+                        <span className="font-medium">{t.total}</span>
+                      </div>
+                      <div className="mt-2">
+                        <Button size="sm" variant="secondary" className="w-full">
+                          Liquidar
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop table (≥640) */}
+              <div className="hidden sm:block max-w-[460px]">
+                <Table className="overflow-hidden">
+                  <TableHeader className="border overflow-hidden">
                     <TableRow>
-                      <TableCell colSpan={3}>
-                        <SkeletonList />
-                      </TableCell>
+                      <TableHead>Número</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Liquidar</TableHead>
                     </TableRow>
-                  ) : tickets?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={14} className="text-center">
-                        <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">No se encontraron tickets</Typography>
-                        </FlexCol>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    tickets?.map((ticket: ITicketEntityFront) => (
-                      <TableRow key={ticket.ticket_id}>
-                        <TableCell>{ticket.ticket_number}</TableCell>
-                        <TableCell>{ticket.total}</TableCell>
-                        <TableCell>Liquidar</TableCell>
+                  </TableHeader>
+                  <TableBody className="border">
+                    {isLoadingTickets ? (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <SkeletonList />
+                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : tickets?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center">
+                          <FlexCol className="items-center justify-center gap-1">
+                            <Typography variant="large">No se encontraron tickets</Typography>
+                          </FlexCol>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      tickets?.map((ticket: ITicketEntityFront) => (
+                        <TableRow key={ticket.ticket_id}>
+                          <TableCell>{ticket.ticket_number}</TableCell>
+                          <TableCell>{ticket.total}</TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="secondary">
+                              Liquidar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </FlexCol>
-            <FlexCol>
-              <span className="text-nowrap">Aciertos a liquidar</span>
-              <Table className="overflow-hidden">
-                <TableHeader className="border overflow-hidden">
-                  <TableRow>
-                    <TableHead>Jugada </TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Quiniela </TableHead>
-                    <TableHead>Turno</TableHead>
-                    <TableHead>Aciertos</TableHead>
-                    <TableHead>Premio</TableHead>
-                  </TableRow>
-                </TableHeader>
 
-                <TableBody className="border">
-                  {isLoadingBets ? (
+            {/* -------- Aciertos a liquidar -------- */}
+            <FlexCol className="w-full sm:w-auto">
+              <span className="text-nowrap mb-2">Aciertos a liquidar</span>
+
+              {/* Mobile cards */}
+              <div className="sm:hidden space-y-2">
+                {isLoadingBets ? (
+                  <SkeletonList />
+                ) : bets?.length === 0 ? (
+                  <div className="text-center py-4 rounded-md border border-dashed">
+                    <Typography variant="large">No se encontraron jugadas ganadoras</Typography>
+                  </div>
+                ) : (
+                  bets?.map((b: IBetEntityFront) => (
+                    <div
+                      key={`${b.ticket_id}-${b.number}-${b.lottery?.lottery_id}-${b.schedule?.schedule_id}`}
+                      className="rounded-lg border p-3 bg-background/30"
+                    >
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Jugada</span>
+                        <span className="font-medium">{b.number}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Monto</span>
+                        <span className="font-medium">{b.amount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Tipo</span>
+                        <span className="font-medium">{betPlaceDictionary[b.place]}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Quiniela</span>
+                        <span className="font-medium">{b.lottery.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Turno</span>
+                        <span className="font-medium">{b.schedule.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Aciertos</span>
+                        <span className="font-medium">{b.hits}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm opacity-70">Premio</span>
+                        <span className="font-medium">{b.prize}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block max-w-[720px] overflow-x-auto">
+                <Table className="overflow-hidden">
+                  <TableHeader className="border overflow-hidden">
                     <TableRow>
-                      <TableCell colSpan={3}>
-                        <SkeletonList />
-                      </TableCell>
+                      <TableHead>Jugada</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Quiniela</TableHead>
+                      <TableHead>Turno</TableHead>
+                      <TableHead>Aciertos</TableHead>
+                      <TableHead>Premio</TableHead>
                     </TableRow>
-                  ) : bets?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={14} className="text-center">
-                        <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">
-                            No se encontraron jugadas ganadoras
-                          </Typography>
-                        </FlexCol>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    bets?.map((bet: IBetEntityFront) => (
-                      <TableRow key={bet.ticket_id}>
-                        <TableCell>{bet.number}</TableCell>
-                        <TableCell>{bet.amount}</TableCell>
-                        <TableCell>{betPlaceDictionary[bet.place]}</TableCell>
-                        <TableCell>{bet.lottery.name}</TableCell>
-                        <TableCell>{bet.schedule.name}</TableCell>
-                        <TableCell>{bet.hits}</TableCell>
-                        <TableCell>{bet.prize}</TableCell>
+                  </TableHeader>
+                  <TableBody className="border">
+                    {isLoadingBets ? (
+                      <TableRow>
+                        <TableCell colSpan={7}>
+                          <SkeletonList />
+                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : bets?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          <FlexCol className="items-center justify-center gap-1">
+                            <Typography variant="large">
+                              No se encontraron jugadas ganadoras
+                            </Typography>
+                          </FlexCol>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      bets?.map((bet: IBetEntityFront) => (
+                        <TableRow
+                          key={`${bet.ticket_id}-${bet.number}-${bet.lottery?.lottery_id}-${bet.schedule?.schedule_id}`}
+                        >
+                          <TableCell>{bet.number}</TableCell>
+                          <TableCell>{bet.amount}</TableCell>
+                          <TableCell>{betPlaceDictionary[bet.place]}</TableCell>
+                          <TableCell>{bet.lottery.name}</TableCell>
+                          <TableCell>{bet.schedule.name}</TableCell>
+                          <TableCell>{bet.hits}</TableCell>
+                          <TableCell>{bet.prize}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </FlexCol>
           </Flex>
         </form>
       </FormProvider>
-    </FlexCol>
+    </PageWrapper>
   );
 };
 
