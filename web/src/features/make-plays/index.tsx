@@ -70,56 +70,36 @@ const MakePlaysContent = () => {
 
     if (!ticketId) {
       createTicket(payload, {
-        /* (res) => {
-          const lastTicket = {
-            bets: bets,
-            ticket: res.data.ticket,
-            cashier_number: user?.number,
-          };
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            makeTicketPdf(lastTicket);
-          }
 
-          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-          setBets([]);
-          setPartialAmount(0);
-          setTotalAmount(0);
-          setCashier(undefined);
-          setLotteries(new Map());
-          setSchedules(new Map());
-          setUserNumber(undefined);
-          setSelectedIndexes([]);
-          setTicketId(undefined);
-          toast.success('Ticket creado correctamente');
-        }, */
         onSuccess: async (res) => {
           const lastTicket = {
-            bets,
+            bets: bets.reverse(),
             ticket: res.data.ticket,
             cashier_number: user?.number,
           };
 
-          // Generar PDF en memoria
-          const { blob, fileName } = makeTicketPdf(lastTicket);
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            // Generar PDF en memoria
+            const { blob, fileName } = makeTicketPdf(lastTicket);
 
-          // Heurística simple: si es mobile, priorizo compartir; si desktop, imprimir
-          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            // Heurística simple: si es mobile, priorizo compartir; si desktop, imprimir
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-          try {
-            if (isMobile) {
-              // 1) Intentá compartir el archivo directamente (Chrome Android)
-              await sharePdfBlob(blob, fileName, {
-                text: `Ticket ${res.data.ticket.ticket_number}`,
-              });
-            } else {
-              // Desktop: imprimir directo
+            try {
+              if (isMobile) {
+                // 1) Intentá compartir el archivo directamente (Chrome Android)
+                await sharePdfBlob(blob, fileName, {
+                  text: `Ticket ${res.data.ticket.ticket_number}`,
+                });
+              } else {
+                // Desktop: imprimir directo
+                printPdfBlob(blob);
+              }
+            } catch {
+              // Garantizá una salida
               printPdfBlob(blob);
             }
-          } catch {
-            // Garantizá una salida
-            printPdfBlob(blob);
           }
-
           // 🧠 tu lógica existente
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
