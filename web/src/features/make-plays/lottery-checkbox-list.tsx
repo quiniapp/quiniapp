@@ -15,11 +15,12 @@ const LotteryCheckboxList = ({
   checkedLottery,
 }: LotteryCheckboxListProps) => {
   return (
-    <Flex className="items-center gap-2" onClick={() => setLotteries(lottery)}>
+    <Flex className="items-center gap-2">
       <Checkbox
         checked={checkedLottery}
         id={lottery.lottery_id}
         className="border-2 border-primary"
+        onClick={() => setLotteries(lottery)}
       />
       <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
         {lottery.name}
