@@ -99,8 +99,7 @@ const FillOutATicket = ({
   };
 
   // Índices de orden según tus arrays "order"
-  // const scheduleOrderIndex = makeOrderIndex(getScheduleId, scheduleOrder);
-  const lotteryOrderIndex = makeOrderIndex(getLotteryId, lotteryOrder);
+
   const handleSchedules = (schedule: IScheduleEntityFront) => {
     setSchedules((prev) => {
       const newMap = new Map(prev); // Clonás el Map
@@ -142,33 +141,31 @@ const FillOutATicket = ({
       | Record<string, string[] | undefined>
       | undefined;
 
-    // 1) Iterar schedules en el mismo orden que "scheduleOrder"
-    //    (si no existe en el Map `schedules`, igual lo tomamos del array de orden)
-    const orderedSchedules = scheduleOrder.map((s) => {
-      const id = getScheduleId(s);
-      return (schedules.get?.(id) as typeof s | undefined) ?? s;
-    });
+    // 1) Tomo SOLO los schedules seleccionados (presentes en el Map `schedules`)
+    //    pero ordenados según `scheduleOrder`
+    const orderedSchedules = scheduleOrder
+      .filter((s) => schedules.has(getScheduleId(s)))
+      .map((s) => schedules.get(getScheduleId(s))!); // ya sabemos que existe
 
-    // 2) Construir lotterySchedule respetando el orden de las loterías según "lotteryOrder"
+    // 2) Para cada schedule, tomo SOLO las loterías seleccionadas (presentes en el Map `lotteries`)
+    //    y las ordeno según `lotteryOrder`
+    const lotteryOrderIndex = makeOrderIndex(getLotteryId, lotteryOrder);
+
     const lotterySchedule: ILotterySchedule[] = orderedSchedules.reduce<ILotterySchedule[]>(
       (acc, sch) => {
         const ids = schLotPerDate?.[getScheduleId(sch)];
         if (!ids || ids.length === 0) return acc;
 
-        // opcional: deduplicar ids manteniendo la primera aparición
-        const seen = new Set<string>();
-        const valid = ids
-          .filter((id) => {
-            if (seen.has(id)) return false;
-            seen.add(id);
-            return true;
-          })
-          .map((id) => lotteries.get(id) ?? lotteryOrder.find((l) => getLotteryId(l) === id))
-          .filter((x): x is ILotteryEntityFront => Boolean(x))
+        // Solo las IDs que están seleccionadas en el Map `lotteries`
+        const selectedIds = ids.filter((id) => lotteries.has(id));
+        if (selectedIds.length === 0) return acc;
+
+        const valid = selectedIds
+          .map((id) => lotteries.get(id)!) // existe seguro
           .sort((a, b) => {
             const ai = lotteryOrderIndex?.get(getLotteryId(a)) ?? Number.POSITIVE_INFINITY;
             const bi = lotteryOrderIndex?.get(getLotteryId(b)) ?? Number.POSITIVE_INFINITY;
-            return ai - bi; // respeta el orden de lotteryOrder
+            return ai - bi;
           });
 
         if (valid.length === 0) return acc;
