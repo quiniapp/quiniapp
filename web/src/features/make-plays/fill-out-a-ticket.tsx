@@ -15,7 +15,18 @@ import dayjs from 'dayjs';
 import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
 import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 
+const getScheduleId = (s: IScheduleEntityFront) => s.schedule_id;
+const getLotteryId = (l: ILotteryEntityFront) => l.lottery_id;
+
+const makeOrderIndex = <T,>(getId: (x: T) => string, arr?: T[]) => {
+  if (!arr) return;
+  const m = new Map<string, number>();
+  arr.forEach((x, i) => m.set(getId(x), i));
+  return m;
+};
 export interface IBetForm {
   number: string;
   amount?: number;
@@ -55,6 +66,8 @@ const FillOutATicket = ({
     position: '',
   });
   const { data: scheduleLotteryPerDate } = useScheduleLottery();
+  const { data: scheduleOrder } = useSchedules();
+  const { data: lotteryOrder } = useLotteries();
   // 1. Refs de cada input
   const numberRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
@@ -84,6 +97,8 @@ const FillOutATicket = ({
       inputRefs[0].current?.focus();
     }
   };
+
+  // Índices de orden según tus arrays "order"
 
   const handleSchedules = (schedule: IScheduleEntityFront) => {
     setSchedules((prev) => {
@@ -119,66 +134,70 @@ const FillOutATicket = ({
   };
 
   const handleCreateBet = () => {
-    if (isAddButtonEnabled) {
-      // Mapeo day -> { [schedule_id]: string[] }
-      const todayKey: DayKey = dayParseToString[today];
-      const schLotPerDate = scheduleLotteryPerDate?.[todayKey] as
-        | Record<string, string[] | undefined>
-        | undefined;
+    if (!isAddButtonEnabled || !scheduleOrder || !lotteryOrder) return;
 
-      // Construye SOLO los horarios que tengan loterías válidas
-      const lotterySchedule: ILotterySchedule[] = Array.from(schedules.values()).reduce<
-        ILotterySchedule[]
-      >((acc, sch) => {
-        const ids = schLotPerDate?.[sch.schedule_id];
-        if (!ids || ids.length === 0) return acc; // nada para este horario
+    const todayKey: DayKey = dayParseToString[today];
+    const schLotPerDate = scheduleLotteryPerDate?.[todayKey] as
+      | Record<string, string[] | undefined>
+      | undefined;
 
-        const valid = ids
-          .map((id) => lotteries.get(id))
-          .filter((x): x is ILotteryEntityFront => Boolean(x));
+    // 1) Tomo SOLO los schedules seleccionados (presentes en el Map `schedules`)
+    //    pero ordenados según `scheduleOrder`
+    const orderedSchedules = scheduleOrder
+      .filter((s) => schedules.has(getScheduleId(s)))
+      .map((s) => schedules.get(getScheduleId(s))!); // ya sabemos que existe
 
-        if (valid.length === 0) return acc; // los ids no existen en el Map de loterías
+    // 2) Para cada schedule, tomo SOLO las loterías seleccionadas (presentes en el Map `lotteries`)
+    //    y las ordeno según `lotteryOrder`
+    const lotteryOrderIndex = makeOrderIndex(getLotteryId, lotteryOrder);
+
+    const lotterySchedule: ILotterySchedule[] = orderedSchedules.reduce<ILotterySchedule[]>(
+      (acc, sch) => {
+        const ids = schLotPerDate?.[getScheduleId(sch)];
+        if (!ids || ids.length === 0) return acc;
+
+        // Solo las IDs que están seleccionadas en el Map `lotteries`
+        const selectedIds = ids.filter((id) => lotteries.has(id));
+        if (selectedIds.length === 0) return acc;
+
+        const valid = selectedIds
+          .map((id) => lotteries.get(id)!) // existe seguro
+          .sort((a, b) => {
+            const ai = lotteryOrderIndex?.get(getLotteryId(a)) ?? Number.POSITIVE_INFINITY;
+            const bi = lotteryOrderIndex?.get(getLotteryId(b)) ?? Number.POSITIVE_INFINITY;
+            return ai - bi;
+          });
+
+        if (valid.length === 0) return acc;
 
         acc.push({ schedule: sch, lotteries: valid });
         return acc;
-      }, []);
+      },
+      []
+    );
 
-      // Cantidad REAL de combinaciones (pares schedule-lottery)
-      const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
+    // 3) Contar combinaciones reales (pares schedule-lottery)
+    const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
+    if (combosCount === 0) return;
 
-      if (combosCount === 0) {
-        // Opcional: avisar que no hay combinaciones válidas
-        // toast.error('No hay combinaciones válidas para el día/horario seleccionado');
-        return;
-      }
+    setBets((prev) => {
+      const newBet: IBetTable = {
+        number: bet?.number ?? '',
+        amount: +bet.amount!,
+        place: placeTypeParse(bet?.place) ?? PLACE_TYPE.HEAD,
+        with: bet?.with ?? '',
+        position: placeTypeParse(bet.position),
+        scheduleLottery: lotterySchedule,
+      };
 
-      setBets((prev) => {
-        const newBet: IBetTable = {
-          number: bet?.number ?? '',
-          amount: +bet.amount!,
-          place: placeTypeParse(bet?.place) ?? PLACE_TYPE.HEAD,
-          with: bet?.with ?? '',
-          position: placeTypeParse(bet.position),
-          scheduleLottery: lotterySchedule,
-        };
+      setPartialAmount((p) => p + newBet.amount * combosCount);
+      setTotalAmount((p) => p + newBet.amount * combosCount);
 
-        // Usar combosCount calculado sobre lotterySchedule (resultado real)
-        setPartialAmount((p) => p + newBet.amount * combosCount);
-        setTotalAmount((p) => p + newBet.amount * combosCount);
+      setBet((prev) => ({ ...prev, number: '', place: '', with: '', position: '' }));
+      numberRef.current?.focus();
 
-        // Reset form
-        setBet((prev) => ({
-          ...prev,
-          number: '',
-          place: '',
-          with: '',
-          position: '',
-        }));
-        numberRef.current?.focus();
-
-        return [newBet, ...prev];
-      });
-    }
+      return [newBet, ...prev];
+    });
   };
 
   const handleResetPartial = () => {
