@@ -20,14 +20,23 @@ const TicketDetails = () => {
   });
 
   return (
-    <FlexCol className="flex-col-reverse sm:flex-row 1440:py-8 py-3 sm:space-x-8">
-      <FlexCol className={'flex-1  space-y-4'}>
-        <p> Jugadas {`${ticket_number ? `ticket ${ticket_number}` : ''}`}</p>
-        <TerminalTicketPlayTable bets={bets} isLoading={isLoading} />
-      </FlexCol>
-      <FlexCol className={'flex-1 space-y-4'}>
-        <p> Aciertos</p>
-        <TerminalTicketMatchesTable bets={winnersBets} isLoading={isLoadingWinners} />
+    <FlexCol className="flex-1 overflow-y-auto min-h-40 ">
+      <p>{ticket_number ? `Ticket ${ticket_number}` : ''}</p>
+
+      <FlexCol className="flex-col-reverse  sm:flex-row 1440:py-8 py-3 sm:space-x-8 min-h-0">
+        {/* Columna Jugadas */}
+        <FlexCol className="flex-1 min-h-0 space-y-4 overflow-hidden">
+          <p>{`Jugadas | Cantidad jugadas: ${
+            bets?.length ?? 0}`}</p>
+          <TerminalTicketPlayTable bets={bets} isLoading={isLoading} />
+        </FlexCol>
+
+        {/* Columna Aciertos */}
+        <FlexCol className="flex-1 min-h-0 space-y-4 overflow-hidden">
+          <p>{`Aciertos | Cantidad aciertos: ${
+            winnersBets?.length ?? 0}`}</p>
+          <TerminalTicketMatchesTable bets={winnersBets} isLoading={isLoadingWinners} />
+        </FlexCol>
       </FlexCol>
     </FlexCol>
   );

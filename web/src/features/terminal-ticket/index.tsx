@@ -49,27 +49,33 @@ export const TerminalTicketContent = () => {
   return (
     <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
-      <FlexCol className={'1440:py-[36px] py-[16px]'}>
-        <FlexCol className={'sm:flex sm:flex-row gap-8'}>
-          <FormHeaderFilter />
+      <FlexCol className={'1440:py-[36px] py-2 sm:py-4 flex-1'}>
+        <FlexCol className={'sm:flex sm:flex-row gap-2 sm:gap-8'}>
           <FlexCol>
-            <FlexCol>
-              <TableTerminalTicket data={data} />
+            <FormHeaderFilter />
 
-              <Typography className={'text-xs'} variant={'p'}>
-                Cantidad de Tickets: {data?.length}
-              </Typography>
-            </FlexCol>
+            <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
+              <Button
+                variant={'destructive'}
+                disabled={!ticket_number}
+                onClick={handleDeleteTicket}
+              >
+                <TicketX /> Eliminar Ticket
+              </Button>
+              <Button variant={'outline'}> Cerrar </Button>
+            </Flex>
+          </FlexCol>
+          <FlexCol>
+            <TableTerminalTicket data={data} />
+
+            <Typography className={'text-xs'} variant={'p'}>
+              Cantidad de Tickets: {data?.length}
+            </Typography>
           </FlexCol>
         </FlexCol>
         <TicketDetails />
+      
       </FlexCol>
-      <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
-        <Button variant={'destructive'} disabled={!ticket_number} onClick={handleDeleteTicket}>
-          <TicketX /> Eliminar Ticket
-        </Button>
-        <Button variant={'outline'}> Cerrar </Button>
-      </Flex>
     </PageWrapper>
   );
 };
