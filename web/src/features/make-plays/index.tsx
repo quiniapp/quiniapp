@@ -73,7 +73,7 @@ const MakePlaysContent = () => {
 
         onSuccess: async (res) => {
           const lastTicket = {
-            bets: bets.reverse(),
+            bets: [...bets].reverse(),
             ticket: res.data.ticket,
             cashier_number: user?.number,
           };

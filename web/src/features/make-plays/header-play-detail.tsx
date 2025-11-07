@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { makeTicketPdf } from '@/functions/makeTicket';
+import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { IBetTable } from '@helper/request/ticket.response';
 import { useGetTicketsNumber } from '@/hooks/fetchs/tickets/useGetTicketNumber';
 
@@ -57,16 +57,34 @@ const HeaderPlayDetail = ({
     const parsed = parseInt(search);
     setUserNumber(isNaN(parsed) ? undefined : parsed);
   };
-  
-  const handleRePrimtLast = () => {
+
+  const handleRePrimtLast = async () => {
     const lastTicketStr = localStorage.getItem('lastTicket');
     if (!lastTicketStr) {
       toast.error('No hay ticket guardado para reimprimir');
       return;
     }
     const lastTicket = JSON.parse(lastTicketStr);
-    makeTicketPdf(lastTicket);
+    const { blob, fileName } = await makeTicketPdf(lastTicket);
+    // Heurística simple: si es mobile, priorizo compartir; si desktop, imprimir
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    try {
+      if (isMobile) {
+        // 1) Intentá compartir el archivo directamente (Chrome Android)
+        await sharePdfBlob(blob, fileName, {
+          text: `Ticket ${lastTicket.ticket.ticket_number}`,
+        });
+      } else {
+        // Desktop: imprimir directo
+        await printPdfBlob(blob);
+      }
+    } catch {
+      // Garantizá una salida
+      await printPdfBlob(blob);
+    }
   };
+
   const { data: tickets } = useGetTicketsNumber({
     user_id: cashier?.user_id,
     date: dayjs().format('YYYY-MM-DD'),
@@ -80,12 +98,10 @@ const HeaderPlayDetail = ({
     }
   };
 
+  useEffect(() => {
+    if (!userNumber) setSelectedValue('');
+  }, [userNumber]);
 
-  useEffect(()=>{
-    if(!userNumber) setSelectedValue('');
-  },[userNumber])
-
-  
   return (
     <HeaderSection title={' Realizar Jugadas'}>
       {role !== USER_TYPE.CASHIER && (
@@ -94,7 +110,7 @@ const HeaderPlayDetail = ({
             <Label htmlFor={'user'}> Usuario</Label>
             <Input
               type={'number'}
-              inputMode='numeric'
+              inputMode="numeric"
               id={'user'}
               name={'user'}
               className={'max-w-[100px]'}
