@@ -7,11 +7,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
-import { Flex } from '@/components/flex';
 
 type Props = { bets?: IBetEntityFront[] };
 
@@ -20,26 +18,13 @@ const currency = (n?: number | string) =>
     ? n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
     : (n ?? '');
 
-const cut = (s?: string, len = 10) => (s && s.length > len ? `${s.slice(0, len)}…` : (s ?? ''));
-
 const PlaysAndHitsTable: React.FC<Props> = ({ bets = [] }) => {
   return (
     <div className="flex-1 min-h-40 overflow-y-auto">
       {/* ====== DESKTOP/TABLET: tabla (>= sm) ====== */}
-      <div className="hidden sm:block w-full overflow-x-auto 2xl:w-full">
-        <Table className="table-fixed min-w-[1000px] w-[1000px] 2xl:w-full mx-auto">
-          {/* 7 columnas de 100px + 2 de 150px = 1000px */}
-          <colgroup>
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '150px' }} />
-            <col style={{ width: '150px' }} />
-          </colgroup>
+      <div className="hidden sm:block w-[1000px] overflow-x-auto xl:w-[1200px] 2xl:w-[1500px]">
+        <Table className="table-fixed min-w-[1000px] w-[1000px]  xl:w-[1200px] 2xl:w-[1450px] mx-auto">
+         
 
           <TableCaption className={!bets?.length ? '' : 'hidden'}>
             No se encontraron jugadas
@@ -47,46 +32,46 @@ const PlaysAndHitsTable: React.FC<Props> = ({ bets = [] }) => {
 
           <TableHeader>
             <TableRow className="bg-[#06081322] h-11">
-              <TableHead className="px-3 whitespace-nowrap">Jugada</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Monto</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Tipo</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Turno</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Quiniela</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Aciertos</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">MontoAciertos</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Ticket</TableHead>
-              <TableHead className="px-3 whitespace-nowrap">Usuario</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Jugada</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Monto</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Tipo</TableHead>
+              <TableHead className="px-2 whitespace-nowra text-base">Turno</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Quiniela</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Aciertos</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">$ Aciertos</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Ticket</TableHead>
+              <TableHead className="px-2 whitespace-nowrap text-base">Usuario</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {bets?.map((bet: IBetEntityFront, index: number) => (
               <TableRow key={index}>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis  text-lg">
                   {bet.number}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {currency(bet.amount)}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {betPlaceDictionary[bet.place]}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {bet.schedule?.name}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {bet.lottery?.name}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {bet.hits}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {currency(bet.prize)}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {bet.ticket_number}
                 </TableCell>
-                <TableCell className="px-3 whitespace-nowrap overflow-hidden text-ellipsis">
+                <TableCell className="px-2 whitespace-nowrap overflow-hidden text-ellipsis text-lg">
                   {bet.cashier_name}
                 </TableCell>
               </TableRow>
