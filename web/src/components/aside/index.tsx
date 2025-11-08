@@ -72,7 +72,7 @@ const Aside = ({ isOpen }: AsideProps) => {
       className={cn(
         `flex transition-transform duration-300
          ${isOpen ? ' md:static translate-x-0  ' : '-translate-x-full'}
-         w-64 bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed z-40`
+          bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed z-40`
       )}
     >
       <SidebarHeader className="p-3">
