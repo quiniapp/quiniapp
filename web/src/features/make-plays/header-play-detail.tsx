@@ -147,10 +147,10 @@ const HeaderPlayDetail = ({
           <Button
             type="button"
             onClick={openRepeatModal}
-            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
+            className="h-7 px-2 text-sm gap-1 sm:h-8 sm:px-3 sm:text-base sm:w-fit"
           >
             <Repeat2Icon className="hidden sm:flex w-3 h-3" />
-            <Typography className="text-[10px] sm:text-xs" variant="small">
+            <Typography className="text-sm sm:text-base" variant="small">
               Repetir Ticket
             </Typography>
           </Button>
@@ -159,10 +159,10 @@ const HeaderPlayDetail = ({
             type="button"
             variant="outline"
             onClick={handleRePrimtLast}
-            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
+            className="h-7 px-2 text-sm gap-1 sm:h-8 sm:px-3 sm:text-base sm:w-fit"
           >
             <PrinterIcon className="hidden sm:flex w-3 h-3" />
-            <Typography className="text-[10px] sm:text-xs" variant="small">
+            <Typography className="text-sm sm:text-base" variant="small">
               Reimprimir Anterior
             </Typography>
           </Button>
@@ -170,9 +170,9 @@ const HeaderPlayDetail = ({
           <Button
             type="button"
             variant="destructive"
-            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
+            className="h-7 px-2 text-sm gap-1 sm:h-8 sm:px-3 sm:text-base sm:w-fit"
           >
-            <Typography className="text-[10px] sm:text-xs" variant="small">
+            <Typography className="text-sm sm:text-base" variant="small">
               Cancelar Ticket
             </Typography>
           </Button>
