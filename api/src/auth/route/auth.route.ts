@@ -57,11 +57,13 @@ export class AuthRouter {
         console.error(error);
         throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
       }
+      // Cookies de sesión (sin maxAge) - se borran al cerrar el navegador
+      // El timeout de 3 horas se maneja en el frontend (AuthProvider)
       res.cookie('access_token', data.session.access_token, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        path: '/', // <- añade esto
+        path: '/',
       });
       const loginResponse = await this.controller.login({ username, password });
       const response: APIResponse<IUserEntityFront> = {
@@ -73,7 +75,7 @@ export class AuthRouter {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        path: '/', // <- añade esto
+        path: '/',
       });
       res.status(200).json(response); // <-- SIN return
     } catch (error) {
