@@ -44,7 +44,7 @@ const PlayDetailGameTable = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 max-h-[400px] sm:max-h-[500px] w-full">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 max-h-full w-full">
       {/* Mobile: Cards */}
       <div className="md:hidden space-y-2 p-2">
         {bets.length === 0 ? (
