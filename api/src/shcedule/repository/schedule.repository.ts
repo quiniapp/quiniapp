@@ -18,7 +18,7 @@ export class ScheduleRepository {
     )
   `
       )
-      .eq('id', id)
+      .eq('schedule_id', id)
       .order('day', { referencedTable: 'schedule_lotteries', ascending: true }) // ordena las loterías por día
       .single();
 
@@ -61,7 +61,7 @@ export class ScheduleRepository {
     const { data, error } = await supabase
       .from('schedules')
       .update({ ...payload, edited_at: timestamp })
-      .eq('id', id)
+      .eq('schedule_id', id)
       .select()
       .single();
 
@@ -70,8 +70,9 @@ export class ScheduleRepository {
   }
 
   async delete(id: string) {
-    const { error } = await supabase.from('schedules').delete().eq('id', id);
-
+    console.log(id);
+    const { error } = await supabase.from('schedules').delete().eq('schedule_id', id);
+    console.log(error);
     if (error) throw new Error(error.details);
     return;
   }

@@ -4,7 +4,7 @@ import HeaderSection from '@/components/header-section';
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
 
 import IsRoleCashier from '@/components/is-role-cashier';
-import { useUpdateCurrentAcoount } from '@/hooks/mutations/current-account/useUpdateCurrentAccoutn';
+import { useCalculateCurrentAccount } from '@/hooks/mutations/current-account/useCalculateCurrentAccount';
 import { useSearchParams } from 'react-router-dom';
 
 import toast from 'react-hot-toast';
@@ -28,12 +28,12 @@ const CurrentAccountContent = () => {
   const [open, setOpen] = useState<boolean>(false);
   const { role } = useAuth();
   const [searchParams] = useSearchParams();
-  const { mutate } = useUpdateCurrentAcoount();
+  const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
   const [printing, setPrinting] = useState(false);
   const date = searchParams.get('date'); // puede ser null: backend devuelve la última
 
   const handleUpdateCurrentAccount = () => {
-    mutate(searchParams.get('date'), {
+    calculateCurrentAccount(searchParams.get('date'), {
       onSuccess: () => {
         toast.success('Actualizado correctamente');
       },

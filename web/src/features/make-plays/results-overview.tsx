@@ -23,25 +23,25 @@ const ResultsOverview = () => {
   return (
     <Flex
       className={
-        'flex-col sm:flex-row gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 items-center sticky bottom-0 bg-background z-10 w-full max-w-full border-t border-border'
+        'flex-col sm:flex-row gap-2 sm:gap-4 p-1 1440:p-2 items-center  sticky bottom-0 bg-background z-10'
       }
     >
-      <Flex className={'flex-col sm:flex-row justify-between gap-2 sm:gap-4 w-full sm:flex-1'}>
-        <Flex className="gap-2 min-w-fit">
+      <Flex className={'flex-col sm:flex-row justify-between gap-2 sm:gap-4 lg:gap-2 w-full sm:flex-1'}>
+        <Flex className="gap-2 lg:gap-1.5 min-w-fit">
           <FlexCol className="">
-            <span className="text-xs sm:text-sm md:text-base whitespace-nowrap">Monto parcial</span>
-            <span className="text-xs sm:text-sm md:text-base whitespace-nowrap">Total</span>
+            <span className="text-xs sm:text-sm  whitespace-nowrap">Monto parcial</span>
+            <span className="text-xs sm:text-sm  whitespace-nowrap">Total</span>
           </FlexCol>
           <FlexCol>
-            <span className="text-xs sm:text-sm md:text-base font-semibold">$ {partialAmount}</span>
-            <span className="text-xs sm:text-sm md:text-base font-semibold">$ {totalAmount}</span>
+            <span className="text-xs sm:text-sm  font-semibold">$ {partialAmount}</span>
+            <span className="text-xs sm:text-sm font-semibold">$ {totalAmount}</span>
           </FlexCol>
         </Flex>
-        <FlexCol className="hidden md:flex">
+        <FlexCol className="hidden md:flex lg:hidden xl:flex">
           <RadioGroup defaultValue="option-one">
             <Flex className="items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />
-              <Label className="text-sm md:text-base" htmlFor="option-one">
+              <Label className="text-sm md:text-base " htmlFor="option-one">
                 Imprimir
               </Label>
             </Flex>
@@ -54,16 +54,16 @@ const ResultsOverview = () => {
           </RadioGroup>
         </FlexCol>
       </Flex>
-      <Flex className={'gap-2 items-center w-full sm:w-auto justify-center flex-wrap'}>
-        <Button onClick={() => handleCreateBet()} disabled={!isEnabled} size="sm" className="flex-1 sm:flex-none min-w-[100px]">
+      <Flex className={'gap-2 lg:gap-1.5 items-center w-full sm:w-auto justify-center flex-wrap'}>
+        <Button onClick={() => handleCreateBet()} disabled={!isEnabled} size="sm" className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]">
           <span className="hidden sm:inline">Cerrar Ticket</span>
           <span className="sm:hidden">Cerrar</span>
         </Button>
-        <Button onClick={handleDeleteSelectedBets} variant="destructive" disabled={!hasSelection} size="sm" className="flex-1 sm:flex-none min-w-[100px]">
-          <Trash2Icon className="sm:mr-1" /> <span className="hidden sm:inline">Eliminar</span>
+        <Button onClick={handleDeleteSelectedBets} variant="destructive" disabled={!hasSelection} size="sm" className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]">
+          <Trash2Icon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Eliminar</span>
         </Button>
-        <Button onClick={() => handleResetBets()} variant={'outline'} size="sm" className="flex-1 sm:flex-none min-w-[100px]">
-          <TimerReset className="sm:mr-1" /> <span className="hidden sm:inline">Reiniciar</span>
+        <Button onClick={() => handleResetBets()} variant={'outline'} size="sm" className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]">
+          <TimerReset className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Reiniciar</span>
         </Button>
       </Flex>
     </Flex>

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Flex, FlexCol } from '@/components/flex';
-import HeaderTitleSection from '@/components/header-title-section';
+import { Flex } from '@/components/flex';
+import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
 import { TicketIcon } from 'lucide-react';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
@@ -48,9 +48,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
   };
 
   return (
-    <FlexCol className="border-2 p-2 sm:p-4 rounded-[--rounded-form] gap-2">
-      <HeaderTitleSection title="Quiniela" icon={<TicketIcon size="16px" />} variant="small" />
-
+    <CheckboxSection title="Quiniela" icon={<TicketIcon size="16px" />}>
       {/* Desktop / Tablet: grilla */}
       <Box className="hidden sm:grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
         {lotteries.map((lot) => (
@@ -136,7 +134,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
           </PopoverContent>
         </Popover>
       </div>
-    </FlexCol>
+    </CheckboxSection>
   );
 };
 

@@ -23,7 +23,9 @@ export const useGenerateWinners = ({schedule_id, date}:{schedule_id?:string, dat
   return useMutation({
     mutationFn: ()=>generateWinners({schedule_id,date}),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['winners','getCurrentAccount'] });
+      // Invalidar cache de ganadores y cuenta corriente
+      queryClient.invalidateQueries({ queryKey: ['winners'] });
+      queryClient.invalidateQueries({ queryKey: ['getCurrentAccount'] });
     },
   });
 };

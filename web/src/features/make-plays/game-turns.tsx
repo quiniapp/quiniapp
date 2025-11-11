@@ -54,7 +54,7 @@ const GameTurns = () => {
   }, [now, schedulesData]);
 
   return (
-    <Flex className="grid grid-cols-2 gap-2 sm:flex sm:flex-col 1440:space-y-5  sm:flex-1 sm:justify-between">
+    <Flex className="grid grid-cols-2 gap-2 lg:gap-1.5 sm:flex sm:flex-col 1440:space-y-5 sm:flex-1 sm:justify-between">
       <ScheduleCheckboxList
         schedules={schedulesData ?? []}
         setSchedules={handleSchedules}

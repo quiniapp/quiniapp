@@ -36,10 +36,11 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   useEffect(() => {
     if (!userNumber) {
       setCashier(undefined);
-    }
-
-    if (cashierByNumber) {
+    } else if (cashierByNumber) {
       setCashier(cashierByNumber);
+    } else {
+      // userNumber existe pero cashierByNumber es undefined/null (usuario no encontrado)
+      setCashier(undefined);
     }
 
     setBets([]);
