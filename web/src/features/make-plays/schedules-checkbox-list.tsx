@@ -3,9 +3,9 @@ import { ClockIcon, } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Flex, FlexCol } from '@/components/flex';
+import { Flex } from '@/components/flex';
 import Box from '@/components/box';
-import HeaderTitleSection from '@/components/header-title-section';
+import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
 
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { useClock } from '@/providers/ClockProvider';
@@ -193,11 +193,10 @@ const ScheduleCheckboxList = ({
   );
 
   return (
-    <FlexCol className="border-2 p-2 sm:p-4 rounded-[--rounded-form] w-full gap-2">
-      <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
+    <CheckboxSection title="Turnos" icon={<ClockIcon size="16px" />} className="w-full">
       {desktopGrid}
       {mobilePicker}
-    </FlexCol>
+    </CheckboxSection>
   );
 };
 

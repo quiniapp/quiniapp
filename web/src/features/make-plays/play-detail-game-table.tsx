@@ -44,7 +44,7 @@ const PlayDetailGameTable = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 max-h-full w-full">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 lg:min-h-32 max-h-full w-full">
       {/* Mobile: Cards */}
       <div className="md:hidden space-y-2 p-2">
         {bets.length === 0 ? (
@@ -66,12 +66,12 @@ const PlayDetailGameTable = () => {
       <div className="hidden md:block overflow-x-auto">
         <Table className="w-full min-w-[600px]">
           <TableHeader className="sticky top-0 bg-background z-10">
-            <TableRow>
-              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Jugada</TableHead>
-              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Con</TableHead>
-              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Monto</TableHead>
-              <TableHead className="text-sm lg:text-base px-2 sm:px-4">JugadaT</TableHead>
-              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Jugada en/Turno</TableHead>
+            <TableRow className="lg:h-9">
+              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Jugada</TableHead>
+              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Con</TableHead>
+              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Monto</TableHead>
+              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">JugadaT</TableHead>
+              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Jugada en/Turno</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -84,7 +84,7 @@ const PlayDetailGameTable = () => {
                   <TableRow
                     key={index}
                     data-state={selectedIndexes.includes(index) ? 'selected' : undefined}
-                    className={cn('cursor-pointer select-none text-slate-300 text-sm lg:text-base')}
+                    className={cn('cursor-pointer select-none text-slate-300 text-sm lg:text-xs lg:h-8')}
                     onMouseDown={() => {
                       dragStarted.current = false;
                       setIsSelecting(true);
@@ -108,12 +108,12 @@ const PlayDetailGameTable = () => {
                       }
                     }}
                   >
-                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{bet.number}</TableCell>
-                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{bet.with}</TableCell>
-                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{bet.amount}</TableCell>
-                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
-                    <TableCell className="whitespace-normal break-words text-sm lg:text-base px-2 sm:px-4 max-w-xs">
-                      <span className="line-clamp-2">
+                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{bet.number}</TableCell>
+                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{bet.with}</TableCell>
+                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{bet.amount}</TableCell>
+                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                    <TableCell className="whitespace-normal break-words text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1 max-w-xs">
+                      <span className="line-clamp-2 lg:line-clamp-1">
                         {bet.scheduleLottery.map((lotSched) => {
                           return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
                         })}

@@ -8,11 +8,11 @@ import { MakePlaysProvider } from './provider/MakePlaysProvider';
 const MakePlaysContent = () => {
   return (
     <PageWrapper>
-      <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-h-0">
-        <HeaderPlayDetail />
-        <FillOutATicket />
-        <PlayDetailGameTable />
-      </div>
+      {/*  <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-h-0 "> */}
+      <HeaderPlayDetail />
+      <FillOutATicket />
+      <PlayDetailGameTable />
+      {/*  </div> */}
       <ResultsOverview />
     </PageWrapper>
   );

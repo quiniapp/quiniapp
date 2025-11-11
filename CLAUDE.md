@@ -88,3 +88,103 @@ This is a monorepo for QuiniApp, a lottery/betting application with the followin
 2. Start web dev server: `npm run web` (Vite will proxy API calls)
 3. Web dev server automatically proxies `/api` requests to the backend
 4. Both servers support hot reloading during development
+
+## Documentation & Change Management
+
+### CHANGELOGs
+Each workspace maintains its own CHANGELOG to track all modifications, additions, and fixes:
+
+- **`web/CHANGELOG.md`** - Frontend changes (components, hooks, pages, styling, routing)
+- **`api/CHANGELOG.md`** - Backend changes (controllers, routes, repositories, middleware)
+- **`helper/CHANGELOG.md`** - Shared code changes (types, utilities, configurations, schemas)
+
+### Change Documentation Guidelines
+
+**IMPORTANT**: When making changes to any workspace, you MUST update the corresponding CHANGELOG.md file.
+
+#### Format
+CHANGELOGs follow [Keep a Changelog](https://keepachangelog.com/) format:
+
+```markdown
+## [Unreleased]
+
+### Added - YYYY-MM-DD
+- New features and functionality
+
+### Changed - YYYY-MM-DD
+- Modifications to existing functionality
+
+### Fixed - YYYY-MM-DD
+- Bug fixes and corrections
+
+### Removed - YYYY-MM-DD
+- Removed features or deprecated code
+```
+
+#### What to Document
+- ✅ New features, components, or endpoints
+- ✅ Changes to existing functionality or behavior
+- ✅ Bug fixes
+- ✅ Breaking changes (with migration guide)
+- ✅ Configuration changes
+- ✅ Dependency updates (if significant)
+- ✅ Database schema changes
+- ✅ API endpoint modifications
+- ❌ Trivial changes (typo fixes, code formatting)
+- ❌ Work-in-progress commits
+
+#### Entry Structure
+Each entry should include:
+1. **Category** (Added/Changed/Fixed/Removed)
+2. **Date** (YYYY-MM-DD)
+3. **Clear description** of what changed
+4. **File path** or component name
+5. **Why** the change was made (if not obvious)
+6. **Migration notes** (for breaking changes)
+
+#### Example Entry
+```markdown
+### Added - 2025-11-11
+
+#### Session Management
+- **Session Configuration File**: Created centralized session config in `@helper/config/session.config.ts`
+  - `SESSION_DURATION_MS`: 3 hours session timeout from last activity
+  - Use case: Unified session management across frontend and backend
+```
+
+### Workspace-Specific Guidelines
+
+#### Web CHANGELOG (`web/CHANGELOG.md`)
+Document:
+- Component additions/modifications
+- Hook changes (mutations, queries)
+- Route additions
+- Context/Provider changes
+- UI/UX improvements
+- State management updates
+
+#### API CHANGELOG (`api/CHANGELOG.md`)
+Document:
+- New endpoints
+- Route modifications
+- Controller/Repository changes
+- Middleware updates
+- Database queries/RPC changes
+- Authentication/Authorization changes
+
+#### Helper CHANGELOG (`helper/CHANGELOG.md`)
+Document:
+- New types/interfaces
+- Shared utility functions
+- Configuration files
+- Validation schemas
+- Cross-workspace constants
+
+### Best Practices
+1. **Update CHANGELOGs immediately** when making changes
+2. **Group related changes** under the same date/section
+3. **Be specific** - include file paths and function names
+4. **Explain the why** - context helps future developers
+5. **Note breaking changes** prominently
+6. **Include migration guides** for breaking changes
+7. **Keep entries concise** but informative

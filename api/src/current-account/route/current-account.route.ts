@@ -23,7 +23,9 @@ export class CurrentAccountRouter {
   private setupRoutes() {
     this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
-    this.router.post('/', this.calculateCurrentAccountHandler);
+    this.router.post('/calculate', this.calculateCurrentAccountHandler);
+    this.router.post('/liquidate', this.liquidateCurrentAccountHandler);
+    this.router.post('/', this.calculateCurrentAccountHandler); // Mantener por compatibilidad
     this.router.put('/bulk', this.bulkUpdateCurrentAccountHandler);
     this.router.put('/:id', this.updateCurrentAccountHandler);
   }
@@ -81,6 +83,57 @@ export class CurrentAccountRouter {
 
   private calculateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const { date } = req.query;
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    try {
+      // Calculate solo recalcula, no liquida (leave = false)
+      const currentaccount = await this.controller.calculateCurrentAccountHandler(
+        date as string,
+        false,
+        false
+      );
+      const response: APIResponse<ICurrentAccountEntityFront> = {
+        data: {
+          currentaccount: currentaccount,
+        },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+        if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+
+  private liquidateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
     const { date, leave } = req.query;
 
     if (!user?.user) {
@@ -95,9 +148,11 @@ export class CurrentAccountRouter {
     }
 
     try {
+      // Liquidate liquida y puede marcar como leave
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
         date as string,
-        typeof leave === 'string' && leave === 'true'
+        typeof leave === 'string' && leave === 'true',
+        true
       );
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {

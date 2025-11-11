@@ -92,57 +92,69 @@ const FillOutATicket = () => {
 
   const handleBet = (key: string, value: string | number) => {
     setBet((prev) => {
+      // Si es amount, parseamos a número
+      if (key === 'amount') {
+        const numValue = value === '' ? undefined : Number(value);
+        return { ...prev, [key]: numValue };
+      }
       return { ...prev, [key]: value };
     });
   };
 
+  // Validación para inputs numéricos (solo permite dígitos 0-9)
+  const handleNumericInput = (key: string, value: string) => {
+    // Solo permite dígitos, elimina cualquier otro carácter
+    const numericValue = value.replace(/[^0-9]/g, '');
+    handleBet(key, numericValue);
+  };
+
   const handleCreateBet = () => {
     if (!isAddButtonEnabled || !scheduleOrder || !lotteryOrder) return;
-
+    
     const todayKey: DayKey = dayParseToString[today];
     const schLotPerDate = scheduleLotteryPerDate?.[todayKey] as
-      | Record<string, string[] | undefined>
-      | undefined;
-
+    | Record<string, string[] | undefined>
+    | undefined;
+    
     // 1) Tomo SOLO los schedules seleccionados (presentes en el Map `schedules`)
     //    pero ordenados según `scheduleOrder`
     const orderedSchedules = scheduleOrder
-      .filter((s) => schedules.has(getScheduleId(s)))
-      .map((s) => schedules.get(getScheduleId(s))!); // ya sabemos que existe
-
+    .filter((s) => schedules.has(getScheduleId(s)))
+    .map((s) => schedules.get(getScheduleId(s))!); // ya sabemos que existe
+    
     // 2) Para cada schedule, tomo SOLO las loterías seleccionadas (presentes en el Map `lotteries`)
     //    y las ordeno según `lotteryOrder`
     const lotteryOrderIndex = makeOrderIndex(getLotteryId, lotteryOrder);
-
+    
     const lotterySchedule: ILotterySchedule[] = orderedSchedules.reduce<ILotterySchedule[]>(
       (acc, sch) => {
         const ids = schLotPerDate?.[getScheduleId(sch)];
         if (!ids || ids.length === 0) return acc;
-
+        
         // Solo las IDs que están seleccionadas en el Map `lotteries`
         const selectedIds = ids.filter((id) => lotteries.has(id));
         if (selectedIds.length === 0) return acc;
-
+        
         const valid = selectedIds
-          .map((id) => lotteries.get(id)!) // existe seguro
-          .sort((a, b) => {
-            const ai = lotteryOrderIndex?.get(getLotteryId(a)) ?? Number.POSITIVE_INFINITY;
-            const bi = lotteryOrderIndex?.get(getLotteryId(b)) ?? Number.POSITIVE_INFINITY;
-            return ai - bi;
-          });
-
+        .map((id) => lotteries.get(id)!) // existe seguro
+        .sort((a, b) => {
+          const ai = lotteryOrderIndex?.get(getLotteryId(a)) ?? Number.POSITIVE_INFINITY;
+          const bi = lotteryOrderIndex?.get(getLotteryId(b)) ?? Number.POSITIVE_INFINITY;
+          return ai - bi;
+        });
+        
         if (valid.length === 0) return acc;
-
+        
         acc.push({ schedule: sch, lotteries: valid });
         return acc;
       },
       []
     );
-
+    
     // 3) Contar combinaciones reales (pares schedule-lottery)
     const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
     if (combosCount === 0) return;
-
+    
     setBets((prev) => {
       const newBet: IBetTable = {
         number: bet?.number ?? '',
@@ -208,100 +220,100 @@ const FillOutATicket = () => {
 
   return (
     <FlexCol className={'h-fit w-full max-w-full'}>
-      <Flex className={'flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:items-stretch w-full'}>
-        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[320px] lg:max-w-[350px] w-full'}>
+      <Flex className={'flex-col-reverse sm:flex-row gap-2 sm:gap-3 lg:gap-2 sm:items-stretch w-full'}>
+        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[320px] lg:max-w-[260px] w-full'}>
           <form className={'w-full'}>
-            <FlexCol className={'space-y-2 sm:space-y-3 h-full border p-2 sm:p-3 bg-card rounded-[--rounded-form] justify-between'}>
-              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
-                <Label htmlFor={'number'} className="text-sm sm:text-base truncate"> Numero </Label>
+            <FlexCol className={'space-y-2 sm:space-y-3 lg:space-y-1 h-full border p-2 sm:p-3 lg:p-1.5 bg-card rounded-[--rounded-form] justify-between'}>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'number'} className="text-sm sm:text-base lg:text-lg truncate"> Numero </Label>
                 <Input
                   ref={numberRef}
                   id="number"
                   name={'ticket-number'}
                   inputMode="numeric"
-                  type={'string'}
+                  type="text"
                   maxLength={10}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
-                  value={bet.number ?? undefined}
-                  onChange={(e) => handleBet('number', e.target.value)}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  value={bet.number ?? ''}
+                  onChange={(e) => handleNumericInput('number', e.target.value)}
                   onKeyDown={handleInputKeyDown(0)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
-                <Label htmlFor={'amount'} className="text-sm sm:text-base truncate"> Monto </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'amount'} className="text-sm sm:text-base lg:text-lg truncate"> Monto </Label>
                 <Input
                   ref={amountRef}
                   id="amount"
                   name={'ticket-amount'}
                   type={'number'}
                   inputMode="numeric"
-                  value={bet?.amount ?? ''}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
+                  value={bet?.amount?.toString() ?? ''}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleBet('amount', e.target.value)}
                   onKeyDown={handleInputKeyDown(1)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
-                <Label htmlFor={'place'} className="text-sm sm:text-base truncate"> Ubicación </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'place'} className="text-sm sm:text-base lg:text-lg truncate"> Ubicación </Label>
                 <Input
                   ref={placeRef}
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
                   inputMode="numeric"
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
-                  value={bet.place ?? undefined}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  value={bet.place ?? ''}
                   onChange={(e) => handleBet('place', e.target.value)}
                   onKeyDown={handleInputKeyDown(2)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
-                <Label htmlFor={'with'} className="text-sm sm:text-base truncate"> Con </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'with'} className="text-sm sm:text-base lg:text-lg truncate"> Con </Label>
                 <Input
                   ref={withRef}
                   id="with"
                   name={'ticket-with'}
                   inputMode="numeric"
-                  type={'string'}
+                  type="text"
                   maxLength={2}
-                  value={bet.with}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
-                  onChange={(e) => handleBet('with', e.target.value)}
+                  value={bet.with ?? ''}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  onChange={(e) => handleNumericInput('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
-                <Label htmlFor={'position'} className="text-sm sm:text-base truncate"> Posición </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'position'} className="text-sm sm:text-base lg:text-lg truncate"> Posición </Label>
                 <Input
                   ref={positionRef}
                   id="position"
                   name={'ticket-position'}
                   type={'number'}
                   inputMode="numeric"
-                  value={bet.position}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
+                  value={bet.position ?? ''}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleBet('position', e.target.value)}
                   onKeyDown={handleInputKeyDown(4)}
                 />
               </Box>
-              <Flex className={'gap-1 sm:gap-2 pt-2'}>
+              <Flex className={'gap-1 sm:gap-2 lg:gap-0.5 pt-2 lg:pt-0.5'}>
                 <Button
                   type={'button'}
                   size="sm"
-                  className={'flex-1'}
+                  className={'flex-1 lg:h-7 lg:text-xs'}
                   disabled={!isAddButtonEnabled || !isEnabled}
                   onClick={() => handleCreateBet()}
                 >
-                  <PlusIcon className="sm:mr-1" /> <span className="hidden sm:inline">Agregar</span>
+                  <PlusIcon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Agregar</span>
                 </Button>
                 <Button
                   type={'reset'}
                   variant={'outline'}
                   size="sm"
-                  className={'flex-1 max-w-[100px] sm:max-w-[120px]'}
+                  className={'flex-1 max-w-[100px] sm:max-w-[120px] lg:max-w-[90px] lg:h-7 lg:text-xs'}
                   onClick={() => handleDeleteForm()}
                 >
-                  <TrashIcon className="sm:mr-1" /> <span className="hidden sm:inline">Borrar</span>
+                  <TrashIcon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Borrar</span>
                 </Button>
               </Flex>
             </FlexCol>

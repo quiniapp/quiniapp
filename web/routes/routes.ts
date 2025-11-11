@@ -39,6 +39,8 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/current_account`,
     id: (id: string) => `${PRIVATE}/current_account/${id}`,
     bulk: `${PRIVATE}/current_account/bulk`,
+    calculate: `${PRIVATE}/current_account/calculate`,
+    liquidate: `${PRIVATE}/current_account/liquidate`,
   },
   results: {
     base: `${PRIVATE}/results`,

@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useDeleteResults } from '@/hooks/mutations/results/useDeleteResults';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
+import { useCalculateCurrentAccount } from '@/hooks/mutations/current-account/useCalculateCurrentAccount';
 
 const ResultsContent = () => {
   const { role } = useAuth();
@@ -52,6 +53,7 @@ const ResultsContent = () => {
     date: selectedDate,
   });
   const { mutate: deleteResults, isPending: isPendingDeleteResults } = useDeleteResults();
+  const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const handleScheduleSelect = (scheduleId: string) => {
@@ -135,6 +137,17 @@ const ResultsContent = () => {
       );
   };
 
+  const handleRefresh = () => {
+    calculateCurrentAccount(selectedDate, {
+      onSuccess: () => {
+        toast.success('Datos actualizados correctamente');
+      },
+      onError: () => {
+        toast.error('Error al actualizar');
+      },
+    });
+  };
+
   useEffect(() => {
     if (!isSuccess) return;
     else {
@@ -161,7 +174,7 @@ const ResultsContent = () => {
             />
           </Flex>
           <Flex className={'gap-6'}>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={handleRefresh}>
               <RefreshCw size={16} />
               Actualizar
             </Button>
