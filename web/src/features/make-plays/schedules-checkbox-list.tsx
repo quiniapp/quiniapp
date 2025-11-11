@@ -120,7 +120,7 @@ const ScheduleCheckboxList = ({
             ref={triggerRef}
             type="button"
             variant="outline"
-            className="w-full justify-between h-9 px-3 text-base"
+            className="w-full justify-between h-9 px-3 text-sm sm:text-base"
           >
             {selectedLabel}
           </Button>

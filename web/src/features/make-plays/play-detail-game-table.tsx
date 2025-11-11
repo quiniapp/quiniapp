@@ -1,4 +1,4 @@
-import { FlexCol } from '@/components/flex';
+import { Flex, FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';
 import {
   Table,
@@ -12,17 +12,11 @@ import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { usePlayDetails } from './context/MakePlaysContext';
 import { IBetTable } from '@helper/request/ticket.response';
 
-const PlayDetailGameTable = ({
-  bets,
-  selectedIndexes,
-  setSelectedIndexes,
-}: {
-  bets: IBetTable[];
-  selectedIndexes: number[];
-  setSelectedIndexes: React.Dispatch<React.SetStateAction<number[]>>;
-}) => {
+const PlayDetailGameTable = () => {
+  const { bets, selectedIndexes, setSelectedIndexes } = usePlayDetails();
   const [isSelecting, setIsSelecting] = useState(false);
   const dragStarted = useRef(false);
 
@@ -43,71 +37,160 @@ const PlayDetailGameTable = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return (
-    <div className="flex-1 overflow-y-auto min-h-40">
-      <Table className=" ">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Jugada</TableHead>
-            <TableHead>Con</TableHead>
-            <TableHead>Monto</TableHead>
-            <TableHead>JugadaT</TableHead>
-            <TableHead>Jugada en/Turno</TableHead>
-          </TableRow>
-        </TableHeader>
+  const toggleSelection = (index: number) => {
+    setSelectedIndexes((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
 
-        <TableBody>
-          {bets.length === 0 ? (
-            <NoPlaysFound />
-          ) : (
-            bets.map((bet, index) => {
-              return (
-                <TableRow
-                  key={index}
-                  data-state={selectedIndexes.includes(index) ? 'selected' : undefined}
-                  className={cn('cursor-pointer select-none text-slate-300')}
-                  onMouseDown={() => {
-                    dragStarted.current = false;
-                    setIsSelecting(true);
-                  }}
-                  onMouseMove={() => {
-                    dragStarted.current = true;
-                  }}
-                  onMouseEnter={() => {
-                    if (isSelecting) {
-                      setSelectedIndexes(
-                        (prev) =>
-                          prev.includes(index)
-                            ? prev.filter((i) => i !== index) // des-seleccionar
-                            : [...prev, index] // seleccionar
-                      );
-                    }
-                  }}
-                  onClick={() => {
-                    if (!dragStarted.current) {
-                      setSelectedIndexes((prev) =>
-                        prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-                      );
-                    }
-                  }}
-                >
-                  <TableCell>{bet.number}</TableCell>
-                  <TableCell>{bet.with}</TableCell>
-                  <TableCell>{bet.amount}</TableCell>
-                  <TableCell>{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
-                  <TableCell className="whitespace-normal break-words">
-                    <span>
-                      {bet.scheduleLottery.map((lotSched) => {
-                        return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
-                      })}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
+  return (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 max-h-[400px] sm:max-h-[500px] w-full">
+      {/* Mobile: Cards */}
+      <div className="md:hidden space-y-2 p-2">
+        {bets.length === 0 ? (
+          <NoPlaysFound />
+        ) : (
+          bets.map((bet, index) => (
+            <BetCard
+              key={index}
+              bet={bet}
+              index={index}
+              isSelected={selectedIndexes.includes(index)}
+              onToggle={() => toggleSelection(index)}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Desktop/Tablet: Table */}
+      <div className="hidden md:block overflow-x-auto">
+        <Table className="w-full min-w-[600px]">
+          <TableHeader className="sticky top-0 bg-background z-10">
+            <TableRow>
+              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Jugada</TableHead>
+              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Con</TableHead>
+              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Monto</TableHead>
+              <TableHead className="text-sm lg:text-base px-2 sm:px-4">JugadaT</TableHead>
+              <TableHead className="text-sm lg:text-base px-2 sm:px-4">Jugada en/Turno</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {bets.length === 0 ? (
+              <NoPlaysFound />
+            ) : (
+              bets.map((bet, index) => {
+                return (
+                  <TableRow
+                    key={index}
+                    data-state={selectedIndexes.includes(index) ? 'selected' : undefined}
+                    className={cn('cursor-pointer select-none text-slate-300 text-sm lg:text-base')}
+                    onMouseDown={() => {
+                      dragStarted.current = false;
+                      setIsSelecting(true);
+                    }}
+                    onMouseMove={() => {
+                      dragStarted.current = true;
+                    }}
+                    onMouseEnter={() => {
+                      if (isSelecting) {
+                        setSelectedIndexes(
+                          (prev) =>
+                            prev.includes(index)
+                              ? prev.filter((i) => i !== index)
+                              : [...prev, index]
+                        );
+                      }
+                    }}
+                    onClick={() => {
+                      if (!dragStarted.current) {
+                        toggleSelection(index);
+                      }
+                    }}
+                  >
+                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{bet.number}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{bet.with}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{bet.amount}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-2 sm:px-4">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                    <TableCell className="whitespace-normal break-words text-sm lg:text-base px-2 sm:px-4 max-w-xs">
+                      <span className="line-clamp-2">
+                        {bet.scheduleLottery.map((lotSched) => {
+                          return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
+                        })}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
+
+// Componente Card para Mobile
+const BetCard = ({
+  bet,
+  isSelected,
+  onToggle,
+}: {
+  bet: IBetTable;
+  index: number;
+  isSelected: boolean;
+  onToggle: () => void;
+}) => {
+  return (
+    <div
+      onClick={onToggle}
+      className={cn(
+        'border rounded-lg p-3 cursor-pointer transition-all',
+        isSelected ? 'bg-primary/20 border-primary' : 'bg-card border-border hover:border-primary/50'
+      )}
+    >
+      <Flex className="justify-between items-start mb-2">
+        <div>
+          <Typography variant="small" className="text-muted-foreground text-xs">
+            Jugada
+          </Typography>
+          <Typography variant="large" className="font-semibold text-base">
+            {bet.number}
+          </Typography>
+        </div>
+        <div className="text-right">
+          <Typography variant="small" className="text-muted-foreground text-xs">
+            Monto
+          </Typography>
+          <Typography variant="large" className="font-semibold text-base text-primary">
+            ${bet.amount}
+          </Typography>
+        </div>
+      </Flex>
+
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <span className="text-muted-foreground text-xs">Con: </span>
+          <span className="font-medium">{bet.with || '-'}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground text-xs">Tipo: </span>
+          <span className="font-medium">
+            {`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 pt-2 border-t border-border">
+        <Typography variant="small" className="text-muted-foreground text-xs mb-1">
+          Turnos/Quinielas
+        </Typography>
+        <Typography variant="small" className="text-xs line-clamp-2">
+          {bet.scheduleLottery.map((lotSched) => {
+            return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] `;
+          })}
+        </Typography>
+      </div>
     </div>
   );
 };

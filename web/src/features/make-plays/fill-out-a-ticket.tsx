@@ -17,6 +17,7 @@ import { dayParseToString } from '@helper/functions/dayDictionary';
 import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { usePlayDetails } from './context/MakePlaysContext';
 
 const getScheduleId = (s: IScheduleEntityFront) => s.schedule_id;
 const getLotteryId = (l: ILotteryEntityFront) => l.lottery_id;
@@ -35,27 +36,18 @@ export interface IBetForm {
   position?: string;
 }
 
-const FillOutATicket = ({
-  setTotalAmount,
-  setPartialAmount,
-  setBets,
-  lotteries,
-  setLotteries,
-  schedules,
-  setSchedules,
-  isEnabled,
-  setIsEnabledCreateBet,
-}: {
-  setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
-  setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
-  setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
-  lotteries: Map<string, ILotteryEntityFront>;
-  setLotteries: React.Dispatch<React.SetStateAction<Map<string, ILotteryEntityFront>>>;
-  schedules: Map<string, IScheduleEntityFront>;
-  setSchedules: React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>;
-  isEnabled: boolean;
-  setIsEnabledCreateBet: React.Dispatch<React.SetStateAction<boolean>>;
-}) => {
+const FillOutATicket = () => {
+  const {
+    lotteries,
+    schedules,
+    setBets,
+    setTotalAmount,
+    setPartialAmount,
+    isEnabledCreateBet,
+    isEnabledCreateBetByAdmin,
+  } = usePlayDetails();
+
+  const isEnabled = isEnabledCreateBet && isEnabledCreateBetByAdmin;
   const today = dayjs().day();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [bet, setBet] = useState<IBetForm>({
@@ -96,35 +88,6 @@ const FillOutATicket = ({
       // Vuelve el foco al primer input
       inputRefs[0].current?.focus();
     }
-  };
-
-  // Índices de orden según tus arrays "order"
-
-  const handleSchedules = (schedule: IScheduleEntityFront) => {
-    setSchedules((prev) => {
-      const newMap = new Map(prev); // Clonás el Map
-
-      if (newMap.has(schedule.schedule_id)) {
-        newMap.delete(schedule.schedule_id);
-      } else {
-        newMap.set(schedule.schedule_id, schedule);
-      }
-
-      return newMap; // Retornás un nuevo objeto
-    });
-  };
-  const handleLotteries = (lottery: ILotteryEntityFront) => {
-    setLotteries((prev) => {
-      const newMap = new Map(prev); // Clonás el Map
-
-      if (newMap.has(lottery.lottery_id)) {
-        newMap.delete(lottery.lottery_id);
-      } else {
-        newMap.set(lottery.lottery_id, lottery);
-      }
-
-      return newMap; // Retornás un nuevo objeto
-    });
   };
 
   const handleBet = (key: string, value: string | number) => {
@@ -244,13 +207,13 @@ const FillOutATicket = ({
   );
 
   return (
-    <FlexCol className={' h-fit'}>
-      <Flex className={'flex-col-reverse sm:flex-row py-1 1440:py-2 gap-1'}>
-        <Flex className={'flex-1  sm:max-w-[300px] '}>
-          <form className={''}>
-            <FlexCol className={'space-y-2 h-auto border p-2 bg-card rounded-[--rounded-form]'}>
-              <Box className={'grid grid-cols-2 items-center justify-end  '}>
-                <Label htmlFor={'number'}> Numero </Label>
+    <FlexCol className={'h-fit w-full max-w-full'}>
+      <Flex className={'flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:items-stretch w-full'}>
+        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[320px] lg:max-w-[350px] w-full'}>
+          <form className={'w-full'}>
+            <FlexCol className={'space-y-2 sm:space-y-3 h-full border p-2 sm:p-3 bg-card rounded-[--rounded-form] justify-between'}>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
+                <Label htmlFor={'number'} className="text-sm sm:text-base truncate"> Numero </Label>
                 <Input
                   ref={numberRef}
                   id="number"
@@ -258,14 +221,14 @@ const FillOutATicket = ({
                   inputMode="numeric"
                   type={'string'}
                   maxLength={10}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
                   value={bet.number ?? undefined}
                   onChange={(e) => handleBet('number', e.target.value)}
                   onKeyDown={handleInputKeyDown(0)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'amount'}> Monto </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
+                <Label htmlFor={'amount'} className="text-sm sm:text-base truncate"> Monto </Label>
                 <Input
                   ref={amountRef}
                   id="amount"
@@ -273,27 +236,27 @@ const FillOutATicket = ({
                   type={'number'}
                   inputMode="numeric"
                   value={bet?.amount ?? ''}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
                   onChange={(e) => handleBet('amount', e.target.value)}
                   onKeyDown={handleInputKeyDown(1)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'place'}> Ubicación </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
+                <Label htmlFor={'place'} className="text-sm sm:text-base truncate"> Ubicación </Label>
                 <Input
                   ref={placeRef}
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
                   inputMode="numeric"
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
                   value={bet.place ?? undefined}
                   onChange={(e) => handleBet('place', e.target.value)}
                   onKeyDown={handleInputKeyDown(2)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'with'}> Con </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
+                <Label htmlFor={'with'} className="text-sm sm:text-base truncate"> Con </Label>
                 <Input
                   ref={withRef}
                   id="with"
@@ -302,13 +265,13 @@ const FillOutATicket = ({
                   type={'string'}
                   maxLength={2}
                   value={bet.with}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
                   onChange={(e) => handleBet('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'position'}> Posición </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2'}>
+                <Label htmlFor={'position'} className="text-sm sm:text-base truncate"> Posición </Label>
                 <Input
                   ref={positionRef}
                   id="position"
@@ -316,39 +279,35 @@ const FillOutATicket = ({
                   type={'number'}
                   inputMode="numeric"
                   value={bet.position}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base h-9 sm:h-10 md:h-11'}
                   onChange={(e) => handleBet('position', e.target.value)}
                   onKeyDown={handleInputKeyDown(4)}
                 />
               </Box>
-              <Flex className={' gap-2 py-2'}>
+              <Flex className={'gap-1 sm:gap-2 pt-2'}>
                 <Button
                   type={'button'}
-                  className={'flex-1 disabled:bg-pink-50'}
+                  size="sm"
+                  className={'flex-1'}
                   disabled={!isAddButtonEnabled || !isEnabled}
                   onClick={() => handleCreateBet()}
                 >
-                  <PlusIcon /> Agregar
+                  <PlusIcon className="sm:mr-1" /> <span className="hidden sm:inline">Agregar</span>
                 </Button>
                 <Button
                   type={'reset'}
                   variant={'outline'}
-                  className={'flex-1 max-w-[120px]  '}
+                  size="sm"
+                  className={'flex-1 max-w-[100px] sm:max-w-[120px]'}
                   onClick={() => handleDeleteForm()}
                 >
-                  <TrashIcon /> Borrar
+                  <TrashIcon className="sm:mr-1" /> <span className="hidden sm:inline">Borrar</span>
                 </Button>
               </Flex>
             </FlexCol>
           </form>
         </Flex>
-        <GameTurns
-          checkedLotteries={lotteries}
-          checkedSchedules={schedules}
-          setLotteries={handleLotteries}
-          setSchedules={handleSchedules}
-          setIsEnabledCreateBet={setIsEnabledCreateBet}
-        />
+        <GameTurns />
       </Flex>
       <Suspense fallback={<div>Cargando...</div>}>
         <ResetPartialModal

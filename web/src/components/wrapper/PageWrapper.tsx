@@ -4,7 +4,7 @@ import { FlexCol } from '../flex';
 export const PageWrapper = ({children}:{children: ReactNode[]}) => {
   return (
     <FlexCol
-      className={'h-full  overflow-y-auto sm:overflow-hidden'}
+      className={'h-full w-full max-w-full overflow-y-auto overflow-x-hidden gap-2 sm:gap-3'}
     >
       {children}
     </FlexCol>
