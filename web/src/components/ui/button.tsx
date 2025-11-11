@@ -24,10 +24,10 @@ const buttonVariants = cva(
       size: {
         // móvil compacto, sube en sm:
         default:
-          'h-8 px-3 text-[11px] has-[>svg]:px-2.5 sm:h-9 sm:px-4 sm:text-xs sm:has-[>svg]:px-3',
-        sm: 'h-7 px-2.5 text-[10px] has-[>svg]:px-2 sm:h-8 sm:px-3 sm:text-[11px]',
-        lg: 'h-9 px-3.5 text-xs sm:h-10 sm:px-6',
-        icon: 'size-7 sm:size-9',
+          'h-9 px-3 text-sm has-[>svg]:px-2.5 sm:h-10 sm:px-4 sm:text-base sm:has-[>svg]:px-3',
+        sm: 'h-8 px-2.5 text-sm has-[>svg]:px-2 sm:h-9 sm:px-3 sm:text-base',
+        lg: 'h-10 px-3.5 text-base sm:h-11 sm:px-6 sm:text-lg',
+        icon: 'size-8 sm:size-10',
       },
     },
     defaultVariants: {

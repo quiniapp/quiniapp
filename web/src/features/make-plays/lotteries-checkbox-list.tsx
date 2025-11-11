@@ -71,7 +71,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
               ref={triggerRef}
               type="button"
               variant="outline"
-              className="w-full justify-between h-9 px-3 text-xs"
+              className="w-full justify-between h-9 px-3 text-sm sm:text-base"
             >
               {selectedLabel}
             </Button>
@@ -94,7 +94,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
                         key={lot.lottery_id}
                         value={lot.name}
                         onSelect={() => toggle(lot)}
-                        className="text-sm"
+                        className="text-base"
                       >
                         <Flex className="items-center gap-2">
                           {/* ✅ check cuadrado */}
@@ -102,7 +102,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
                             checked={checked}
                             className="h-4 w-4 rounded-[4px] pointer-events-none"
                           />
-                          <span className="text-xs">{lot.name}</span>
+                          <span className="text-base">{lot.name}</span>
                         </Flex>
                       </CommandItem>
                     );
@@ -114,7 +114,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-8 px-2 text-xs"
+                  className="h-8 px-2 text-base"
                   onClick={() => {
                     // limpiar: togglear todas las seleccionadas
                     clearAll();
@@ -126,7 +126,7 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-8 px-2 text-xs"
+                  className="h-8 px-2 text-base"
                   onClick={() => setOpen(false)}
                 >
                   Listo

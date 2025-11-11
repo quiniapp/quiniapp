@@ -22,7 +22,7 @@ const LotteryCheckboxList = ({
         className="border-2 border-primary"
         onClick={() => setLotteries(lottery)}
       />
-      <Label htmlFor={lottery.lottery_id} className="text-[12px] min-w-[90px]">
+      <Label htmlFor={lottery.lottery_id} className="text-base min-w-[90px]">
         {lottery.name}
       </Label>
     </Flex>
