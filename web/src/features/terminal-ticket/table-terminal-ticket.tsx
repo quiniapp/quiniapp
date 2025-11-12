@@ -1,16 +1,11 @@
+// TableTerminalTicket.tsx
 import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
+  Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteTickets } from '@/hooks/fetchs/tickets/useInfiniteTickets';
 
@@ -22,57 +17,74 @@ interface TableTerminalTicketProps {
   not_paid?: boolean | null;
 }
 
+const dedupe = <T, K>(arr: T[], getKey: (x: T) => K) => {
+  const seen = new Set<K>();
+  const out: T[] = [];
+  for (const item of arr) {
+    const k = getKey(item);
+    if (!seen.has(k)) { seen.add(k); out.push(item); }
+  }
+  return out;
+};
+
 const TableTerminalTicket = ({
-  user_id,
-  date,
-  winner,
-  paid,
-  not_paid,
+  user_id, date, winner, paid, not_paid,
 }: TableTerminalTicketProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selected = searchParams.get('ticket_number');
 
   const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
+    data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
   } = useInfiniteTickets({
-    user_id,
-    date,
-    winner,
-    paid,
-    not_paid,
-    limit: 100,
+    user_id, date, winner, paid, not_paid, limit: 100,
   });
 
-  // Flatten all pages into a single array
+  // Flatten + dedupe por ticket_id
   const tickets = useMemo(() => {
-    return data?.pages.flatMap((page) => page.data) ?? [];
+    const flat = data?.pages.flatMap((p) => p.data) ?? [];
+    return dedupe(flat, (t: ITicketEntityFront) => String(t.ticket_id));
   }, [data]);
 
-  // Ref para el trigger element (cargar más al llegar a la fila 60)
-  const [triggerRef, isIntersecting] = useIntersectionObserver<HTMLTableRowElement>({
-    threshold: 0.1,
-    rootMargin: '200px',
-  });
+  // Contenedor que scrollea (root) y sentinel al final
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Detectar cuando el elemento trigger es visible
+  // IO con root y prefetch 800px antes del fondo
   useEffect(() => {
-    if (isIntersecting && hasNextPage && !isFetchingNextPage && fetchNextPage) {
-      fetchNextPage();
+    const root = rootRef.current;
+    const target = sentinelRef.current;
+    if (!root || !target) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage?.();
+        }
+      },
+      { root, rootMargin: '0px 0px 800px 0px', threshold: 0 }
+    );
+    io.observe(target);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Si no llena el contenedor, traigo otra página hasta llenar (o no haya más)
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (root.scrollHeight <= root.clientHeight && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage?.();
     }
-  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [tickets.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleClick = (ticket_number: string) => {
     if (selected === ticket_number) {
-      searchParams.delete('ticket_number');
-      setSearchParams(searchParams);
+      const next = new URLSearchParams(searchParams);
+      next.delete('ticket_number');
+      setSearchParams(next);
     } else {
-      const params = new URLSearchParams(searchParams);
-      params.set('ticket_number', ticket_number);
-      setSearchParams(params);
+      const next = new URLSearchParams(searchParams);
+      next.set('ticket_number', ticket_number);
+      setSearchParams(next);
     }
   };
 
@@ -94,23 +106,18 @@ const TableTerminalTicket = ({
               <TableHead className="bg-card-bg text-white">Número</TableHead>
               <TableHead className="bg-card-bg text-white">Pasador</TableHead>
               <TableHead className="bg-card-bg text-white">Monto</TableHead>
-              {/* ⬇️ Se oculta en <sm */}
-              <TableHead className="hidden sm:table-cell bg-card-bg text-white text-right">
-                Pagado
-              </TableHead>
+              <TableHead className="hidden sm:table-cell bg-card-bg text-white text-right">Pagado</TableHead>
             </TableRow>
           </TableHeader>
         </Table>
 
-      <div className="overflow-y-auto h-[200px] 1440:h-[300px]">
-        <Table className="min-w-full table-fixed">
-          <TableBody>
-            {tickets?.map((item: ITicketEntityFront, index: number) => {
-              const isTriggerRow = index === Math.min(60, tickets.length - 1);
-              return (
+        {/* root del scroll */}
+        <div ref={rootRef} className="overflow-y-auto h-[200px] 1440:h-[300px]">
+          <Table className="min-w-full table-fixed">
+            <TableBody>
+              {tickets.map((item) => (
                 <TableRow
-                  key={item.ticket_id}
-                  ref={isTriggerRow ? triggerRef : null}
+                  key={String(item.ticket_id)}
                   data-state={selected === item.ticket_number ? 'selected' : undefined}
                   className={cn(
                     `cursor-pointer hover:bg-primary-light transition ${
@@ -122,39 +129,41 @@ const TableTerminalTicket = ({
                   <TableCell>{item.ticket_number}</TableCell>
                   <TableCell>{item.user_name}</TableCell>
                   <TableCell>${item.total}</TableCell>
-                  {/* ⬇️ También se oculta en <sm */}
                   <TableCell className="hidden sm:table-cell text-right">
                     {item.paid ? 'Pagado' : 'No pagado'}
                   </TableCell>
                 </TableRow>
-              );
-            })}
-            {/* Loading indicator */}
-            {isFetchingNextPage && (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center p-4">
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-                    <span className="text-sm text-muted-foreground">Cargando más tickets...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-            {/* End of list indicator */}
-            {!hasNextPage && tickets.length > 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center p-4">
-                  <span className="text-sm text-muted-foreground">
-                    No hay más tickets ({tickets.length} total)
-                  </span>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+
+              {isFetchingNextPage && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center p-4">
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+                      <span className="text-sm text-muted-foreground">Cargando más tickets...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!hasNextPage && tickets.length > 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center p-4">
+                    <span className="text-sm text-muted-foreground">
+                      No hay más tickets ({tickets.length} total)
+                    </span>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+
+          {/* sentinel */}
+          {hasNextPage && !isFetchingNextPage && <div ref={sentinelRef} className="h-px w-full" />}
+        </div>
       </div>
-      </div>
-      <p className="text-xs">Cantidad de Tickets: {tickets?.length}</p>
+
+      <p className="text-xs">Cantidad de Tickets: {tickets.length}</p>
     </>
   );
 };

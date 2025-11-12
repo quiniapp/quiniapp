@@ -17,3 +17,10 @@ export type INewBetEntity = Omit<
 export type IDeleteBetEntity = Pick<IBetEntityBase, 'bet_id'>;
 
 export type IGetBetEntity = Pick<IBetEntityBase, 'bet_id'>;
+
+export type TicketSums = {
+  total_amount: number;
+  total_prize: number;
+  total_count: number;
+  total_winners_count: number;
+};

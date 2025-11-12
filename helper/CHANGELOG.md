@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-11
 
+#### Type Enhancements
+- **TicketSums Type**: Extended to include play counts
+  - Path: `request/bet.response.ts:21-26`
+  - Added `total_count: number` - Total number of plays in ticket
+  - Added `total_winners_count: number` - Total number of winning plays in ticket
+  - Previously only included `total_amount` and `total_prize`
+  - Supports accurate pagination totals in frontend
+
+- **IPaginatedBetsResponse**: Enhanced aggregates interface
+  - Path: `request/pagination.response.ts:20-27`
+  - Added `totalCount?: number` - Total count of plays
+  - Added `totalWinnersCount?: number` - Total count of winning plays
+  - Previously only included `totalAmount` and `totalPrize`
+  - Allows frontend to display correct totals with infinite scroll
+
 #### Session Configuration
 - **New File**: `config/session.config.ts`
   - Centralized session management configuration

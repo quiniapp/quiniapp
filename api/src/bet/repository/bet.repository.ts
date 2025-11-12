@@ -1,4 +1,5 @@
 import { supabase } from '@database/db.connection';
+import { TicketSums } from '@helper/request/bet.response';
 import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
 
 export class BetRepository {
@@ -187,5 +188,14 @@ export class BetRepository {
 
     if (error) throw error;
     return data;
+  }
+
+  async getAmountsByTicket({ ticket_number }: { ticket_number: string }) {
+    const { data, error } = await supabase
+      .rpc('get_ticket_sums', { p_ticket: ticket_number })
+      .single(); // una fila
+
+    if (error) throw error;
+    return data as TicketSums;
   }
 }

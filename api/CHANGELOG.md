@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-11
 
+#### Bet Aggregates - Enhanced Pagination Response
+- **Total Counts in Aggregates**: Added `totalCount` and `totalWinnersCount` to bet aggregates
+  - Path: `src/bet/controller/bet.controller.ts:75-113`
+  - When filtering by `ticket_number`, uses `getAmountsByTicket` RPC
+  - Returns `totalCount` (total plays) and `totalWinnersCount` (winning plays)
+  - Ensures accurate totals even with pagination
+  - Backend now distinguishes between ticket-specific and general totals
+
+#### Database RPC
+- **get_ticket_sums Enhancement**: Modified to return play counts
+  - Migration: `20251111131145_sp_sum_amount_by_ticket_number.sql` (modified)
+  - Now returns: `total_amount`, `total_prize`, `total_count`, `total_winners_count`
+  - Allows accurate count of total plays and winners per ticket
+  - Supports paginated display with correct totals
+
 #### Authentication
 - **Session Cookies Documentation**: Added comments explaining cookie behavior
   - Path: `src/auth/route/auth.route.ts` (lines 60-61)

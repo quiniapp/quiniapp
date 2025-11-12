@@ -21,5 +21,7 @@ export interface IPaginatedBetsResponse<T> extends IPaginatedResponse<T> {
   aggregates?: {
     totalAmount?: number;
     totalPrize?: number;
+    totalCount?: number;
+    totalWinnersCount?: number;
   };
 }

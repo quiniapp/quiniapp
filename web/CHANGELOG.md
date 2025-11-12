@@ -56,6 +56,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Debug Logging**: Added console logs to track IntersectionObserver state
   - Helps debug infinite scroll behavior during development
 
+#### Terminal Ticket - Total Counts Fix
+- **Total Counts Display**: Fixed incorrect total counts in ticket tables
+  - Path: `src/features/terminal-ticket/terminal-ticket-matches-table.tsx:76,118`
+  - Path: `src/features/terminal-ticket/termina-ticket-play-table.tsx:76,118`
+  - Now uses `totalWinnersCount` and `totalCount` from aggregates instead of array length
+  - Displays correct totals even with pagination
+
 ### Changed - 2025-11-11
 
 #### Session Management

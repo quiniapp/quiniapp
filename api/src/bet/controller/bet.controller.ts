@@ -69,14 +69,36 @@ export class BetController {
           limit,
         });
 
-        // Obtener totales en paralelo
-        const [totalAmount, totalPrize] = await Promise.all([
-          this.repository.getTotalAmount({ date, schedule_id, cashier_id, lottery_id }),
-          this.repository.getTotalPrize({ date, schedule_id, cashier_id, lottery_id }),
-        ]);
-
         const parsedBets = bets.map((bet) => parseBet(bet));
         const totalPages = Math.ceil(count / limit);
+
+        // Si hay ticket_number, obtener totales por ticket
+        let aggregates: {
+          totalAmount?: number;
+          totalPrize?: number;
+          totalCount?: number;
+          totalWinnersCount?: number;
+        } = {};
+
+        if (ticket_number) {
+          const ticketSums = await this.repository.getAmountsByTicket({ ticket_number });
+          aggregates = {
+            totalAmount: ticketSums.total_amount,
+            totalPrize: ticketSums.total_prize,
+            totalCount: ticketSums.total_count,
+            totalWinnersCount: ticketSums.total_winners_count,
+          };
+        } else {
+          // Obtener totales generales en paralelo
+          const [totalAmount, totalPrize] = await Promise.all([
+            this.repository.getTotalAmount({ date, schedule_id, cashier_id, lottery_id }),
+            this.repository.getTotalPrize({ date, schedule_id, cashier_id, lottery_id }),
+          ]);
+          aggregates = {
+            totalAmount,
+            totalPrize,
+          };
+        }
 
         return {
           data: parsedBets,
@@ -87,10 +109,7 @@ export class BetController {
             totalPages,
             hasMore: page < totalPages,
           },
-          aggregates: {
-            totalAmount,
-            totalPrize,
-          },
+          aggregates,
         };
       }
     } catch (error) {
@@ -145,6 +164,18 @@ export class BetController {
       return total;
     } catch (error) {
       console.error('GetTotalPrize error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  getAmountsByTicket = async ({ ticket_number }: { ticket_number: string }) => {
+    try {
+      const totals = await this.repository.getAmountsByTicket({
+        ticket_number,
+      });
+      return totals;
+    } catch (error) {
+      console.error('getAmountsByTicket error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
