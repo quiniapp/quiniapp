@@ -1,35 +1,127 @@
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import toast from 'react-hot-toast';
-import { Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { Copy, Check, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { useSearchParams } from 'react-router-dom';
+import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
 
-type Props = { bets?: IBetEntityFront[] };
+type Props = {
+  onTotalsUpdate?: (totalAmount?: number, totalPrize?: number) => void;
+};
 
 const currency = (n?: number | string) =>
   typeof n === 'number'
     ? n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
     : (n ?? '');
 
-const PlaysAndHitsTable: React.FC<Props> = ({ bets = [] }) => {
+const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
+  const [searchParams] = useSearchParams();
+  const schedule_id = searchParams.get('schedule_id');
+  const date = searchParams.get('date');
+  const lottery_id = searchParams.get('lottery_id');
+  const cashier_id = searchParams.get('cashier_id');
+  const grouped = searchParams.get('grouped');
+  const winners = searchParams.get('winners');
+  const quatern = searchParams.get('quatern');
+  const tern = searchParams.get('tern');
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteBets({
+    schedule_id,
+    date,
+    cashier_id,
+    lottery_id,
+    grouped,
+    quatern,
+    tern,
+    winners,
+    limit: 100,
+  });
+
+  // Flatten all pages into a single array
+  // Reemplazá tu 'bets' por este 'bets' deduplicado
+  const bets = useMemo(() => {
+    const flat = data?.pages.flatMap((p) => p.data) ?? [];
+    const seen = new Set<string>();
+    const out: IBetEntityFront[] = [];
+    for (const b of flat) {
+      // asumimos que bet_id existe y es único globalmente
+      const id = String(b.bet_id);
+      if (!seen.has(id)) {
+        seen.add(id);
+        out.push(b);
+      }
+    }
+    return out;
+  }, [data]);
+
+  const toFinite = (v: unknown, def = 0) => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+    return Number.isFinite(n) ? n : def;
+  };
+
+  useEffect(() => {
+    const agg = data?.pages?.[0]?.aggregates;
+    onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
+  }, [data, onTotalsUpdate]);
+
+  // 1) Contenedor scrolleable (root del IO) + sentinel al final
+  const scrollRootRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // 2) IntersectionObserver usando el contenedor como root
+  useEffect(() => {
+    const root = scrollRootRef.current;
+    const target = sentinelRef.current;
+    if (!root || !target) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root, // 👈 contenedor que scrollea
+        rootMargin: '0px 0px 800px 0px', // prefetch antes de llegar al fondo
+        threshold: 0,
+      }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // 3) Si el contenido no llena el viewport del contenedor, trae más hasta que llene o no haya más
+  useEffect(() => {
+    const root = scrollRootRef.current;
+    if (!root) return;
+    if (root.scrollHeight <= root.clientHeight && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [bets.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-sm">Cargando datos...</span>
+      </div>
+    );
+  }
   return (
-    <div className="flex-1 min-h-40 max-h-full overflow-y-auto overflow-x-hidden w-full">
-      {/* ====== DESKTOP/TABLET: tabla (>= md) ====== */}
+    // 👇 Este es el root del scroll + el ref usado en el IO
+    <div
+      ref={scrollRootRef}
+      className="flex-1 min-h-40 max-h-full overflow-y-auto overflow-x-hidden w-full"
+    >
+      {/* ===== DESKTOP/TABLET ===== */}
       <div className="hidden md:block overflow-x-auto w-full">
         <Table className="w-full min-w-[900px]">
-         
-
+          
           <TableCaption className={!bets?.length ? '' : 'hidden'}>
             No se encontraron jugadas
           </TableCaption>
@@ -47,10 +139,9 @@ const PlaysAndHitsTable: React.FC<Props> = ({ bets = [] }) => {
               <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Usuario</TableHead>
             </TableRow>
           </TableHeader>
-
           <TableBody>
-            {bets?.map((bet: IBetEntityFront, index: number) => (
-              <TableRow key={index}>
+            {bets?.map((bet: IBetEntityFront) => (
+              <TableRow key={String(bet.bet_id)}>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
                   {bet.number}
                 </TableCell>
@@ -80,22 +171,42 @@ const PlaysAndHitsTable: React.FC<Props> = ({ bets = [] }) => {
                 </TableCell>
               </TableRow>
             ))}
+
+            {isFetchingNextPage && (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center p-4">
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+                    <span className="text-sm text-muted-foreground">Cargando más jugadas...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+
+            {!hasNextPage && bets.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center p-4">
+                  <span className="text-sm text-muted-foreground">
+                    No hay más jugadas ({bets.length} total)
+                  </span>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* ====== MOBILE: cards (< md) ====== */}
+      {/* ===== MOBILE ===== */}
       <div className="md:hidden space-y-3 p-2">
         {(!bets || bets.length === 0) && (
           <p className="text-center text-sm text-muted-foreground">No se encontraron jugadas</p>
         )}
 
-        {bets?.map((bet, i) => (
+        {bets?.map((bet) => (
           <div
-            key={i}
+            key={bet.bet_id}
             className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
           >
-            {/* Header con jugada y monto destacados */}
             <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
               <div>
                 <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
@@ -130,10 +241,29 @@ const PlaysAndHitsTable: React.FC<Props> = ({ bets = [] }) => {
             </div>
           </div>
         ))}
+
+        {isFetchingNextPage && (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+            <span className="text-sm text-muted-foreground">Cargando más jugadas...</span>
+          </div>
+        )}
+
+        {!hasNextPage && bets.length > 0 && (
+          <div className="flex items-center justify-center p-4">
+            <span className="text-sm text-muted-foreground">
+              No hay más jugadas ({bets.length} total)
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* 👇 Sentinel al final del contenedor scrolleable */}
+      <div ref={sentinelRef} className="h-px w-full" />
     </div>
   );
 };
+
 
 /** Subcomponente para fila label → valor */
 const Field: React.FC<{
@@ -149,7 +279,6 @@ const Field: React.FC<{
     </div>
   );
 };
-
 /** Componente para copiar número de ticket */
 const CopyableTicket: React.FC<{
   ticketNumber?: string;
@@ -203,7 +332,7 @@ const CopyableTicket: React.FC<{
         'text-sm md:text-base lg:text-lg font-bold'
       )}
     >
-      <span className="text-white">{ticketNumber || '-'}</span>
+      <span className="text-primary">{ticketNumber || '-'}</span>
       {copied ? (
         <Check className="w-4 h-4 text-green-500" />
       ) : (

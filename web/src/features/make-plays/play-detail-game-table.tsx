@@ -67,11 +67,11 @@ const PlayDetailGameTable = () => {
         <Table className="w-full min-w-[600px]">
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow className="lg:h-9">
-              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Jugada</TableHead>
-              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Con</TableHead>
-              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Monto</TableHead>
-              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">JugadaT</TableHead>
-              <TableHead className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1.5">Jugada en/Turno</TableHead>
+              <TableHead className="text-xs lg:text-base ">Jugada</TableHead>
+              <TableHead className="text-xs lg:text-base ">Con</TableHead>
+              <TableHead className="text-xs lg:text-base ">Monto</TableHead>
+              <TableHead className="text-xs lg:text-base ">JugadaT</TableHead>
+              <TableHead className="text-xs lg:text-base ">Jugada en/Turno</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -108,12 +108,12 @@ const PlayDetailGameTable = () => {
                       }
                     }}
                   >
-                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{bet.number}</TableCell>
-                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{bet.with}</TableCell>
-                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{bet.amount}</TableCell>
-                    <TableCell className="text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
-                    <TableCell className="whitespace-normal break-words text-sm lg:text-xs px-2 sm:px-4 lg:px-2 lg:py-1 max-w-xs">
-                      <span className="line-clamp-2 lg:line-clamp-1">
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{bet.number}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{bet.with}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{bet.amount}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
+                    <TableCell className="whitespace-normal break-words text-sm lg:text-base px-1 2xl:px-2 lg:py-1 max-w-xs">
+                      <span className="">
                         {bet.scheduleLottery.map((lotSched) => {
                           return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] //`;
                         })}

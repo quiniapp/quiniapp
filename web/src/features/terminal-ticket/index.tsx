@@ -3,12 +3,9 @@ import { TicketX } from 'lucide-react';
 // @Components
 import { Button } from '@/components/ui/button';
 import { Flex, FlexCol } from '@/components/flex';
-import { Typography } from '@/components/typography';
 import HeaderSection from '@/components/header-section';
 import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
 import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket'; // @Hooks
-
-import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 
 import TicketDetails from './TicketDetails';
 import { useSearchParams } from 'react-router-dom';
@@ -22,13 +19,7 @@ export const TerminalTicketContent = () => {
   const cashier_id = searchParams.get('cashier_id') ?? undefined;
   const filter = searchParams.get('filter') ?? undefined;
   const ticket_number = searchParams.get('ticket_number') ?? undefined;
-  const { data } = useTickets({
-    date: date,
-    user_id: cashier_id,
-    winner: filter === 'winner' ? true : undefined,
-    paid: filter === 'paid' ? true : undefined,
-    not_paid: filter === 'not_paid' ? true : undefined,
-  });
+
   const { mutate: runDeleteTicket } = useDeleteTicket();
 
   const handleDeleteTicket = () => {
@@ -66,11 +57,13 @@ export const TerminalTicketContent = () => {
             </Flex>
           </FlexCol>
           <FlexCol>
-            <TableTerminalTicket data={data} />
-
-            <Typography className={'text-xs'} variant={'p'}>
-              Cantidad de Tickets: {data?.length}
-            </Typography>
+            <TableTerminalTicket
+              user_id={cashier_id}
+              date={date}
+              winner={filter === 'winner' ? true : undefined}
+              paid={filter === 'paid' ? true : undefined}
+              not_paid={filter === 'not_paid' ? true : undefined}
+            />
           </FlexCol>
         </FlexCol>
         <TicketDetails />

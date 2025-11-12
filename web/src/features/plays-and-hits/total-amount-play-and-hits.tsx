@@ -18,8 +18,8 @@ const TotalAmountPlayAndHits = ({
 
   return (
     <Flex className="w-full  justify-between sticky bottom-0 z-10 gap-2 sm:gap-4 p-1 1440:p-2 ">
-      <TextAmount label="Total Monto de aciertos: $" value={totalHitsAmount} />
-      <TextAmount label="Total Monto de jugadas: $" value={totalPlaysAmount} />
+      <TextAmount label="Total Monto de aciertos:" value={totalHitsAmount} />
+      <TextAmount label="Total Monto de jugadas:" value={totalPlaysAmount} />
 
       <TextAmount label="Tickets cancelados:" value={Number(data)} />
     </Flex>
