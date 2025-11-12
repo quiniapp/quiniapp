@@ -42,13 +42,29 @@ export class TicketRepository {
     if (error) throw error;
     return data;
   }
-  async getAll({ user_id, date, winner }: { user_id?: string; date: string; winner: boolean }) {
+  async getAll({
+    user_id,
+    date,
+    winner,
+    page = 1,
+    limit = 100,
+  }: {
+    user_id?: string;
+    date: string;
+    winner: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     let query = supabase
       .from('tickets')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('date', date)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (user_id !== undefined) {
       query = query.eq('user_id', user_id);
@@ -56,9 +72,9 @@ export class TicketRepository {
     if (winner) {
       query = query.is('winner', true);
     }
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data;
+    return { data, count: count ?? 0 };
   }
 
   async delete(props: IDeleteTicketEntity) {

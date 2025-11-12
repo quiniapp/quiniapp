@@ -15,6 +15,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
 import { betBase } from 'src/bet/helper/betBase';
+import { IPaginatedResponse } from '@helper/request/pagination.response';
 
 export class TicketController {
   private repository = new TicketRepository();
@@ -49,26 +50,47 @@ export class TicketController {
     }
   };
 
-  getAll = async (props: IGetAllTicketEntity): Promise<ITicketEntityFront[]> => {
-    let tickets;
+  getAll = async (
+    props: IGetAllTicketEntity & { page?: number; limit?: number }
+  ): Promise<IPaginatedResponse<ITicketEntityFront>> => {
+    const page = props.page ?? 1;
+    const limit = props.limit ?? 100;
+
     try {
+      let result;
       if (props.user_type === USER_TYPE.CASHIER) {
-        tickets = await this.repository.getAll({
+        result = await this.repository.getAll({
           user_id: props.user_id,
           date: props.date ?? '',
           winner: !!props.winner,
+          page,
+          limit,
         });
       } else {
-        tickets = await this.repository.getAll({
+        result = await this.repository.getAll({
           date: props.date ?? '',
           user_id: props?.cashier_id,
           winner: !!props.winner,
+          page,
+          limit,
         });
       }
 
-      return tickets.map((ticket) => {
-        return parseTicket(ticket);
-      });
+      const { data: tickets, count } = result;
+      const parsedTickets = tickets.map((ticket) => parseTicket(ticket));
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        data: parsedTickets,
+        pagination: {
+          currentPage: page,
+          pageSize: limit,
+          totalCount: count,
+          totalPages,
+          hasMore: page < totalPages,
+        },
+      };
     } catch (error) {
       console.error('GetAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

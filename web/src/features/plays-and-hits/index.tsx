@@ -2,52 +2,20 @@ import { Flex, FlexCol } from '@/components/flex';
 import HeaderPlayAndHits from '@/features/plays-and-hits/header-play-and-hits.tsx';
 import PlaysAndHitsTable from '@/features/plays-and-hits/plays-and-hits-table.tsx';
 import TotalAmountPlayAndHits from '@/features/plays-and-hits/total-amount-play-and-hits.tsx';
-import { useBets } from '@/hooks/fetchs/plays/useBets';
-import { useSearchParams } from 'react-router-dom';
 import SelectBetType from './select-bet-type';
 import PlayAndHitsToggleSelect from './play-and-hits-toggle-select';
 import PlayAndHitsSelect from './play-and-hits-select';
-import { useTotalAmount, useTotalPrize } from '@/hooks/fetchs/plays/useTotals';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
+import { useState, useCallback } from 'react';
 
 const PlaysAndHitsContent = () => {
+  const [totalPlaysAmount, setTotalPlaysAmount] = useState<number | undefined>();
+  const [totalHitsAmount, setTotalHitsAmount] = useState<number | undefined>();
 
-  const [setSearchParams] = useSearchParams();
-  const schedule_id = setSearchParams.get('schedule_id');
-
-  const date = setSearchParams.get('date');
-  const lottery_id = setSearchParams.get('lottery_id');
-  const cashier_id = setSearchParams.get('cashier_id');
-  const grouped = setSearchParams.get('grouped');
-  const winners = setSearchParams.get('winners');
-  const quatern = setSearchParams.get('quatern');
-  const tern = setSearchParams.get('tern');
-
-  const { data } = useBets({
-    schedule_id: schedule_id,
-    date: date,
-    cashier_id: cashier_id,
-    lottery_id: lottery_id,
-    grouped: grouped,
-    quatern: quatern,
-    tern: tern,
-    winners: winners,
-  });
-
-  const { data: totalPlaysAmount } = useTotalAmount({
-    schedule_id: schedule_id,
-    date: date,
-    cashier_id: cashier_id,
-    lottery_id: lottery_id,
-  });
-
-  const { data: totalHitsAmount } = useTotalPrize({
-    schedule_id: schedule_id,
-    date: date,
-    cashier_id: cashier_id,
-    lottery_id: lottery_id,
-  });
-
+  const handleTotalsUpdate = useCallback((totalAmount?: number, totalPrize?: number) => {
+    setTotalPlaysAmount(totalAmount);
+    setTotalHitsAmount(totalPrize);
+  }, []);
 
   return (
     <PageWrapper>
@@ -59,7 +27,7 @@ const PlaysAndHitsContent = () => {
           <PlayAndHitsSelect />
         </Flex>
       </FlexCol>
-      <PlaysAndHitsTable bets={data ?? []} />
+      <PlaysAndHitsTable onTotalsUpdate={handleTotalsUpdate} />
       <TotalAmountPlayAndHits
         totalPlaysAmount={totalPlaysAmount}
         totalHitsAmount={totalHitsAmount}

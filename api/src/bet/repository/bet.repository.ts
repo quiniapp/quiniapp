@@ -11,6 +11,8 @@ export class BetRepository {
     quatern,
     tern,
     ticket_number,
+    page = 1,
+    limit = 100,
   }: {
     schedule_id?: string;
     date: string;
@@ -20,14 +22,21 @@ export class BetRepository {
     quatern?: boolean;
     tern?: boolean;
     ticket_number?: string;
+    page?: number;
+    limit?: number;
   }) {
+    // Calcular offset basado en página
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     let query = supabase
       .from('bets')
-      .select('*, lotteries(*), schedules(*)')
+      .select('*, lotteries(*), schedules(*)', { count: 'exact' })
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false }) // 1° por fecha de creación (tickets más nuevos primero)
-      .order('bet_order', { ascending: true }); // 2° por bloque dentro del ticket
+      .order('bet_order', { ascending: true }) // 2° por bloque dentro del ticket
+      .range(from, to);
     // .order('created_at', { ascending: true, referencedTable : 'lotteries' }); // 3️⃣ Dentro del bloque, orden por creación de la lotería
 
     if (ticket_number) {
@@ -47,10 +56,10 @@ export class BetRepository {
     if (winners) query = query.eq('winner', true);
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
-    return data;
+    return { data, count: count ?? 0 };
   }
 
   async getAllBetsGrouped({

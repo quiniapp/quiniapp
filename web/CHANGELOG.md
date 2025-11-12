@@ -43,6 +43,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now invalidates both `['winners']` and `['getCurrentAccount']` query keys
   - Ensures current account data refreshes when winners are generated
 
+### Fixed - 2025-11-11
+
+#### Plays and Hits - Infinite Scroll
+- **IntersectionObserver Type Fix**: Changed triggerRef type from `HTMLTableRowElement` to `HTMLDivElement`
+  - Path: `src/features/plays-and-hits/plays-and-hits-table.tsx:75`
+  - Fixed issue where observer wasn't detecting intersection due to type mismatch
+- **NaN Error Fix**: Added fallback values for totals aggregates
+  - Path: `src/features/plays-and-hits/plays-and-hits-table.tsx:65-72`
+  - Now uses `?? 0` to prevent NaN errors when aggregates are undefined
+  - Ensures TextAmount component always receives valid numbers
+- **Debug Logging**: Added console logs to track IntersectionObserver state
+  - Helps debug infinite scroll behavior during development
+
 ### Changed - 2025-11-11
 
 #### Session Management
@@ -162,9 +175,147 @@ Further optimizations based on user feedback requesting MORE compression:
     - Text size: `lg:text-sm` and `lg:text-xs` → `lg:text-lg`
 **Impact**: Significant vertical space savings on 1024x768px screens, allowing table to display more rows while maintaining readability.
 
+### Added - 2025-11-11
+
+#### Infinite Scroll & Pagination
+- **Pagination Interfaces** (`helper/request/pagination.response.ts`):
+  - Created `IPaginatedResponse<T>` generic interface for paginated responses
+  - Created `IPaginationParams` for pagination request parameters
+  - Created `IPaginatedBetsResponse<T>` extending pagination with aggregates (totalAmount, totalPrize)
+  - Supports page, limit, totalCount, hasMore, currentPage, totalPages
+
+- **Backend Pagination** - BetRepository (`api/src/bet/repository/bet.repository.ts`):
+  - Added `page` and `limit` parameters to `getAllBets` method
+  - Implemented `.range(from, to)` for offset-based pagination
+  - Added `{count: 'exact'}` to get total count of records
+  - Returns `{ data, count }` instead of just data
+  - Default: 100 records per page
+
+- **Backend Controller** (`api/src/bet/controller/bet.controller.ts`):
+  - Updated `getAllBets` to return `IPaginatedBetsResponse<IBetEntityFront>`
+  - Fetches `totalAmount` and `totalPrize` in parallel with bets using `Promise.all`
+  - Calculates pagination metadata (totalPages, hasMore)
+  - Returns aggregates in response for frontend consumption
+  - Grouped queries maintain backward compatibility (no pagination)
+
+- **Backend Routes** (`api/src/bet/route/bet.routes.ts`):
+  - Added `page` and `limit` query parameters to getAllBets endpoint
+  - Parses pagination params with defaults: page=1, limit=100
+  - Response format changed from `{ bets: [] }` to pagination structure
+
+- **Frontend Hook** - `useInfiniteBets` (`web/src/hooks/fetchs/plays/useInfiniteBets.ts`):
+  - New hook using `useInfiniteQuery` from React Query
+  - Automatically handles page fetching and caching
+  - Supports all existing bet filters (date, schedule, lottery, cashier, etc.)
+  - Returns flattened data from all pages
+  - Provides `fetchNextPage`, `hasNextPage`, `isFetchingNextPage`
+
+- **Intersection Observer Hook** (`web/src/hooks/useIntersectionObserver.ts`):
+  - Custom hook for detecting element visibility
+  - Configurable threshold, root, rootMargin
+  - Optional freeze once visible
+  - Returns ref and isIntersecting boolean
+  - Used to trigger infinite scroll loading
+
+- **Infinite Scroll Table Component** (`web/src/components/table/InfiniteScrollTable.tsx`):
+  - Generic reusable component for infinite scroll tables
+  - Configurable trigger index (default: 60)
+  - Shows loading indicators while fetching
+  - Shows "end of list" message when no more data
+  - Supports custom row and header rendering
+
+- **Plays & Hits - Infinite Scroll** (`web/src/features/plays-and-hits/`):
+  - Updated to use `useInfiniteBets` instead of `useBets`
+  - Loads 100 records per page
+  - Triggers next page load at row 60 (60% scroll)
+  - Shows loading spinner while fetching more data
+  - Displays total count at end of list
+  - Gets `totalAmount` and `totalPrize` from first page aggregates
+  - Eliminates need for separate `useTotalAmount` and `useTotalPrize` queries
+  - Both desktop table and mobile cards support infinite scroll
+
+**Benefits**:
+- **Performance**: Only loads 100 records initially instead of all records
+- **UX**: Seamless loading without user noticing (pre-fetches at 60%)
+- **Network**: Reduces initial page load time significantly
+- **Scalability**: Can handle thousands of records without performance issues
+
+- **Terminal-Ticket - Infinite Scroll** (`web/src/features/terminal-ticket/`):
+  - Backend pagination support added to tickets endpoint
+  - Created `useInfiniteTickets` hook similar to `useInfiniteBets`
+  - Updated `index.tsx` to use infinite query
+  - Updated `table-terminal-ticket.tsx` with infinite scroll
+  - Loads 100 tickets per page
+  - Triggers next page load at row 60 (60% scroll)
+  - Shows loading spinner while fetching more data
+  - Displays total count at end of list
+  - Both desktop and mobile views support infinite scroll
+
+**Backend Changes for Tickets**:
+- **TicketRepository** (`api/src/ticket/repository/ticket.repository.ts`):
+  - Added `page` and `limit` parameters to `getAll` method
+  - Implemented `.range(from, to)` for offset-based pagination
+  - Added `{count: 'exact'}` to get total count of records
+  - Returns `{ data, count }` instead of just data
+  - Default: 100 records per page
+
+- **TicketController** (`api/src/ticket/controller/ticket.controller.ts`):
+  - Updated `getAll` to return `IPaginatedResponse<ITicketEntityFront>`
+  - Calculates pagination metadata (totalPages, hasMore)
+  - Returns structured pagination response
+
+- **TicketRouter** (`api/src/ticket/route/ticket.route.ts`):
+  - Added `page` and `limit` query parameters to getAllTicketHandler endpoint
+  - Parses pagination params with defaults: page=1, limit=100
+  - Response format changed to pagination structure for non-ticket_number queries
+
+- **Ticket Details - Bets Infinite Scroll** (`web/src/features/terminal-ticket/`):
+  - Created `useInfiniteBetsByTicketNumber` hook for paginated bets by ticket
+  - Updated `TicketDetails.tsx` to use infinite queries for both jugadas and aciertos
+  - Updated `termina-ticket-play-table.tsx` with infinite scroll support
+  - Updated `terminal-ticket-matches-table.tsx` with infinite scroll support
+  - Loads 100 bets per page for each table
+  - Triggers next page load at row 60 (60% scroll)
+  - Shows loading indicators while fetching more data
+  - Displays total count at end of each list
+
 ### Fixed - 2025-11-11
 
 #### Bug Fixes
+
+- **Pagination Response Parsing** (`web/src/hooks/fetchs/plays/`):
+  - Fixed `useBets.ts` to access `json.data.bets.data` instead of `json.data.bets`
+  - Fixed `useGetBetysByTicketNumber.ts` to access `json.data.bets.data` instead of `json.data.bets`
+  - Resolved "bets.map is not a function" error when clicking tickets in terminal-ticket
+  - These hooks now correctly handle the new paginated response structure
+
+- **TypeScript Type Errors**:
+  - Made `useIntersectionObserver` generic to support different HTML element types
+  - Fixed type errors in `plays-and-hits-table.tsx` by specifying `HTMLTableRowElement` type
+  - Fixed type errors in `table-terminal-ticket.tsx` by specifying `HTMLTableRowElement` type
+  - Fixed `APIResponse` type errors in `bet.routes.ts` by wrapping response in `{ bets: result }`
+  - Fixed `APIResponse` type errors in `ticket.route.ts` by wrapping response in `{ ticket: result }`
+
+- **Infinite Scroll Query Location - Final Fix** (`web/src/features/plays-and-hits/`):
+  - **Problem**: IntersectionObserver was in child component but query was in parent, preventing infinite scroll from triggering
+  - **Solution**: Moved queries to the same components where IntersectionObserver is used
+  - **PlaysAndHitsTable** (`plays-and-hits-table.tsx`):
+    - Query `useInfiniteBets` now lives in the table component itself
+    - Reads filters directly from `useSearchParams` hook
+    - Uses `useMemo` to flatten pages: `data?.pages.flatMap((page) => page.data)`
+    - Implements `IntersectionObserver` with trigger at row 60
+    - Added `onTotalsUpdate` callback to pass aggregates back to parent
+    - Shows loading spinner, infinite scroll indicators, and end-of-list messages
+    - Table now manages its own infinite scroll state internally
+  - **PlaysAndHitsContent** (`plays-and-hits/index.tsx`):
+    - Removed all query logic
+    - Only passes `onTotalsUpdate` callback to table
+    - Receives totals via `useState` and passes them to `TotalAmountPlayAndHits`
+    - Simplified to pure layout component
+  - **TotalAmountPlayAndHits** (`total-amount-play-and-hits.tsx`):
+    - Receives `totalPlaysAmount` and `totalHitsAmount` as props
+    - No changes needed, already prepared to receive props
+  - **Result**: Infinite scroll now works correctly in plays-and-hits, loading pages as user scrolls
 - **MakePlaysProvider** (`src/features/make-plays/provider/MakePlaysProvider.tsx`):
   - Fixed cashier state not clearing when non-existent user number is entered
   - Changed useEffect logic from simple `if (cashierByNumber)` to `if...else if...else`

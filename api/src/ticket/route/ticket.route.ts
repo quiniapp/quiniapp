@@ -144,7 +144,7 @@ export class TicketRouter {
 
   private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, ticket_number, cashier_id, winner } = req.query;
+    const { date, ticket_number, cashier_id, winner, page, limit } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -157,12 +157,17 @@ export class TicketRouter {
     }
 
     try {
-      let ticket;
       if (typeof ticket_number === 'string') {
-        const res = await this.controller.get({
+        const ticketData = await this.controller.get({
           ticket_number: ticket_number,
         });
-        ticket = [res];
+        const response: APIResponse<ITicketEntityFront[]> = {
+          data: {
+            ticket: [ticketData],
+          },
+        };
+        res.status(200).json(response);
+        return;
       } else {
         if (typeof date !== 'string') {
           const response: APIResponse<null> = {
@@ -174,7 +179,7 @@ export class TicketRouter {
           res.status(500).json(response);
           return;
         }
-        ticket = await this.controller.getAll({
+        const result = await this.controller.getAll({
           user_type: user.user.user_type,
           user_id: user.user.user_id,
           date: date,
@@ -182,16 +187,18 @@ export class TicketRouter {
           ...(typeof winner === 'string' && winner === 'true'
             ? { winner: true }
             : { winner: false }),
+          page: typeof page === 'string' ? parseInt(page, 10) : 1,
+          limit: typeof limit === 'string' ? parseInt(limit, 10) : 100,
         });
-      }
 
-      const response: APIResponse<ITicketEntityFront[]> = {
-        data: {
-          ticket,
-        },
-      };
-      res.status(200).json(response);
-      return;
+        const response: APIResponse<typeof result> = {
+          data: {
+            ticket: result,
+          },
+        };
+        res.status(200).json(response);
+        return;
+      }
     } catch (error) {
       console.error(error);
 
