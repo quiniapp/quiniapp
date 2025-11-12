@@ -39,7 +39,7 @@ export const useTickets = ({
       });
       if (!res.ok) throw new Error('Error fetching tickets');
       const { data } = await res.json();
-      return data.ticket;
+      return data.ticket?.data;
     },
     refetchOnWindowFocus: true,
   });
