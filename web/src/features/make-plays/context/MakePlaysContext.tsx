@@ -16,6 +16,8 @@ type PlayDetailsState = {
   selectedIndexes: number[];
   userNumber?: number;
   isEnabledCreateBet: boolean;
+  isPendingEdit: boolean;
+  isPendingCreate: boolean;
   setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;

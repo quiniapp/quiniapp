@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now uses `totalWinnersCount` and `totalCount` from aggregates instead of array length
   - Displays correct totals even with pagination
 
+#### Make Plays - Button State
+- **Close Ticket Button**: Prevent double-click during bet creation/edit
+  - Path: `src/features/make-plays/results-overview.tsx:65`
+  - Button now disabled when `isPendingCreate` or `isPendingEdit` are true
+  - Prevents multiple submissions while fetching
+
 ### Changed - 2025-11-11
 
 #### Session Management
