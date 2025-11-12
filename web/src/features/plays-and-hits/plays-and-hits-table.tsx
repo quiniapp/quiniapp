@@ -155,7 +155,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
           </TableHeader>
           <TableBody>
             {bets?.map((bet: IBetEntityFront) => (
-              <TableRow key={Math.random()}>
+              <TableRow key={bet?.bet_id ?? Math.random()}>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
                   {bet.number}
                 </TableCell>
@@ -218,7 +218,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
 
         {bets?.map((bet) => (
           <div
-            key={Math.random()}
+            key={bet?.bet_id ?? Math.random()}
             className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
           >
             <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
