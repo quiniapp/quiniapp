@@ -1,4 +1,12 @@
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -44,18 +52,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   // Flatten all pages into a single array
   // Reemplazá tu 'bets' por este 'bets' deduplicado
   const bets = useMemo(() => {
-    const flat = data?.pages.flatMap((p) => p.data) ?? [];
-    const seen = new Set<string>();
-    const out: IBetEntityFront[] = [];
-    for (const b of flat) {
-      // asumimos que bet_id existe y es único globalmente
-      const id = String(b.bet_id);
-      if (!seen.has(id)) {
-        seen.add(id);
-        out.push(b);
-      }
-    }
-    return out;
+    return data?.pages.flatMap((p) => p.data) ?? [];
   }, [data]);
 
   const toFinite = (v: unknown, def = 0) => {
@@ -121,27 +118,44 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
       {/* ===== DESKTOP/TABLET ===== */}
       <div className="hidden md:block overflow-x-auto w-full">
         <Table className="w-full min-w-[900px]">
-          
           <TableCaption className={!bets?.length ? '' : 'hidden'}>
             No se encontraron jugadas
           </TableCaption>
 
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow className="bg-[#06081322] h-11">
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Jugada</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Monto</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Tipo</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Turno</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Quiniela</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Aciertos</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">$ Aciertos</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base font-semibold">Ticket</TableHead>
-              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">Usuario</TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Jugada
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Monto
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Tipo
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Turno
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Quiniela
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Aciertos
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                $ Aciertos
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base font-semibold">
+                Ticket
+              </TableHead>
+              <TableHead className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base">
+                Usuario
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bets?.map((bet: IBetEntityFront) => (
-              <TableRow key={String(bet.bet_id)}>
+              <TableRow key={Math.random()}>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
                   {bet.number}
                 </TableCell>
@@ -204,7 +218,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
 
         {bets?.map((bet) => (
           <div
-            key={bet.bet_id}
+            key={Math.random()}
             className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
           >
             <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
@@ -264,7 +278,6 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   );
 };
 
-
 /** Subcomponente para fila label → valor */
 const Field: React.FC<{
   label: string;
@@ -272,9 +285,7 @@ const Field: React.FC<{
 }> = ({ label, value = '-' }) => {
   return (
     <div className="flex flex-col">
-      <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
-        {label}
-      </span>
+      <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">{label}</span>
       <span className="text-sm font-semibold text-white truncate">{value}</span>
     </div>
   );
