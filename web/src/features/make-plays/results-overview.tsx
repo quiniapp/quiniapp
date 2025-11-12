@@ -15,10 +15,13 @@ const ResultsOverview = () => {
     handleResetBets,
     handleDeleteSelectedBets,
     isEnabledCreateBetByAdmin,
+    isPendingCreate,
+    isPendingEdit,
   } = usePlayDetails();
 
   const hasSelection = selectedIndexes.length > 0;
-  const isEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin;
+  const isEnabled =
+    (totalAmount > 0 && isEnabledCreateBetByAdmin);
 
   return (
     <Flex
@@ -26,7 +29,9 @@ const ResultsOverview = () => {
         'flex-col sm:flex-row gap-2 sm:gap-4 p-1 1440:p-2 items-center  sticky bottom-0 bg-background z-10'
       }
     >
-      <Flex className={'flex-col sm:flex-row justify-between gap-2 sm:gap-4 lg:gap-2 w-full sm:flex-1'}>
+      <Flex
+        className={'flex-col sm:flex-row justify-between gap-2 sm:gap-4 lg:gap-2 w-full sm:flex-1'}
+      >
         <Flex className="gap-2 lg:gap-1.5 min-w-fit">
           <FlexCol className="">
             <span className="text-xs sm:text-sm  whitespace-nowrap">Monto parcial</span>
@@ -55,15 +60,33 @@ const ResultsOverview = () => {
         </FlexCol>
       </Flex>
       <Flex className={'gap-2 lg:gap-1.5 items-center w-full sm:w-auto justify-center flex-wrap'}>
-        <Button onClick={() => handleCreateBet()} disabled={!isEnabled} size="sm" className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]">
+        <Button
+          onClick={() => handleCreateBet()}
+          disabled={!isEnabled || isPendingCreate || isPendingEdit}
+          size="sm"
+          className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
+        >
           <span className="hidden sm:inline">Cerrar Ticket</span>
           <span className="sm:hidden">Cerrar</span>
         </Button>
-        <Button onClick={handleDeleteSelectedBets} variant="destructive" disabled={!hasSelection} size="sm" className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]">
-          <Trash2Icon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Eliminar</span>
+        <Button
+          onClick={handleDeleteSelectedBets}
+          variant="destructive"
+          disabled={!hasSelection}
+          size="sm"
+          className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
+        >
+          <Trash2Icon className="sm:mr-1 lg:mr-0.5" />{' '}
+          <span className="hidden sm:inline">Eliminar</span>
         </Button>
-        <Button onClick={() => handleResetBets()} variant={'outline'} size="sm" className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]">
-          <TimerReset className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Reiniciar</span>
+        <Button
+          onClick={() => handleResetBets()}
+          variant={'outline'}
+          size="sm"
+          className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
+        >
+          <TimerReset className="sm:mr-1 lg:mr-0.5" />{' '}
+          <span className="hidden sm:inline">Reiniciar</span>
         </Button>
       </Flex>
     </Flex>

@@ -225,6 +225,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     selectedIndexes,
     userNumber,
     isEnabledCreateBet,
+    isPendingCreate,
+    isPendingEdit,
     setBets,
     setTotalAmount,
     setPartialAmount,
