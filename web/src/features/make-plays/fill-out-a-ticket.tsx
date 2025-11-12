@@ -221,11 +221,11 @@ const FillOutATicket = () => {
   return (
     <FlexCol className={'h-fit w-full max-w-full'}>
       <Flex className={'flex-col-reverse sm:flex-row gap-2 sm:gap-3 lg:gap-2 sm:items-stretch w-full'}>
-        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[320px] lg:max-w-[260px] w-full'}>
+        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[260px] lg:max-w-[320px] w-full'}>
           <form className={'w-full'}>
             <FlexCol className={'space-y-2 sm:space-y-3 lg:space-y-1 h-full border p-2 sm:p-3 lg:p-1.5 bg-card rounded-[--rounded-form] justify-between'}>
               <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
-                <Label htmlFor={'number'} className="text-sm sm:text-base lg:text-lg truncate"> Numero </Label>
+                <Label htmlFor={'number'} className="text-sm sm:text-base 2xl:text-lg truncate"> Numero </Label>
                 <Input
                   ref={numberRef}
                   id="number"
@@ -233,14 +233,14 @@ const FillOutATicket = () => {
                   inputMode="numeric"
                   type="text"
                   maxLength={10}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   value={bet.number ?? ''}
                   onChange={(e) => handleNumericInput('number', e.target.value)}
                   onKeyDown={handleInputKeyDown(0)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
-                <Label htmlFor={'amount'} className="text-sm sm:text-base lg:text-lg truncate"> Monto </Label>
+                <Label htmlFor={'amount'} className="text-sm sm:text-base 2xl:text-lg truncate"> Monto </Label>
                 <Input
                   ref={amountRef}
                   id="amount"
@@ -248,27 +248,27 @@ const FillOutATicket = () => {
                   type={'number'}
                   inputMode="numeric"
                   value={bet?.amount?.toString() ?? ''}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleBet('amount', e.target.value)}
                   onKeyDown={handleInputKeyDown(1)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
-                <Label htmlFor={'place'} className="text-sm sm:text-base lg:text-lg truncate"> Ubicación </Label>
+                <Label htmlFor={'place'} className="text-sm sm:text-base 2xl:text-lg truncate"> Ubicación </Label>
                 <Input
                   ref={placeRef}
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
                   inputMode="numeric"
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   value={bet.place ?? ''}
                   onChange={(e) => handleBet('place', e.target.value)}
                   onKeyDown={handleInputKeyDown(2)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
-                <Label htmlFor={'with'} className="text-sm sm:text-base lg:text-lg truncate"> Con </Label>
+                <Label htmlFor={'with'} className="text-sm sm:text-base 2xl:text-lg truncate"> Con </Label>
                 <Input
                   ref={withRef}
                   id="with"
@@ -277,13 +277,13 @@ const FillOutATicket = () => {
                   type="text"
                   maxLength={2}
                   value={bet.with ?? ''}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleNumericInput('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
                 />
               </Box>
               <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
-                <Label htmlFor={'position'} className="text-sm sm:text-base lg:text-lg truncate"> Posición </Label>
+                <Label htmlFor={'position'} className="text-sm sm:text-base 2xl:text-lg truncate"> Posición </Label>
                 <Input
                   ref={positionRef}
                   id="position"
@@ -291,7 +291,7 @@ const FillOutATicket = () => {
                   type={'number'}
                   inputMode="numeric"
                   value={bet.position ?? ''}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base lg:text-lg h-9 sm:h-10 lg:h-8'}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleBet('position', e.target.value)}
                   onKeyDown={handleInputKeyDown(4)}
                 />
