@@ -1,7 +1,6 @@
 import { TicketX } from 'lucide-react';
 
 // @Components
-import Box from '@/components/box';
 import { Button } from '@/components/ui/button';
 import { Flex, FlexCol } from '@/components/flex';
 import { Typography } from '@/components/typography';
@@ -15,6 +14,7 @@ import TicketDetails from './TicketDetails';
 import { useSearchParams } from 'react-router-dom';
 import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket';
 import toast from 'react-hot-toast';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 export const TerminalTicketContent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +26,8 @@ export const TerminalTicketContent = () => {
     date: date,
     user_id: cashier_id,
     winner: filter === 'winner' ? true : undefined,
+    paid: filter === 'paid' ? true : undefined,
+    not_paid: filter === 'not_paid' ? true : undefined,
   });
   const { mutate: runDeleteTicket } = useDeleteTicket();
 
@@ -45,29 +47,35 @@ export const TerminalTicketContent = () => {
   };
 
   return (
-    <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
+    <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
-      <FlexCol className={'1440:py-[36px] py-[16px]'}>
-        <Flex className={'gap-8'}>
-          <FormHeaderFilter />
+      <FlexCol className={'1440:py-[36px] py-2 sm:py-4 flex-1'}>
+        <FlexCol className={'sm:flex sm:flex-row gap-2 sm:gap-8'}>
           <FlexCol>
-            <FlexCol>
-              <TableTerminalTicket data={data} />
+            <FormHeaderFilter />
 
-              <Typography className={'text-xs'} variant={'p'}>
-                Cantidad de Tickets: {data?.length}
-              </Typography>
-            </FlexCol>
+            <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
+              <Button
+                variant={'destructive'}
+                disabled={!ticket_number}
+                onClick={handleDeleteTicket}
+              >
+                <TicketX /> Eliminar Ticket
+              </Button>
+              <Button variant={'outline'}> Cerrar </Button>
+            </Flex>
           </FlexCol>
-        </Flex>
+          <FlexCol>
+            <TableTerminalTicket data={data} />
+
+            <Typography className={'text-xs'} variant={'p'}>
+              Cantidad de Tickets: {data?.length}
+            </Typography>
+          </FlexCol>
+        </FlexCol>
         <TicketDetails />
+      
       </FlexCol>
-      <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
-        <Button variant={'destructive'} disabled={!ticket_number} onClick={handleDeleteTicket}>
-          <TicketX /> Eliminar Ticket
-        </Button>
-        <Button variant={'outline'}> Cerrar </Button>
-      </Flex>
-    </Box>
+    </PageWrapper>
   );
 };

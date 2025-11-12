@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { QuinielaFieldset } from '@/features/make-plays/quiniela-fieldset';
 import { useEffect, useMemo, useState } from 'react';
-import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetByNumber';
-import { IBetTable } from '@/features/make-plays';
+import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetTicketByNumber';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -21,6 +20,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useClock } from '@/providers/ClockProvider';
 import { useAuth } from '@/contexts/AuthContext';
+import { IBetTable } from '@helper/request/ticket.response';
 
 dayjs.extend(customParseFormat);
 const toHHMMSS = (t: string) => (t.length === 5 ? `${t}:00` : t);
@@ -49,7 +49,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
   const { data } = getTicketByNumber(ticketNumber);
-  console.log('data',data)
+
   const handleSetBets = () => {
     handleRecreateBet(selectedBets);
     onClose();
@@ -154,47 +154,57 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
     setScheduleLotteriesToPlay(new Map());
   };
 
-  useEffect(() => {
-    if (!data) return;
+useEffect(() => {
+  if (!data) return;
 
-    const betsByNumber = new Map<string, IBetTable>();
-    const selectedBySchedule = new Map<string, Set<string>>();
+  const betsByNumber = new Map<string, IBetTable>();
+  const selectedBySchedule = new Map<string, Set<string>>();
 
-    for (const b of data.bets) {
-      const num = b.number;
-      const schId = b.schedule.schedule_id;
-      const lotId = String(b.lottery_id);
-      if (disabledSchedules.has(schId)) continue; // ⬅️ no sumar cerrados
-      // preselección por turno/lot
+  for (const bet of data.bets) {
+    const num = bet.number;
+
+    // recorro los schedules anidados
+    for (const sl of bet.scheduleLottery) {
+      const schId = sl.schedule.schedule_id;
+      if (disabledSchedules.has(schId)) continue;
+
+      // preselección: todas las lotteries de ese schedule
       if (!selectedBySchedule.has(schId)) selectedBySchedule.set(schId, new Set());
-      selectedBySchedule.get(schId)!.add(lotId);
+      for (const lot of sl.lotteries) {
+        selectedBySchedule.get(schId)!.add(lot.lottery_id);
+      }
 
-      // agrupar jugadas por número con schedule/lottery
+      // agrupar jugadas por número y mergear schedule/lotteries
       const existing = betsByNumber.get(num);
       if (existing) {
         let entry = existing.scheduleLottery.find((s) => s.schedule.schedule_id === schId);
         if (!entry) {
-          entry = { schedule: b.schedule, lotteries: [] };
+          entry = { schedule: sl.schedule, lotteries: [] };
           existing.scheduleLottery.push(entry);
         }
-        if (!entry.lotteries.some((l) => l.lottery_id === lotId)) {
-          entry.lotteries.push(b.lottery);
+        // merge sin duplicados
+        const existingIds = new Set(entry.lotteries.map((l) => l.lottery_id));
+        for (const lot of sl.lotteries) {
+          if (!existingIds.has(lot.lottery_id)) entry.lotteries.push(lot);
         }
       } else {
+        // primer vez: clono la estructura de scheduleLottery del bet
         betsByNumber.set(num, {
-          number: b.number,
-          amount: b.amount,
-          place: b.place,
-          with: b.with,
-          position: b.position,
-          scheduleLottery: [{ schedule: b.schedule, lotteries: [b.lottery] }],
+          number: bet.number,
+          amount: bet.amount,
+          place: bet.place,
+          with: bet.with ?? null,
+          position: bet.position ?? null,
+          scheduleLottery: [{ schedule: sl.schedule, lotteries: [...sl.lotteries] }],
         });
       }
     }
+  }
 
-    setRepeatBets(betsByNumber);
-    setScheduleLotteriesToPlay(selectedBySchedule);
-  }, [data]);
+  setRepeatBets(betsByNumber);
+  setScheduleLotteriesToPlay(selectedBySchedule);
+}, [data]);
+
 
   useEffect(() => {
     setScheduleLotteriesToPlay((prev) => {

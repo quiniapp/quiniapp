@@ -1,4 +1,4 @@
-import { INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.response';
+import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.response';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';
@@ -20,7 +20,7 @@ export const ticketBase = (ticket: INewTicketEntity): INewTicketBaseEntity => {
     ticket_id: ticket_id,
     total: total,
     ticket_number: ticket_number,
-    bets: ticket.bets.map((bet) => betBase(bet, ticket_id, ticket_number)),
+    bets: ticket.bets.map((b: IBetTable) => betBase(b)),
     winner: false,
     paid: false,
     deleted_at: null,

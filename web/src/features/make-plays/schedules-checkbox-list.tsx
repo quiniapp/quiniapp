@@ -1,17 +1,21 @@
-import { ClockIcon } from 'lucide-react';
-// Components UI
+import { useEffect, useRef, useState, useMemo, useLayoutEffect } from 'react';
+import { ClockIcon, } from 'lucide-react';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-// Components
 import { Flex, FlexCol } from '@/components/flex';
 import Box from '@/components/box';
 import HeaderTitleSection from '@/components/header-title-section';
-// Hooks
+
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { useEffect, useRef } from 'react';
 import { useClock } from '@/providers/ClockProvider';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
+
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface SchedulesProps {
   time: string;
@@ -21,9 +25,10 @@ interface SchedulesProps {
 
 interface SchedulesCheckboxListProps {
   schedules: SchedulesProps[];
-  setSchedules: (schedule: IScheduleEntityFront) => void;
+  setSchedules: (schedule: IScheduleEntityFront) => void; // toggle
   checkedSchedules: Map<string, IScheduleEntityFront>;
 }
+
 const ScheduleCheckboxList = ({
   schedules,
   setSchedules,
@@ -31,93 +36,167 @@ const ScheduleCheckboxList = ({
 }: SchedulesCheckboxListProps) => {
   const { role } = useAuth();
   const { isScheduleAfter, isLessThanTenMinutes } = useClock();
-  const refF1 = useRef<HTMLButtonElement>(null);
-  const refF2 = useRef<HTMLButtonElement>(null);
-  const refF3 = useRef<HTMLButtonElement>(null);
-  const refF4 = useRef<HTMLButtonElement>(null);
-  const refF5 = useRef<HTMLButtonElement>(null);
 
-  const refF6 = useRef<HTMLButtonElement>(null);
-  const refF7 = useRef<HTMLButtonElement>(null);
-  const refF8 = useRef<HTMLButtonElement>(null);
-  const refF9 = useRef<HTMLButtonElement>(null);
-  const refF10 = useRef<HTMLButtonElement>(null);
+  // F-keys (solo para desktop)
+  const refs = Array.from({ length: 10 }, () => useRef<HTMLButtonElement>(null));
+  const keyMap: Record<string, number> = Object.fromEntries(
+    Array.from({ length: 10 }, (_, i) => [`F${i + 1}`, i])
+  );
 
-  const keyMap: Record<string, number> = {
-    F1: 0,
-    F2: 1,
-    F3: 2,
-    F4: 3,
-    F5: 4,
-    F6: 5,
-    F7: 6,
-    F8: 7,
-    F9: 8,
-    F10: 9,
-  };
-  const keyboardMap = [
-    { key: 'F1', ref: refF1 },
-    { key: 'F2', ref: refF2 },
-    { key: 'F3', ref: refF3 },
-    { key: 'F4', ref: refF4 },
-    { key: 'F5', ref: refF5 },
-    { key: 'F6', ref: refF6 },
-    { key: 'F7', ref: refF7 },
-    { key: 'F8', ref: refF8 },
-    { key: 'F9', ref: refF9 },
-    { key: 'F10', ref: refF10 },
-  ];
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    const index = keyMap[e.key];
-    if (index !== undefined) {
-      e.preventDefault();
-
-      const ref = keyboardMap[index].ref;
-      if (ref?.current) {
-        ref.current.click();
-      }
-    }
-  };
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const idx = keyMap[e.key];
+      if (idx !== undefined && refs[idx]?.current) {
+        e.preventDefault();
+        refs[idx]!.current!.click();
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [schedules, setSchedules]);
+    // no dependas de schedules acá para no recrear el listener
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Helpers
+  const isEnabled = (t: string) =>
+    (isScheduleAfter(t) && !isLessThanTenMinutes(t)) || role !== USER_TYPE.CASHIER;
+
+  // ===== Desktop / Tablet (sm+) =====
+  const desktopGrid = (
+    <Box className="hidden sm:grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
+      {schedules.slice(0, 10).map((sch, index) => {
+        const enabled = isEnabled(sch.time);
+        const checked = checkedSchedules.has(sch.schedule_id);
+
+        return (
+          <Flex key={sch.schedule_id} className="items-center gap-2">
+            <Checkbox
+              checked={checked}
+              disabled={!enabled}
+              id={`f${index + 1}`}
+              ref={refs[index]}
+              onClick={() => setSchedules(sch as IScheduleEntityFront)} // toggle
+              className="border-2 border-primary"
+            />
+            <Label htmlFor={`f${index + 1}`} className="text-[12px]">
+              {sch.name} [{sch.time.slice(0, 5)}]{' '}
+              <span className="text-primary-light">[{`F${index + 1}`}]</span>
+            </Label>
+          </Flex>
+        );
+      })}
+    </Box>
+  );
+
+  // ===== Mobile (< sm): Popover + Command (multi-select sin auto-cerrar) =====
+  const [open, setOpen] = useState(false);
+  const selectedCount = checkedSchedules.size;
+  const selectedLabel = useMemo(() => {
+    if (selectedCount === 0) return 'Seleccionar turnos';
+    if (selectedCount === 1) return `${Array.from(checkedSchedules.values())[0].name}`;
+    return `${selectedCount} seleccionados`;
+  }, [selectedCount, checkedSchedules]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [triggerW, setTriggerW] = useState(0);
+  useLayoutEffect(() => {
+    const update = () => setTriggerW(triggerRef.current?.offsetWidth ?? 0);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  const toggleSchedule = (sch: IScheduleEntityFront) => {
+    if (!isEnabled(sch.time)) return;
+    setSchedules(sch); // tu setter ya togglea
+  };
+  const clearAll = () => {
+    // deseleccionar todas las ya marcadas togglenado cada una
+    Array.from(checkedSchedules.values()).forEach(setSchedules);
+  };
+  const mobilePicker = (
+    <div className="sm:hidden">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            ref={triggerRef}
+            type="button"
+            variant="outline"
+            className="w-full justify-between h-9 px-3 text-xs"
+          >
+            {selectedLabel}
+          </Button>
+        </PopoverTrigger>
+
+        {/* 👇 ancho igual al trigger; offset pequeño para que no se pegue */}
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={6}
+          className="p-0"
+          style={{ width: triggerW || undefined, maxWidth: '92vw' }}
+        >
+          <Command>
+            <CommandList className="max-h-56">
+              <CommandGroup heading="Turnos">
+                {schedules.map((sch) => {
+                  const enabled = isEnabled(sch.time);
+                  const checked = checkedSchedules.has(sch.schedule_id);
+                  return (
+                    <CommandItem
+                      key={sch.schedule_id}
+                      value={`${sch.name} ${sch.time}`}
+                      onSelect={() => toggleSchedule(sch as IScheduleEntityFront)}
+                      className={cn('text-sm', !enabled && 'opacity-50')}
+                    >
+                      <Flex className="items-center gap-2">
+                        {/* ✅ check cuadrado */}
+                        <Checkbox
+                          checked={checked}
+                          className="h-4 w-4 rounded-[4px] pointer-events-none"
+                        />
+                        <span className="text-xs">
+                          {sch.name} — {sch.time.slice(0, 5)}
+                          {!enabled ? ' (cerrado)' : ''}
+                        </span>
+                      </Flex>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+
+             <div className="flex items-center justify-between gap-2 px-2 py-2 border-t">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-8 px-2 text-xs"
+                  onClick={() => {
+                    // limpiar: togglear todas las seleccionadas
+                    clearAll();
+                  }}
+                  disabled={checkedSchedules.size === 0}
+                >
+                  Limpiar
+                </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 px-2 text-xs"
+                onClick={() => setOpen(false)}
+              >
+                Listo
+              </Button>
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 
   return (
-    <FlexCol className="border-2  p-2 sm:p-4 rounded-[--rounded-form]">
+    <FlexCol className="border-2 p-2 sm:p-4 rounded-[--rounded-form] w-full gap-2">
       <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
-      <Box className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
-        {schedules.map((schedule, index) => {
-          const keyHandler = keyboardMap[index];
-          if (!keyHandler) return null;
-
-          const enabled =
-            (isScheduleAfter(schedule.time) && !isLessThanTenMinutes(schedule.time)) ||
-            role !== USER_TYPE.CASHIER;
-
-          if (!enabled) checkedSchedules.delete(schedule.schedule_id);
-
-          return (
-            <Flex key={schedule.schedule_id} className="items-center gap-2">
-              <Checkbox
-                checked={checkedSchedules.has(schedule.schedule_id)}
-                disabled={!enabled}
-                id={`f${index + 1}`}
-                ref={keyHandler.ref}
-                onClick={() => {
-                  setSchedules(schedule);
-                }}
-                className="border-2 border-primary"
-              />
-              <Label htmlFor={`f${index + 1}`} className="text-[12px]">
-                {schedule.name} [{schedule.time.slice(0, 5)}]{' '}
-                <span className="text-primary-light">[{`F${index + 1}`}]</span>
-              </Label>
-            </Flex>
-          );
-        })}
-      </Box>
+      {desktopGrid}
+      {mobilePicker}
     </FlexCol>
   );
 };

@@ -1,30 +1,21 @@
-import { INewBetEntity } from '@helper/request/bet.response';
-import { IBetEntityBase } from '@helper/types/bet.type';
-import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { IBetTable, IBetTableBase, ILotterySchedule } from '@helper/request/ticket.response';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-export const betBase = (
-  bet: INewBetEntity,
-  ticket_id: string,
-  ticket_number: string
-): IBetEntityBase => {
-  const timestamp = dayjs().tz('America/Argentina/Buenos_Aires');
+export const betBase = (bet: IBetTable): IBetTableBase => {
   return {
     ...bet,
-    ticket_id: ticket_id,
-    bet_id: uuidv4(),
-    winner: false,
-    paid: false,
-    deleted_at: null,
-    created_at: timestamp.toISOString(),
-    edited_at: timestamp.toISOString(),
-    prize: 0,
-    hits: 0,
-    date: timestamp.format('YYYY-MM-DD'),
-    ticket_number,
+    scheduleLottery: bet.scheduleLottery.map((schLot: ILotterySchedule) => {
+      const schedule: IScheduleEntityFront = schLot.schedule;
+      return {
+        schedule: schedule.schedule_id,
+        lotteries: schLot.lotteries.map((lot: ILotteryEntityFront) => lot.lottery_id),
+      };
+    }),
   };
 };

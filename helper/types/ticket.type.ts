@@ -1,4 +1,4 @@
-import { IBetEntityBack, IBetEntityBase, IBetEntityFront } from './bet.type';
+import { IBetTable } from '../request/ticket.response';
 
 export interface ITicketEntityBase {
   ticket_id: string;
@@ -14,15 +14,14 @@ export interface ITicketEntityBase {
   deleted_at: string | null;
   deleted_by: string | null;
   hits: number;
-  bets: IBetEntityBase[];
 }
 
-export type ITicketEntityBack = Omit<ITicketEntityBase, 'bets'> & {
-  bets: IBetEntityBack[];
-};
+export interface ITicketEntityBack extends ITicketEntityBase {
+  bets: IBetTable[];
+}
 export type ITicketEntityFront = Omit<
   ITicketEntityBase,
-  'created_at' | 'deleted_at' | 'edited_at' | 'bets'
+  'created_at' | 'deleted_at' | 'edited_at'
 > & {
-  bets: IBetEntityFront[];
+  bets: IBetTable[];
 };

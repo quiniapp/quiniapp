@@ -9,7 +9,13 @@ const BORDER_TABLE = {
   tableLineColor: [0, 0, 0] as [number, number, number],
 };
 
-const money = (n: number) => `$ ${n}`;
+const money = (n: number) => {
+  const fmt = new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1, // ⬅️ 1 decimal
+  });
+  return fmt.format(Number.isFinite(n) ? n : 0); // ⬅️ sin $
+};
 
 /** Evita problemas con SSR cargando jsPDF/autotable sólo en el cliente */
 async function getPDFDeps() {
@@ -34,6 +40,8 @@ export async function downloadCurrentAccountTablePDF(params: {
   date?: string | null;
   data: ICurrentAccountEntityFront[];
 }) {
+  const BASE_FONT = 8; // antes 9
+  const CELL_PAD = 1; // antes 2.0
   const { jsPDF, autoTable } = await getPDFDeps();
   const totals = computeTotals(params.data);
 
@@ -50,21 +58,82 @@ export async function downloadCurrentAccountTablePDF(params: {
   doc.setFontSize(10);
   doc.text(`Fecha de la Liquidación: ${dateStr}`, 14, 20);
 
-  // 👉 Definimos mismos márgenes y anchos fijos por columna (alineación garantizada)
-  const margin = { left: 14, right: 14 };
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const available = pageWidth - margin.left - margin.right;
+  // 2) dentro de downloadCurrentAccountTablePDF, después de crear el doc:
 
-  // pesos relativos por columna (Nombre más ancho)
-  const weights = [0.9, 2.8, 1.1, 1.2, 1.1, 1.1, 1.2, 1.1, 1.1, 1.2, 1.2, 1.0];
-  const sum = weights.reduce((a, b) => a + b, 0);
-  const widths = weights.map((w) => (w / sum) * available);
+  // 👉 Márgenes y medidas base
+// --- medidas base (seguí usando landscape A4 en mm)
+// const BASE_FONT = 8.5;
+// const CELL_PAD = 1.6;
+doc.setFontSize(BASE_FONT);
 
-  const columnStyles = widths.reduce<Record<number, any>>((acc, w, i) => {
-    acc[i] = { cellWidth: w, halign: i <= 1 ? 'left' : 'right' }; // 0=Numero, 1=Nombre
-    return acc;
-  }, {});
+const margin = { left: 14, right: 14 };       // si hace falta más lugar, podés bajar a 12/12
+const pageWidth = doc.internal.pageSize.getWidth();
+const available = pageWidth - margin.left - margin.right;
 
+// peor caso garantizado: 7 dígitos + 1 decimal + separadores + posible signo
+const worstMoney = '-9.999.999,9';
+const MONEY_W_TEXT = doc.getTextWidth(worstMoney);
+const minMoneyCol = MONEY_W_TEXT + CELL_PAD * 2 + 0.5; // ancho mínimo numérico
+
+const numberColWidth = 16;             // "Número" angosto y fijo
+const MONEY_COL_COUNT = 10;            // Pase, Subtotal, Aciertos, Reclamos, Deuda, Cobros, Pagos, Total, Arrastre, Deje
+
+// 1) Partimos del mínimo que entra seguro para cada numérica
+let moneyColWidth = Math.ceil(minMoneyCol);
+
+// 2) Asignamos a "Nombre" un ancho inicial más chico (achicamos esta col)
+const MIN_NAME = 24;                   // ⬅️ ANTES era 30/32, ahora la achicamos
+let nameColWidth = MIN_NAME;
+
+// 3) Calculamos el espacio usado y el remanente
+let used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
+let leftover = available - used;
+
+// Si sobra ancho, lo repartimos entre TODAS las numéricas por igual
+if (leftover > 0) {
+  const addEach = leftover / MONEY_COL_COUNT;
+  moneyColWidth = Math.floor(moneyColWidth + addEach); // puede ser float, pero redondeo a piso para evitar overrun
+  // recalculamos con el nuevo ancho
+  used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
+  leftover = available - used;
+  // Si quedó 1–2mm sueltos por redondeo, sumalos a "Nombre" como colchón
+  if (leftover > 0) nameColWidth += leftover;
+} else {
+  // Si falta espacio (no debería, pero por si cambiaste márgenes/fuente)
+  // reducimos 0.5mm a cada numérica sin bajar del mínimo medido
+  const deficit = -leftover;
+  const reduceEach = Math.ceil(deficit / MONEY_COL_COUNT);
+  moneyColWidth = Math.max(Math.ceil(minMoneyCol), moneyColWidth - reduceEach);
+  // y recomputamos
+  used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
+  nameColWidth = Math.max(MIN_NAME, available - numberColWidth - moneyColWidth * MONEY_COL_COUNT);
+}
+
+// 4) columnStyles (se aplican IGUAL a la tabla principal y al footer)
+const columnStyles: Record<number, any> = {
+  0:  { cellWidth: numberColWidth, halign: 'left',  overflow: 'ellipsize' }, // Número
+  1:  { cellWidth: nameColWidth,   halign: 'left',  overflow: 'ellipsize' }, // Nombre
+  2:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Pase
+  3:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Subtotal
+  4:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Aciertos
+  5:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Reclamos
+  6:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Deuda
+  7:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Cobros
+  8:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Pagos
+  9:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Total
+  10: { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Arrastre
+  11: { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Deje
+};
+
+// usa el MISMO font/padding/columnStyles en ambos autoTable
+const baseStyles = {
+  ...BORDER_CELL,
+  fontSize: BASE_FONT,
+  cellPadding: CELL_PAD,
+  overflow: 'linebreak',
+  fillColor: [255, 255, 255],
+  textColor: [0, 0, 0],
+};
   // 👉 HEAD en el orden pedido
   const HEAD = [
     [
@@ -99,6 +168,7 @@ export async function downloadCurrentAccountTablePDF(params: {
       'Deje',
     ],
   ];
+
   // 👉 BODY en el mismo orden
   const body = params.data.map((a) => [
     a.user_number ?? '',
@@ -122,29 +192,16 @@ export async function downloadCurrentAccountTablePDF(params: {
     startY: 26,
     margin,
     theme: 'grid',
-
-    // 👉 borde exterior de la tabla = igual que celdas
     ...BORDER_TABLE,
-
-    styles: {
-      ...BORDER_CELL,
-      fontSize: 9,
-      cellPadding: 2,
-      overflow: 'linebreak',
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-    },
+    styles: baseStyles,
     headStyles: {
-      ...BORDER_CELL, // 👉 header con el mismo borde que las celdas
-      halign: 'center',
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-    },
-    bodyStyles: {
       ...BORDER_CELL,
+      halign: 'center',
+      fontSize: BASE_FONT,
       fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
     },
+    bodyStyles: { ...BORDER_CELL, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
     alternateRowStyles: { fillColor: [255, 255, 255] },
     columnStyles,
     tableWidth: available,
@@ -173,34 +230,20 @@ export async function downloadCurrentAccountTablePDF(params: {
     head: HEAD_FOOTER,
     body: [totalsRow],
     margin,
-
+    theme: 'grid',
+    ...BORDER_TABLE,
+    styles: baseStyles,
+    headStyles: {
+      ...BORDER_CELL,
+      halign: 'center',
+      fontSize: BASE_FONT,
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+    },
+    bodyStyles: { ...BORDER_CELL, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
     alternateRowStyles: { fillColor: [255, 255, 255] },
     columnStyles,
     tableWidth: available,
-    theme: 'grid',
-
-    // 👉 borde exterior de la tabla = igual que celdas
-    ...BORDER_TABLE,
-
-    styles: {
-      ...BORDER_CELL,
-      fontSize: 9,
-      cellPadding: 2,
-      overflow: 'linebreak',
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-    },
-    headStyles: {
-      ...BORDER_CELL, // 👉 header con el mismo borde que las celdas
-      halign: 'center',
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-    },
-    bodyStyles: {
-      ...BORDER_CELL,
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-    },
   });
 
   addFooterPageNumbers(doc);

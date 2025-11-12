@@ -20,42 +20,51 @@ const TableTerminalTicket = ({ data }: TableTerminalTicketProps) => {
   const handleClick = (ticket_number: string) => {
     if (selected === ticket_number) {
       searchParams.delete('ticket_number');
-      setSearchParams(searchParams)
+      setSearchParams(searchParams);
     } else {
       const params = new URLSearchParams(searchParams);
       params.set('ticket_number', ticket_number);
       setSearchParams(params);
     }
   };
-  
+
   return (
-    <div className="border mb-4">
+    <div className="border mb-1 sm:mb-4">
       <Table className="min-w-full table-fixed">
         <TableHeader>
           <TableRow className="bg-card-bg sticky top-0 z-10">
-            <TableHead className="bg-card-bg text-white">Numero</TableHead>
+            <TableHead className="bg-card-bg text-white">Número</TableHead>
             <TableHead className="bg-card-bg text-white">Pasador</TableHead>
             <TableHead className="bg-card-bg text-white">Monto</TableHead>
-            <TableHead className="bg-card-bg text-white text-right ">Pagado</TableHead>
+            {/* ⬇️ Se oculta en <sm */}
+            <TableHead className="hidden sm:table-cell bg-card-bg text-white text-right">
+              Pagado
+            </TableHead>
           </TableRow>
         </TableHeader>
       </Table>
+
       <div className="overflow-y-auto h-[200px] 1440:h-[300px]">
         <Table className="min-w-full table-fixed">
           <TableBody>
             {data?.map((item: ITicketEntityFront) => (
               <TableRow
-                data-state={selected === item.ticket_number ? 'selected' : undefined}
                 key={item.ticket_id}
+                data-state={selected === item.ticket_number ? 'selected' : undefined}
                 className={cn(
-                  `cursor-pointer hover:bg-primary-light transition ${selected === item.ticket_number ? 'bg-primary-light' : ''}`
+                  `cursor-pointer hover:bg-primary-light transition ${
+                    selected === item.ticket_number ? 'bg-primary-light' : ''
+                  }`
                 )}
                 onClick={() => handleClick(item.ticket_number)}
               >
                 <TableCell>{item.ticket_number}</TableCell>
                 <TableCell>{item.user_name}</TableCell>
                 <TableCell>${item.total}</TableCell>
-                <TableCell className={'text-right'}>{item.paid ? 'Pagado' : 'No pagado'}</TableCell>
+                {/* ⬇️ También se oculta en <sm */}
+                <TableCell className="hidden sm:table-cell text-right">
+                  {item.paid ? 'Pagado' : 'No pagado'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

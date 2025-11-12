@@ -14,14 +14,17 @@ export const useGetDeletedTickets = ({
   return useQuery<number>({
     queryKey: ['deletdTickets', user_id, normalizedDate],
     queryFn: async () => {
-      const res = await fetch(
-        `${BACKEND_ROUTES.ticket.base}/deleted?date=${normalizedDate}&cashier_id=${user_id}`,
-        { headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
-      );
+      const params = new URLSearchParams();
+      if (date) params.append('date', date);
+      if (user_id) params.append('cashier_id', user_id);
+      const res = await fetch(`${BACKEND_ROUTES.ticket.base}/deleted?${params.toString()}`, {
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Error fetching tickets');
       const { data } = await res.json();
       return data.ticket;
     },
-    enabled: !!user_id,
+    enabled: !!date
   });
 };

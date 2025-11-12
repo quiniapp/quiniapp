@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils.ts';
+import { cn } from '@/lib/utils';
 import { useId } from 'react';
 
 interface BasicModalProps {
@@ -32,17 +32,18 @@ const Modal = ({
   const descId = useId();
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DialogContent className={cn(className)}
-        aria-describedby={description ? descId : undefined}>
+      <DialogContent className={cn(className)} aria-describedby={description ? descId : undefined}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description && <DialogDescription id={descId}>{description}</DialogDescription>}
         </DialogHeader>
-        <div className="py-4 ">{children}</div>
+
+        <div className="py-4">{children}</div>
+
         {isCloseButton && (
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2   rounded" onClick={onClose}>
+              <button className="px-4 py-2 rounded" onClick={onClose}>
                 Cerrar
               </button>
             </DialogClose>

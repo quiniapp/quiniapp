@@ -3,24 +3,13 @@ import React, { createContext, useContext } from 'react';
 
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { PLACE_TYPE } from '@helper/types/bet.type';
 import { IUserEntityFront } from '@helper/types/user.type';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { IBetTable } from '@helper/request/ticket.response';
 
 
 
-export interface ILotterySchedule {
-  schedule: IScheduleEntityFront;
-  lotteries: ILotteryEntityFront[];
-}
-export interface IBetTable {
-  number: string;
-  amount: number;
-  place: PLACE_TYPE;
-  with: string | null;
-  position?: PLACE_TYPE | null;
-  scheduleLottery: ILotterySchedule[];
-}
+
 
 type PlayDetailsState = {
   ticketId?: string;

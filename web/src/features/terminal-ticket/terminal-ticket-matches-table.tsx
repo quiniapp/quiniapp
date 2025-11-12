@@ -6,7 +6,6 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { Flex } from '@/components/flex';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { IBetEntityFront } from '@helper/types/bet.type';
 
@@ -22,7 +21,7 @@ const TerminalTicketMatchesTable = ({ bets, isLoading }: TerminalTicketMatchesTa
         <SkeletonList />
       ) : (
         <>
-          <Table>
+          <Table className="min-w-full table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead>Jugada</TableHead>
@@ -44,7 +43,6 @@ const TerminalTicketMatchesTable = ({ bets, isLoading }: TerminalTicketMatchesTa
               ))}
             </TableBody>
           </Table>
-          <Flex className="text-right items-end justify-end">Total Aciertos: {bets?.length ??0}</Flex>
         </>
       )}
     </>

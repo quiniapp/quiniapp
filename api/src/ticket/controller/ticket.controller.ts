@@ -1,5 +1,6 @@
 import { TicketRepository } from '../repository/ticket.repository';
 import {
+  IBetTable,
   IDeleteTicketEntity,
   IEditTicketEntity,
   IGetAllTicketByUserEntity,
@@ -13,6 +14,7 @@ import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
+import { betBase } from 'src/bet/helper/betBase';
 
 export class TicketController {
   private repository = new TicketRepository();
@@ -73,6 +75,32 @@ export class TicketController {
     }
   };
 
+  getAllTicketNumber = async (
+    props: IGetAllTicketEntity
+  ): Promise<{ ticket_id: string; ticket_number: string }[]> => {
+    let tickets;
+    try {
+      if (props.user_type === USER_TYPE.CASHIER) {
+        tickets = await this.repository.getAllTicketNumber({
+          user_id: props.user_id,
+          date: props.date ?? '',
+          winner: !!props.winner,
+        });
+      } else {
+        tickets = await this.repository.getAllTicketNumber({
+          date: props.date ?? '',
+          user_id: props?.cashier_id,
+          winner: !!props.winner,
+        });
+      }
+
+      return tickets;
+    } catch (error) {
+      console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
   delete = async (props: IDeleteTicketEntity) => {
     try {
       const ticket = await this.repository.getByNumber(props.ticket_number);
@@ -80,7 +108,6 @@ export class TicketController {
         if (dayjs().diff(ticket.created_at, 'minutes') > 2)
           throw new Error(ERROR_MESSAGE.INVALID_DELETE_TIME);
       }
-
       await this.repository.delete(props);
       return;
     } catch (error) {
@@ -104,7 +131,7 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  getAllDeletedTickets = async ({ user_id, date }: { user_id: string; date: string }) => {
+  getAllDeletedTickets = async ({ user_id, date }: { user_id?: string; date: string }) => {
     try {
       const tickets = await this.repository.getAllDeletedTickets({
         user_id: user_id,
@@ -113,17 +140,18 @@ export class TicketController {
 
       return tickets;
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('getAllDeletedTickets error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
   update = async (props: IEditTicketEntity) => {
     try {
-      const ticket = await this.repository.update(props);
+      const updateBase = props.bets.map((b: IBetTable) => betBase(b));
+      const ticket = await this.repository.update({ bets: updateBase, ticket_id: props.ticket_id });
 
       return parseTicket(ticket);
     } catch (error) {
-      console.error('GetAll error:', error);
+      console.error('update error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

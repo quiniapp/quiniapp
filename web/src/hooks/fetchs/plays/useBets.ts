@@ -11,6 +11,7 @@ export interface FetchBetsProps {
   winners?: string | null; // 'true' | 'false'
   tern?: string | null;
   quatern?: string | null;
+  ticket_number?: string | null;
 }
 
 // ⬇️ Incluir TODOS los filtros en el key (con fallback a '')
@@ -23,8 +24,9 @@ export const betsKey = (p: FetchBetsProps) =>
     p.lottery_id ?? '',
     p.grouped ?? '',
     p.winners ?? '',
-    p.quatern??'',
-    p.tern ?? ''
+    p.quatern ?? '',
+    p.tern ?? '',
+    p.ticket_number ?? '',
   ] as const;
 
 // ⬇️ Exportá el fetch para usarlo fuera del hook
@@ -36,8 +38,8 @@ export async function fetchBets({
   grouped,
   winners,
   quatern,
-  tern
-
+  tern,
+  ticket_number,
 }: FetchBetsProps): Promise<IBetEntityFront[]> {
   if (!date) return [];
 
@@ -49,6 +51,7 @@ export async function fetchBets({
   if (winners) params.append('winners', winners);
   if (quatern) params.append('quatern', quatern);
   if (tern) params.append('tern', tern);
+  if (ticket_number) params.append('ticket_number', ticket_number);
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
   const res = await fetch(url, {

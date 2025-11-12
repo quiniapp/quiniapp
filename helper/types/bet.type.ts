@@ -39,14 +39,18 @@ export interface IBetEntityBase {
   ticket_number: string;
   cashier_name: string;
   deleted_at: string | null;
+  bet_order: number;
 }
 
-export interface IBetEntityBack extends IBetEntityBase {
+export type IBetEntityBack = Omit<IBetEntityBase, 'bet_order'> & {
   lotteries: ILotteryEntityBack;
   schedules: IScheduleEntityBack;
-}
+};
 
-export type IBetEntityFront = Omit<IBetEntityBase, 'created_at' | 'edited_at' | 'deleted_at'> & {
+export type IBetEntityFront = Omit<
+  IBetEntityBase,
+  'created_at' | 'edited_at' | 'deleted_at' | 'bet_order'
+> & {
   lottery: ILotteryEntityFront;
   schedule: IScheduleEntityFront;
 };
