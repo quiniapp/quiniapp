@@ -27,6 +27,8 @@ import { useGetCurrentAccountByUser } from '@/hooks/fetchs/current-account/useGe
 import { useAuth } from '@/contexts/AuthContext';
 import { printUserSlipPDF } from '@/functions/printLiquidationCashier';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
+const money = (n?: number | null) =>
+  Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const CurrentAcoountByUserTable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -208,7 +210,11 @@ const CurrentAcoountByUserTable = () => {
               />
             </FlexCol>
           </Flex>
-
+          <Flex className="p-1 gap-1 sm:gap-4 items-center justify-center">
+            <Label className="text-white text-center text-nowrap text-base sm:text-lg uppercase font-bold">
+              {`${methods.getValues('total') > 0 ? 'Debe' : 'Cobra'}: $ ${money(Math.abs(methods.getValues('total')))}`}
+            </Label>
+          </Flex>
           {/* Listas: tablas en desktop, tarjetas en mobile */}
           <Flex className="flex-col sm:flex-row gap-3 sm:gap-6 items-start justify-center mt-4 px-3 sm:px-0">
             {/* -------- Tickets a liquidar -------- */}
