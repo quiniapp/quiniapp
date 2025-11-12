@@ -90,13 +90,12 @@ export class BetRepository {
 
     if (error) throw error;
 
+    if (quatern && tern) {
+      return data.filter(
+        (bet: IBetEntityBack) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
+      );
+    }
     if (quatern) {
-      if (tern) {
-        return data.filter(
-          (bet: IBetEntityBack) =>
-            bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
-        );
-      }
       return data.filter((bet: IBetEntityBack) => bet.bet_type === BET_TYPE.QUATERN);
     }
     if (tern) {
