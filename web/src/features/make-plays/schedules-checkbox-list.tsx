@@ -3,9 +3,9 @@ import { ClockIcon, } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Flex, FlexCol } from '@/components/flex';
+import { Flex } from '@/components/flex';
 import Box from '@/components/box';
-import HeaderTitleSection from '@/components/header-title-section';
+import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
 
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { useClock } from '@/providers/ClockProvider';
@@ -78,7 +78,7 @@ const ScheduleCheckboxList = ({
               onClick={() => setSchedules(sch as IScheduleEntityFront)} // toggle
               className="border-2 border-primary"
             />
-            <Label htmlFor={`f${index + 1}`} className="text-[12px]">
+            <Label htmlFor={`f${index + 1}`} className="text-base">
               {sch.name} [{sch.time.slice(0, 5)}]{' '}
               <span className="text-primary-light">[{`F${index + 1}`}]</span>
             </Label>
@@ -120,7 +120,7 @@ const ScheduleCheckboxList = ({
             ref={triggerRef}
             type="button"
             variant="outline"
-            className="w-full justify-between h-9 px-3 text-xs"
+            className="w-full justify-between h-9 px-3 text-sm sm:text-base"
           >
             {selectedLabel}
           </Button>
@@ -145,7 +145,7 @@ const ScheduleCheckboxList = ({
                       key={sch.schedule_id}
                       value={`${sch.name} ${sch.time}`}
                       onSelect={() => toggleSchedule(sch as IScheduleEntityFront)}
-                      className={cn('text-sm', !enabled && 'opacity-50')}
+                      className={cn('text-base', !enabled && 'opacity-50')}
                     >
                       <Flex className="items-center gap-2">
                         {/* ✅ check cuadrado */}
@@ -153,7 +153,7 @@ const ScheduleCheckboxList = ({
                           checked={checked}
                           className="h-4 w-4 rounded-[4px] pointer-events-none"
                         />
-                        <span className="text-xs">
+                        <span className="text-base">
                           {sch.name} — {sch.time.slice(0, 5)}
                           {!enabled ? ' (cerrado)' : ''}
                         </span>
@@ -168,7 +168,7 @@ const ScheduleCheckboxList = ({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-8 px-2 text-xs"
+                  className="h-8 px-2 text-base"
                   onClick={() => {
                     // limpiar: togglear todas las seleccionadas
                     clearAll();
@@ -180,7 +180,7 @@ const ScheduleCheckboxList = ({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-base"
                 onClick={() => setOpen(false)}
               >
                 Listo
@@ -193,11 +193,10 @@ const ScheduleCheckboxList = ({
   );
 
   return (
-    <FlexCol className="border-2 p-2 sm:p-4 rounded-[--rounded-form] w-full gap-2">
-      <HeaderTitleSection title="Turnos" icon={<ClockIcon size="16px" />} variant="small" />
+    <CheckboxSection title="Turnos" icon={<ClockIcon size="16px" />} className="w-full">
       {desktopGrid}
       {mobilePicker}
-    </FlexCol>
+    </CheckboxSection>
   );
 };
 

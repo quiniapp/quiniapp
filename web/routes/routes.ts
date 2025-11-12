@@ -16,7 +16,8 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/bet`,
     id: (id: string) => `${PRIVATE}/bet/${id}`,
     totalAmount: `${PRIVATE}/bet/total`,
-    totalPrize: `${PRIVATE}/bet/prize`
+    totalPrize: `${PRIVATE}/bet/prize`,
+    amounts: `${PRIVATE}/bet/amounts`,
   },
   lottery: {
     base: `${PRIVATE}/lottery`,
@@ -39,6 +40,8 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/current_account`,
     id: (id: string) => `${PRIVATE}/current_account/${id}`,
     bulk: `${PRIVATE}/current_account/bulk`,
+    calculate: `${PRIVATE}/current_account/calculate`,
+    liquidate: `${PRIVATE}/current_account/liquidate`,
   },
   results: {
     base: `${PRIVATE}/results`,

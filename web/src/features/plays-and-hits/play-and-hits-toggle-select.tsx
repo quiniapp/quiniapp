@@ -29,7 +29,7 @@ const PlayAndHitsToggleSelect = () => {
   };
   return (
     <Flex className={'flex-col sm:flex-row sm:space-x-5'}>
-      <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3 gap-3'}>
+      <Flex className={'flex-1 border bg-card rounded-sm  p-1 lg:p-2 xl:p-3  gap-3'}>
         <HeaderTitleSection
           title={'Ver'}
           icon={<EyeIcon size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
@@ -60,7 +60,7 @@ const PlayAndHitsToggleSelect = () => {
         </ToggleGroup>
       </Flex>
 
-      <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3  gap-3'}>
+      <Flex className={'flex-1 border bg-card rounded-sm  p-1 lg:p-2 xl:p-3  gap-3'}>
         <HeaderTitleSection
           title={'Agrupado'}
           icon={<UsersIcon size="16px" />}

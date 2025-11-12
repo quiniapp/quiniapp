@@ -1,4 +1,4 @@
-/* import React, {  useCallback,  useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
@@ -9,16 +9,12 @@ import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { INewBetEntity } from '@helper/request/bet.response';
-import { betTypeDictionary } from '@helper/functions/betTypeDictionary';
-import { Ctx, IBetTable, PlayDetailsContext } from '../context/MakePlaysContext';
-import { groupTicketBetsByNumber } from '@/functions/groupNumber';
-import { makeTicketPdf } from '@/functions/makeTicket';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
+import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
+import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
 
-
-
-export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
 
   // ---- state
@@ -35,14 +31,45 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
 
   // ---- fetch cashier por número
   const { data: cashierByNumber } = useGetUserByNumber(userNumber);
-  React.useEffect(() => {
-    if (!userNumber) setCashier(undefined);
-    if (cashierByNumber) setCashier(cashierByNumber);
+  const { data: ticketGroupedBets } = useGetGroupedBetsByTicketId(ticketId);
+
+  useEffect(() => {
+    if (!userNumber) {
+      setCashier(undefined);
+    } else if (cashierByNumber) {
+      setCashier(cashierByNumber);
+    } else {
+      // userNumber existe pero cashierByNumber es undefined/null (usuario no encontrado)
+      setCashier(undefined);
+    }
+
+    setBets([]);
+    setTicketId(undefined);
+    setSelectedIndexes([]);
+    setTotalAmount(0);
+    setPartialAmount(0);
   }, [userNumber, cashierByNumber]);
 
+  useEffect(() => {
+    if (ticketGroupedBets) {
+      setBets(ticketGroupedBets.bets);
+      const total = ticketGroupedBets.bets.reduce((acc: number, b: IBetTable) => {
+        return (
+          acc +
+          b.amount *
+            b.scheduleLottery.reduce(
+              (quantity: number, ls: ILotterySchedule) => quantity + ls.lotteries.length,
+              0
+            )
+        );
+      }, 0);
+      setTotalAmount(total);
+    }
+  }, [ticketGroupedBets]);
+
   // ---- mutations
-  const { mutate: createTicket } = useCreateTicket();
-  const { mutate: editTicket } = useEditTicket();
+  const { mutate: createTicket, isPending: isPendingCreate } = useCreateTicket();
+  const { mutate: editTicket, isPending: isPendingEdit } = useEditTicket();
 
   // ---- @helpers
   const computeTotal = useCallback((list: IBetTable[]) => {
@@ -53,87 +80,56 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
     }, 0);
   }, []);
 
-  const handleRecreateBet = useCallback((values: IBetTable[]) => {
-    setBets(values);
-    const total = computeTotal(values);
-    setPartialAmount(total);
-    setTotalAmount(total);
-    setSelectedIndexes([]);
-    setIsEnabledCreateBet(true);
-  }, [computeTotal]);
+  const handleRecreateBet = useCallback(
+    (values: IBetTable[]) => {
+      setBets(values);
+      const total = computeTotal(values);
+      setPartialAmount(total);
+      setTotalAmount(total);
+      setSelectedIndexes([]);
+      setIsEnabledCreateBet(true);
+    },
+    [computeTotal]
+  );
 
   const handleCreateBet = useCallback(() => {
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
-    const newBets: INewBetEntity[] = [...bets].reverse().flatMap((bet) =>
-      bet.scheduleLottery.flatMap((schedLot) =>
-        schedLot.lotteries.map((lot) => ({
-          number: bet.number,
-          amount: +bet.amount!,
-          place: bet.place,
-          with: bet?.with,
-          position: bet?.position,
-          bet_type: betTypeDictionary(bet.number?.length, !!bet.with?.length)!,
-          lottery_id: lot.lottery_id,
-          schedule_id: schedLot.schedule.schedule_id,
-          user_id: cashier?.user_id ?? user?.user_id!,
-          date: today,
-          user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-          cashier_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-        }))
-      )
-    );
+    const payload = {
+      date: today,
+      user_id: cashier?.user_id ?? user!.user_id,
+      user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
+      bets: bets,
+    };
 
-    // Crear
     if (!ticketId) {
-      createTicket(
-        {
-          bets: newBets,
-          date: today,
-          user_id: cashier?.user_id ?? user?.user_id!,
-          user_name: `${cashier?.name ?? user?.name!}-${cashier?.number ?? user?.number}`,
-        },
-        {
-          onSuccess: (res) => {
-            const lastTicket = {
-              bets: [...bets].reverse(),
-              ticket: res.data.ticket,
-              cashier_number: user?.number,
-            };
-            if (user?.user_type === USER_TYPE.CASHIER) {
-              makeTicketPdf(lastTicket);
+      createTicket(payload, {
+        onSuccess: async (res) => {
+          const lastTicket = {
+            bets: [...bets].reverse(),
+            ticket: res.data.ticket,
+            cashier_number: user?.number,
+          };
+
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const { blob, fileName } = makeTicketPdf(lastTicket);
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            try {
+              if (isMobile) {
+                await sharePdfBlob(blob, fileName, {
+                  text: `Ticket ${res.data.ticket.ticket_number}`,
+                });
+              } else {
+                printPdfBlob(blob);
+              }
+            } catch {
+              printPdfBlob(blob);
             }
-            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+          }
 
-            // reset
-            setBets([]);
-            setPartialAmount(0);
-            setTotalAmount(0);
-            setCashier(undefined);
-            setLotteries(new Map());
-            setSchedules(new Map());
-            setUserNumber(undefined);
-            setSelectedIndexes([]);
-            setTicketId(undefined);
-            toast.success('Ticket creado correctamente');
-            setIsEnabledCreateBet(true);
-          },
-          onError: (err) => {
-            console.error(err);
-            toast.error('Ocurrió un error, intente de nuevo');
-            setIsEnabledCreateBet(true);
-          },
-        }
-      );
-      return;
-    }
-
-    // Editar
-    editTicket(
-      { ticket_id: ticketId, bets: newBets },
-      {
-        onSuccess: () => {
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
           setPartialAmount(0);
           setTotalAmount(0);
@@ -143,33 +139,49 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
           setUserNumber(undefined);
           setSelectedIndexes([]);
           setTicketId(undefined);
-          toast.success('Ticket modificado correctamente');
-          setIsEnabledCreateBet(true);
+          toast.success('Ticket creado correctamente');
         },
         onError: (err) => {
           console.error(err);
-          toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
+          toast.error('Ocurrió un error, intente de nuevo');
+        },
+        onSettled: () => {
           setIsEnabledCreateBet(true);
         },
-      }
-    );
+      });
+    } else {
+      editTicket(
+        { ticket_id: ticketId, bets: payload.bets },
+        {
+          onSuccess: () => {
+            setBets([]);
+            setPartialAmount(0);
+            setTotalAmount(0);
+            setCashier(undefined);
+            setLotteries(new Map());
+            setSchedules(new Map());
+            setUserNumber(undefined);
+            setSelectedIndexes([]);
+            setTicketId(undefined);
+            toast.success('Ticket modificado correctamente');
+          },
+          onError: (err) => {
+            console.error(err);
+            toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
+          },
+          onSettled: () => {
+            setIsEnabledCreateBet(true);
+          },
+        }
+      );
+    }
   }, [bets, cashier, createTicket, editTicket, ticketId, user]);
 
-  const handleEditTicket = useCallback((ticket: ITicketEntityFront) => {
-    setTicketId(ticket.ticket_id);
+  const handleEditTicket = useCallback((ticket_id: string) => {
+    setTicketId(ticket_id);
     setSelectedIndexes([]);
     setTotalAmount(0);
     setPartialAmount(0);
-
-    const groupedBets = groupTicketBetsByNumber(ticket);
-    setBets(groupedBets);
-
-    const total = groupedBets.reduce((acc, b) => {
-      const lotCount = b.scheduleLottery.reduce((c, s) => c + s.lotteries.length, 0);
-      const amount = typeof b.amount === 'string' ? parseFloat(b.amount as any) : (b.amount ?? 0);
-      return acc + amount * lotCount;
-    }, 0);
-    setTotalAmount(total);
   }, []);
 
   const handleResetBets = useCallback(() => {
@@ -201,7 +213,7 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
     [cashier, user?.user_type]
   );
 
-  const value: Ctx = {
+  const value: MakePlaysContextType = {
     // state
     ticketId,
     totalAmount,
@@ -213,6 +225,11 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
     selectedIndexes,
     userNumber,
     isEnabledCreateBet,
+    isPendingCreate,
+    isPendingEdit,
+    setBets,
+    setTotalAmount,
+    setPartialAmount,
     // derived
     isEnabledCreateBetByAdmin,
     // actions
@@ -228,5 +245,5 @@ export const PlayDetailsProvider: React.FC<React.PropsWithChildren> = ({ childre
     handleDeleteSelectedBets,
   };
 
-  return <PlayDetailsContext.Provider value={value}>{children}</PlayDetailsContext.Provider>;
-}; */
+  return <MakePlaysContext.Provider value={value}>{children}</MakePlaysContext.Provider>;
+};
