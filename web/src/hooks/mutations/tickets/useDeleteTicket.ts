@@ -22,10 +22,11 @@ export const useDeleteTicket = () => {
     // Invalida TODO lo que empiece con ['tickets'] (activos) para asegurar refetch
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['tickets'],
-        exact:false,
+        queryKey: ['tickets-infinite'],
+        exact: false,
         refetchType: 'active',
       });
+      // await queryClient.refetchQueries({queryKey:['tickets']})
     },
   });
 };

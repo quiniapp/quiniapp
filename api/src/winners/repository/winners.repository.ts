@@ -1,25 +1,17 @@
 import { supabase } from '@database/db.connection';
-import dayjs from 'dayjs';
 
 export class WinnerRepository {
   async generateWinners(schedule_id: string, date: string) {
-    const { error } = await supabase.rpc('generate_winners', {
-      target_id: schedule_id,
-      bet_date: date,
+    // Usar función unificada que ejecuta ambas operaciones en una sola transacción
+    const { data, error } = await supabase.rpc('generate_winners_and_calculate_accounts', {
+      p_schedule_id: schedule_id,
+      p_bet_date: date,
     });
 
     if (error) throw error;
 
-    const dateToProcess: string = dayjs(date)
-      .tz('America/Argentina/Buenos_Aires')
-      .format('DD-MM-YYYY');
-
-    const { error: currentAccountError } = await supabase.rpc('calculate_current_account', {
-      p_date_text: dateToProcess,
-    });
-    if (currentAccountError) throw currentAccountError;
-
-    return true;
+    // Retornar resultado con estadísticas
+    return data;
   }
 
   async getAllWinners(user_id?: string) {
