@@ -67,10 +67,10 @@ const ResultsContent = () => {
   const handleGenerate = () => {
     generateWinners(undefined, {
       onSuccess: () => {
-        toast.success('Resultados guardados correctamente');
+        toast.success('Ganadores generados y cuenta corriente actualizada');
       },
       onError: (error) => {
-        toast.error(`Error al guardar: ${error.message}`);
+        toast.error(`Error al generar ganadores: ${error.message}`);
       },
     });
   };
@@ -140,10 +140,10 @@ const ResultsContent = () => {
   const handleRefresh = () => {
     calculateCurrentAccount(selectedDate, {
       onSuccess: () => {
-        toast.success('Datos actualizados correctamente');
+        toast.success('Cuenta corriente actualizada correctamente');
       },
       onError: () => {
-        toast.error('Error al actualizar');
+        toast.error('Error al actualizar la cuenta corriente');
       },
     });
   };

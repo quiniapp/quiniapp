@@ -22,10 +22,10 @@ export const useGenerateWinners = ({schedule_id, date}:{schedule_id?:string, dat
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ()=>generateWinners({schedule_id,date}),
-    onSuccess: () => {
-      // Invalidar cache de ganadores y cuenta corriente
-      queryClient.invalidateQueries({ queryKey: ['winners'] });
-      queryClient.invalidateQueries({ queryKey: ['getCurrentAccount'] });
+    onSuccess: async () => {
+      // Refetch forzado de ganadores y cuenta corriente para garantizar datos frescos
+      await queryClient.refetchQueries({ queryKey: ['winners'] });
+      await queryClient.refetchQueries({ queryKey: ['getCurrentAccount'] });
     },
   });
 };
