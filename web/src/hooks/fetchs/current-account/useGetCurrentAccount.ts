@@ -29,8 +29,6 @@ export function useGetCurrentAccount(date?: string | null) {
   return useQuery<ICurrentAccountEntityFront[]>({
     queryKey: currentAccountKey(date),
     queryFn: () => fetchCurrentAccount(date),
-    // staleTime reducido para asegurar datos frescos después de generar ganadores
-    staleTime: 0, // Siempre considera los datos como stale para refetch inmediato
-    gcTime: 5 * 60_000,
+    
   });
 }
