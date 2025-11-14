@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-13
+
+#### Winners - Unified Transaction for Consistency
+- **New RPC `generate_winners_and_calculate_accounts`**: Unified function
+  - Migration: `20251113181041_sp_generate_winners_and_calculate_current_account.sql`
+  - Executes `generate_winners` + `calculate_current_account` in single transaction
+  - Guarantees data consistency: current accounts always reflect latest winners
+  - Returns combined result with statistics from both operations
+  - Use case: Ensures cuenta corriente updates immediately after generating winners
+
+### Changed - 2025-11-13
+
+#### Winners Repository - Simplified Flow
+- **`generateWinners` now uses unified RPC**: Simplified implementation
+  - Path: `src/winners/repository/winners.repository.ts:5-16`
+  - Changed from calling 2 separate RPCs to 1 unified RPC
+  - Removed manual date formatting (handled by stored procedure)
+  - Removed `dayjs` dependency from this file
+  - Returns JSONB result with statistics instead of boolean
+  - Fixes race condition: cuenta corriente now updates reliably on first run
+
+#### Database RPC - `generate_winners` Return Type
+- **`generate_winners` now returns JSONB**: Breaking change for direct callers
+  - Migration: `20251113181041_sp_generate_winners_and_calculate_current_account.sql`
+  - Changed from `RETURNS VOID` to `RETURNS JSONB`
+  - Returns: `{success, schedule_id, date, affected_tickets, winner_tickets}`
+  - Forces PostgreSQL to complete transaction before returning
+  - Improves observability: can now see how many tickets were affected
+  - Note: Application code updated to use new unified RPC instead
+
 ### Added - 2025-11-11
 
 #### Bet Aggregates - Enhanced Pagination Response

@@ -29,8 +29,6 @@ export function useGetCurrentAccount(date?: string | null) {
   return useQuery<ICurrentAccountEntityFront[]>({
     queryKey: currentAccountKey(date),
     queryFn: () => fetchCurrentAccount(date),
-    // siempre habilitado porque el backend soporta "sin fecha"
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
+    
   });
 }

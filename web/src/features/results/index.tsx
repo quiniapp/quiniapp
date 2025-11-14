@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import React, { Suspense, useEffect, useState } from 'react';
-import { Clock, PencilIcon, RefreshCw, SaveIcon, TrashIcon } from 'lucide-react';
+import { Clock, PencilIcon,  SaveIcon, TrashIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import Box from '@/components/box';
@@ -27,7 +27,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useDeleteResults } from '@/hooks/mutations/results/useDeleteResults';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
-import { useCalculateCurrentAccount } from '@/hooks/mutations/current-account/useCalculateCurrentAccount';
 
 const ResultsContent = () => {
   const { role } = useAuth();
@@ -53,7 +52,6 @@ const ResultsContent = () => {
     date: selectedDate,
   });
   const { mutate: deleteResults, isPending: isPendingDeleteResults } = useDeleteResults();
-  const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const handleScheduleSelect = (scheduleId: string) => {
@@ -67,10 +65,10 @@ const ResultsContent = () => {
   const handleGenerate = () => {
     generateWinners(undefined, {
       onSuccess: () => {
-        toast.success('Resultados guardados correctamente');
+        toast.success('Ganadores generados y cuenta corriente actualizada');
       },
       onError: (error) => {
-        toast.error(`Error al guardar: ${error.message}`);
+        toast.error(`Error al generar ganadores: ${error.message}`);
       },
     });
   };
@@ -137,17 +135,6 @@ const ResultsContent = () => {
       );
   };
 
-  const handleRefresh = () => {
-    calculateCurrentAccount(selectedDate, {
-      onSuccess: () => {
-        toast.success('Datos actualizados correctamente');
-      },
-      onError: () => {
-        toast.error('Error al actualizar');
-      },
-    });
-  };
-
   useEffect(() => {
     if (!isSuccess) return;
     else {
@@ -173,12 +160,8 @@ const ResultsContent = () => {
               }}
             />
           </Flex>
-          <Flex className={'gap-6'}>
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleRefresh}>
-              <RefreshCw size={16} />
-              Actualizar
-            </Button>
-            {role !== USER_TYPE.CASHIER && (
+          {role !== USER_TYPE.CASHIER && (
+            <Flex className={'gap-6'}>
               <Button
                 variant={'success'}
                 className="  hover:bg-green-700 text-white"
@@ -186,8 +169,8 @@ const ResultsContent = () => {
               >
                 {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
               </Button>
-            )}
-          </Flex>
+            </Flex>
+          )}
         </FlexCol>
         <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
           <FlexCol className="  rounded-xl   space-y-6">

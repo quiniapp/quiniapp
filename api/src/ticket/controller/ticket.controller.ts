@@ -3,7 +3,7 @@ import {
   IBetTable,
   IDeleteTicketEntity,
   IEditTicketEntity,
-  IGetAllTicketByUserEntity,
+  // IGetAllTicketByUserEntity,
   IGetAllTicketEntity,
   IGetTicketEntity,
   INewTicketEntity,
@@ -137,22 +137,22 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  getAllByUser = async (props: IGetAllTicketByUserEntity): Promise<ITicketEntityFront[]> => {
-    try {
-      const tickets = await this.repository.getAll({
-        user_id: props.user_id!,
-        date: props.date,
-        winner: props?.winner ?? false,
-      });
-
-      return tickets.map((ticket) => {
-        return parseTicket(ticket);
-      });
-    } catch (error) {
-      console.error('GetAll error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
-  };
+  // getAllByUser = async (props: IGetAllTicketByUserEntity): Promise<ITicketEntityFront[]> => {
+  //   try {
+  //     const tickets = await this.repository.getAll({
+  //       user_id: props.user_id!,
+  //       date: props.date,
+  //       winner: props?.winner ?? false,
+  //     });
+  //     console.log('asdf', tickets)
+  //     return tickets.map((ticket) => {
+  //       return parseTicket(ticket);
+  //     });
+  //   } catch (error) {
+  //     console.error('GetAll error:', error);
+  //     throw error instanceof Error ? error : new Error('Unknown error');
+  //   }
+  // };
   getAllDeletedTickets = async ({ user_id, date }: { user_id?: string; date: string }) => {
     try {
       const tickets = await this.repository.getAllDeletedTickets({

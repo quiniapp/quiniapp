@@ -35,10 +35,10 @@ const CurrentAccountContent = () => {
   const handleUpdateCurrentAccount = () => {
     calculateCurrentAccount(searchParams.get('date'), {
       onSuccess: () => {
-        toast.success('Actualizado correctamente');
+        toast.success('Cuenta corriente actualizada correctamente');
       },
       onError: () => {
-        toast.error('Error al actualizar');
+        toast.error('Error al actualizar la cuenta corriente');
       },
     });
   };
