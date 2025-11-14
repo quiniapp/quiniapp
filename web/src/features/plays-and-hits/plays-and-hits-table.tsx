@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
+import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
 
 type Props = {
   onTotalsUpdate?: (totalAmount?: number, totalPrize?: number) => void;
@@ -157,13 +158,13 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
             {bets?.map((bet: IBetEntityFront) => (
               <TableRow key={bet?.bet_id ?? Math.random()}>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
-                  {bet.number}
+                  {bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}
                 </TableCell>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
                   {currency(bet.amount)}
                 </TableCell>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {betPlaceDictionary[bet.place]}
+                  {betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}
                 </TableCell>
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
                   {bet.schedule?.name}
