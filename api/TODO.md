@@ -352,3 +352,201 @@ $$;
 - **Testing:** 1-2 horas
 - **Documentación:** 1 hora
 - **Total:** ~1 día de trabajo
+
+---
+
+# TODO - Números Atrasados (Delayed Numbers)
+
+## Contexto
+
+Los números atrasados son aquellos números que no han salido en los sorteos recientes de una lotería específica. Esta información es valiosa para los jugadores que buscan patrones o tendencias estadísticas.
+
+### Definición
+- **Número atrasado**: Un número que no ha aparecido en los últimos N sorteos
+- Se calcula por:
+  - Lotería (ej: Quiniela, Nacional, etc.)
+  - Turno (Matutina, Vespertina, Nocturna, etc.)
+  - Posición (Cabeza, 5 primeros, 10 primeros, 20 primeros)
+  - Tipo de número (1 cifra, 2 cifras, 3 cifras, 4 cifras)
+
+### Casos de Uso
+1. **Frontend - Estadísticas**: Mostrar números atrasados en dashboard o sección de estadísticas
+2. **Sugerencias de apuestas**: Ayudar a jugadores a identificar números "calientes" vs "fríos"
+3. **Reportes**: Generar reportes de tendencias históricas
+4. **Análisis**: Análisis estadístico de frecuencias
+
+## Tareas
+
+### 1. Diseñar Esquema de Respuesta
+- [ ] Definir estructura de datos para respuesta
+- [ ] Decidir parámetros de entrada (lottery_id, schedule_id, position, days_back, etc.)
+- [ ] Definir formato de salida (JSON con número, días atrasado, última aparición, etc.)
+- [ ] Considerar paginación si hay muchos números
+
+**Ejemplo de estructura:**
+```typescript
+interface DelayedNumber {
+  number: string;           // "45", "123", etc.
+  days_delayed: number;     // Cantidad de días/sorteos sin salir
+  last_appearance: string;  // Fecha de última aparición
+  lottery_id: string;
+  schedule_id: string;
+  position: 'HEAD' | 'FIVE' | 'TEN' | 'TWENTY';
+}
+```
+
+### 2. Crear RPC para Calcular Números Atrasados
+- [ ] Crear SP `get_delayed_numbers(p_lottery_id, p_schedule_id, p_position, p_lookback_days, p_number_type)`
+- [ ] El SP debe:
+  - Obtener todos los resultados de los últimos N días para lottery/schedule/position
+  - Generar lista de todos los números posibles según `number_type`
+  - Comparar y encontrar números que NO aparecieron
+  - Calcular cuántos días/sorteos llevan sin salir
+  - Ordenar por días atrasados (descendente)
+- [ ] Considerar performance: usar índices en tabla `results`
+- [ ] Retornar JSONB array con números atrasados
+
+**Ejemplo de implementación:**
+```sql
+CREATE OR REPLACE FUNCTION get_delayed_numbers(
+  p_lottery_id UUID,
+  p_schedule_id UUID,
+  p_position TEXT DEFAULT 'TWENTY',  -- 'HEAD', 'FIVE', 'TEN', 'TWENTY'
+  p_lookback_days INT DEFAULT 30,
+  p_number_type TEXT DEFAULT 'DOUBLE'  -- 'ONE', 'DOUBLE', 'TERN', 'QUATERN'
+)
+RETURNS JSONB[]
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_results JSONB[];
+  v_cutoff_date DATE;
+  v_position_limit INT;
+BEGIN
+  v_cutoff_date := CURRENT_DATE - p_lookback_days;
+
+  -- Determinar límite de posición
+  v_position_limit := CASE p_position
+    WHEN 'HEAD' THEN 1
+    WHEN 'FIVE' THEN 5
+    WHEN 'TEN' THEN 10
+    WHEN 'TWENTY' THEN 20
+    ELSE 20
+  END;
+
+  -- Lógica para calcular números atrasados
+  -- (Implementación detallada aquí)
+
+  RETURN v_results;
+END;
+$$;
+```
+
+### 3. Crear Endpoint en Backend
+- [ ] Crear ruta: `GET /api/private/delayed-numbers`
+- [ ] Parámetros query string:
+  - `lottery_id` (requerido)
+  - `schedule_id` (requerido)
+  - `position` (opcional, default: 'TWENTY')
+  - `lookback_days` (opcional, default: 30)
+  - `number_type` (opcional, default: 'DOUBLE')
+- [ ] Llamar al RPC `get_delayed_numbers`
+- [ ] Retornar resultado parseado
+
+**Ubicación sugerida:**
+- Ruta: `api/src/stats/route/stats.route.ts` (nuevo módulo)
+- Controller: `api/src/stats/controller/stats.controller.ts`
+- Repository: `api/src/stats/repository/stats.repository.ts`
+
+### 4. Optimizaciones
+- [ ] Crear índices en tabla `results` para queries rápidas
+- [ ] Considerar cacheo de resultados (ej: Redis, o cache en memoria)
+- [ ] Cache TTL: 1 hora (los números atrasados no cambian constantemente)
+- [ ] Implementar rate limiting si es endpoint público
+
+**Índices recomendados:**
+```sql
+CREATE INDEX IF NOT EXISTS idx_results_lottery_schedule_date
+  ON results(lottery_id, schedule_id, date DESC);
+```
+
+### 5. Frontend Integration (Futuro)
+- [ ] Crear hook `useDelayedNumbers(lottery_id, schedule_id, options)`
+- [ ] Componente para mostrar tabla/lista de números atrasados
+- [ ] Visualización: gráfico de barras mostrando días atrasados
+- [ ] Filtros interactivos: posición, tipo de número, rango de días
+
+### 6. Testing
+- [ ] Probar con diferentes combinaciones de parámetros
+- [ ] Validar que números efectivamente están atrasados
+- [ ] Performance testing con gran volumen de resultados
+- [ ] Edge cases: sin resultados, todos los números salieron, etc.
+
+### 7. Documentación
+- [ ] Documentar endpoint en README o Swagger
+- [ ] Comentarios en código explicando lógica
+- [ ] Ejemplos de uso en documentación
+- [ ] Actualizar CHANGELOG
+
+## Consideraciones Técnicas
+
+### Generación de Números Posibles
+Dependiendo del `number_type`:
+- **ONE**: 0-9 (10 números)
+- **DOUBLE**: 00-99 (100 números)
+- **TERN**: 000-999 (1000 números)
+- **QUATERN**: 0000-9999 (10000 números)
+
+### Cálculo de "Días Atrasado"
+Dos opciones:
+1. **Por días calendario**: Días corridos desde última aparición
+2. **Por sorteos**: Cantidad de sorteos donde no salió
+
+Recomendado: **Por sorteos** (más preciso para jugadores)
+
+### Performance
+- Con lookback de 30 días y posición TWENTY:
+  - ~30 días × 1 resultado/día = 30 filas a procesar
+  - Para DOUBLE (100 números): comparar 100 vs ~600 apariciones (30 días × 20 posiciones)
+- Query debería ser muy rápida con índices apropiados
+
+### Casos Especiales
+- ¿Qué pasa si un número NUNCA salió?
+  - Retornar con `days_delayed: NULL` o `days_delayed: Infinity`
+  - Indicar "Sin registro" en frontend
+- ¿Qué pasa si no hay suficientes datos (ej: solo 5 días de historial)?
+  - Retornar solo con datos disponibles
+  - Incluir metadata: `total_days_analyzed: 5`
+
+## Estado Actual
+
+**Fecha de creación:** 2025-11-13
+**Estado:** Pendiente de implementación
+**Prioridad:** Media (feature request)
+**Dependencias:** Requiere datos históricos en tabla `results`
+
+## Estimación
+
+- **Diseño y RPC:** 4-6 horas
+- **Endpoint backend:** 2-3 horas
+- **Testing:** 2-3 horas
+- **Optimización e índices:** 1-2 horas
+- **Documentación:** 1 hora
+- **Total:** ~2 días de trabajo
+
+## Extensiones Futuras
+
+### 1. Números "Calientes" (Opposite)
+Crear endpoint complementario para números que MÁS salen:
+- `GET /api/private/hot-numbers`
+- Mismos parámetros
+- Retorna números ordenados por frecuencia de aparición
+
+### 2. Predicciones Estadísticas
+- Probabilidad de que un número atrasado salga pronto
+- Análisis de tendencias históricas
+- Machine learning (muy futuro)
+
+### 3. Notificaciones
+- Alertar cuando un número muy atrasado finalmente sale
+- Suscripciones por número favorito
