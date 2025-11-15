@@ -1,4 +1,5 @@
-import { BET_TYPE } from '../types/bet.type';
+import { BET_TYPE, PLACE_TYPE } from '../types/bet.type';
+import { betPlaceDictionary } from './betPlaceDictionary';
 
 export const betTypeDictionary = (length?: number, redouble?: boolean) => {
   switch (length) {
@@ -17,6 +18,24 @@ export const betTypeDictionary = (length?: number, redouble?: boolean) => {
       break;
     case 1:
       return BET_TYPE.ONE;
+      break;
+  }
+};
+
+export const betTypeAndPlaceLabel = (
+  bet_type: BET_TYPE,
+  place: PLACE_TYPE,
+  position?: PLACE_TYPE | null
+) => {
+  switch (bet_type) {
+    case BET_TYPE.BORRATINA:
+      return `BORR`;
+      break;
+    case BET_TYPE.REDOUBLE:
+      return `RED ${betPlaceDictionary[place]}${position ? ` - ${betPlaceDictionary[position]}` : ''}`;
+      break;
+    default:
+      return `${betPlaceDictionary[place]}`;
       break;
   }
 };
