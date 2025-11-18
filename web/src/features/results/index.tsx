@@ -11,7 +11,7 @@ import HeaderTitleSection from '@/components/header-title-section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
+import { SelectDayToSearch } from '@/components/button/select-day-to-search';
 import QuiniChecks from '@/features/results/quini-check';
 import ResultShifts from '@/features/results/shifts';
 
@@ -75,6 +75,14 @@ const ResultsContent = () => {
 
   const handleSave = () => {
     if (!selectedSchedule || !selectedLottery) return;
+
+    // Validate that all results have exactly 4 digits
+    const allValid = results.every(result => result.length === 4);
+    if (!allValid) {
+      toast.error('Todos los resultados deben tener exactamente 4 cifras');
+      return;
+    }
+
     const payload = {
       schedule_id: selectedSchedule,
       lottery_id: selectedLottery,
@@ -113,6 +121,9 @@ const ResultsContent = () => {
     }
     setOnEdit(false);
   };
+
+  // Check if all results have exactly 4 digits for enabling save button
+  const canSave = onEdit && results.every(result => result.length === 4);
 
   const handleDeleteResult = () => {
     if (getResults?.results_id)
@@ -200,9 +211,11 @@ const ResultsContent = () => {
                     maxLength={4}
                     value={value}
                     onChange={(e) => {
+                      // Only allow numbers 0-9
+                      const numericValue = e.target.value.replace(/[^0-9]/g, '');
                       setResults((prev) => {
                         const newResults = [...prev];
-                        newResults[i] = e.target.value;
+                        newResults[i] = numericValue;
                         return newResults;
                       });
                     }}
@@ -215,7 +228,7 @@ const ResultsContent = () => {
                       }
                     }}
                     disabled={!onEdit}
-                    className="w-full bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1"
+                    className="w-full min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
                   />
                 </div>
               ))}
@@ -241,7 +254,7 @@ const ResultsContent = () => {
                   variant={'default'}
                   onClick={handleSave}
                   className=" w-full   text-white"
-                  disabled={!onEdit}
+                  disabled={!canSave}
                 >
                   <SaveIcon /> {isPending || isPendingResults ? 'Guardando' : 'Guardar Resultados'}
                 </Button>

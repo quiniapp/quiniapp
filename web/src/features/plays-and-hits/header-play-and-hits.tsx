@@ -1,6 +1,6 @@
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
+import { SelectDayToSearch } from '@/components/button/select-day-to-search';
 import dayjs from 'dayjs';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';

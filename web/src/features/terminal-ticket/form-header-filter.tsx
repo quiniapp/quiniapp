@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select.tsx';
 import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search.tsx';
+import { SelectDayToSearch } from '@/components/button/select-day-to-search';
 
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useEffect, useState } from 'react';

@@ -1,6 +1,4 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Flex } from '@/components/flex';
-import { Label } from '@/components/ui/label.tsx';
+import { CheckboxWithLabel } from '@/components/checkbox-with-label';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 
 interface LotteryCheckboxListProps {
@@ -15,17 +13,13 @@ const LotteryCheckboxList = ({
   checkedLottery,
 }: LotteryCheckboxListProps) => {
   return (
-    <Flex className="items-center gap-2">
-      <Checkbox
-        checked={checkedLottery}
-        id={lottery.lottery_id}
-        className="border-2 border-primary"
-        onClick={() => setLotteries(lottery)}
-      />
-      <Label htmlFor={lottery.lottery_id} className="text-base min-w-[90px]">
-        {lottery.name}
-      </Label>
-    </Flex>
+    <CheckboxWithLabel
+      id={lottery.lottery_id}
+      label={lottery.name}
+      checked={checkedLottery}
+      onClick={() => setLotteries(lottery)}
+      labelClassName="min-w-[90px]"
+    />
   );
 };
 

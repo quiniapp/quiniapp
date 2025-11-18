@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-18
+
+#### Reusable Components
+- **CheckboxWithLabel Component**: Created centralized checkbox component in `src/components/checkbox-with-label.tsx`
+  - Supports clicking on entire container (not just checkbox or label)
+  - Shows cursor pointer on hover for better UX
+  - Accepts ReactNode for labels to support complex content
+  - Supports disabled state, custom styling, and both onClick and onCheckedChange handlers
+  - Used across multiple features for consistent behavior
+
+- **RadioButtonWithLabel Component**: Created centralized radio button component in `src/components/radio-button-with-label.tsx`
+  - Container-level click support for better accessibility
+  - Cursor pointer on hover
+  - Supports forwardRef for external refs (F-key functionality)
+  - Consistent styling across the app
+
+- **IconButton Component**: Created flexible button component in `src/components/icon-button.tsx`
+  - Accepts optional icon and label
+  - Fully responsive (full-width on mobile, auto-width on desktop)
+  - Supports all button variants
+  - Prevents text/icon overflow with truncate
+
+- **SelectDayToSearch Component**: Moved from features to `src/components/select-day-to-search.tsx`
+  - Now reusable across all features
+  - Improved responsive behavior (full-width on mobile, fixed width on desktop)
+  - Added flex-shrink-0 to icon to prevent squishing
+  - Text truncation to prevent overflow
+
+### Changed - 2025-11-18
+
+#### Checkbox Components Migration
+- **make-plays/lottery-checkbox-list.tsx**: Updated to use CheckboxWithLabel component
+  - Simplified code from 30 lines to 23 lines
+  - Better UX with container-level click support
+
+- **make-plays/schedules-checkbox-list.tsx**: Updated desktop grid to use CheckboxWithLabel
+  - Maintains F-key functionality with hidden button refs
+  - Complex labels with colored F-key indicators
+
+- **plays-and-hits/select-bet-type.tsx**: Updated to use CheckboxWithLabel component
+  - Cleaner implementation for bet type selection
+  - Improved accessibility
+
+- **upcoming-lotteries/lottery-checkbox-list.tsx**: Updated to use CheckboxWithLabel component
+  - Consistent checkbox behavior across the app
+
+#### Radio Button Components Migration
+- **upcoming-lotteries/schedules-list.tsx**: Updated to use RadioButtonWithLabel component
+  - Simplified component structure
+  - Better click targets
+
+- **results/shifts.tsx**: Updated to use RadioButtonWithLabel component
+  - Maintains F-key functionality with refs
+  - Improved accessibility with container clicks
+
+- **results/quini-check.tsx**: Updated to use RadioButtonWithLabel component
+  - Consistent styling and behavior
+
+#### Results Page Improvements
+- **results/index.tsx**: Added comprehensive validations and responsive fixes
+  - Input validation: only numbers (0-9) allowed, no letters or special characters
+  - Range validation: 0000-9999 (4 digits required)
+  - Save button now disabled until all 20 inputs have exactly 4 digits
+  - Added min-width to inputs (60px mobile, 70px desktop) to always show 4 digits
+  - Added text-center alignment for better number display
+  - Toast error message when trying to save incomplete results
+  - Added `canSave` computed value for button state
+
+#### Mobile Responsiveness
+- **fill-out-a-ticket.tsx**: Improved button display on mobile
+  - Icons hidden on mobile (visible on sm+ screens)
+  - Text "Agregar" and "Borrar" always visible
+  - Better use of screen space on small devices
+
+- **terminal-ticket/index.tsx**: Updated buttons to use IconButton component
+  - Better responsive behavior with flex-col on mobile, flex-row on desktop
+  - Added gap-2 for proper spacing
+  - Buttons now stack vertically on mobile, horizontally on desktop
+
+#### Component Location Changes
+- **SelectDayToSearch**: Moved from `features/plays-and-hits/` to `components/`
+  - Updated imports in 5 files:
+    - features/results/index.tsx
+    - features/current-account/CurrentAcoountByUserTable.tsx
+    - features/terminal-ticket/form-header-filter.tsx
+    - features/plays-and-hits/header-play-and-hits.tsx
+    - components/filter-section/index.tsx
+
 ### Added - 2025-11-11
 
 #### Session Management

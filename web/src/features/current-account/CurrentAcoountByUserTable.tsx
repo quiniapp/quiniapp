@@ -22,7 +22,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { SelectDayToSearch } from '../plays-and-hits/select-day-to-search';
+import { SelectDayToSearch } from '@/components/button/select-day-to-search';
 import { useGetCurrentAccountByUser } from '@/hooks/fetchs/current-account/useGetCurrentAccountByUser';
 import { useAuth } from '@/contexts/AuthContext';
 import { printUserSlipPDF } from '@/functions/printLiquidationCashier';

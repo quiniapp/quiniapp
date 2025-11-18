@@ -2,8 +2,7 @@
 import { USER_TYPE } from '@helper/types/user.type';
 import { useSearchParams } from 'react-router-dom';
 import { Flex } from '@/components/flex';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { CheckboxWithLabel } from '@/components/checkbox-with-label';
 import { betTypeParse } from '@helper/functions/betTypeParse';
 import { BET_TYPE } from '@helper/types/bet.type';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,25 +27,21 @@ const SelectBetType = () => {
 
   return (
     <Flex className="gap-1 sm:gap-3 items-center">
-      <Checkbox
+      <CheckboxWithLabel
         id={BET_TYPE.QUATERN}
-        className="border-2 border-primary"
+        label={betTypeParse[BET_TYPE.QUATERN]}
         checked={quaternOn}
-        onCheckedChange={(v) => setFlag('quatern', !!v)} // shadcn usa onCheckedChange
+        onCheckedChange={(v) => setFlag('quatern', !!v)}
+        labelClassName="text-[12px] min-w-[90px]"
       />
-      <Label htmlFor={BET_TYPE.QUATERN} className="text-[12px] min-w-[90px]">
-        {betTypeParse[BET_TYPE.QUATERN]}
-      </Label>
 
-      <Checkbox
+      <CheckboxWithLabel
         id={BET_TYPE.TERN}
-        className="border-2 border-primary"
+        label={betTypeParse[BET_TYPE.TERN]}
         checked={ternOn}
         onCheckedChange={(v) => setFlag('tern', !!v)}
+        labelClassName="text-[12px] min-w-[90px]"
       />
-      <Label htmlFor={BET_TYPE.TERN} className="text-[12px] min-w-[90px]">
-        {betTypeParse[BET_TYPE.TERN]}
-      </Label>
     </Flex>
   );
 };
