@@ -1,4 +1,4 @@
-import { CheckboxWithLabel } from '@/components/checkbox-with-label';
+import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';

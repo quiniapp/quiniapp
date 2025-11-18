@@ -1,6 +1,6 @@
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { RadioButtonWithLabel } from '@/components/radio-button-with-label';
+import { RadioButtonWithLabel } from '@/components/button/RadioButtonWithLabel';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 

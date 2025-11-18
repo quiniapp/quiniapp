@@ -1,4 +1,4 @@
-import { CheckboxWithLabel } from '@/components/checkbox-with-label';
+import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 
 interface LotteryCheckboxListProps {

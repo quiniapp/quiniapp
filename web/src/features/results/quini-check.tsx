@@ -3,7 +3,7 @@ import { Ticket } from 'lucide-react';
 import Box from '@/components/box';
 import HeaderTitleSection from '@/components/header-title-section';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { RadioButtonWithLabel } from '@/components/radio-button-with-label';
+import { RadioButtonWithLabel } from '@/components/button/RadioButtonWithLabel';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 type Quini = {

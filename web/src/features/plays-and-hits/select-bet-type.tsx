@@ -2,7 +2,7 @@
 import { USER_TYPE } from '@helper/types/user.type';
 import { useSearchParams } from 'react-router-dom';
 import { Flex } from '@/components/flex';
-import { CheckboxWithLabel } from '@/components/checkbox-with-label';
+import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 import { betTypeParse } from '@helper/functions/betTypeParse';
 import { BET_TYPE } from '@helper/types/bet.type';
 import { useAuth } from '@/contexts/AuthContext';

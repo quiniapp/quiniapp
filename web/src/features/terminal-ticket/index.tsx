@@ -1,7 +1,7 @@
 import { TicketX } from 'lucide-react';
 
 // @Components
-import { IconButton } from '@/components/button/icon-button';
+import { IconButton } from '@/components/button/IconButton';
 import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';

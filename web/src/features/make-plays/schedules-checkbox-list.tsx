@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo, useLayoutEffect } from 'react';
 import { ClockIcon, } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { CheckboxWithLabel } from '@/components/checkbox-with-label';
+import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 import { Flex } from '@/components/flex';
 import Box from '@/components/box';
 import CheckboxSection from '@/features/make-plays/components/CheckboxSection';

@@ -1,6 +1,6 @@
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
-import { SelectDayToSearch } from '@/components/button/select-day-to-search';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import dayjs from 'dayjs';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';

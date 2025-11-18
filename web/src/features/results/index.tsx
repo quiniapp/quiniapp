@@ -11,7 +11,7 @@ import HeaderTitleSection from '@/components/header-title-section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { SelectDayToSearch } from '@/components/button/select-day-to-search';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import QuiniChecks from '@/features/results/quini-check';
 import ResultShifts from '@/features/results/shifts';
 

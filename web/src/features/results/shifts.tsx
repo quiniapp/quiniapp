@@ -1,7 +1,7 @@
 import { Clock } from 'lucide-react';
 // @UI
 import { RadioGroup } from '@/components/ui/radio-group';
-import { RadioButtonWithLabel } from '@/components/radio-button-with-label';
+import { RadioButtonWithLabel } from '@/components/button/RadioButtonWithLabel';
 // @Components
 import Box from '@/components/box';
 import HeaderTitleSection from '@/components/header-title-section';
