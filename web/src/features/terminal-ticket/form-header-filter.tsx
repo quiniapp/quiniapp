@@ -21,6 +21,7 @@ import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
 
 const FormHeaderFilter = () => {
   const { role } = useAuth();
@@ -63,105 +64,106 @@ const FormHeaderFilter = () => {
     handleSelectDate();
   }, []);
   return (
-    <Flex className={' space-y-4 w-full'}>
-      <Flex className={'mb-1 sm:mb-4 w-full gap-4'}>
-        <Fieldset legend={'Pasador:'} className={'w-full flex gap-1 sm:gap-3'}>
-          <FlexCol className={'space-y-4'}>
-            <IsRoleCashier role={role}>
-              <Flex className={' gap-3'}>
+    <FlexCol className={'sm:flex-row mb-1 sm:mb-4 w-full gap-1 sm:gap-3'}>
+      <Fieldset
+        legend={role === USER_TYPE.CASHIER ? 'Seleccionar fecha' : 'Pasador:'}
+        className={'w-full sm:w-1/2 flex gap-1 sm:gap-3'}
+      >
+        <FlexCol className={'w-full  space-y-4'}>
+          <IsRoleCashier role={role}>
+            <Flex className={' gap-3'}>
+              <Select
+                defaultValue={undefined}
+                value={selectValue}
+                onValueChange={(value) => {
+                  handleSelectCashier(value);
+                }}
+              >
+                <SelectTrigger className={'border w-full '}>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cashiers?.map((cashier) => {
+                    return (
+                      <SelectItem key={cashier.user_id} value={cashier.user_id}>
+                        {cashier.name} - {cashier.number}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </Flex>
+          </IsRoleCashier>
+
+          <Flex className={'gap-2 w-full sm:w-2/4 justify-between'}>
+            <Flex className={'items-center gap-3'}>
+              <Box className="hidden sm:box">
+                <TypographyMuted label={'Fecha'} />
+              </Box>
+              <Box className={' overflow-hidden'}>
+                <SelectDayToSearch
+                  onDayChange={(value) => {
+                    handleSelectDate(value);
+                  }}
+                  toDate={dayjs().toDate()}
+                />
+              </Box>
+            </Flex>
+            <Flex>
+              <Flex className={'w-full items-center gap-3'}>
+                <Box>
+                  <TypographyMuted label={'Tickets'} />
+                </Box>
                 <Select
-                  defaultValue={undefined}
-                  value={selectValue}
-                  onValueChange={(value) => {
-                    handleSelectCashier(value);
+                  onValueChange={(value: 'all' | 'winner' | 'paid' | 'not_paid') => {
+                    onChangeFilter(value);
                   }}
                 >
-                  <SelectTrigger className={'border w-full '}>
+                  <SelectTrigger className="border w-full">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    {cashiers?.map((cashier) => {
-                      return (
-                        <SelectItem key={cashier.user_id} value={cashier.user_id}>
-                          {cashier.name} - {cashier.number}
-                        </SelectItem>
-                      );
-                    })}
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="winner">Con aciertos</SelectItem>
+                    <SelectItem value="paid">Pagados</SelectItem>
+                    <SelectItem value="not_paid">No Pagados</SelectItem>
                   </SelectContent>
                 </Select>
               </Flex>
-            </IsRoleCashier>
-
-            <Flex className={'flex-1 gap-2 '}>
-              <Flex className={'items-center gap-3'}>
-                <Box className="hidden sm:box">
-                  <TypographyMuted label={'Fecha'} />
-                </Box>
-                <Box className={' overflow-hidden'}>
-                  <SelectDayToSearch
-                    onDayChange={(value) => {
-                      handleSelectDate(value);
-                    }}
-                    toDate={dayjs().toDate()}
-                  />
-                </Box>
-              </Flex>
-              <Flex>
-                <Flex className={'w-full items-center gap-3'}>
-                  <Box>
-                    <TypographyMuted label={'Tickets'} />
-                  </Box>
-                  <Select
-                    onValueChange={(value: 'all' | 'winner' | 'paid' | 'not_paid') => {
-                      onChangeFilter(value);
-                    }}
-                  >
-                    <SelectTrigger className="border w-full">
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="winner">Con aciertos</SelectItem>
-                      <SelectItem value="paid">Pagados</SelectItem>
-                      <SelectItem value="not_paid">No Pagados</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Flex>
-              </Flex>
             </Flex>
-          </FlexCol>
-        </Fieldset>
+          </Flex>
+        </FlexCol>
+      </Fieldset>
 
-        <Fieldset legend="Buscar por número de Ticket:" className="flex w-full gap-3">
-          <FlexCol className="w-full gap-4">
-            <Input
-              type="number"
-              inputMode="numeric"
-              className=''
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ej: 20250619..."
+      <Fieldset legend="Buscar por número de Ticket:" className="w-full sm:w-1/2 flex gap-3">
+        <FlexCol className="w-full gap-4">
+          <Input
+            type="number"
+            inputMode="numeric"
+            className=""
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Ej: 20250619..."
+          />
+          <Flex className="gap-4 w-full justify-between">
+            <IconButton
+              type="button"
+              label="Buscar"
+              icon={<SearchIcon />}
+              onClick={handleSearch}
+              className="!px-6"
             />
-            <Flex className="gap-4 w-full justify-between">
-              <IconButton
-                type="button"
-                label="Buscar"
-                icon={<SearchIcon />}
-                onClick={handleSearch}
-                className="!px-6"
-              />
-              <IconButton
-                type="reset"
-                label="Limpiar"
-                variant="outline"
-                onClick={handleReset}
-                className="!px-6"
-              />
-            </Flex>
-          </FlexCol>
-        </Fieldset>
-      </Flex>
-    </Flex>
+            <IconButton
+              type="reset"
+              label="Limpiar"
+              variant="outline"
+              onClick={handleReset}
+              className="!px-6"
+            />
+          </Flex>
+        </FlexCol>
+      </Fieldset>
+    </FlexCol>
   );
 };
 

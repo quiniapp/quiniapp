@@ -16,11 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Switches to flex-row at xl breakpoint (1280px+) for better horizontal layout on large screens
   - Improves responsive behavior and content flow
 
-- **terminal-ticket/form-header-filter.tsx**: Updated fieldsets to occupy full horizontal space
-  - Changed container from `Flex` with `justify-between` to `FlexCol` with `gap-4`
-  - Both fieldsets now stack vertically and occupy 100% width
-  - First fieldset now has `w-full` on all screen sizes (previously `sm:w-full`)
-  - Better space utilization and consistent layout across all screen sizes
+- **terminal-ticket/form-header-filter.tsx**: Updated fieldsets layout for responsive design
+  - Container uses `flex-col` by default, switches to `flex-row` at sm breakpoint
+  - Both fieldsets now have `w-full sm:w-1/2` for equal width distribution
+  - Mobile (< sm): Fieldsets stack vertically, each occupying 100% width
+  - Desktop (≥ sm): Fieldsets display side-by-side, each occupying 50% width
+  - Consistent spacing with `gap-1 sm:gap-3` between fieldsets
+  - Better space utilization and balanced layout across all screen sizes
 
 #### Button Components Migration
 - **results/index.tsx**: Updated all buttons to use IconButton component
