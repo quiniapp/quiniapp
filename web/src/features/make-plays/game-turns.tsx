@@ -32,6 +32,7 @@ const GameTurns = () => {
   };
 
   const handleLotteries = (lottery: ILotteryEntityFront) => {
+    console.log(lottery)
     setLotteries((prev) => {
       const newMap = new Map(prev);
       if (newMap.has(lottery.lottery_id)) {

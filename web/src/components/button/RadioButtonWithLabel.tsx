@@ -43,9 +43,8 @@ export const RadioButtonWithLabel = forwardRef<HTMLButtonElement, RadioButtonWit
           className={cn('border-2 border-primary', radioClassName)}
         />
         <Label
-          htmlFor={id}
           className={cn(
-            'text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
+            'text-sm font-medium leading-none cursor-pointer pointer-events-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
             labelClassName
           )}
         >

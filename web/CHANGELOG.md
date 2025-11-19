@@ -23,23 +23,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - 2025-11-19
 
 #### CheckboxWithLabel Component - Visibility, Click Behavior, and Ref Support
-- **CheckboxWithLabel**: Fixed checkbox visibility, click area, and F-key support
+- **CheckboxWithLabel**: Fixed checkbox visibility, click area, F-key support, and double-click issue
   - Path: `src/components/button/CheckboxWithLabel.tsx`
   - Removed `hidden md:flex` from checkbox - now visible on all screen sizes
   - Added `forwardRef` support for F-key functionality compatibility
-  - Maintains `pointer-events-none` to prevent direct checkbox clicks
-  - Container `onClick` handler works across entire component area
+  - Removed `htmlFor` from Label and added `pointer-events-none` to both Checkbox and Label
+  - Container `onClick` handler is now the single source of click events
   - Fixes: Clicking on label or space between checkbox and label now works correctly
   - Fixes: Checkbox is now visible on mobile devices
   - Fixes: F-key shortcuts now work properly in schedules-checkbox-list
+  - Fixes: Double-click event eliminated - onClick now fires only once per click
 
 #### RadioButtonWithLabel Component - Click Area Enhancement
-- **RadioButtonWithLabel**: Added container-level click support
+- **RadioButtonWithLabel**: Added container-level click support and fixed double-click issue
   - Path: `src/components/button/RadioButtonWithLabel.tsx`
   - Added `onClick` handler to container Flex
   - Uses `useRef` and `useImperativeHandle` for proper ref forwarding
+  - Removed `htmlFor` from Label and added `pointer-events-none` to Label
   - Maintains compatibility with existing F-key functionality
   - Fixes: Clicking anywhere in the container (label, space between) now selects the radio button
+  - Fixes: Double-click event eliminated - onClick now fires only once per click
   - Benefits: Improved UX with larger click target area
 
 #### Schedule Checkbox List - F-key Support Fixed

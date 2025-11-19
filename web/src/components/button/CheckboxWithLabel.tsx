@@ -57,8 +57,7 @@ export const CheckboxWithLabel = forwardRef<HTMLDivElement, CheckboxWithLabelPro
           className={cn('border-2 border-primary pointer-events-none', checkboxClassName)}
         />
         <Label
-          htmlFor={id}
-          className={cn('text-base cursor-pointer', disabled && 'cursor-not-allowed', labelClassName)}
+          className={cn('text-base cursor-pointer pointer-events-none', disabled && 'cursor-not-allowed', labelClassName)}
         >
           {label}
         </Label>
