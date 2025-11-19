@@ -1,7 +1,7 @@
 import { TicketX } from 'lucide-react';
 
 // @Components
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/button/IconButton';
 import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
@@ -41,19 +41,19 @@ export const TerminalTicketContent = () => {
     <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-2 sm:py-4 flex-1'}>
-        <FlexCol className={'sm:flex sm:flex-row gap-2 sm:gap-8'}>
+        <FlexCol className={' gap-1 sm:gap-3'}>
           <FlexCol>
             <FormHeaderFilter />
 
-            <Flex className={'w-full justify-between 1440:py-8 py-3 border-t'}>
-              <Button
-                variant={'destructive'}
+            <Flex className={'w-full justify-between 1440:py-8 py-3 border-t gap-2 flex-col sm:flex-row'}>
+              <IconButton
+                label="Eliminar Ticket"
+                icon={<TicketX />}
+                variant="destructive"
                 disabled={!ticket_number}
                 onClick={handleDeleteTicket}
-              >
-                <TicketX /> Eliminar Ticket
-              </Button>
-              <Button variant={'outline'}> Cerrar </Button>
+              />
+              <IconButton label="Cerrar" variant="outline" />
             </Flex>
           </FlexCol>
           <FlexCol>

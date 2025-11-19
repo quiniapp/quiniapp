@@ -1,10 +1,9 @@
 import { Clock } from 'lucide-react';
 // @UI
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { RadioGroup } from '@/components/ui/radio-group';
+import { RadioButtonWithLabel } from '@/components/button/RadioButtonWithLabel';
 // @Components
 import Box from '@/components/box';
-import { Flex } from '@/components/flex';
 import HeaderTitleSection from '@/components/header-title-section';
 // @Hooks
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
@@ -88,20 +87,16 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
       <RadioGroup onValueChange={onScheduleSelect}>
         <Box className="grid 1440:grid-cols-3 grid-cols-2 1440:gap-4 gap-1">
           {schedules?.map((turno: Shift, index) => (
-            <Flex key={turno.schedule_id} className=" h-[36px]  items-center space-x-4">
-              <RadioGroupItem
-                ref={keyboardMap[index]?.ref}
-                id={turno.schedule_id}
-                value={turno.schedule_id}
-                className="border border-primary"
-              />
-              <Label
-                htmlFor={turno.schedule_id}
-                className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                {turno.name} [{turno.time}] [F{index+1}]
-              </Label>
-            </Flex>
+            <RadioButtonWithLabel
+              key={turno.schedule_id}
+              ref={keyboardMap[index]?.ref}
+              id={turno.schedule_id}
+              value={turno.schedule_id}
+              label={`${turno.name} [${turno.time}] [F${index + 1}]`}
+              radioClassName="border border-primary"
+              labelClassName="text-xs"
+              className="h-[36px]"
+            />
           ))}
         </Box>
       </RadioGroup>

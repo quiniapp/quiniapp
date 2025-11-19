@@ -304,7 +304,7 @@ const FillOutATicket = () => {
                   disabled={!isAddButtonEnabled || !isEnabled}
                   onClick={() => handleCreateBet()}
                 >
-                  <PlusIcon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Agregar</span>
+                  <PlusIcon className="hidden sm:inline sm:mr-1 lg:mr-0.5" /> <span>Agregar</span>
                 </Button>
                 <Button
                   type={'reset'}
@@ -313,7 +313,7 @@ const FillOutATicket = () => {
                   className={'flex-1 max-w-[100px] sm:max-w-[120px] lg:max-w-[90px] lg:h-7 lg:text-xs'}
                   onClick={() => handleDeleteForm()}
                 >
-                  <TrashIcon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Borrar</span>
+                  <TrashIcon className="hidden sm:inline sm:mr-1 lg:mr-0.5" /> <span>Borrar</span>
                 </Button>
               </Flex>
             </FlexCol>

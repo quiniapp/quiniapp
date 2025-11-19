@@ -1,10 +1,9 @@
 import { Ticket } from 'lucide-react';
 
 import Box from '@/components/box';
-import { Flex } from '@/components/flex';
 import HeaderTitleSection from '@/components/header-title-section';
-import { Label } from '@/components/ui/label.tsx';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { RadioGroup } from '@/components/ui/radio-group';
+import { RadioButtonWithLabel } from '@/components/button/RadioButtonWithLabel';
 import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 
 type Quini = {
@@ -31,19 +30,15 @@ const QuiniChecks = ({ quini, onLotterySelect }: ResultQuinisProps) => {
         <RadioGroup onValueChange={onLotterySelect}>
           <Box className="grid grid-cols-2 1440:grid-cols-4 sm:grid-cols-4 1440:gap-4 gap-1">
             {quini.map((turno: Quini) => (
-              <Flex key={turno.lottery_id} className=" h-[36px] items-center space-x-4">
-                <RadioGroupItem
-                  value={turno.lottery_id}
-                  id={turno.lottery_id}
-                  className="border border-primary"
-                />
-                <Label
-                  htmlFor={turno.lottery_id}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {turno.name}
-                </Label>
-              </Flex>
+              <RadioButtonWithLabel
+                key={turno.lottery_id}
+                id={turno.lottery_id}
+                value={turno.lottery_id}
+                label={turno.name}
+                radioClassName="border border-primary"
+                labelClassName="text-sm"
+                className="h-[36px]"
+              />
             ))}
           </Box>
         </RadioGroup>

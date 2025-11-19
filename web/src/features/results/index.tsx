@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import React, { Suspense, useEffect, useState } from 'react';
-import { Clock, PencilIcon,  SaveIcon, TrashIcon } from 'lucide-react';
+import { Clock, PencilIcon, SaveIcon, TrashIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import Box from '@/components/box';
@@ -8,10 +8,10 @@ import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import HeaderTitleSection from '@/components/header-title-section';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
+import { IconButton } from '@/components/button/IconButton';
 import QuiniChecks from '@/features/results/quini-check';
 import ResultShifts from '@/features/results/shifts';
 
@@ -75,6 +75,14 @@ const ResultsContent = () => {
 
   const handleSave = () => {
     if (!selectedSchedule || !selectedLottery) return;
+
+    // Validate that all results have exactly 4 digits
+    const allValid = results.every((result) => result.length === 4);
+    if (!allValid) {
+      toast.error('Todos los resultados deben tener exactamente 4 cifras');
+      return;
+    }
+
     const payload = {
       schedule_id: selectedSchedule,
       lottery_id: selectedLottery,
@@ -114,6 +122,9 @@ const ResultsContent = () => {
     setOnEdit(false);
   };
 
+  // Check if all results have exactly 4 digits for enabling save button
+  const canSave = onEdit && results.every((result) => result.length === 4);
+
   const handleDeleteResult = () => {
     if (getResults?.results_id)
       deleteResults(
@@ -151,28 +162,25 @@ const ResultsContent = () => {
     <PageWrapper>
       <HeaderSection title={'Resultados'} />
       <FlexCol className="w-full items-center sm:space-x-[36px] max-h-[60px] justify-between">
-        <FlexCol className="w-full sm:flex-row mt-8 items-center sm:space-x-[36px] max-h-[60px] justify-between">
-          <Flex className={'  w-full items-center sm:space-x-[24px] '}>
-            <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
+        <Flex className="w-full mt-8 items-center sm:space-x-[36px] max-h-[60px] justify-between">
+ 
             <SelectDayToSearch
               onDayChange={(date) => {
                 setSelectedDate(dayjs(date).format('YYYY-MM-DD'));
               }}
             />
-          </Flex>
           {role !== USER_TYPE.CASHIER && (
             <Flex className={'gap-6'}>
-              <Button
-                variant={'success'}
-                className="  hover:bg-green-700 text-white"
+              <IconButton
+                variant="success"
+                label={isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
                 onClick={() => setIsOpen(true)}
-              >
-                {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
-              </Button>
+                className="hover:bg-green-700 text-white"
+              />
             </Flex>
           )}
-        </FlexCol>
-        <Box className="grid grid-cols-1 lg:grid-cols-2  gap-8 py-[36px]  ">
+        </Flex>
+        <Box className="flex flex-col xl:flex-row gap-8 py-[36px]">
           <FlexCol className="  rounded-xl   space-y-6">
             <ResultShifts
               schedules={fetchSchedules ?? []}
@@ -200,9 +208,11 @@ const ResultsContent = () => {
                     maxLength={4}
                     value={value}
                     onChange={(e) => {
+                      // Only allow numbers 0-9
+                      const numericValue = e.target.value.replace(/[^0-9]/g, '');
                       setResults((prev) => {
                         const newResults = [...prev];
-                        newResults[i] = e.target.value;
+                        newResults[i] = numericValue;
                         return newResults;
                       });
                     }}
@@ -215,36 +225,36 @@ const ResultsContent = () => {
                       }
                     }}
                     disabled={!onEdit}
-                    className="w-full bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1"
+                    className="w-full min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
                   />
                 </div>
               ))}
             </Box>
             {role !== USER_TYPE.CASHIER && (
               <Box className=" grid grid-cols-1 sm:grid-cols-3 py-2 mt-6 gap-[12px] ">
-                <Button
-                  variant={'destructive'}
-                  className="  hover:bg-[var(--bg-card)] text-dark w-full font-medium"
+                <IconButton
+                  variant="destructive"
+                  icon={<TrashIcon />}
+                  label="Borrar resultado"
                   disabled={!(selectedLottery && selectedSchedule && getResults?.results_id)}
                   onClick={() => setIsOpenDeleteResult(true)}
-                >
-                  <TrashIcon /> Borrar resultado
-                </Button>
-                <Button
-                  variant={'outline'}
-                  className="  bg-cyan hover:bg-[var(--bg-card)] text-dark w-full font-medium"
+                  className="hover:bg-[var(--bg-card)] text-dark font-medium"
+                />
+                <IconButton
+                  variant="outline"
+                  icon={<PencilIcon />}
+                  label="Editar"
                   onClick={() => setOnEdit(!onEdit)}
-                >
-                  <PencilIcon /> Editar
-                </Button>
-                <Button
-                  variant={'default'}
+                  className="bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium"
+                />
+                <IconButton
+                  variant="default"
+                  icon={<SaveIcon />}
+                  label={isPending || isPendingResults ? 'Guardando' : 'Guardar Resultados'}
                   onClick={handleSave}
-                  className=" w-full   text-white"
-                  disabled={!onEdit}
-                >
-                  <SaveIcon /> {isPending || isPendingResults ? 'Guardando' : 'Guardar Resultados'}
-                </Button>
+                  disabled={!canSave}
+                  className="text-white"
+                />
               </Box>
             )}
           </div>

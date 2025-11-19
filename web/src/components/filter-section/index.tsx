@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SelectDayToSearch } from '@/features/plays-and-hits/select-day-to-search';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';

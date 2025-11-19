@@ -3,7 +3,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/button/IconButton';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { USER_TYPE } from '@helper/types/user.type';
@@ -127,37 +127,29 @@ const HeaderPlayDetail = () => {
 
       {role === USER_TYPE.CASHIER && (
         <Flex className="flex-row w-full flex-wrap justify-center sm:justify-end gap-2 lg:gap-1.5">
-          <Button
+          <IconButton
             type="button"
+            label="Repetir Ticket"
+            icon={<Repeat2Icon className="w-4 h-4" />}
             onClick={openRepeatModal}
-            size="sm"
             className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
-          >
-            <Repeat2Icon className="w-3 h-3 sm:mr-1 lg:mr-0.5" />
-            <span className="hidden sm:inline text-xs sm:text-sm lg:text-xs">Repetir Ticket</span>
-            <span className="sm:hidden text-xs">Repetir</span>
-          </Button>
+          />
 
-          <Button
+          <IconButton
             type="button"
+            label="Reimprimir"
+            icon={<PrinterIcon className="w-4 h-4" />}
             variant="outline"
             onClick={handleRePrimtLast}
-            size="sm"
             className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
-          >
-            <PrinterIcon className="w-3 h-3 sm:mr-1 lg:mr-0.5" />
-            <span className="hidden sm:inline text-xs sm:text-sm lg:text-xs">Reimprimir</span>
-            <span className="sm:hidden text-xs">Reimpr.</span>
-          </Button>
+          />
 
-          <Button
+          <IconButton
             type="button"
+            label="Cancelar"
             variant="destructive"
-            size="sm"
             className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
-          >
-            <span className="text-xs sm:text-sm lg:text-xs">Cancelar</span>
-          </Button>
+          />
         </Flex>
       )}
 

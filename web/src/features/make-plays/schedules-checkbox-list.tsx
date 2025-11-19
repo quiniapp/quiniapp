@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo, useLayoutEffect } from 'react';
 import { ClockIcon, } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 import { Flex } from '@/components/flex';
 import Box from '@/components/box';
 import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
@@ -69,20 +69,27 @@ const ScheduleCheckboxList = ({
         const checked = checkedSchedules.has(sch.schedule_id);
 
         return (
-          <Flex key={sch.schedule_id} className="items-center gap-2">
-            <Checkbox
+          <div key={sch.schedule_id}>
+            <CheckboxWithLabel
+              id={`f${index + 1}`}
+              label={
+                <>
+                  {sch.name} [{sch.time.slice(0, 5)}]{' '}
+                  <span className="text-primary-light">[F{index + 1}]</span>
+                </>
+              }
               checked={checked}
               disabled={!enabled}
-              id={`f${index + 1}`}
-              ref={refs[index]}
-              onClick={() => setSchedules(sch as IScheduleEntityFront)} // toggle
-              className="border-2 border-primary"
+              onClick={() => setSchedules(sch as IScheduleEntityFront)}
+              labelClassName="text-base"
             />
-            <Label htmlFor={`f${index + 1}`} className="text-base">
-              {sch.name} [{sch.time.slice(0, 5)}]{' '}
-              <span className="text-primary-light">[{`F${index + 1}`}]</span>
-            </Label>
-          </Flex>
+            <button
+              ref={refs[index]}
+              onClick={() => setSchedules(sch as IScheduleEntityFront)}
+              className="hidden"
+              aria-hidden="true"
+            />
+          </div>
         );
       })}
     </Box>

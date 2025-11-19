@@ -136,7 +136,12 @@ export class AuthRouter {
         sameSite: 'none',
         path: '/',
       });
-      res.clearCookie('user_token', { httpOnly: true, secure: true, sameSite: 'none', path: '/' });
+      res.clearCookie('user_token', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        path: '/',
+      });
 
       res.status(200).json(response);
     } catch (error) {

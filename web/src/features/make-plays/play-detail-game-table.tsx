@@ -46,7 +46,7 @@ const PlayDetailGameTable = () => {
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 lg:min-h-32 max-h-full w-full">
       {/* Mobile: Cards */}
-      <div className="md:hidden space-y-2 p-2">
+      <Flex className="md:hidden justify-center space-y-2 p-2">
         {bets.length === 0 ? (
           <NoPlaysFound />
         ) : (
@@ -60,7 +60,7 @@ const PlayDetailGameTable = () => {
             />
           ))
         )}
-      </div>
+      </Flex>
 
       {/* Desktop/Tablet: Table */}
       <div className="hidden md:block overflow-x-auto">
@@ -84,7 +84,9 @@ const PlayDetailGameTable = () => {
                   <TableRow
                     key={index}
                     data-state={selectedIndexes.includes(index) ? 'selected' : undefined}
-                    className={cn('cursor-pointer select-none text-slate-300 text-sm lg:text-xs lg:h-8')}
+                    className={cn(
+                      'cursor-pointer select-none text-slate-300 text-sm lg:text-xs lg:h-8'
+                    )}
                     onMouseDown={() => {
                       dragStarted.current = false;
                       setIsSelecting(true);
@@ -94,11 +96,8 @@ const PlayDetailGameTable = () => {
                     }}
                     onMouseEnter={() => {
                       if (isSelecting) {
-                        setSelectedIndexes(
-                          (prev) =>
-                            prev.includes(index)
-                              ? prev.filter((i) => i !== index)
-                              : [...prev, index]
+                        setSelectedIndexes((prev) =>
+                          prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
                         );
                       }
                     }}
@@ -108,9 +107,15 @@ const PlayDetailGameTable = () => {
                       }
                     }}
                   >
-                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{bet.number}</TableCell>
-                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{bet.with}</TableCell>
-                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{bet.amount}</TableCell>
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">
+                      {bet.number}
+                    </TableCell>
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">
+                      {bet.with}
+                    </TableCell>
+                    <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">
+                      {bet.amount}
+                    </TableCell>
                     <TableCell className="text-sm lg:text-base px-1 2xl:px-2 lg:py-1">{`${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`}</TableCell>
                     <TableCell className="whitespace-normal break-words text-sm lg:text-base px-1 2xl:px-2 lg:py-1 max-w-xs">
                       <span className="">
@@ -146,7 +151,9 @@ const BetCard = ({
       onClick={onToggle}
       className={cn(
         'border rounded-lg p-3 cursor-pointer transition-all',
-        isSelected ? 'bg-primary/20 border-primary' : 'bg-card border-border hover:border-primary/50'
+        isSelected
+          ? 'bg-primary/20 border-primary'
+          : 'bg-card border-border hover:border-primary/50'
       )}
     >
       <Flex className="justify-between items-start mb-2">
