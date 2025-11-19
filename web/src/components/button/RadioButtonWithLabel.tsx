@@ -2,7 +2,7 @@ import { RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Flex } from '@/components/flex';
 import { cn } from '@/lib/utils';
-import { ReactNode, forwardRef } from 'react';
+import { ReactNode, forwardRef, useRef, useImperativeHandle } from 'react';
 
 interface RadioButtonWithLabelProps {
   id: string;
@@ -16,6 +16,16 @@ interface RadioButtonWithLabelProps {
 
 export const RadioButtonWithLabel = forwardRef<HTMLButtonElement, RadioButtonWithLabelProps>(
   ({ id, value, label, disabled, className, labelClassName, radioClassName }, ref) => {
+    const internalRef = useRef<HTMLButtonElement>(null);
+
+    // Expose the internal ref to the parent component
+    useImperativeHandle(ref, () => internalRef.current!);
+
+    const handleContainerClick = () => {
+      if (disabled) return;
+      internalRef.current?.click();
+    };
+
     return (
       <Flex
         className={cn(
@@ -23,9 +33,10 @@ export const RadioButtonWithLabel = forwardRef<HTMLButtonElement, RadioButtonWit
           disabled && 'cursor-not-allowed opacity-50',
           className
         )}
+        onClick={handleContainerClick}
       >
         <RadioGroupItem
-          ref={ref}
+          ref={internalRef}
           id={id}
           value={value}
           disabled={disabled}

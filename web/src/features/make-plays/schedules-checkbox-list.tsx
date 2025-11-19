@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo, useLayoutEffect } from 'react';
-import { ClockIcon, } from 'lucide-react';
+import { ClockIcon } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
@@ -38,7 +38,7 @@ const ScheduleCheckboxList = ({
   const { isScheduleAfter, isLessThanTenMinutes } = useClock();
 
   // F-keys (solo para desktop)
-  const refs = Array.from({ length: 10 }, () => useRef<HTMLButtonElement>(null));
+  const refs = Array.from({ length: 10 }, () => useRef<HTMLDivElement>(null));
   const keyMap: Record<string, number> = Object.fromEntries(
     Array.from({ length: 10 }, (_, i) => [`F${i + 1}`, i])
   );
@@ -69,27 +69,21 @@ const ScheduleCheckboxList = ({
         const checked = checkedSchedules.has(sch.schedule_id);
 
         return (
-          <div key={sch.schedule_id}>
-            <CheckboxWithLabel
-              id={`f${index + 1}`}
-              label={
-                <>
-                  {sch.name} [{sch.time.slice(0, 5)}]{' '}
-                  <span className="text-primary-light">[F{index + 1}]</span>
-                </>
-              }
-              checked={checked}
-              disabled={!enabled}
-              onClick={() => setSchedules(sch as IScheduleEntityFront)}
-              labelClassName="text-base"
-            />
-            <button
-              ref={refs[index]}
-              onClick={() => setSchedules(sch as IScheduleEntityFront)}
-              className="hidden"
-              aria-hidden="true"
-            />
-          </div>
+          <CheckboxWithLabel
+            key={sch.schedule_id}
+            ref={refs[index]}
+            id={`f${index + 1}`}
+            label={
+              <>
+                {sch.name} [{sch.time.slice(0, 5)}]{' '}
+                <span className="text-primary-light">[F{index + 1}]</span>
+              </>
+            }
+            checked={checked}
+            disabled={!enabled}
+            onClick={() => setSchedules(sch as IScheduleEntityFront)}
+            labelClassName="text-base"
+          />
         );
       })}
     </Box>
@@ -171,19 +165,19 @@ const ScheduleCheckboxList = ({
               </CommandGroup>
             </CommandList>
 
-             <div className="flex items-center justify-between gap-2 px-2 py-2 border-t">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-8 px-2 text-base"
-                  onClick={() => {
-                    // limpiar: togglear todas las seleccionadas
-                    clearAll();
-                  }}
-                  disabled={checkedSchedules.size === 0}
-                >
-                  Limpiar
-                </Button>
+            <div className="flex items-center justify-between gap-2 px-2 py-2 border-t">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 px-2 text-base"
+                onClick={() => {
+                  // limpiar: togglear todas las seleccionadas
+                  clearAll();
+                }}
+                disabled={checkedSchedules.size === 0}
+              >
+                Limpiar
+              </Button>
               <Button
                 type="button"
                 variant="ghost"

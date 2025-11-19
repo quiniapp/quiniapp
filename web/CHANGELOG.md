@@ -20,6 +20,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Consistent styling with existing modals (DeleteResultsModal)
   - Purpose: Improve UX and prevent unintended ticket deletions
 
+### Fixed - 2025-11-19
+
+#### CheckboxWithLabel Component - Visibility, Click Behavior, and Ref Support
+- **CheckboxWithLabel**: Fixed checkbox visibility, click area, and F-key support
+  - Path: `src/components/button/CheckboxWithLabel.tsx`
+  - Removed `hidden md:flex` from checkbox - now visible on all screen sizes
+  - Added `forwardRef` support for F-key functionality compatibility
+  - Maintains `pointer-events-none` to prevent direct checkbox clicks
+  - Container `onClick` handler works across entire component area
+  - Fixes: Clicking on label or space between checkbox and label now works correctly
+  - Fixes: Checkbox is now visible on mobile devices
+  - Fixes: F-key shortcuts now work properly in schedules-checkbox-list
+
+#### RadioButtonWithLabel Component - Click Area Enhancement
+- **RadioButtonWithLabel**: Added container-level click support
+  - Path: `src/components/button/RadioButtonWithLabel.tsx`
+  - Added `onClick` handler to container Flex
+  - Uses `useRef` and `useImperativeHandle` for proper ref forwarding
+  - Maintains compatibility with existing F-key functionality
+  - Fixes: Clicking anywhere in the container (label, space between) now selects the radio button
+  - Benefits: Improved UX with larger click target area
+
+#### Schedule Checkbox List - F-key Support Fixed
+- **schedules-checkbox-list.tsx**: Fixed F-key shortcuts for schedule selection
+  - Path: `src/features/make-plays/schedules-checkbox-list.tsx`
+  - Changed refs from `HTMLButtonElement` to `HTMLDivElement` to match CheckboxWithLabel
+  - Added `ref` prop to CheckboxWithLabel components
+  - Changed from `onCheckedChange` to `onClick` for consistent behavior
+  - Fixes: F1-F10 shortcuts now properly select schedules
+
+#### Lotteries Checkbox List - Key Prop Added
+- **lotteries-checkbox-list.tsx**: Added missing key prop to CheckboxWithLabel
+  - Path: `src/features/make-plays/lotteries-checkbox-list.tsx`
+  - Added `key={lot.lottery_id}` to prevent React warnings
+  - Uses `onClick` for consistent checkbox behavior
+  - Fixes: Proper React reconciliation and checkbox toggle behavior
+
 ### Changed - 2025-11-19
 
 #### Terminal Ticket - Delete Confirmation
