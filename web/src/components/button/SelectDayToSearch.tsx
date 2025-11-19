@@ -43,7 +43,7 @@ export function SelectDayToSearch({
         <Button
           variant="outline"
           className={cn(
-            'w-full sm:w-[240px] justify-start text-left font-normal',
+            'w-fit sm:w-[240px] justify-start text-left font-normal',
             !date && 'text-muted-foreground',
             className
           )}

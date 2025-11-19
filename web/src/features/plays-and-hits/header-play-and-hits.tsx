@@ -1,4 +1,3 @@
-import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import dayjs from 'dayjs';
@@ -20,10 +19,7 @@ const HeaderPlayAndHits = () => {
 
   return (
     <HeaderSection title={'Jugadas'} >
-      <Flex className={'justify-end  w-full items-center space-x-[24px] '}>
-        <span className={'text-sm text-muted-foreground'}> Selecionar fecha</span>
         <SelectDayToSearch onDayChange={handleDayChange} toDate={today.toDate()} />
-      </Flex>
     </HeaderSection>
   );
 };

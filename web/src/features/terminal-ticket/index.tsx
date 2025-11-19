@@ -41,7 +41,7 @@ export const TerminalTicketContent = () => {
     <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-2 sm:py-4 flex-1'}>
-        <FlexCol className={'sm:flex sm:flex-row gap-2 sm:gap-8'}>
+        <FlexCol className={' gap-1 sm:gap-3'}>
           <FlexCol>
             <FormHeaderFilter />
 

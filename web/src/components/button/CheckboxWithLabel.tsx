@@ -49,7 +49,7 @@ export const CheckboxWithLabel = ({
         checked={checked}
         disabled={disabled}
         id={id}
-        className={cn('border-2 border-primary pointer-events-none', checkboxClassName)}
+        className={cn('hidden md:flex border-2 border-primary pointer-events-none', checkboxClassName)}
         onCheckedChange={onCheckedChange}
       />
       <Label

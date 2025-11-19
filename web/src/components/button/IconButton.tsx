@@ -29,7 +29,7 @@ export const IconButton = ({
       onClick={onClick}
       className={cn('w-full sm:w-auto flex items-center gap-2 justify-center px-4 py-2', className)}
     >
-      {icon && <span className="flex-shrink-0">{icon}</span>}
+      {icon && <span className="hidden md:inline flex-shrink-0">{icon}</span>}
       <span className="truncate">{label}</span>
     </Button>
   );

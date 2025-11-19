@@ -7,27 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-11-19
+
+#### Responsive Layout Improvements
+- **results/index.tsx**: Updated main container to use flexbox layout
+  - Changed from `grid grid-cols-1 lg:grid-cols-2` to `flex flex-col xl:flex-row`
+  - Container now uses flex-col by default (mobile/tablet)
+  - Switches to flex-row at xl breakpoint (1280px+) for better horizontal layout on large screens
+  - Improves responsive behavior and content flow
+
+- **terminal-ticket/form-header-filter.tsx**: Updated fieldsets to occupy full horizontal space
+  - Changed container from `Flex` with `justify-between` to `FlexCol` with `gap-4`
+  - Both fieldsets now stack vertically and occupy 100% width
+  - First fieldset now has `w-full` on all screen sizes (previously `sm:w-full`)
+  - Better space utilization and consistent layout across all screen sizes
+
+#### Button Components Migration
+- **results/index.tsx**: Updated all buttons to use IconButton component
+  - "Generar Ganadores" button: Now uses IconButton with success variant
+  - "Borrar resultado" button: Now uses IconButton with TrashIcon and destructive variant
+  - "Editar" button: Now uses IconButton with PencilIcon and outline variant
+  - "Guardar Resultados" button: Now uses IconButton with SaveIcon and default variant
+  - Icons hidden on screens smaller than md (768px), only text visible on mobile
+  - Consistent responsive behavior across all action buttons
+  - Improved accessibility with container-level click support
+
+- **terminal-ticket/form-header-filter.tsx**: Updated filter buttons to use IconButton component
+  - "Buscar" button: Now uses IconButton with SearchIcon
+  - "Limpiar" button: Now uses IconButton with outline variant
+  - Icons hidden on screens smaller than md (768px), only text visible on mobile
+  - Better responsive behavior and consistent styling with the rest of the app
+
 ### Added - 2025-11-18
 
 #### Reusable Components
-- **CheckboxWithLabel Component**: Created centralized checkbox component in `src/components/checkbox-with-label.tsx`
+- **CheckboxWithLabel Component**: Created centralized checkbox component in `src/components/button/CheckboxWithLabel.tsx`
   - Supports clicking on entire container (not just checkbox or label)
   - Shows cursor pointer on hover for better UX
   - Accepts ReactNode for labels to support complex content
   - Supports disabled state, custom styling, and both onClick and onCheckedChange handlers
   - Used across multiple features for consistent behavior
+  - Checkbox hidden on screens smaller than `md` (768px), only label visible on mobile
 
-- **RadioButtonWithLabel Component**: Created centralized radio button component in `src/components/radio-button-with-label.tsx`
+- **RadioButtonWithLabel Component**: Created centralized radio button component in `src/components/button/RadioButtonWithLabel.tsx`
   - Container-level click support for better accessibility
   - Cursor pointer on hover
   - Supports forwardRef for external refs (F-key functionality)
   - Consistent styling across the app
 
-- **IconButton Component**: Created flexible button component in `src/components/icon-button.tsx`
+- **IconButton Component**: Created flexible button component in `src/components/button/IconButton.tsx`
   - Accepts optional icon and label
   - Fully responsive (full-width on mobile, auto-width on desktop)
   - Supports all button variants
   - Prevents text/icon overflow with truncate
+  - Icons hidden on screens smaller than `md` (768px), only text visible on mobile
 
 - **SelectDayToSearch Component**: Moved from features to `src/components/select-day-to-search.tsx`
   - Now reusable across all features
@@ -85,6 +118,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better responsive behavior with flex-col on mobile, flex-row on desktop
   - Added gap-2 for proper spacing
   - Buttons now stack vertically on mobile, horizontally on desktop
+
+- **make-plays/header-play-detail.tsx**: Updated cashier buttons to use IconButton component
+  - Replaced three Button components with IconButton for consistent behavior
+  - "Repetir Ticket" with Repeat2Icon
+  - "Reimprimir" with PrinterIcon
+  - "Cancelar" button (no icon)
+  - Icons hidden on screens smaller than md, simplified labels removed
+  - Cleaner implementation with less conditional rendering
 
 #### Component Location Changes
 - **SelectDayToSearch**: Moved from `features/plays-and-hits/` to `components/`

@@ -3,7 +3,7 @@ import { SearchIcon } from 'lucide-react';
 import Box from '@/components/box';
 import { Fieldset } from '@/components/fieldset';
 import { Flex, FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/button/IconButton';
 import { Input } from '@/components/ui/input.tsx';
 import {
   Select,
@@ -63,9 +63,9 @@ const FormHeaderFilter = () => {
     handleSelectDate();
   }, []);
   return (
-    <Flex className={' space-y-4 sm:w-full'}>
-      <FlexCol className={'mb-1 sm:mb-4 1440:gap-6  gap-2 '}>
-        <Fieldset legend={'Pasador:'} className={'sm:w-full gap-1 sm:gap-3'}>
+    <Flex className={' space-y-4 w-full'}>
+      <Flex className={'mb-1 sm:mb-4 w-full gap-4'}>
+        <Fieldset legend={'Pasador:'} className={'w-full flex gap-1 sm:gap-3'}>
           <FlexCol className={'space-y-4'}>
             <IsRoleCashier role={role}>
               <Flex className={' gap-3'}>
@@ -97,7 +97,7 @@ const FormHeaderFilter = () => {
                 <Box className="hidden sm:box">
                   <TypographyMuted label={'Fecha'} />
                 </Box>
-                <Box className={'sm:w-[200px] overflow-hidden'}>
+                <Box className={' overflow-hidden'}>
                   <SelectDayToSearch
                     onDayChange={(value) => {
                       handleSelectDate(value);
@@ -106,7 +106,7 @@ const FormHeaderFilter = () => {
                   />
                 </Box>
               </Flex>
-              <Flex className={'w-[150px]'}>
+              <Flex>
                 <Flex className={'w-full items-center gap-3'}>
                   <Box>
                     <TypographyMuted label={'Tickets'} />
@@ -132,26 +132,35 @@ const FormHeaderFilter = () => {
           </FlexCol>
         </Fieldset>
 
-        <Fieldset legend="Buscar por número de Ticket:" className="w-full gap-3">
-          <Flex className="gap-4">
+        <Fieldset legend="Buscar por número de Ticket:" className="flex w-full gap-3">
+          <FlexCol className="w-full gap-4">
             <Input
               type="number"
               inputMode="numeric"
+              className=''
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ej: 20250619..."
             />
-            <Flex className="gap-4">
-              <Button type="button" className="!px-6" onClick={handleSearch}>
-                <SearchIcon /> Buscar
-              </Button>
-              <Button type="reset" variant="outline" className="!px-6" onClick={handleReset}>
-                Limpiar
-              </Button>
+            <Flex className="gap-4 w-full justify-between">
+              <IconButton
+                type="button"
+                label="Buscar"
+                icon={<SearchIcon />}
+                onClick={handleSearch}
+                className="!px-6"
+              />
+              <IconButton
+                type="reset"
+                label="Limpiar"
+                variant="outline"
+                onClick={handleReset}
+                className="!px-6"
+              />
             </Flex>
-          </Flex>
+          </FlexCol>
         </Fieldset>
-      </FlexCol>
+      </Flex>
     </Flex>
   );
 };
