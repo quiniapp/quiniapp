@@ -1,4 +1,5 @@
 import { TicketX } from 'lucide-react';
+import { useState } from 'react';
 
 // @Components
 import { IconButton } from '@/components/button/IconButton';
@@ -6,6 +7,7 @@ import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
 import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket'; // @Hooks
+import DeleteTicketModal from '@/components/modals/DeleteTicketModal';
 
 import TicketDetails from './TicketDetails';
 import { useSearchParams } from 'react-router-dom';
@@ -15,12 +17,14 @@ import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 export const TerminalTicketContent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isOpenDeleteTicket, setIsOpenDeleteTicket] = useState(false);
+
   const date = searchParams.get('date') ?? undefined;
   const cashier_id = searchParams.get('cashier_id') ?? undefined;
   const filter = searchParams.get('filter') ?? undefined;
   const ticket_number = searchParams.get('ticket_number') ?? undefined;
 
-  const { mutate: runDeleteTicket } = useDeleteTicket();
+  const { mutate: runDeleteTicket, isPending: isPendingDelete } = useDeleteTicket();
 
   const handleDeleteTicket = () => {
     runDeleteTicket(ticket_number, {
@@ -29,6 +33,7 @@ export const TerminalTicketContent = () => {
         next.delete('ticket_number');
         setSearchParams(next, { replace: true }); // ✅ asegura navegación sin push
 
+        setIsOpenDeleteTicket(false);
         toast.success('Ticket eliminado correctamente');
       },
       onError: () => {
@@ -51,7 +56,7 @@ export const TerminalTicketContent = () => {
                 icon={<TicketX />}
                 variant="destructive"
                 disabled={!ticket_number}
-                onClick={handleDeleteTicket}
+                onClick={() => setIsOpenDeleteTicket(true)}
               />
               <IconButton label="Cerrar" variant="outline" />
             </Flex>
@@ -67,8 +72,15 @@ export const TerminalTicketContent = () => {
           </FlexCol>
         </FlexCol>
         <TicketDetails />
-      
       </FlexCol>
+
+      <DeleteTicketModal
+        isOpen={isOpenDeleteTicket}
+        ticketNumber={ticket_number}
+        onClose={() => setIsOpenDeleteTicket(false)}
+        onClick={handleDeleteTicket}
+        isPendingDelete={isPendingDelete}
+      />
     </PageWrapper>
   );
 };

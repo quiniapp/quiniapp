@@ -6,42 +6,15 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
-
-// ====== Cache en memoria, estático hasta mutación ======
-type LotteriesCacheEntry = {
-  payload: ILotteryEntityFront[];
-  etag: string;
-};
-const cache = new Map<string, LotteriesCacheEntry>(); // key por variante (all=true/false)
-
+import { globalCacheManager } from 'src/cache/CacheManager';
+// ====== Cache Manager para Lotteries ======
 function keyFor(allFlag: boolean) {
   return `lotteries:all=${allFlag ? 'true' : 'false'}`;
 }
 
-function makeEtag() {
-  return `W/"${Date.now()}"`;
-}
-
-async function loadAndSet(
-  controller: LotteryController,
-  allFlag: boolean
-): Promise<LotteriesCacheEntry> {
-  const data = await controller.getAll(allFlag);
-  const entry = { payload: data, etag: makeEtag() };
-  cache.set(keyFor(allFlag), entry);
-  return entry;
-}
-
-async function ensureCache(controller: LotteryController, allFlag: boolean) {
-  const k = keyFor(allFlag);
-  const snap = cache.get(k);
-  if (snap) return snap;
-  return await loadAndSet(controller, allFlag); // sólo carga en frío
-}
-
 function invalidateAllLotteries() {
-  cache.delete(keyFor(true));
-  cache.delete(keyFor(false));
+  globalCacheManager.invalidate(keyFor(true));
+  globalCacheManager.invalidate(keyFor(false));
 }
 
 export class LotteryRouter {
@@ -119,7 +92,10 @@ export class LotteryRouter {
     }
 
     try {
-      const snap = await ensureCache(this.controller, allFlag);
+      const key = keyFor(allFlag);
+      const snap = await globalCacheManager.getOrLoad(key, () => this.controller.getAll(allFlag), {
+        etagStrategy: 'timestamp',
+      });
 
       // 304 si el cliente tiene la misma versión
       const inm = req.headers['if-none-match'];
@@ -132,7 +108,7 @@ export class LotteryRouter {
         data: { lottery: snap.payload },
       };
 
-      // “sin TTL”: forzá revalidación de cliente/proxy via ETag
+      // "sin TTL": forzá revalidación de cliente/proxy via ETag
       // (el ETag sólo cambia en mutaciones)
       res.setHeader('ETag', snap.etag);
       res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-19
+
+#### Modal Components
+- **DeleteTicketModal Component**: Created confirmation modal for ticket deletion
+  - Path: `src/components/modals/DeleteTicketModal.tsx`
+  - Features:
+    - Confirmation dialog to prevent accidental deletions
+    - Displays ticket number being deleted
+    - Warning message about irreversible action
+    - Delete and Cancel buttons with loading state
+    - Consistent styling with existing modals (DeleteResultsModal)
+  - Purpose: Improve UX and prevent unintended ticket deletions
+
+### Changed - 2025-11-19
+
+#### Terminal Ticket - Delete Confirmation
+- **terminal-ticket/index.tsx**: Added confirmation modal for ticket deletion
+  - Path: `src/features/terminal-ticket/index.tsx`
+  - Changes:
+    - Added `isOpenDeleteTicket` state to control modal visibility
+    - "Eliminar Ticket" button now opens confirmation modal instead of deleting directly
+    - Integrated DeleteTicketModal component
+    - Modal closes automatically on successful deletion
+    - Maintains toast notifications for success/error feedback
+  - Benefits:
+    - Prevents accidental ticket deletions
+    - Better user experience with explicit confirmation
+    - Follows same pattern as results deletion (DeleteResultsModal)
+
 ### Changed - 2025-11-19
 
 #### Responsive Layout Improvements

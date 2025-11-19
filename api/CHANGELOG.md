@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-19
+
+#### Cache Management System
+- **CacheManager Class**: Created centralized cache management system
+  - Path: `src/cache/CacheManager.ts`
+  - Features:
+    - Multiple cache instances identified by unique keys
+    - Optional TTL (time-to-live) configuration per cache
+    - Three ETag generation strategies: counter, timestamp, hash
+    - Statistics tracking: size, access count, uptime, last access
+    - Automatic invalidation support
+    - Inflight request deduplication to prevent duplicate DB queries
+  - Benefits:
+    - Eliminates code duplication across route files
+    - Centralized cache monitoring and management
+    - Easy to query cache state (size, age, hit rate)
+    - Consistent caching behavior across all endpoints
+
+#### Database Optimization TODO
+- **Database Indices Review**: Added comprehensive TODO in `TODO.md`
+  - Detailed plan for auditing and optimizing database indices
+  - Recommendations for indices on all major tables
+  - Performance testing methodology
+  - Integration with CacheManager for maximum performance
+  - Estimated 3-4 days of work for full implementation
+
+### Changed - 2025-11-19
+
+#### Lottery Routes - Cache Refactoring
+- **lottery.route.ts**: Migrated to use CacheManager
+  - Path: `src/lottery/route/lottery.route.ts`
+  - Removed local cache implementation (Map, helper functions)
+  - Now uses `globalCacheManager.getOrLoad()` with timestamp ETag strategy
+  - Cache keys: `lotteries:all=true` and `lotteries:all=false`
+  - Automatic invalidation on create/update/delete operations
+  - Reduced code from ~45 lines to ~20 lines of cache logic
+  - Maintains ETag/304 support for bandwidth optimization
+
+#### Schedule-Lottery Routes - Cache Refactoring
+- **schedule-lottery.route.ts**: Migrated to use CacheManager
+  - Path: `src/schedule-lottery/route/schedule-lottery.route.ts`
+  - Removed local cache implementation with TTL
+  - Now uses `globalCacheManager.getOrLoad()` with hash ETag strategy
+  - Cache key: `schedule-lotteries:all`
+  - TTL: 24 hours (configurable)
+  - Automatic invalidation on POST operations
+  - Reduced code complexity and improved maintainability
+
+#### Schedule Routes - Cache Refactoring
+- **schedule.route.ts**: Migrated to use CacheManager
+  - Path: `src/shcedule/route/schedule.route.ts`
+  - Removed local cache with counter-based ETag
+  - Now uses `globalCacheManager.getOrLoad()` with counter ETag strategy
+  - Cache key: `schedules:all`
+  - No TTL (cache persists until invalidation)
+  - Automatic invalidation on create/update/delete operations
+  - Removed manual inflight request handling (now managed by CacheManager)
+
 ### Added - 2025-11-13
 
 #### Winners - Unified Transaction for Consistency
