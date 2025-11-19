@@ -550,3 +550,270 @@ Crear endpoint complementario para números que MÁS salen:
 ### 3. Notificaciones
 - Alertar cuando un número muy atrasado finalmente sale
 - Suscripciones por número favorito
+
+---
+
+# TODO - Revisión y Optimización de Índices de Base de Datos
+
+## Contexto
+
+Con la implementación del nuevo sistema de caché centralizado (CacheManager) y el crecimiento continuo de datos, es necesario revisar y optimizar los índices de la base de datos para asegurar el mejor rendimiento posible en las consultas.
+
+### Problema Actual
+- Posibles índices faltantes en tablas críticas
+- Índices redundantes o innecesarios que consumen espacio
+- Consultas lentas en tablas con gran volumen de datos
+- Falta de índices compuestos para queries comunes
+
+### Solución Propuesta
+Realizar una auditoría completa de índices en todas las tablas principales y optimizarlos según los patrones de uso reales.
+
+## Tareas
+
+### 1. Auditoría de Índices Actuales
+- [ ] Listar todos los índices existentes en Supabase
+- [ ] Identificar índices duplicados o redundantes
+- [ ] Medir tamaño de cada índice
+- [ ] Documentar índices actuales por tabla
+
+**Tablas prioritarias:**
+- `lottery`
+- `schedule`
+- `schedule_lottery`
+- `bets`
+- `tickets`
+- `ticket_prizes_by_turn`
+- `results`
+- `winners`
+- `current_account`
+
+### 2. Análisis de Query Patterns
+- [ ] Revisar queries más frecuentes en cada módulo
+- [ ] Identificar queries lentas usando `EXPLAIN ANALYZE`
+- [ ] Documentar filtros y ordenamientos comunes
+- [ ] Identificar oportunidades para índices compuestos
+
+**Módulos a revisar:**
+- `api/src/lottery/repository/`
+- `api/src/schedule/repository/`
+- `api/src/schedule-lottery/repository/`
+- `api/src/bet/repository/`
+- `api/src/ticket/repository/`
+- `api/src/results/repository/`
+- `api/src/winners/repository/`
+
+### 3. Índices Recomendados por Tabla
+
+#### lottery
+```sql
+-- Verificar índices existentes
+CREATE INDEX IF NOT EXISTS idx_lottery_active ON lottery(active) WHERE active = true;
+CREATE INDEX IF NOT EXISTS idx_lottery_name ON lottery(name);
+```
+
+#### schedule
+```sql
+-- Verificar índices existentes
+CREATE INDEX IF NOT EXISTS idx_schedule_active ON schedule(active) WHERE active = true;
+```
+
+#### schedule_lottery
+```sql
+-- Índices para queries frecuentes por día/schedule/lottery
+CREATE INDEX IF NOT EXISTS idx_schedule_lottery_day ON schedule_lottery(day);
+CREATE INDEX IF NOT EXISTS idx_schedule_lottery_schedule ON schedule_lottery(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_lottery_lottery ON schedule_lottery(lottery_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_lottery_composite
+  ON schedule_lottery(day, schedule_id, lottery_id);
+```
+
+#### bets
+```sql
+-- Índices para búsquedas por usuario, ticket, fecha
+CREATE INDEX IF NOT EXISTS idx_bets_user ON bets(user_id);
+CREATE INDEX IF NOT EXISTS idx_bets_ticket ON bets(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_bets_date ON bets(date DESC);
+CREATE INDEX IF NOT EXISTS idx_bets_lottery ON bets(lottery_id);
+CREATE INDEX IF NOT EXISTS idx_bets_schedule ON bets(schedule_id);
+-- Índice compuesto para queries comunes
+CREATE INDEX IF NOT EXISTS idx_bets_user_date
+  ON bets(user_id, date DESC);
+```
+
+#### tickets
+```sql
+-- Índices para búsquedas por usuario, número, fecha, estado
+CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_number ON tickets(ticket_number);
+CREATE INDEX IF NOT EXISTS idx_tickets_date ON tickets(date DESC);
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(paid, winner);
+-- Índice compuesto para terminal-ticket queries
+CREATE INDEX IF NOT EXISTS idx_tickets_user_date_status
+  ON tickets(user_id, date DESC, winner, paid);
+```
+
+#### results
+```sql
+-- Índices para búsquedas por lotería, turno, fecha
+CREATE INDEX IF NOT EXISTS idx_results_lottery ON results(lottery_id);
+CREATE INDEX IF NOT EXISTS idx_results_schedule ON results(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_results_date ON results(date DESC);
+-- Índice compuesto crítico
+CREATE INDEX IF NOT EXISTS idx_results_lottery_schedule_date
+  ON results(lottery_id, schedule_id, date DESC);
+```
+
+#### winners
+```sql
+-- Índices para búsquedas de ganadores
+CREATE INDEX IF NOT EXISTS idx_winners_date ON winners(date DESC);
+CREATE INDEX IF NOT EXISTS idx_winners_lottery ON winners(lottery_id);
+CREATE INDEX IF NOT EXISTS idx_winners_schedule ON winners(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_winners_paid ON winners(paid);
+```
+
+#### ticket_prizes_by_turn
+```sql
+-- Índices para cálculos de premios
+CREATE INDEX IF NOT EXISTS idx_prizes_ticket ON ticket_prizes_by_turn(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_prizes_date ON ticket_prizes_by_turn(date DESC);
+CREATE INDEX IF NOT EXISTS idx_prizes_schedule ON ticket_prizes_by_turn(schedule_id);
+-- Índice parcial solo para ganadores
+CREATE INDEX IF NOT EXISTS idx_prizes_winners
+  ON ticket_prizes_by_turn(date DESC, schedule_id)
+  WHERE prize_turn > 0;
+```
+
+### 4. Implementación de Índices
+- [ ] Crear migraciones SQL para nuevos índices
+- [ ] Ejecutar en ambiente de desarrollo primero
+- [ ] Medir impacto en performance (antes/después)
+- [ ] Monitorear uso de espacio en disco
+- [ ] Aplicar en producción en horario de bajo tráfico
+
+### 5. Índices a Considerar Eliminar
+- [ ] Identificar índices no utilizados (ver pg_stat_user_indexes)
+- [ ] Índices redundantes (ej: índice en columna A cuando existe índice en A,B)
+- [ ] Índices en tablas pequeñas que no justifican el overhead
+- [ ] Documentar razones para eliminación
+
+### 6. Índices Parciales y Especiales
+- [ ] Índices parciales para queries con WHERE frecuentes
+- [ ] Índices de texto completo si hay búsquedas de texto
+- [ ] Considerar GiST o GIN para tipos especiales
+- [ ] Evaluar índices de expresión si hay cálculos frecuentes
+
+**Ejemplos de índices parciales:**
+```sql
+-- Solo tickets activos (no eliminados)
+CREATE INDEX idx_tickets_active
+  ON tickets(date DESC)
+  WHERE deleted_at IS NULL;
+
+-- Solo ganadores pagados
+CREATE INDEX idx_winners_paid
+  ON winners(date DESC)
+  WHERE paid = true;
+```
+
+### 7. Performance Testing
+- [ ] Benchmark queries ANTES de agregar índices
+- [ ] Benchmark queries DESPUÉS de agregar índices
+- [ ] Medir tiempo de INSERT/UPDATE (puede degradarse con más índices)
+- [ ] Validar que cache + índices mejoran performance general
+- [ ] Documentar mejoras específicas por query
+
+**Métricas a medir:**
+- Tiempo de respuesta promedio por endpoint
+- Query execution time (pg_stat_statements)
+- Index usage statistics (pg_stat_user_indexes)
+- Tamaño total de índices vs tablas
+
+### 8. Mantenimiento de Índices
+- [ ] Configurar VACUUM ANALYZE automático
+- [ ] Monitorear bloat de índices
+- [ ] Programar REINDEX periódico si es necesario
+- [ ] Alertas si índices crecen anormalmente
+
+### 9. Documentación
+- [ ] Documentar todos los índices por tabla
+- [ ] Explicar razón de cada índice (qué query optimiza)
+- [ ] Guía de cuándo agregar nuevos índices
+- [ ] Actualizar CHANGELOG
+
+### 10. Integración con CacheManager
+- [ ] Revisar que índices complementen estrategia de caché
+- [ ] Índices en columnas usadas por cache keys
+- [ ] Optimizar queries de carga de cache (getAll, etc.)
+- [ ] Documentar relación cache-índices
+
+## Consideraciones
+
+### Trade-offs de Índices
+- **Ventajas:**
+  - Queries de lectura más rápidas
+  - Mejor performance en JOINs y WHERE clauses
+  - Soporte para UNIQUE constraints
+- **Desventajas:**
+  - Espacio en disco adicional
+  - Inserts/Updates/Deletes más lentos
+  - Overhead de mantenimiento
+
+### Reglas Generales
+1. Indexar columnas en WHERE clauses frecuentes
+2. Indexar foreign keys para JOINs
+3. Indexar columnas en ORDER BY
+4. Considerar índices compuestos para queries multi-columna
+5. No indexar columnas con baja cardinalidad (ej: boolean en tabla grande)
+6. No crear índice si tabla tiene <1000 filas
+
+### Análisis de Impacto
+Para cada índice propuesto, documentar:
+- Query que optimiza
+- Frecuencia de uso del query
+- Mejora esperada (estimada con EXPLAIN)
+- Costo en espacio y writes
+
+## Estado Actual
+
+**Fecha de creación:** 2025-11-19
+**Estado:** Pendiente de implementación
+**Prioridad:** Alta (performance optimization)
+**Dependencias:** Sistema de CacheManager implementado
+
+## Estimación
+
+- **Auditoría inicial:** 4-6 horas
+- **Análisis de queries:** 4-6 horas
+- **Diseño de índices:** 3-4 horas
+- **Implementación y testing:** 6-8 horas
+- **Documentación:** 2-3 horas
+- **Total:** ~3-4 días de trabajo
+
+## Recursos Útiles
+
+### Queries de Diagnóstico
+```sql
+-- Ver índices no utilizados
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0 AND indexrelname NOT LIKE 'pg_toast%'
+ORDER BY pg_relation_size(indexrelid) DESC;
+
+-- Ver tamaño de índices
+SELECT schemaname, tablename, indexname,
+       pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC;
+
+-- Queries lentas
+SELECT query, calls, total_time, mean_time
+FROM pg_stat_statements
+ORDER BY mean_time DESC
+LIMIT 20;
+```
+
+---
+
+**Notas finales:**
+Esta optimización debe hacerse en conjunto con el CacheManager para maximizar el performance general. Los índices optimizan lecturas de DB mientras el cache reduce la frecuencia de esas lecturas. Ambos sistemas son complementarios.
