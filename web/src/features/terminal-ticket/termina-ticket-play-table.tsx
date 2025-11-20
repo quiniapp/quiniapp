@@ -7,6 +7,7 @@ import { IBetEntityFront } from '@helper/types/bet.type';
 import { useEffect, useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
+import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
 
 interface Props {
   ticket_number?: string;
@@ -96,7 +97,7 @@ const TerminalTicketPlayTable = ({
                   <TableCell className="truncate">{bet.number}</TableCell>
                   <TableCell className="whitespace-nowrap">${bet.amount}</TableCell>
                   <TableCell className="truncate">{bet.lottery.name}</TableCell>
-                  <TableCell className="truncate">{bet.bet_type}</TableCell>
+                  <TableCell className="truncate">{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>
                   <TableCell className="truncate">{bet.schedule.name}</TableCell>
                 </TableRow>
               ))}

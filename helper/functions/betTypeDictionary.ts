@@ -32,7 +32,7 @@ export const betTypeAndPlaceLabel = (
       return `BORR`;
       break;
     case BET_TYPE.REDOUBLE:
-      return `RED ${betPlaceDictionary[place]}${position ? ` - ${betPlaceDictionary[position]}` : ''}`;
+      return `RED ${betPlaceDictionary[place] === 'CABEZA' ? '1' : betPlaceDictionary[place]}${position ? ` - ${betPlaceDictionary[position]}` : ''}`;
       break;
     default:
       return `${betPlaceDictionary[place]}`;
