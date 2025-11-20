@@ -103,7 +103,7 @@ const TerminalTicketMatchesTable = ({
             <TableBody>
               {bets.map((bet) => (
                 <TableRow key={String(bet.bet_id)}>
-                  <TableCell>{bet.number}</TableCell>
+                  <TableCell>{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
                   <TableCell>${bet.amount}</TableCell>
                   <TableCell>{bet.lottery.name}</TableCell>
                   <TableCell>{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>

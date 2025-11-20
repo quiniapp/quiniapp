@@ -817,3 +817,441 @@ LIMIT 20;
 
 **Notas finales:**
 Esta optimización debe hacerse en conjunto con el CacheManager para maximizar el performance general. Los índices optimizan lecturas de DB mientras el cache reduce la frecuencia de esas lecturas. Ambos sistemas son complementarios.
+
+---
+
+# TODO - Sistema de Reportes y Estadísticas
+
+## Contexto
+
+Implementar un sistema completo de reportes que permita analizar el comportamiento del negocio, patrones de apuestas, y métricas clave para la toma de decisiones.
+
+### Objetivo
+Proveer endpoints y funcionalidad para generar reportes detallados sobre:
+- Tickets por día
+- Jugadas (bets) por día
+- Promedios de apuestas
+- Tickets promedio
+- Tendencias y patrones
+- Análisis por usuario, lotería, turno, etc.
+
+### Casos de Uso
+1. **Dashboard de Admin**: Visualizar métricas clave del negocio
+2. **Reportes Financieros**: Análisis de ingresos, premios pagados, ganancias netas
+3. **Análisis de Usuarios**: Comportamiento de pasadores, tickets más activos
+4. **Tendencias**: Identificar patrones en apuestas y loterías populares
+5. **Optimización**: Detectar horarios pico, turnos más jugados, etc.
+
+## Tareas
+
+### 1. Reportes Básicos de Tickets
+
+#### 1.1 Cantidad de Tickets por Día
+- [ ] Crear RPC `get_tickets_per_day(p_start_date, p_end_date, p_user_id)`
+- [ ] Retornar cantidad de tickets por día en el rango especificado
+- [ ] Incluir filtros opcionales: usuario, estado (pagado/no pagado, ganador/perdedor)
+- [ ] Agrupar por fecha con totales diarios
+
+**Estructura de respuesta:**
+```typescript
+interface TicketsPerDay {
+  date: string;
+  total_tickets: number;
+  winner_tickets: number;
+  paid_tickets: number;
+  unpaid_tickets: number;
+  total_amount: number;
+  total_prizes: number;
+}
+```
+
+#### 1.2 Cantidad de Jugadas por Día
+- [ ] Crear RPC `get_bets_per_day(p_start_date, p_end_date, p_user_id)`
+- [ ] Retornar cantidad de jugadas (bets) por día
+- [ ] Incluir totales por tipo de apuesta (head, double, tern, etc.)
+- [ ] Agrupar por lotería y turno
+
+**Estructura de respuesta:**
+```typescript
+interface BetsPerDay {
+  date: string;
+  total_bets: number;
+  by_lottery: {
+    lottery_id: string;
+    lottery_name: string;
+    bet_count: number;
+    total_amount: number;
+  }[];
+  by_type: {
+    bet_type: string;  // 'HEAD', 'DOUBLE', 'TERN', etc.
+    count: number;
+    total_amount: number;
+  }[];
+}
+```
+
+#### 1.3 Promedio de Jugadas por Ticket
+- [ ] Crear RPC `get_average_bets_per_ticket(p_start_date, p_end_date)`
+- [ ] Calcular promedio de jugadas por ticket
+- [ ] Incluir desglose por usuario
+- [ ] Identificar usuarios con más/menos jugadas promedio
+
+**Cálculo:**
+```sql
+AVG(bets_per_ticket) = SUM(total_bets) / SUM(total_tickets)
+```
+
+#### 1.4 Ticket Promedio (Monto)
+- [ ] Crear RPC `get_average_ticket_amount(p_start_date, p_end_date)`
+- [ ] Calcular monto promedio por ticket
+- [ ] Incluir mediana y moda
+- [ ] Desglose por usuario, día, turno
+
+**Métricas:**
+- Ticket promedio general
+- Ticket promedio por usuario
+- Ticket promedio por día de la semana
+- Ticket promedio por turno
+
+#### 1.5 Ticket Promedio por Día
+- [ ] Crear RPC `get_daily_average_ticket(p_start_date, p_end_date)`
+- [ ] Calcular monto promedio de tickets para cada día
+- [ ] Comparar con promedio histórico
+- [ ] Identificar días atípicos (outliers)
+
+**Estructura:**
+```typescript
+interface DailyAverageTicket {
+  date: string;
+  avg_ticket_amount: number;
+  total_tickets: number;
+  min_ticket: number;
+  max_ticket: number;
+  median_ticket: number;
+}
+```
+
+### 2. Reportes Financieros
+
+#### 2.1 Reporte de Ingresos vs Premios
+- [ ] Crear RPC `get_financial_report(p_start_date, p_end_date)`
+- [ ] Calcular ingresos totales (sum de tickets)
+- [ ] Calcular premios pagados (sum de winners)
+- [ ] Calcular ganancia neta (ingresos - premios)
+- [ ] Desglose por día, turno, lotería
+
+**Estructura:**
+```typescript
+interface FinancialReport {
+  period: {
+    start_date: string;
+    end_date: string;
+  };
+  summary: {
+    total_income: number;
+    total_prizes: number;
+    net_profit: number;
+    profit_margin: number;  // (net_profit / total_income) * 100
+  };
+  by_day: DailyFinancials[];
+  by_lottery: LotteryFinancials[];
+}
+```
+
+#### 2.2 Reporte de Premios Pendientes de Pago
+- [ ] Crear RPC `get_unpaid_prizes_report()`
+- [ ] Listar todos los winners con `paid = false`
+- [ ] Agrupar por usuario, fecha, lotería
+- [ ] Calcular total pendiente de pago
+- [ ] Identificar premios más antiguos sin pagar
+
+#### 2.3 Tasa de Retorno (RTP - Return to Player)
+- [ ] Calcular porcentaje de premios respecto a ingresos
+- [ ] Comparar RTP por lotería
+- [ ] Análisis de RTP por turno
+- [ ] Tendencias de RTP en el tiempo
+
+**Fórmula:**
+```
+RTP = (Total Prizes / Total Income) * 100
+```
+
+### 3. Reportes de Usuarios
+
+#### 3.1 Top Usuarios por Volumen
+- [ ] Crear RPC `get_top_users_by_volume(p_start_date, p_end_date, p_limit)`
+- [ ] Ranking de usuarios por cantidad de tickets
+- [ ] Ranking por monto total apostado
+- [ ] Ranking por cantidad de jugadas
+
+#### 3.2 Análisis de Comportamiento de Usuarios
+- [ ] Frecuencia de apuestas por usuario
+- [ ] Horarios preferidos de apuesta
+- [ ] Loterías y turnos más apostados por usuario
+- [ ] Tipos de apuesta favoritos
+
+#### 3.3 Usuarios Ganadores
+- [ ] Top usuarios con más premios ganados
+- [ ] Usuarios con mejor tasa de aciertos
+- [ ] Análisis de "suerte" por usuario
+
+### 4. Reportes de Loterías y Turnos
+
+#### 4.1 Loterías Más Populares
+- [ ] Ranking de loterías por cantidad de apuestas
+- [ ] Loterías por monto apostado
+- [ ] Tendencias de popularidad en el tiempo
+
+#### 4.2 Análisis por Turno
+- [ ] Comparación de turnos (Matutina, Vespertina, Nocturna)
+- [ ] Turnos más apostados por día de semana
+- [ ] Rentabilidad por turno
+
+#### 4.3 Números Más Apostados
+- [ ] Top números más jugados por lotería
+- [ ] Top números más jugados por posición (cabeza, 5 primeros, etc.)
+- [ ] Comparar con números más salidos (resultados)
+
+### 5. Reportes de Tendencias
+
+#### 5.1 Tendencias Semanales
+- [ ] Análisis de comportamiento por día de la semana
+- [ ] Identificar días pico y días bajos
+- [ ] Patrones recurrentes
+
+#### 5.2 Tendencias Mensuales
+- [ ] Comparación mes a mes
+- [ ] Crecimiento o decrecimiento
+- [ ] Estacionalidad
+
+#### 5.3 Horas Pico
+- [ ] Análisis de actividad por hora del día
+- [ ] Identificar horarios con más tickets
+- [ ] Optimización de horarios de cierre
+
+### 6. Dashboards y Visualización
+
+#### 6.1 Dashboard Principal
+- [ ] Métricas clave del día actual
+- [ ] Comparación con día anterior
+- [ ] Gráficos de tendencias
+- [ ] Alertas de anomalías
+
+**Métricas del dashboard:**
+- Tickets del día
+- Ingresos del día
+- Premios pagados
+- Ganancia neta
+- Tickets pendientes de pago
+- Usuarios activos
+
+#### 6.2 Gráficos y Visualizaciones
+- [ ] Gráfico de líneas: Ingresos en el tiempo
+- [ ] Gráfico de barras: Loterías más apostadas
+- [ ] Gráfico de torta: Distribución por turno
+- [ ] Heatmap: Actividad por día/hora
+
+### 7. Exportación de Reportes
+
+#### 7.1 Exportar a CSV
+- [ ] Endpoint para exportar reportes a CSV
+- [ ] Incluir todos los reportes principales
+- [ ] Formato compatible con Excel
+
+#### 7.2 Exportar a PDF
+- [ ] Generar reportes en formato PDF
+- [ ] Incluir gráficos y tablas
+- [ ] Header con logo y fecha
+
+#### 7.3 Reportes Programados
+- [ ] Sistema de reportes automáticos vía email
+- [ ] Configuración de frecuencia (diario, semanal, mensual)
+- [ ] Suscripción a reportes específicos
+
+### 8. Endpoints de Backend
+
+#### 8.1 Crear Módulo de Reportes
+- [ ] Crear módulo `api/src/reports/`
+- [ ] Controllers: `reports.controller.ts`
+- [ ] Repositories: `reports.repository.ts`
+- [ ] Routes: `reports.route.ts`
+- [ ] Types: `reports.type.ts`
+
+#### 8.2 Endpoints Principales
+```typescript
+// Tickets
+GET /api/private/reports/tickets/per-day
+GET /api/private/reports/tickets/average
+GET /api/private/reports/tickets/average-per-day
+
+// Bets
+GET /api/private/reports/bets/per-day
+GET /api/private/reports/bets/average-per-ticket
+
+// Financials
+GET /api/private/reports/financial/summary
+GET /api/private/reports/financial/unpaid-prizes
+GET /api/private/reports/financial/rtp
+
+// Users
+GET /api/private/reports/users/top-by-volume
+GET /api/private/reports/users/behavior
+GET /api/private/reports/users/winners
+
+// Lotteries
+GET /api/private/reports/lotteries/popular
+GET /api/private/reports/lotteries/by-schedule
+GET /api/private/reports/lotteries/top-numbers
+
+// Trends
+GET /api/private/reports/trends/weekly
+GET /api/private/reports/trends/monthly
+GET /api/private/reports/trends/peak-hours
+
+// Dashboard
+GET /api/private/reports/dashboard/summary
+GET /api/private/reports/dashboard/today
+
+// Export
+GET /api/private/reports/export/csv
+GET /api/private/reports/export/pdf
+```
+
+#### 8.3 Parámetros Comunes
+Todos los endpoints deberían aceptar:
+- `start_date`: Fecha inicio (opcional, default: hace 30 días)
+- `end_date`: Fecha fin (opcional, default: hoy)
+- `user_id`: Filtrar por usuario (opcional)
+- `lottery_id`: Filtrar por lotería (opcional)
+- `schedule_id`: Filtrar por turno (opcional)
+
+### 9. Optimización y Performance
+
+#### 9.1 Cacheo de Reportes
+- [ ] Implementar caché para reportes frecuentes
+- [ ] TTL de 5-15 minutos según el reporte
+- [ ] Invalidar caché al crear nuevos tickets/bets
+
+#### 9.2 Tablas Materializadas
+- [ ] Considerar vistas materializadas para cálculos pesados
+- [ ] Refresh automático con triggers o cron
+- [ ] Vistas para reportes más solicitados
+
+#### 9.3 Pre-agregación de Datos
+- [ ] Tabla de resúmenes diarios pre-calculados
+- [ ] Actualizar con trigger al insertar tickets/bets
+- [ ] Reducir cálculos en tiempo real
+
+**Ejemplo de tabla de agregación:**
+```sql
+CREATE TABLE daily_summaries (
+  date DATE PRIMARY KEY,
+  total_tickets INT,
+  total_bets INT,
+  total_income DECIMAL,
+  total_prizes DECIMAL,
+  net_profit DECIMAL,
+  avg_ticket_amount DECIMAL,
+  avg_bets_per_ticket DECIMAL,
+  -- ... más métricas
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 10. Testing y Validación
+
+#### 10.1 Tests Unitarios
+- [ ] Tests para cada RPC
+- [ ] Tests para controllers
+- [ ] Validar cálculos matemáticos
+
+#### 10.2 Tests de Performance
+- [ ] Benchmark con gran volumen de datos
+- [ ] Validar que queries no excedan 2-3 segundos
+- [ ] Optimizar queries lentas
+
+#### 10.3 Validación de Datos
+- [ ] Verificar que reportes coincidan con datos reales
+- [ ] Comparar totales manualmente
+- [ ] Validar edge cases (sin datos, fechas inválidas, etc.)
+
+### 11. Frontend Integration
+
+#### 11.1 Hooks de Reportes
+- [ ] `useTicketsPerDay()`
+- [ ] `useBetsPerDay()`
+- [ ] `useFinancialReport()`
+- [ ] `useDashboardSummary()`
+
+#### 11.2 Componentes de Visualización
+- [ ] `<ReportChart>` para gráficos
+- [ ] `<ReportTable>` para tablas de datos
+- [ ] `<DashboardCard>` para métricas clave
+- [ ] `<ExportButton>` para exportaciones
+
+#### 11.3 Página de Reportes
+- [ ] Crear página `/reports` en frontend
+- [ ] Filtros interactivos (fechas, usuarios, loterías)
+- [ ] Gráficos responsivos
+- [ ] Exportación desde UI
+
+### 12. Documentación
+
+- [ ] Documentar todos los endpoints en README o Swagger
+- [ ] Explicar cálculos y fórmulas usadas
+- [ ] Ejemplos de uso de cada reporte
+- [ ] Actualizar CHANGELOG
+
+## Estado Actual
+
+**Fecha de creación:** 2025-11-20
+**Estado:** Pendiente de implementación
+**Prioridad:** Alta (feature importante para análisis de negocio)
+**Dependencias:** Sistema de caché, optimización de índices
+
+## Estimación
+
+- **Diseño de esquema y RPCs:** 1-2 semanas
+- **Backend endpoints:** 1-2 semanas
+- **Testing y optimización:** 1 semana
+- **Frontend integration:** 1-2 semanas
+- **Documentación:** 2-3 días
+- **Total:** ~6-8 semanas de desarrollo completo
+
+## Consideraciones
+
+### Privacidad y Seguridad
+- Solo usuarios ADMIN deben acceder a reportes generales
+- Usuarios regulares solo ven sus propios reportes
+- No exponer datos sensibles de otros usuarios
+
+### Performance
+- Reportes complejos pueden ser costosos computacionalmente
+- Implementar paginación para reportes grandes
+- Considerar procesamiento en background para reportes pesados
+- Rate limiting en endpoints de reportes
+
+### Escalabilidad
+- Sistema diseñado para crecer con volumen de datos
+- Considerar particionamiento de tablas históricas
+- Archivado de reportes antiguos si es necesario
+
+## Extensiones Futuras
+
+### Machine Learning
+- Predicción de tendencias futuras
+- Detección de anomalías automática
+- Recomendaciones personalizadas
+
+### Integraciones
+- Webhooks para alertas automáticas
+- API pública para partners
+- Integración con sistemas de contabilidad
+
+### Análisis Avanzado
+- Análisis de cohortes de usuarios
+- Lifetime value (LTV) por usuario
+- Churn analysis
+- A/B testing framework
+
+---

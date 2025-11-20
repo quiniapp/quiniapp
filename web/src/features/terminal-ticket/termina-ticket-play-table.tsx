@@ -94,7 +94,7 @@ const TerminalTicketPlayTable = ({
             <TableBody>
               {bets.map((bet) => (
                 <TableRow key={String(bet.bet_id)}>
-                  <TableCell className="truncate">{bet.number}</TableCell>
+                  <TableCell className="truncate">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
                   <TableCell className="whitespace-nowrap">${bet.amount}</TableCell>
                   <TableCell className="truncate">{bet.lottery.name}</TableCell>
                   <TableCell className="truncate">{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>

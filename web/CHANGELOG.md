@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-20
+
+#### Frontend TODO System
+- **Comprehensive TODO Documentation**: Created detailed TODO.md for frontend development
+  - Path: `web/TODO.md`
+  - **6 Major Categories:**
+    1. **Atomic Design Migration**: Complete restructuring to atoms/molecules/organisms/templates
+    2. **Componentization**: Reuse terminal-ticket table in current-account, create generic DataTable
+    3. **Modal Optimization**: Unified modal system with base component, manager, and presets
+    4. **UI Uniformization**: Typography system, responsive text patterns, button standardization, form elements
+    5. **New Features**: WhatsApp Web export with PDF generation (desktop only)
+    6. **Performance Optimization**: Code splitting, lazy loading, bundle optimization, Web Vitals monitoring
+  - **Timeline:** 2-3 months for full implementation
+  - **Priorities defined:** High (1-2 months), Medium (2-3 months), Low (Future)
+  - **Recommended Action Plan:**
+    - Month 1: Quick wins + Atomic Design foundations
+    - Month 2: Core components + uniformization
+    - Month 3: Features + migration
+  - **Success Metrics:** Code reduction >30%, LCP <2.5s, 100% UI consistency
+  - Detailed task breakdowns with time estimates for each section
+  - Mobile-first approach emphasized throughout
+  - Performance budgets defined
+
 ### Changed - 2025-11-20
 
 #### Results Overview - IconButton Implementation & Mobile Layout
