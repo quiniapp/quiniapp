@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-11-20
+
+#### Results Overview - IconButton Implementation & Mobile Layout
+- **results-overview.tsx**: Refactored to use IconButton component and improved mobile layout
+  - Path: `src/features/make-plays/results-overview.tsx`
+  - Replaced three Button components with IconButton:
+    - "Cerrar Ticket" button (no icon)
+    - "Eliminar" button with Trash2Icon
+    - "Reiniciar" button with TimerReset icon
+  - Benefits: Consistent button styling and behavior across the app
+  - Maintains all existing functionality and disabled states
+  - Icons now hidden on mobile (< md) as per IconButton design
+  - **Mobile Amount Display**: Redesigned amount display for mobile view
+    - Mobile (< sm): Single row layout with two amounts side by side
+    - Format: "Monto parcial: $ X,XXX" | "TOTAL: $ X,XXX"
+    - Uses `toLocaleString('es-AR')` for proper number formatting
+    - "Total" label appears in uppercase on mobile
+    - Desktop (≥ sm): Maintains original two-column vertical layout
+
+#### Terminal Ticket Table - Modularization and Column Width Improvements
+- **TicketTableRow Components**: Created modular components for table rows and headers
+  - Path: `src/features/terminal-ticket/ticket-table-row.tsx`
+  - New components: `TicketTableHeader` and `TicketTableRow`
+  - Benefits: Better code organization, reusability, and maintainability
+- **TableTerminalTicket**: Refactored to use new modular components
+  - Path: `src/features/terminal-ticket/table-terminal-ticket.tsx`
+  - Replaced inline TableRow/TableHead with `TicketTableHeader` and `TicketTableRow`
+  - Added responsive column widths to prevent data overlap:
+    - Número: `min-w-40 w-[25%] sm:w-[30%]`
+    - Pasador: `w-[25%] sm:w-[25%]`
+    - Monto: `w-[20%] sm:w-[20%]`
+    - Pagado: `w-[30%] sm:w-[25%]`
+  - Fixes: Data overlap issue on mobile devices
+  - Ensures all 4 columns are always visible with proper spacing
+
 ### Added - 2025-11-19
 
 #### Modal Components

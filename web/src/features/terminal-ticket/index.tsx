@@ -10,7 +10,7 @@ import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticke
 import DeleteTicketModal from '@/components/modals/DeleteTicketModal';
 
 import TicketDetails from './TicketDetails';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket';
 import toast from 'react-hot-toast';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
@@ -18,7 +18,7 @@ import { PageWrapper } from '@/components/wrapper/PageWrapper';
 export const TerminalTicketContent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isOpenDeleteTicket, setIsOpenDeleteTicket] = useState(false);
-
+  const navigate = useNavigate()
   const date = searchParams.get('date') ?? undefined;
   const cashier_id = searchParams.get('cashier_id') ?? undefined;
   const filter = searchParams.get('filter') ?? undefined;
@@ -42,25 +42,18 @@ export const TerminalTicketContent = () => {
     });
   };
 
+  const handleClose = ()=>{
+    navigate('/')
+  }
   return (
     <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-2 sm:py-4 flex-1'}>
-        <FlexCol className={' gap-1 sm:gap-3'}>
+
           <FlexCol>
             <FormHeaderFilter />
 
-            <Flex className={'w-full justify-between 1440:py-8 py-3 border-t gap-2 flex-col sm:flex-row'}>
-              <IconButton
-                label="Eliminar Ticket"
-                icon={<TicketX />}
-                variant="destructive"
-                disabled={!ticket_number}
-                onClick={() => setIsOpenDeleteTicket(true)}
-              />
-              <IconButton label="Cerrar" variant="outline" />
-            </Flex>
-          </FlexCol>
+  
           <FlexCol>
             <TableTerminalTicket
               user_id={cashier_id}
@@ -69,6 +62,16 @@ export const TerminalTicketContent = () => {
               paid={filter === 'paid' ? true : undefined}
               not_paid={filter === 'not_paid' ? true : undefined}
             />
+            <Flex className={'w-full justify-between 1440:py-8 py-3 border-t gap-2'}>
+              <IconButton
+                label="Eliminar Ticket"
+                icon={<TicketX />}
+                variant="destructive"
+                disabled={!ticket_number}
+                onClick={() => setIsOpenDeleteTicket(true)}
+              />
+              <IconButton label="Cerrar" variant="outline" onClick={()=>handleClose()}/>
+            </Flex>
           </FlexCol>
         </FlexCol>
         <TicketDetails />
