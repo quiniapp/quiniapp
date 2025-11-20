@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-20
+
+#### Action Plan for TODOs Implementation
+- **Strategic Action Plan**: Created comprehensive prioritized action plan
+  - Path: `ACTION_PLAN.md`
+  - Prioritization criteria:
+    - Performance impact (Critical → Low)
+    - Business value (Critical → Low)
+    - Implementation complexity (High → Low)
+  - **4 Phases planned:**
+    - **Phase 1 - Quick Wins** (1 week): Database indices + purge ticket_prizes_by_turn
+    - **Phase 2 - Essential Reports** (1-2 weeks): Basic tickets, bets, and financial reports
+    - **Phase 3 - Statistics Features** (1 week): Delayed numbers and hot numbers
+    - **Phase 4 - Advanced** (Future): Data archiving system and advanced reports
+  - Immediate priorities (P0):
+    - Database indices audit and optimization (3-4 days)
+    - 30-50% expected performance improvement on main queries
+  - High priorities (P1):
+    - Purge non-winner prizes (1 day, ~80% row reduction)
+    - Basic reports system (1-2 weeks, critical for business)
+  - Timeline: 3-4 weeks for Phases 1-3
+  - Success metrics clearly defined for each phase
+  - Rollback plans and security considerations included
+
+#### Reports and Analytics System TODO
+- **Reports System Planning**: Added comprehensive TODO for reports and analytics system
+  - Path: `TODO.md` - Section "Sistema de Reportes y Estadísticas"
+  - Planned features:
+    - **Tickets Reports**: Quantity per day, averages, trends
+    - **Bets Reports**: Quantity per day, average per ticket, distribution by lottery
+    - **Financial Reports**: Income vs prizes, unpaid prizes, RTP (Return to Player)
+    - **User Reports**: Top users by volume, behavior analysis, winners
+    - **Lottery Reports**: Most popular lotteries, analysis by schedule, top numbers
+    - **Trend Reports**: Weekly/monthly trends, peak hours
+    - **Dashboard**: Summary metrics with real-time updates
+    - **Export**: CSV and PDF export capabilities
+  - Technical approach:
+    - New module: `api/src/reports/`
+    - Stored procedures for complex calculations
+    - Caching with CacheManager (5-15 min TTL)
+    - Materialized views for heavy calculations
+    - Pre-aggregated daily summaries table
+  - Endpoints planned:
+    - `/api/private/reports/tickets/*`
+    - `/api/private/reports/bets/*`
+    - `/api/private/reports/financial/*`
+    - `/api/private/reports/users/*`
+    - `/api/private/reports/lotteries/*`
+    - `/api/private/reports/trends/*`
+    - `/api/private/reports/dashboard/*`
+    - `/api/private/reports/export/*`
+  - Estimated: 6-8 weeks of full development
+  - Priority: High (important for business analytics)
+
 ### Added - 2025-11-19
 
 #### Cache Management System
