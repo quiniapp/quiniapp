@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2025-11-20
 
-#### Results Overview - IconButton Implementation
-- **results-overview.tsx**: Refactored to use IconButton component
+#### Results Overview - IconButton Implementation & Mobile Layout
+- **results-overview.tsx**: Refactored to use IconButton component and improved mobile layout
   - Path: `src/features/make-plays/results-overview.tsx`
   - Replaced three Button components with IconButton:
     - "Cerrar Ticket" button (no icon)
@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Benefits: Consistent button styling and behavior across the app
   - Maintains all existing functionality and disabled states
   - Icons now hidden on mobile (< md) as per IconButton design
+  - **Mobile Amount Display**: Redesigned amount display for mobile view
+    - Mobile (< sm): Single row layout with two amounts side by side
+    - Format: "Monto parcial: $ X,XXX" | "TOTAL: $ X,XXX"
+    - Uses `toLocaleString('es-AR')` for proper number formatting
+    - "Total" label appears in uppercase on mobile
+    - Desktop (≥ sm): Maintains original two-column vertical layout
 
 #### Terminal Ticket Table - Modularization and Column Width Improvements
 - **TicketTableRow Components**: Created modular components for table rows and headers

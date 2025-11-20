@@ -20,8 +20,7 @@ const ResultsOverview = () => {
   } = usePlayDetails();
 
   const hasSelection = selectedIndexes.length > 0;
-  const isEnabled =
-    (totalAmount > 0 && isEnabledCreateBetByAdmin);
+  const isEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin;
 
   return (
     <Flex
@@ -32,17 +31,38 @@ const ResultsOverview = () => {
       <Flex
         className={'flex-col sm:flex-row justify-between gap-2 sm:gap-4 lg:gap-2 w-full sm:flex-1'}
       >
-        <Flex className="gap-2 lg:gap-1.5 min-w-fit">
-          <FlexCol className="">
-            <span className="text-xs sm:text-sm  whitespace-nowrap">Monto parcial</span>
-            <span className="text-xs sm:text-sm  whitespace-nowrap">Total</span>
-          </FlexCol>
-          <FlexCol>
-            <span className="text-xs sm:text-sm  font-semibold">$ {partialAmount}</span>
-            <span className="text-xs sm:text-sm font-semibold">$ {totalAmount}</span>
-          </FlexCol>
+        <Flex className="gap-2 lg:gap-1.5 min-w-fit w-full sm:w-auto">
+          {/* Mobile: Single row with two columns */}
+          <Flex className="sm:hidden w-full justify-between">
+            <Flex className='w-full'>
+              <span className="text-xs">
+                Monto parcial:{' '}
+                <span className="font-semibold">$ {partialAmount.toLocaleString('es-AR')}</span>
+              </span>
+            </Flex>
+            <Flex className='w-full'>
+              <span className="text-xs">
+                <span className="uppercase">Total</span>:{' '}
+                <span className="font-semibold">$ {totalAmount.toLocaleString('es-AR')}</span>
+              </span>
+            </Flex>
+          </Flex>
+
+          {/* Desktop: Two columns layout */}
+          <Flex className="hidden sm:flex gap-2 lg:gap-1.5">
+            <FlexCol>
+              <span className="text-sm whitespace-nowrap">Monto parcial</span>
+              <span className="text-sm whitespace-nowrap">Total</span>
+            </FlexCol>
+            <FlexCol>
+              <span className="text-sm font-semibold">
+                $ {partialAmount.toLocaleString('es-AR')}
+              </span>
+              <span className="text-sm font-semibold">$ {totalAmount.toLocaleString('es-AR')}</span>
+            </FlexCol>
+          </Flex>
         </Flex>
-        <FlexCol className="hidden md:flex lg:hidden xl:flex">
+        <FlexCol className="hidden md:flex ">
           <RadioGroup defaultValue="option-one">
             <Flex className="items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />
