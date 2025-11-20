@@ -190,7 +190,7 @@ const FillOutATicket = () => {
   };
   useEffect(() => {
     const handleWindowKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '*') {
+      if (e.key === '*' || e.key === '-') {
         setOpenModal(true);
       }
     };
