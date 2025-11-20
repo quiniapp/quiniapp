@@ -180,7 +180,7 @@ const ResultsContent = () => {
             </Flex>
           )}
         </Flex>
-        <Box className="flex flex-col xl:flex-row gap-8 py-[36px]">
+        <FlexCol className="2xl:flex-row gap-8 py-[36px]">
           <FlexCol className="  rounded-xl   space-y-6">
             <ResultShifts
               schedules={fetchSchedules ?? []}
@@ -198,7 +198,7 @@ const ResultsContent = () => {
             <Box className="grid grid-flow-col grid-rows-10 sm:grid-rows-5 gap-6 p-8 justify-between bg-card">
               {results.map((value, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="text-sm text-primary font-medium w-6">{i + 1}</span>
+                  <span className="text-sm sm:text-base xl:text-lg text-primary font-bold w-6">{i + 1}</span>
                   <Input
                     ref={(el) => {
                       inputRefs.current[i] = el;
@@ -225,7 +225,7 @@ const ResultsContent = () => {
                       }
                     }}
                     disabled={!onEdit}
-                    className="w-full min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
+                    className="w-full text-sm sm:text-base xl:text-lg font-bold min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
                   />
                 </div>
               ))}
@@ -258,7 +258,7 @@ const ResultsContent = () => {
               </Box>
             )}
           </div>
-        </Box>
+        </FlexCol>
       </FlexCol>
       <Suspense fallback={<div>Cargando...</div>}>
         <GenerateWinnersModal
