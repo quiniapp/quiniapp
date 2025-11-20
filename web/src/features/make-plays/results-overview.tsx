@@ -84,7 +84,7 @@ const ResultsOverview = () => {
           label="Cerrar Ticket"
           onClick={() => handleCreateBet()}
           disabled={!isEnabled || isPendingCreate || isPendingEdit}
-          className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
+          className="flex-1 sm:flex-none  lg:min-w-[80px]"
         />
         <IconButton
           label="Eliminar"
@@ -92,14 +92,14 @@ const ResultsOverview = () => {
           onClick={handleDeleteSelectedBets}
           variant="destructive"
           disabled={!hasSelection}
-          className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
+          className="flex-1 sm:flex-none  lg:min-w-[80px]"
         />
         <IconButton
           label="Reiniciar"
           icon={<TimerReset className="w-4 h-4" />}
           onClick={() => handleResetBets()}
           variant="outline"
-          className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
+          className="flex-1 sm:flex-none  lg:min-w-[80px]"
         />
       </Flex>
     </Flex>
