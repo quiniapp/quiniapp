@@ -46,7 +46,7 @@ const PlayDetailGameTable = () => {
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-40 lg:min-h-32 max-h-full w-full">
       {/* Mobile: Cards */}
-      <Flex className="md:hidden justify-center space-y-2 p-2">
+      <FlexCol className="md:hidden justify-center space-y-2 p-2">
         {bets.length === 0 ? (
           <NoPlaysFound />
         ) : (
@@ -60,7 +60,7 @@ const PlayDetailGameTable = () => {
             />
           ))
         )}
-      </Flex>
+      </FlexCol>
 
       {/* Desktop/Tablet: Table */}
       <div className="hidden md:block overflow-x-auto">
@@ -150,13 +150,13 @@ const BetCard = ({
     <div
       onClick={onToggle}
       className={cn(
-        'border rounded-lg p-3 cursor-pointer transition-all',
+        'border rounded-lg px-3 py-1 cursor-pointer transition-all',
         isSelected
           ? 'bg-primary/20 border-primary'
           : 'bg-card border-border hover:border-primary/50'
       )}
     >
-      <Flex className="justify-between items-start mb-2">
+      <Flex className="justify-between items-start mb-1">
         <div>
           <Typography variant="small" className="text-muted-foreground text-xs">
             Jugada
@@ -188,11 +188,11 @@ const BetCard = ({
         </div>
       </div>
 
-      <div className="mt-2 pt-2 border-t border-border">
+      <div className="mt-1 pt-1 border-t border-border">
         <Typography variant="small" className="text-muted-foreground text-xs mb-1">
           Turnos/Quinielas
         </Typography>
-        <Typography variant="small" className="text-xs line-clamp-2">
+        <Typography variant="small" className="text-xs line-clamp-7">
           {bet.scheduleLottery.map((lotSched) => {
             return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] `;
           })}
