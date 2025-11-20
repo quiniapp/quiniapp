@@ -1,10 +1,10 @@
 import { Trash2Icon, TimerReset } from 'lucide-react';
 
 import { Flex, FlexCol } from '@/components/flex';
-import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePlayDetails } from './context/MakePlaysContext';
+import { IconButton } from '@/components/button/IconButton';
 
 const ResultsOverview = () => {
   const {
@@ -60,34 +60,27 @@ const ResultsOverview = () => {
         </FlexCol>
       </Flex>
       <Flex className={'gap-2 lg:gap-1.5 items-center w-full sm:w-auto justify-center flex-wrap'}>
-        <Button
+        <IconButton
+          label="Cerrar Ticket"
           onClick={() => handleCreateBet()}
           disabled={!isEnabled || isPendingCreate || isPendingEdit}
-          size="sm"
           className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
-        >
-          <span className="hidden sm:inline">Cerrar Ticket</span>
-          <span className="sm:hidden">Cerrar</span>
-        </Button>
-        <Button
+        />
+        <IconButton
+          label="Eliminar"
+          icon={<Trash2Icon className="w-4 h-4" />}
           onClick={handleDeleteSelectedBets}
           variant="destructive"
           disabled={!hasSelection}
-          size="sm"
           className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
-        >
-          <Trash2Icon className="sm:mr-1 lg:mr-0.5" />{' '}
-          <span className="hidden sm:inline">Eliminar</span>
-        </Button>
-        <Button
+        />
+        <IconButton
+          label="Reiniciar"
+          icon={<TimerReset className="w-4 h-4" />}
           onClick={() => handleResetBets()}
-          variant={'outline'}
-          size="sm"
+          variant="outline"
           className="flex-1 sm:flex-none min-w-[100px] lg:min-w-[80px]"
-        >
-          <TimerReset className="sm:mr-1 lg:mr-0.5" />{' '}
-          <span className="hidden sm:inline">Reiniciar</span>
-        </Button>
+        />
       </Flex>
     </Flex>
   );

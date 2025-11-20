@@ -1,6 +1,5 @@
 import { SearchIcon } from 'lucide-react';
 
-import Box from '@/components/box';
 import { Fieldset } from '@/components/fieldset';
 import { Flex, FlexCol } from '@/components/flex';
 import { IconButton } from '@/components/button/IconButton';
@@ -40,8 +39,8 @@ const FormHeaderFilter = () => {
 
   const handleReset = () => {
     setInputValue('');
-    const params = new URLSearchParams();
-    setSearchParams(params);
+    searchParams.delete('ticket_number')
+    setSearchParams(searchParams);
   };
 
   const handleSelectCashier = (id: string) => {
@@ -67,7 +66,7 @@ const FormHeaderFilter = () => {
     <FlexCol className={'sm:flex-row mb-1 sm:mb-4 w-full gap-1 sm:gap-3'}>
       <Fieldset
         legend={role === USER_TYPE.CASHIER ? 'Seleccionar fecha' : 'Pasador:'}
-        className={'w-full sm:w-1/2 flex gap-1 sm:gap-3'}
+        className={'w-full  flex gap-1 sm:gap-3'}
       >
         <FlexCol className={'w-full  space-y-4'}>
           <IsRoleCashier role={role}>
@@ -95,47 +94,38 @@ const FormHeaderFilter = () => {
             </Flex>
           </IsRoleCashier>
 
-          <Flex className={'gap-2 w-full sm:w-2/4 justify-between'}>
-            <Flex className={'items-center gap-3'}>
-              <Box className="hidden sm:box">
-                <TypographyMuted label={'Fecha'} />
-              </Box>
-              <Box className={' overflow-hidden'}>
-                <SelectDayToSearch
-                  onDayChange={(value) => {
-                    handleSelectDate(value);
-                  }}
-                  toDate={dayjs().toDate()}
-                />
-              </Box>
-            </Flex>
-            <Flex>
-              <Flex className={'w-full items-center gap-3'}>
-                <Box>
-                  <TypographyMuted label={'Tickets'} />
-                </Box>
-                <Select
-                  onValueChange={(value: 'all' | 'winner' | 'paid' | 'not_paid') => {
-                    onChangeFilter(value);
-                  }}
-                >
-                  <SelectTrigger className="border w-full">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="winner">Con aciertos</SelectItem>
-                    <SelectItem value="paid">Pagados</SelectItem>
-                    <SelectItem value="not_paid">No Pagados</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Flex>
+          <Flex className={'w-full gap-2 justify-between'}>
+            <SelectDayToSearch
+              onDayChange={(value) => {
+                handleSelectDate(value);
+              }}
+              toDate={dayjs().toDate()}
+            />
+            <Flex className={' items-center gap-3'}>
+         
+                <TypographyMuted label={'Tickets'} />
+          
+              <Select
+                onValueChange={(value: 'all' | 'winner' | 'paid' | 'not_paid') => {
+                  onChangeFilter(value);
+                }}
+              >
+                <SelectTrigger className="border w-full">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="winner">Con aciertos</SelectItem>
+                  <SelectItem value="paid">Pagados</SelectItem>
+                  <SelectItem value="not_paid">No Pagados</SelectItem>
+                </SelectContent>
+              </Select>
             </Flex>
           </Flex>
         </FlexCol>
       </Fieldset>
 
-      <Fieldset legend="Buscar por número de Ticket:" className="w-full sm:w-1/2 flex gap-3">
+      <Fieldset legend="Buscar por número de Ticket:" className="w-full  flex gap-3">
         <FlexCol className="w-full gap-4">
           <Input
             type="number"
