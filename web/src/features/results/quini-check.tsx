@@ -36,7 +36,7 @@ const QuiniChecks = ({ quini, onLotterySelect }: ResultQuinisProps) => {
                 value={turno.lottery_id}
                 label={turno.name}
                 radioClassName="border border-primary"
-                labelClassName="text-base xl:text-lg"
+                labelClassName="text-xs md:text-base xl:text-lg md:font-semibold"
                 className="h-[36px]"
               />
             ))}

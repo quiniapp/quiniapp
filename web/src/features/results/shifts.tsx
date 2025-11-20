@@ -94,7 +94,7 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
               value={turno.schedule_id}
               label={`${turno.name} [${turno.time}] [F${index + 1}]`}
               radioClassName="border border-primary"
-              labelClassName="text-base xl:text-lg"
+              labelClassName="text-xs  md:text-base xl:text-lg md:font-semibold"
               className="h-[36px]"
             />
           ))}
