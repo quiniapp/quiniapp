@@ -1,7 +1,7 @@
 import Modal from './custom-modal';
 import { FlexCol } from '../flex';
 import { Label } from '../ui/label';
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 
 interface DeleteTicketModalProps {
   isOpen: boolean;
@@ -23,28 +23,27 @@ const DeleteTicketModal = ({
       title="Eliminar Ticket"
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center w-fit !max-w-[980px]  m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[90vw] sm:!max-w-[500px] md:!max-w-[600px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
-      <FlexCol className='gap-3 w-fit'>
-        <Label>¿Estás seguro que deseas eliminar el ticket?</Label>
-        <Label className='font-bold'>Ticket N°: {ticketNumber}</Label>
-        <Label className='text-sm text-muted-foreground'>Esta acción no se puede deshacer.</Label>
-        <FlexCol className='gap-2 mt-4'>
-          <Button
-            variant={'destructive'}
-            className="hover:bg-red-700 text-white"
+      <FlexCol className="gap-3 sm:gap-4 w-full px-2 sm:px-4">
+        <Label className="text-sm sm:text-base">¿Estás seguro que deseas eliminar el ticket?</Label>
+        <Label className="font-bold text-sm sm:text-base">Ticket N°: {ticketNumber}</Label>
+        <Label className="text-xs sm:text-sm text-muted-foreground">Esta acción no se puede deshacer.</Label>
+        <FlexCol className="gap-2 mt-2 sm:mt-4 w-full">
+          <IconButton
+            label={isPendingDelete ? 'Eliminando...' : 'Eliminar ticket'}
+            variant="destructive"
             onClick={() => onClick()}
             disabled={isPendingDelete}
-          >
-            {isPendingDelete ? 'Eliminando...' : 'Eliminar ticket'}
-          </Button>
-          <Button
-            variant={'outline'}
+            className="w-full"
+          />
+          <IconButton
+            label="Cancelar"
+            variant="outline"
             onClick={onClose}
             disabled={isPendingDelete}
-          >
-            Cancelar
-          </Button>
+            className="w-full"
+          />
         </FlexCol>
       </FlexCol>
     </Modal>

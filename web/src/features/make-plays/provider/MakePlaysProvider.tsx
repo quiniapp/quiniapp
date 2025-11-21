@@ -28,6 +28,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
   const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
 
   // ---- fetch cashier por número
   const { data: cashierByNumber } = useGetUserByNumber(userNumber);
@@ -227,9 +228,11 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     isEnabledCreateBet,
     isPendingCreate,
     isPendingEdit,
+    openDeleteModal,
     setBets,
     setTotalAmount,
     setPartialAmount,
+    setOpenDeleteModal,
     // derived
     isEnabledCreateBetByAdmin,
     // actions
