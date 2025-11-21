@@ -1,0 +1,81 @@
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+
+interface SelectDayToSearchProps {
+  selectedDay?: string;
+  onDayChange: (date?: string) => void;
+  className?: string;
+  toDate?: Date;
+}
+
+export function SelectDayToSearch({
+  selectedDay,
+  onDayChange,
+  className,
+  toDate,
+}: SelectDayToSearchProps) {
+  // Maintain internal Date state synced with selectedDay prop
+  const [date, setDate] = useState<Date | undefined>(
+    selectedDay ? parseISO(selectedDay) : undefined
+  );
+
+  // Sync when selectedDay prop changes
+  useEffect(() => {
+    setDate(selectedDay ? parseISO(selectedDay) : undefined);
+  }, [selectedDay]);
+
+  const handleSelect = (newDate: Date | undefined) => {
+    setDate(newDate);
+    // Format to local date string without timezone offset
+    onDayChange(newDate ? format(newDate, 'yyyy-MM-dd') : undefined);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            'w-auto flex items-center gap-1 md:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2 cursor-pointer',
+            !date && 'text-muted-foreground',
+            className
+          )}
+        >
+          <CalendarIcon color="white" className="h-2 w-2  lg:h-4 lg:w-4 flex-shrink-0" />
+          <span className="truncate text-white font-semibold  text-xs md:text-sm lg:text-base text-nowrap">
+            {date ? (
+              // Show shorter format on mobile
+              <span className="hidden sm:inline">{format(date, 'PPP', { locale: es })}</span>
+            ) : null}
+            {date ? (
+              <span className="inline sm:hidden">{format(date, 'dd/MM/yy', { locale: es })}</span>
+            ) : (
+              <span className="">
+                <span className="hidden sm:inline">Seleccionar Fecha</span>
+                <span className="inline sm:hidden">Fecha</span>
+              </span>
+            )}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleSelect}
+          locale={es}
+          toDate={toDate}
+          initialFocus
+          className={cn('p-2 sm:p-3 pointer-events-auto')}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}

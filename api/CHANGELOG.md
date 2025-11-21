@@ -7,6 +7,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-20
+
+#### Action Plan for TODOs Implementation
+- **Strategic Action Plan**: Created comprehensive prioritized action plan
+  - Path: `ACTION_PLAN.md`
+  - Prioritization criteria:
+    - Performance impact (Critical → Low)
+    - Business value (Critical → Low)
+    - Implementation complexity (High → Low)
+  - **4 Phases planned:**
+    - **Phase 1 - Quick Wins** (1 week): Database indices + purge ticket_prizes_by_turn
+    - **Phase 2 - Essential Reports** (1-2 weeks): Basic tickets, bets, and financial reports
+    - **Phase 3 - Statistics Features** (1 week): Delayed numbers and hot numbers
+    - **Phase 4 - Advanced** (Future): Data archiving system and advanced reports
+  - Immediate priorities (P0):
+    - Database indices audit and optimization (3-4 days)
+    - 30-50% expected performance improvement on main queries
+  - High priorities (P1):
+    - Purge non-winner prizes (1 day, ~80% row reduction)
+    - Basic reports system (1-2 weeks, critical for business)
+  - Timeline: 3-4 weeks for Phases 1-3
+  - Success metrics clearly defined for each phase
+  - Rollback plans and security considerations included
+
+#### Reports and Analytics System TODO
+- **Reports System Planning**: Added comprehensive TODO for reports and analytics system
+  - Path: `TODO.md` - Section "Sistema de Reportes y Estadísticas"
+  - Planned features:
+    - **Tickets Reports**: Quantity per day, averages, trends
+    - **Bets Reports**: Quantity per day, average per ticket, distribution by lottery
+    - **Financial Reports**: Income vs prizes, unpaid prizes, RTP (Return to Player)
+    - **User Reports**: Top users by volume, behavior analysis, winners
+    - **Lottery Reports**: Most popular lotteries, analysis by schedule, top numbers
+    - **Trend Reports**: Weekly/monthly trends, peak hours
+    - **Dashboard**: Summary metrics with real-time updates
+    - **Export**: CSV and PDF export capabilities
+  - Technical approach:
+    - New module: `api/src/reports/`
+    - Stored procedures for complex calculations
+    - Caching with CacheManager (5-15 min TTL)
+    - Materialized views for heavy calculations
+    - Pre-aggregated daily summaries table
+  - Endpoints planned:
+    - `/api/private/reports/tickets/*`
+    - `/api/private/reports/bets/*`
+    - `/api/private/reports/financial/*`
+    - `/api/private/reports/users/*`
+    - `/api/private/reports/lotteries/*`
+    - `/api/private/reports/trends/*`
+    - `/api/private/reports/dashboard/*`
+    - `/api/private/reports/export/*`
+  - Estimated: 6-8 weeks of full development
+  - Priority: High (important for business analytics)
+
+### Added - 2025-11-19
+
+#### Cache Management System
+- **CacheManager Class**: Created centralized cache management system
+  - Path: `src/cache/CacheManager.ts`
+  - Features:
+    - Multiple cache instances identified by unique keys
+    - Optional TTL (time-to-live) configuration per cache
+    - Three ETag generation strategies: counter, timestamp, hash
+    - Statistics tracking: size, access count, uptime, last access
+    - Automatic invalidation support
+    - Inflight request deduplication to prevent duplicate DB queries
+  - Benefits:
+    - Eliminates code duplication across route files
+    - Centralized cache monitoring and management
+    - Easy to query cache state (size, age, hit rate)
+    - Consistent caching behavior across all endpoints
+
+#### Database Optimization TODO
+- **Database Indices Review**: Added comprehensive TODO in `TODO.md`
+  - Detailed plan for auditing and optimizing database indices
+  - Recommendations for indices on all major tables
+  - Performance testing methodology
+  - Integration with CacheManager for maximum performance
+  - Estimated 3-4 days of work for full implementation
+
+### Changed - 2025-11-19
+
+#### Lottery Routes - Cache Refactoring
+- **lottery.route.ts**: Migrated to use CacheManager
+  - Path: `src/lottery/route/lottery.route.ts`
+  - Removed local cache implementation (Map, helper functions)
+  - Now uses `globalCacheManager.getOrLoad()` with timestamp ETag strategy
+  - Cache keys: `lotteries:all=true` and `lotteries:all=false`
+  - Automatic invalidation on create/update/delete operations
+  - Reduced code from ~45 lines to ~20 lines of cache logic
+  - Maintains ETag/304 support for bandwidth optimization
+
+#### Schedule-Lottery Routes - Cache Refactoring
+- **schedule-lottery.route.ts**: Migrated to use CacheManager
+  - Path: `src/schedule-lottery/route/schedule-lottery.route.ts`
+  - Removed local cache implementation with TTL
+  - Now uses `globalCacheManager.getOrLoad()` with hash ETag strategy
+  - Cache key: `schedule-lotteries:all`
+  - TTL: 24 hours (configurable)
+  - Automatic invalidation on POST operations
+  - Reduced code complexity and improved maintainability
+
+#### Schedule Routes - Cache Refactoring
+- **schedule.route.ts**: Migrated to use CacheManager
+  - Path: `src/shcedule/route/schedule.route.ts`
+  - Removed local cache with counter-based ETag
+  - Now uses `globalCacheManager.getOrLoad()` with counter ETag strategy
+  - Cache key: `schedules:all`
+  - No TTL (cache persists until invalidation)
+  - Automatic invalidation on create/update/delete operations
+  - Removed manual inflight request handling (now managed by CacheManager)
+
 ### Added - 2025-11-13
 
 #### Winners - Unified Transaction for Consistency

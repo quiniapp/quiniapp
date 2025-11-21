@@ -1,7 +1,7 @@
-import ResultsContent from '@/features/results';
+import ResultsContentWithProvider from '@/features/results';
 
 const ResultsPage = () => {
-  return <ResultsContent />;
+  return  <ResultsContentWithProvider />;
 };
 
 export default ResultsPage;

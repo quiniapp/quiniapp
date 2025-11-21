@@ -3,7 +3,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/button/IconButton';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { USER_TYPE } from '@helper/types/user.type';
@@ -86,30 +86,32 @@ const HeaderPlayDetail = () => {
   }, [userNumber]);
 
   return (
-    <HeaderSection title={' Realizar Jugadas'}>
+    <HeaderSection title={' Realizar Jugadas'} className='gap-2'>
       {role !== USER_TYPE.CASHIER && (
-        <Flex className="flex-col sm:flex-row w-full flex-wrap justify-start sm:justify-end gap-2 sm:gap-3 lg:gap-1.5">
+        <Flex className=" w-full  justify-start sm:justify-end gap-1 sm:gap-2 xl:gap-3 ">
           <Flex className={'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
-            <Label htmlFor={'user'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap"> Usuario</Label>
+            <Label htmlFor={'user'} className="hidden sm:inline text-xs sm:text-sm lg:text-base whitespace-nowrap"> Usuario</Label>
             <Input
               type={'number'}
               inputMode="numeric"
               id={'user'}
               name={'user'}
-              className={'w-20 sm:max-w-[100px] text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7'}
+              placeholder='Usuario'
+              className={'w-20 sm:max-w-[100px] text-xs sm:text-sm lg:text-base h-8 sm:h-9 lg:h-7'}
               value={userNumber?.toString() ?? ''}
               onChange={(e) => {
                 handleSearch(e.target.value);
               }}
             />
-            <div className="flex-1 sm:w-32 md:w-40 lg:w-28 truncate">
-              <Label htmlFor={'user'} className="text-xs sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
+            <div className="flex-1 truncate">
+              <Label htmlFor={'user'} className="text-xs w-20 sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
             </div>
           </Flex>
-          <Flex className={'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
-            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap"> Ticket</Label>
+          
+          <Flex className={'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
+            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">Ticket</Label>
             <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
-              <SelectTrigger className="min-w-[120px] sm:min-w-48 lg:min-w-32 border-dark-lighter text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7">
+              <SelectTrigger className=" border-dark-lighter text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7">
                 <SelectValue placeholder="Seleccione uno" />
               </SelectTrigger>
               <SelectContent>
@@ -127,37 +129,29 @@ const HeaderPlayDetail = () => {
 
       {role === USER_TYPE.CASHIER && (
         <Flex className="flex-row w-full flex-wrap justify-center sm:justify-end gap-2 lg:gap-1.5">
-          <Button
+          <IconButton
             type="button"
+            label="Repetir Ticket"
+            icon={<Repeat2Icon className="w-4 h-4" />}
             onClick={openRepeatModal}
-            size="sm"
-            className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
-          >
-            <Repeat2Icon className="w-3 h-3 sm:mr-1 lg:mr-0.5" />
-            <span className="hidden sm:inline text-xs sm:text-sm lg:text-xs">Repetir Ticket</span>
-            <span className="sm:hidden text-xs">Repetir</span>
-          </Button>
+            className="flex-1 sm:flex-none"
+          />
 
-          <Button
+          <IconButton
             type="button"
+            label="Reimprimir"
+            icon={<PrinterIcon className="w-4 h-4" />}
             variant="outline"
             onClick={handleRePrimtLast}
-            size="sm"
-            className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
-          >
-            <PrinterIcon className="w-3 h-3 sm:mr-1 lg:mr-0.5" />
-            <span className="hidden sm:inline text-xs sm:text-sm lg:text-xs">Reimprimir</span>
-            <span className="sm:hidden text-xs">Reimpr.</span>
-          </Button>
+            className="flex-1 sm:flex-none "
+          />
 
-          <Button
+          <IconButton
             type="button"
+            label="Cancelar"
             variant="destructive"
-            size="sm"
-            className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
-          >
-            <span className="text-xs sm:text-sm lg:text-xs">Cancelar</span>
-          </Button>
+            className="flex-1 sm:flex-none"
+          />
         </Flex>
       )}
 

@@ -1,7 +1,7 @@
 import Modal from './custom-modal';
 import { Flex, FlexCol } from '../flex';
 import { Label } from '../ui/label';
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 import { CASHIER_TYPE, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { IUpdateUserEntity } from '@helper/request/user.response';
 import { Controller, useForm } from 'react-hook-form';
@@ -60,11 +60,11 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
       title={`Editar usuario ${user?.name} - ${user?.number}`}
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[95vw] sm:!max-w-[90vw] md:!max-w-[800px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className={'w-full   py-4 space-y-4 '}>
-        <FlexCol className="items-center pt-2 gap-2">
-          <Flex className="items-center justify-center gap-2">
+      <form onSubmit={handleSubmit(onSubmit)} className={'w-full py-2 sm:py-4 space-y-2 sm:space-y-4 px-2 sm:px-4'}>
+        <FlexCol className="items-center pt-2 gap-2 sm:gap-4">
+          <Flex className="items-center justify-center gap-2 sm:gap-3 flex-col sm:flex-row w-full">
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="number">Número de usuario</Label>
               <Controller
@@ -234,9 +234,13 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
               </FlexCol>
             </Flex>
           )}
-          <Button variant={'success'} className="  hover:bg-green-700 text-white" type="submit">
-            {isPendingUpdate ? 'Editando...' : 'Editar'}
-          </Button>
+          <IconButton
+            label={isPendingUpdate ? 'Editando...' : 'Editar'}
+            variant="success"
+            type="submit"
+            disabled={isPendingUpdate}
+            className="w-full"
+          />
         </FlexCol>
       </form>
     </Modal>

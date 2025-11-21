@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/make-plays/game-turns';
 import { PLACE_TYPE } from '@helper/types/bet.type';
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { placeTypeParse } from '@helper/functions/placeTypeParse';
@@ -45,11 +45,11 @@ const FillOutATicket = () => {
     setPartialAmount,
     isEnabledCreateBet,
     isEnabledCreateBetByAdmin,
+    setOpenDeleteModal,
   } = usePlayDetails();
 
   const isEnabled = isEnabledCreateBet && isEnabledCreateBetByAdmin;
   const today = dayjs().day();
-  const [openModal, setOpenModal] = useState<boolean>(false);
   const [bet, setBet] = useState<IBetForm>({
     number: '',
     amount: undefined,
@@ -175,10 +175,6 @@ const FillOutATicket = () => {
     });
   };
 
-  const handleResetPartial = () => {
-    setPartialAmount(0);
-    setOpenModal(false);
-  };
   const handleDeleteForm = () => {
     setBet({
       number: '',
@@ -191,12 +187,12 @@ const FillOutATicket = () => {
   useEffect(() => {
     const handleWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key === '*') {
-        setOpenModal(true);
+        setOpenDeleteModal(true);
       }
     };
     window.addEventListener('keydown', handleWindowKeyDown);
     return () => window.removeEventListener('keydown', handleWindowKeyDown);
-  }, []);
+  }, [setOpenDeleteModal]);
 
   // const isEnabled = useIsButtonEnabled();
   const isAddButtonEnabled = Boolean(
@@ -304,7 +300,7 @@ const FillOutATicket = () => {
                   disabled={!isAddButtonEnabled || !isEnabled}
                   onClick={() => handleCreateBet()}
                 >
-                  <PlusIcon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Agregar</span>
+                  <PlusIcon className="hidden sm:inline sm:mr-1 lg:mr-0.5" /> <span>Agregar</span>
                 </Button>
                 <Button
                   type={'reset'}
@@ -313,7 +309,7 @@ const FillOutATicket = () => {
                   className={'flex-1 max-w-[100px] sm:max-w-[120px] lg:max-w-[90px] lg:h-7 lg:text-xs'}
                   onClick={() => handleDeleteForm()}
                 >
-                  <TrashIcon className="sm:mr-1 lg:mr-0.5" /> <span className="hidden sm:inline">Borrar</span>
+                  <TrashIcon className="hidden sm:inline sm:mr-1 lg:mr-0.5" /> <span>Borrar</span>
                 </Button>
               </Flex>
             </FlexCol>
@@ -321,17 +317,8 @@ const FillOutATicket = () => {
         </Flex>
         <GameTurns />
       </Flex>
-      <Suspense fallback={<div>Cargando...</div>}>
-        <ResetPartialModal
-          isOpen={openModal}
-          onClose={() => setOpenModal(false)}
-          onClick={handleResetPartial}
-        />
-      </Suspense>
     </FlexCol>
   );
 };
 
 export default FillOutATicket;
-
-const ResetPartialModal = React.lazy(() => import('../../components/modals/ResetPartialModal'));

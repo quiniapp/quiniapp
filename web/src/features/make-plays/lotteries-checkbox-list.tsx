@@ -4,7 +4,6 @@ import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
 import { TicketIcon } from 'lucide-react';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import LotteryCheckboxList from '@/features/make-plays/lottery-checkbox-list';
 import Box from '@/components/box';
 
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -12,6 +11,7 @@ import { Command, CommandList, CommandGroup, CommandItem } from '@/components/ui
 import { Button } from '@/components/ui/button';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 
 interface ILotteriesCheckboxListProps {
   setLotteries: (lottery: ILotteryEntityFront) => void; // toggle
@@ -52,11 +52,13 @@ const LotteriesCheckboxList = ({ setLotteries, checkedLotteries }: ILotteriesChe
       {/* Desktop / Tablet: grilla */}
       <Box className="hidden sm:grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
         {lotteries.map((lot) => (
-          <LotteryCheckboxList
+          <CheckboxWithLabel
             key={lot.lottery_id}
-            lottery={lot}
-            setLotteries={setLotteries}
-            checkedLottery={checkedLotteries.has(lot.lottery_id)}
+            id={lot.lottery_id}
+            label={lot.name}
+            checked={checkedLotteries.has(lot.lottery_id)}
+            onClick={() => setLotteries(lot)}
+            labelClassName="min-w-[90px]"
           />
         ))}
       </Box>

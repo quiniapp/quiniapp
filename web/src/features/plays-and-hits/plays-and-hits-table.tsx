@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/table';
 
 import { IBetEntityFront } from '@helper/types/bet.type';
-import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import toast from 'react-hot-toast';
 import { Copy, Check, Loader2 } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -227,7 +226,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
                 <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
                   Jugada
                 </span>
-                <p className="text-lg font-bold text-white">{bet.number}</p>
+                <p className="text-lg font-bold text-white">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</p>
               </div>
               <div className="text-right">
                 <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
@@ -238,8 +237,8 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
             </div>
 
             {/* Grid de información */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-3">
-              <Field label="Tipo" value={betPlaceDictionary[bet.place]} />
+            <div className="grid grid-cols-3 gap-x-4 gap-y-3 mb-3">
+              <Field label="Tipo" value={betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)} />
               <Field label="Aciertos" value={String(bet.hits ?? 0)} />
               <Field label="Turno" value={bet.schedule?.name} />
               <Field label="Quiniela" value={bet.lottery?.name} />

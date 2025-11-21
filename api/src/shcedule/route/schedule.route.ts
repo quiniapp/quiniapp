@@ -5,30 +5,13 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
+import { globalCacheManager } from 'src/cache/CacheManager';
 
-// ====== Cache en memoria (sin TTL): solo cambia en POST/PUT/DELETE ======
-type SchedulesCacheEntry = { payload: IScheduleEntityFront[]; etag: string };
-let cache: SchedulesCacheEntry | null = null;
-let etagCounter = 0; // sin crypto, cambia al invalidar
-let inflight: Promise<SchedulesCacheEntry> | null = null; // evita N queries concurrentes
+// ====== Cache Manager para Schedules ======
+const CACHE_KEY = 'schedules:all';
 
-function makeEtag() {
-  etagCounter += 1;
-  return `W/"schedules-${etagCounter}"`;
-}
-function invalidate() {
-  cache = null;
-  // no recalculamos acá: lo hará el próximo GET on-demand
-}
-async function loadAndSet(controller: ScheduleController): Promise<SchedulesCacheEntry> {
-  const data = await controller.getAll();
-  cache = { payload: data, etag: makeEtag() };
-  return cache;
-}
-async function ensureCache(controller: ScheduleController) {
-  if (cache) return cache;
-  if (!inflight) inflight = loadAndSet(controller).finally(() => (inflight = null));
-  return inflight;
+function invalidateSchedules() {
+  globalCacheManager.invalidate(CACHE_KEY);
 }
 
 export class ScheduleRouter {
@@ -73,7 +56,7 @@ export class ScheduleRouter {
 
     try {
       const schedule = await this.controller.create(newSchedule);
-      invalidate(); // 🔴 invalida cache (y cambia ETag en el próximo GET)
+      invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
     } catch (error) {
@@ -104,7 +87,9 @@ export class ScheduleRouter {
     }
 
     try {
-      const snap = await ensureCache(this.controller);
+      const snap = await globalCacheManager.getOrLoad(CACHE_KEY, () => this.controller.getAll(), {
+        etagStrategy: 'counter',
+      });
 
       // ETag/304: si el cliente tiene la versión actual, no enviamos payload
       const inm = req.headers['if-none-match'];
@@ -158,7 +143,7 @@ export class ScheduleRouter {
 
     try {
       const schedule = await this.controller.update(schedule_id, updateSchedule);
-      invalidate(); // 🔴
+      invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
     } catch (error) {
@@ -192,8 +177,8 @@ export class ScheduleRouter {
 
     try {
       await this.controller.delete({ schedule_id });
-      invalidate(); // 🔴
-      res.status(200).json({ data: { deleted: true } }); // (tenías un 200 sin body)
+      invalidateSchedules();
+      res.status(200).json({ data: { deleted: true } });
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {

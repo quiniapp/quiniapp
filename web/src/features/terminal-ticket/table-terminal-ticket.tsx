@@ -1,13 +1,13 @@
 // TableTerminalTicket.tsx
 import {
-  Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
+  Table, TableHeader, TableBody, TableCell, TableRow,
 } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useEffect, useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteTickets } from '@/hooks/fetchs/tickets/useInfiniteTickets';
+import { TicketTableHeader, TicketTableRow } from './ticket-table-row';
 
 interface TableTerminalTicketProps {
   user_id?: string;
@@ -102,12 +102,7 @@ const TableTerminalTicket = ({
       <div className="border mb-1 sm:mb-4">
         <Table className="min-w-full table-fixed">
           <TableHeader>
-            <TableRow className="bg-card-bg sticky top-0 z-10">
-              <TableHead className="bg-card-bg text-white">Número</TableHead>
-              <TableHead className="bg-card-bg text-white">Pasador</TableHead>
-              <TableHead className="bg-card-bg text-white">Monto</TableHead>
-              <TableHead className="hidden sm:table-cell bg-card-bg text-white text-right">Pagado</TableHead>
-            </TableRow>
+            <TicketTableHeader />
           </TableHeader>
         </Table>
 
@@ -116,23 +111,12 @@ const TableTerminalTicket = ({
           <Table className="min-w-full table-fixed">
             <TableBody>
               {tickets.map((item) => (
-                <TableRow
+                <TicketTableRow
                   key={String(item.ticket_id)}
-                  data-state={selected === item.ticket_number ? 'selected' : undefined}
-                  className={cn(
-                    `cursor-pointer hover:bg-primary-light transition ${
-                      selected === item.ticket_number ? 'bg-primary-light' : ''
-                    }`
-                  )}
-                  onClick={() => handleClick(item.ticket_number)}
-                >
-                  <TableCell>{item.ticket_number}</TableCell>
-                  <TableCell>{item.user_name}</TableCell>
-                  <TableCell>${item.total}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-right">
-                    {item.paid ? 'Pagado' : 'No pagado'}
-                  </TableCell>
-                </TableRow>
+                  ticket={item}
+                  isSelected={selected === item.ticket_number}
+                  onClick={handleClick}
+                />
               ))}
 
               {isFetchingNextPage && (

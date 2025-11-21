@@ -75,7 +75,7 @@ const Aside = ({ isOpen }: AsideProps) => {
           bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed z-40`
       )}
     >
-      <SidebarHeader className="p-3">
+      <SidebarHeader className="p-2 lg:p-3">
         <Link to="/">
           <Logo />
         </Link>
@@ -103,15 +103,15 @@ const Aside = ({ isOpen }: AsideProps) => {
                   <CollapsibleTrigger asChild>
                     <SidebarGroupLabel
                       className={cn(
-                        'cursor-pointer !text-[14px] flex items-center gap-2 h-[36px] px-3 !rounded-none transition-colors',
+                        'cursor-pointer flex items-center gap-2 h-[36px] px-2 lg:px-3 !rounded-none transition-colors text-xs lg:text-base',
                         isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                       )}
                     >
-                      <div className="flex items-center gap-2 !h-[36px]">
-                        <span className="text-gray-200">{item.icon}</span>
+                      <span className="flex items-center gap-2 !h-[36px]">
+                        <span className="text-gray-200 [&>svg]:w-3.5 [&>svg]:h-3.5 lg:[&>svg]:w-5 lg:[&>svg]:h-5">{item.icon}</span>
                         <span>{item.name}</span>
-                      </div>
-                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                      </span>
+                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 w-3.5 h-3.5 lg:w-4 lg:h-4" />
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
 
@@ -126,13 +126,13 @@ const Aside = ({ isOpen }: AsideProps) => {
                                 goTo(child.route, child.id);
                               }}
                               className={cn(
-                                'text-neutral-300 !text-[14px] !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors',
+                                'text-neutral-300 !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors text-xs lg:text-base',
                                 active && '!bg-primary'
                               )}
                               asChild
                             >
-                              <a className="flex !text-[14px] items-center gap-2 h-[36px] px-3 w-full">
-                                <span>{child.icon}</span>
+                              <a className="flex items-center gap-2 h-[36px] px-2 lg:px-3 w-full">
+                                <span className="[&>svg]:w-3.5 [&>svg]:h-3.5 lg:[&>svg]:w-5 lg:[&>svg]:h-5">{child.icon}</span>
                                 <span>{child.name}</span>
                               </a>
                             </SidebarMenuButton>
@@ -157,13 +157,13 @@ const Aside = ({ isOpen }: AsideProps) => {
                       setOpenId(null);goTo(item.route, item.id)
                     }}
                     className={cn(
-                      'h-[36px] !text-[14px] px-3 !rounded-none transition-colors cursor-pointer',
+                      'h-[36px] px-3 !rounded-none transition-colors cursor-pointer text-xs lg:text-base',
                       isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                     )}
                     asChild
                   >
-                    <a className="flex items-center gap-2 h-[36px] !text-[14px] w-full">
-                      <span>{item.icon}</span>
+                    <a className="flex items-center gap-2 h-[36px] w-full">
+                      <span className="[&>svg]:w-3.5 [&>svg]:h-3.5 lg:[&>svg]:w-5 lg:[&>svg]:h-5">{item.icon}</span>
                       <span>{item.name}</span>
                     </a>
                   </SidebarMenuButton>
@@ -176,9 +176,9 @@ const Aside = ({ isOpen }: AsideProps) => {
 
       <SidebarFooter className="border-t-2 1440:h-[100px] h-[70px] flex justify-center items-center">
         <Button variant="ghost" onClick={handleLogoutClick} disabled={loading}>
-          <Flex className="items-center gap-2 h-[48px]">
+          <Flex className="items-center gap-2 h-[48px] text-xs lg:text-base">
             {loading ? 'Cerrando Sesión…' : 'Cerrar Sesión'}
-            <Power />
+            <Power className="w-3.5 h-3.5 lg:w-5 lg:h-5" />
           </Flex>
         </Button>
       </SidebarFooter>

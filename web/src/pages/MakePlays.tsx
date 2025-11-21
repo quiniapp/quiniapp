@@ -1,7 +1,7 @@
-import MakePlaysContent from '@/features/make-plays';
+import MakePlaysContentWithProvider from '@/features/make-plays';
 
 const MakePlaysPage = () => {
-  return <MakePlaysContent />;
+  return <MakePlaysContentWithProvider />;
 };
 
 export default MakePlaysPage;

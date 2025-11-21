@@ -6,7 +6,7 @@ import { Flex, FlexCol } from '../flex';
 import { RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 type Shift = {
   schedule_id: string;
   name: string;
@@ -87,13 +87,13 @@ const GenerateWinnersModal = ({
       title="Generar ganadores"
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[90vw] sm:!max-w-[600px] md:!max-w-[700px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
         
-      <RadioGroup onValueChange={setScheduleWinners} className='flex gap-5'>
+      <RadioGroup onValueChange={setScheduleWinners} className="flex flex-wrap gap-3 sm:gap-5 px-2 sm:px-4 justify-center">
 
           {schedules?.map((turno: Shift, index) => (
-              <Flex key={turno.schedule_id} className=" h-[36px]  items-center space-x-4">
+              <Flex key={turno.schedule_id} className="h-[36px] items-center space-x-2 sm:space-x-4">
               <RadioGroupItem
                 ref={keyboardMap[index]?.ref}
                 id={turno.schedule_id}
@@ -102,22 +102,21 @@ const GenerateWinnersModal = ({
                 />
               <Label
                 htmlFor={turno.schedule_id}
-                className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                 {turno.name} [{turno.time}] [F{index + 1}]
               </Label>
             </Flex>
           ))}
       </RadioGroup>
-      <FlexCol className='items-center pt-2'>
-
-      <Button
-        variant={'success'}
-        className="  hover:bg-green-700 text-white"
+      <FlexCol className="items-center pt-2 w-full px-2 sm:px-4">
+      <IconButton
+        label={isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
+        variant="success"
         onClick={() => onClick()}
-        >
-        {isPendingWinners ? 'Generando...' : 'Generar Ganadores'}
-      </Button>
+        disabled={isPendingWinners}
+        className="w-full"
+        />
           </FlexCol>
 
     </Modal>
