@@ -86,7 +86,7 @@ const ResultsOverview = () => {
           </RadioGroup>
         </FlexCol>
       </Flex>
-      <Flex className={'gap-1 md:gap-2 items-center w-full lg:w-auto justify-end flex-wrap'}>
+      <Flex className={'gap-1 md:gap-2 items-center w-full sm:w-auto lg:w-auto justify-end flex-wrap'}>
         <IconButton
           label="Cerrar Ticket"
           onClick={() => handleCreateBet()}
