@@ -85,7 +85,6 @@ const ResultShifts = () => {
       title="Turno"
       icon={<Clock />}
       items={scheduleItems}
-      
       onValueChange={handleScheduleSelect}
       keyboardRefs={keyboardMap.map((k) => k.ref)}
       getItemLabel={(item, index) => `${item.name} [${item.time}] [F${index + 1}]`}

@@ -70,76 +70,77 @@ const ResultsContent = () => {
             </Flex>
           )}
         </Flex>
-        <FlexCol className=" gap-1 xl:gap-2  ">
-          <Flex className="flex-col sm:flex-row xl:flex-col justify-between gap-2 xl:gap-3  ">
+        <FlexCol className="w-full 2xl:flex-row  gap-2 xl:gap-4  ">
+          <FlexCol className="sm:flex-row 2xl:flex-col justify-between gap-2 xl:gap-3  ">
             <ResultShifts />
             <QuiniChecks />
-          </Flex>
-
-          <Box className="grid grid-flow-col grid-rows-10 sm:grid-rows-5 gap-1 md:gap-2  p-1 xl:p-2 2xl:p-4 justify-between bg-card">
-            {results.map((value, i) => (
-              <Flex key={i} className="flex items-center gap-2">
-                <span className="text-xs sm:text-base xl:text-lg text-primary font-bold w-6">
-                  {i + 1}
-                </span>
-                <Input
-                  ref={(el) => {
-                    inputRefs.current[i] = el;
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={value}
-                  onChange={(e) => {
-                    // Only allow numbers 0-9
-                    const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                    setResults((prev) => {
-                      const newResults = [...prev];
-                      newResults[i] = numericValue;
-                      return newResults;
-                    });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (i < results.length - 1) {
-                        inputRefs.current[i + 1]?.focus();
-                        e.preventDefault(); // Evita el beep en algunos navegadores
+          </FlexCol>
+          <FlexCol className='gap-1 md:gap-2'>
+            <Box className="grid grid-flow-col grid-rows-10 sm:grid-rows-5 gap-1 md:gap-2  p-1 xl:p-2 2xl:p-4 justify-between bg-card rounded h-full">
+              {results.map((value, i) => (
+                <Flex key={i} className="flex items-center gap-2">
+                  <span className="text-xs sm:text-base xl:text-lg text-primary font-bold w-6">
+                    {i + 1}
+                  </span>
+                  <Input
+                    ref={(el) => {
+                      inputRefs.current[i] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={value}
+                    onChange={(e) => {
+                      // Only allow numbers 0-9
+                      const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                      setResults((prev) => {
+                        const newResults = [...prev];
+                        newResults[i] = numericValue;
+                        return newResults;
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (i < results.length - 1) {
+                          inputRefs.current[i + 1]?.focus();
+                          e.preventDefault(); // Evita el beep en algunos navegadores
+                        }
                       }
-                    }
-                  }}
-                  disabled={!onEdit}
-                  className="w-full text-xs sm:text-base xl:text-lg font-bold min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
-                />
-              </Flex>
-            ))}
-          </Box>
-          {role !== USER_TYPE.CASHIER && (
-            <Box className=" grid grid-cols-1 sm:grid-cols-3 p-1   gap-[12px] ">
-              <IconButton
-                variant="destructive"
-                icon={<TrashIcon />}
-                label="Borrar resultado"
-                disabled={!(selectedLottery && selectedSchedule && getResults?.results_id)}
-                onClick={() => setIsOpenDeleteResult(true)}
-                className="hover:bg-[var(--bg-card)] text-dark font-medium"
-              />
-              <IconButton
-                variant="outline"
-                icon={<PencilIcon />}
-                label="Editar"
-                onClick={() => setOnEdit(!onEdit)}
-                className="bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium"
-              />
-              <IconButton
-                variant="default"
-                icon={<SaveIcon />}
-                label={isPending || isPendingResults ? 'Guardando' : 'Guardar Resultados'}
-                onClick={handleSave}
-                disabled={!canSave}
-                className="text-white"
-              />
+                    }}
+                    disabled={!onEdit}
+                    className="w-full text-xs sm:text-base xl:text-lg font-bold min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
+                  />
+                </Flex>
+              ))}
             </Box>
-          )}
+            {role !== USER_TYPE.CASHIER && (
+              <Box className=" grid grid-cols-1 sm:grid-cols-3 p-1   gap-2 w-full sm:w-auto ">
+                <IconButton
+                  variant="destructive"
+                  icon={<TrashIcon />}
+                  label="Borrar resultado"
+                  disabled={!(selectedLottery && selectedSchedule && getResults?.results_id)}
+                  onClick={() => setIsOpenDeleteResult(true)}
+                  className="hover:bg-[var(--bg-card)] text-dark font-medium"
+                />
+                <IconButton
+                  variant="outline"
+                  icon={<PencilIcon />}
+                  label="Editar"
+                  onClick={() => setOnEdit(!onEdit)}
+                  className="bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium"
+                />
+                <IconButton
+                  variant="default"
+                  icon={<SaveIcon />}
+                  label={isPending || isPendingResults ? 'Guardando' : 'Guardar Resultados'}
+                  onClick={handleSave}
+                  disabled={!canSave}
+                  className="text-white"
+                />
+              </Box>
+            )}
+          </FlexCol>
         </FlexCol>
       </FlexCol>
       <Suspense fallback={<div>Cargando...</div>}>

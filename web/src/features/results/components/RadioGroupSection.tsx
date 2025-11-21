@@ -33,14 +33,14 @@ export function RadioGroupSection<T extends RadioItem>({
   const isLargeScreen = useMediaQuery('(min-width: 1440px)');
 
   return (
-    <Box className={`rounded-lg bg-card p-2 min-w-fit w-full ${className}`}>
+    <Box className={`rounded-lg bg-card p-2 min-w-fit w-full ${className} `}>
       <HeaderTitleSection
         title={title}
         icon={icon}
         variant={isLargeScreen ? 'large' : 'small'}
       />
       <RadioGroup onValueChange={onValueChange}>
-        <Box className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-1 md:gap-2 xl:gap-3">
+        <Box className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-2 gap-1 md:gap-2 xl:gap-3">
           {items.map((item, index) => {
             const ref = keyboardRefs?.[index];
             const label = getItemLabel ? getItemLabel(item, index) : item.label;
@@ -53,7 +53,7 @@ export function RadioGroupSection<T extends RadioItem>({
                 value={item.id}
                 label={label}
                 radioClassName="border border-primary"
-                labelClassName="text-xs xl:text-base xl:font-semibold  md:whitespace-nowrap"
+                labelClassName="text-xs xl:text-base xl:font-semibold  md:whitespace-nowrap 2xl:whitespace-normal"
               />
             );
           })}
