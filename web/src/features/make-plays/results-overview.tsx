@@ -17,11 +17,11 @@ const ResultsOverview = () => {
     isEnabledCreateBetByAdmin,
     isPendingCreate,
     isPendingEdit,
+    setOpenDeleteModal,
   } = usePlayDetails();
 
   const hasSelection = selectedIndexes.length > 0;
   const isEnabled = totalAmount > 0 && isEnabledCreateBetByAdmin;
-
   return (
     <Flex
       className={
@@ -33,14 +33,21 @@ const ResultsOverview = () => {
       >
         <Flex className="gap-2 lg:gap-1.5 min-w-fit w-full sm:w-auto">
           {/* Mobile: Single row with two columns */}
-          <Flex className="sm:hidden w-full justify-between">
-            <Flex className='w-full'>
+          <Flex className="sm:hidden w-full justify-between items-center gap-1">
+            <Flex className="w-full justify-between items-center">
               <span className="text-xs">
                 Monto parcial:{' '}
                 <span className="font-semibold">$ {partialAmount.toLocaleString('es-AR')}</span>
               </span>
+              <IconButton
+                label="*"
+                icon={<TimerReset className="w-4 h-4" />}
+                onClick={() => setOpenDeleteModal(true)}
+                variant="outline"
+                className="sm:hidden w-fit h-fit font-extrabold text-lg"
+              />
             </Flex>
-            <Flex className='w-full'>
+            <Flex className="w-full">
               <span className="text-xs">
                 <span className="uppercase">Total</span>:{' '}
                 <span className="font-semibold">$ {totalAmount.toLocaleString('es-AR')}</span>

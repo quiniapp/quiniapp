@@ -18,9 +18,11 @@ type PlayDetailsState = {
   isEnabledCreateBet: boolean;
   isPendingEdit: boolean;
   isPendingCreate: boolean;
+  openDeleteModal: boolean;
   setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
+  setOpenDeleteModal: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 type PlayDetailsActions = {

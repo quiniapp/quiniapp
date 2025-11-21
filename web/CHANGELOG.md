@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-11-21
+
+#### Modal System - IconButton Integration & Mobile Responsiveness
+- **All Modal Components**: Updated to use IconButton and improved mobile responsiveness
+  - Paths: `web/src/components/modals/*.tsx`
+  - **Modals Updated:**
+    - `ResetPartialModal.tsx` - Replaced Button with IconButton, added responsive layout
+    - `DeleteUsersModal.tsx` - IconButton integration with full-width mobile layout
+    - `DeleteResultsModal.tsx` - IconButton with responsive text sizing
+    - `DeleteTicketModal.tsx` - Dual IconButton layout (Delete + Cancel)
+    - `generate-winners-modal.tsx` - IconButton with responsive radio group layout
+    - `GenerateLiquitationModal.tsx` - IconButton with horizontal scroll for table on mobile
+    - `UpdateUserModal.tsx` - IconButton with responsive form layout
+    - `UserCurrentAccountModal.tsx` - Dual IconButton layout for actions
+  - **Mobile Improvements:**
+    - Responsive max-width: `!max-w-[90vw] sm:!max-w-[500px] md:!max-w-[600px]`
+    - Responsive padding: `pt-4 sm:pt-6 md:pt-[36px]`, `px-2 sm:px-4`
+    - Responsive text: `text-xs sm:text-sm`, `text-sm sm:text-base`
+    - Buttons stack vertically on mobile: `flex-col sm:flex-row`
+    - Full-width buttons on mobile: `className="w-full"`
+    - Tables with horizontal scroll wrapper on small screens
+  - **Consistency Benefits:**
+    - Unified button styling across all modals
+    - Consistent mobile/desktop responsive patterns
+    - Better touch targets on mobile devices
+    - Improved readability with responsive typography
+
+#### Make Plays Feature - ResetPartialModal State Management Refactor
+- **MakePlaysProvider.tsx**: Added centralized `openDeleteModal` state
+  - Path: `web/src/features/make-plays/provider/MakePlaysProvider.tsx`
+  - Added state: `const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false)`
+  - Exposed via context: `openDeleteModal`, `setOpenDeleteModal`
+  - Why: Eliminate duplicate state management across components
+
+- **MakePlaysContext.tsx**: Extended context type with modal state
+  - Path: `web/src/features/make-plays/context/MakePlaysContext.tsx`
+  - Added to `PlayDetailsState` type: `openDeleteModal: boolean`, `setOpenDeleteModal`
+  - Enables shared modal state across make-plays feature components
+
+- **index.tsx**: Centralized ResetPartialModal rendering
+  - Path: `web/src/features/make-plays/index.tsx`
+  - Added lazy-loaded `ResetPartialModal` component
+  - Moved modal rendering from child components to parent
+  - Handles `handleResetPartial` logic centrally
+  - Single source of truth for modal open/close state
+  - Benefits: Eliminates code duplication, simplifies component tree
+
+- **fill-out-a-ticket.tsx**: Removed duplicate modal, uses shared state
+  - Path: `web/src/features/make-plays/fill-out-a-ticket.tsx`
+  - Removed local `openModal` state
+  - Removed `handleResetPartial` function
+  - Removed duplicate `ResetPartialModal` component and Suspense wrapper
+  - Uses `setOpenDeleteModal` from context for keyboard shortcut (*)
+  - Removed unused `Suspense` import
+
+- **results-overview.tsx**: Removed duplicate modal, uses shared state
+  - Path: `web/src/features/make-plays/results-overview.tsx`
+  - Removed local `openModal` state
+  - Removed `handleResetPartial` function
+  - Removed duplicate `ResetPartialModal` component and Suspense wrapper
+  - Uses `setOpenDeleteModal` from context for button click
+  - Removed unused `React`, `Suspense`, `useState` imports
+  - Cleaner component with single responsibility
+
+- **Migration Summary:**
+  - Before: ResetPartialModal duplicated in 2 components
+  - After: Single modal instance in parent, shared state in provider
+  - Code reduction: Eliminated ~30 lines of duplicate code
+  - Maintenance: Changes to modal now only need updates in one place
+  - State management: Centralized in provider pattern
+
 ### Added - 2025-11-20
 
 #### Frontend TODO System

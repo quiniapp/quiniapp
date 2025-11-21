@@ -11,7 +11,7 @@ import SkeletonList from '../skeletons/skeleton-list';
 import { Flex, FlexCol } from '../flex';
 import { Typography } from '../typography';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 import Modal from './custom-modal';
 import { useSearchParams } from 'react-router-dom';
 import { useGetCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
@@ -105,7 +105,7 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
       title={`Generar liquidaciones del día ${dayjs(data?.[0].date).format('DD-MM-YYYY')}`}
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[95vw] sm:!max-w-[90vw] md:!max-w-[980px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
       <Flex
         className="gap-1 sm:gap-3"
@@ -117,8 +117,9 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
 
         <Label>Liquidar todos los dejes</Label>
       </Flex>
-      <FlexCol className="p-1 sm:p-3 gap-1 sm:gap-3 items-center">
-        <Table className="overflow-hidden rounded-sm">
+      <FlexCol className="p-1 sm:p-3 gap-1 sm:gap-3 items-center w-full">
+        <div className="overflow-x-auto w-full">
+        <Table className="overflow-hidden rounded-sm min-w-[800px]">
           <TableHeader className="border overflow-hidden rounded-sm">
             <TableRow>
               <TableHead> Numero </TableHead>
@@ -230,13 +231,20 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
             </TableRow>
           </TableFooter>
         </Table>
-        <Flex className="gap-1 sm:gap-3">
-          <Button variant="default" className="uppercase" onClick={() => handleGenerate()}>
-            Generar liquidaciones
-          </Button>
-          <Button variant="destructive" onClick={() => onClose()}>
-            Cancelar
-          </Button>
+        </div>
+        <Flex className="gap-2 sm:gap-3 flex-col sm:flex-row w-full px-2 sm:px-4">
+          <IconButton
+            label="Generar liquidaciones"
+            variant="default"
+            onClick={() => handleGenerate()}
+            className="w-full uppercase"
+          />
+          <IconButton
+            label="Cancelar"
+            variant="destructive"
+            onClick={() => onClose()}
+            className="w-full"
+          />
         </Flex>
       </FlexCol>
     </Modal>
