@@ -205,8 +205,8 @@ const BetCard = ({
 export default PlayDetailGameTable;
 
 const NoPlaysFound = () => (
-  <TableRow>
-    <TableCell colSpan={6} className="flex justify-center text-center !py-[36px] ">
+  <TableRow className='w-full'>
+    <TableCell colSpan={5} className="flex justify-center md:table-cell text-center !py-[36px]">
       <FlexCol className="items-center justify-center gap-3">
         <Typography variant={'large'}>No se encontraron jugadas</Typography>
         <Typography variant={'small'} className={'font-light text-muted-foreground'}>
