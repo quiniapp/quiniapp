@@ -25,7 +25,6 @@ const QuiniChecks = () => {
   return (
     <RadioGroupSection
       title="Quinielas"
-      className=''
       icon={<Ticket />}
       items={lotteryItems}
       onValueChange={handleLotterySelect}

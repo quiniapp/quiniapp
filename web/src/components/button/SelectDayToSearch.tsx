@@ -43,7 +43,7 @@ export function SelectDayToSearch({
         <Button
           variant="outline"
           className={cn(
-            'w-full sm:w-auto flex items-center gap-1 md:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2 cursor-pointer',
+            'w-auto flex items-center gap-1 md:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2 cursor-pointer',
             !date && 'text-muted-foreground',
             className
           )}
