@@ -27,7 +27,7 @@ export const IconButton = ({
       variant={variant}
       disabled={disabled}
       onClick={onClick}
-      className={cn('w-full sm:w-auto flex items-center gap-1 lg:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2', className)}
+      className={cn('w-full sm:w-auto flex items-center gap-1 lg:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2 cursor-pointer', className)}
     >
       {icon && <span className="hidden md:inline flex-shrink-0">{icon}</span>}
       <span className="truncate text-xs md:text-sm lg:text-base text-nowrap">{label}</span>
