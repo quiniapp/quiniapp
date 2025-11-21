@@ -70,16 +70,16 @@ const ResultsContent = () => {
             </Flex>
           )}
         </Flex>
-        <FlexCol className="w-full 2xl:flex-row  gap-2 xl:gap-4  ">
-          <FlexCol className="sm:flex-row 2xl:flex-col justify-between gap-2 xl:gap-3  ">
+        <FlexCol className="w-full 2xl:flex-row  gap-2 xl:gap-4  justify-center  2xl:gap-6 ">
+          <FlexCol className="sm:flex-row 2xl:flex-col justify-between gap-2 xl:gap-3 2xl:gap-6 ">
             <ResultShifts />
             <QuiniChecks />
           </FlexCol>
-          <FlexCol className='gap-1 md:gap-2'>
+          <FlexCol className='gap-1 xl:gap-2 2xl:h-full  2xl:gap-6 '>
             <Box className="grid grid-flow-col grid-rows-10 sm:grid-rows-5 gap-1 md:gap-2  p-1 xl:p-2 2xl:p-4 justify-between bg-card rounded h-full">
               {results.map((value, i) => (
-                <Flex key={i} className="flex items-center gap-2">
-                  <span className="text-xs sm:text-base xl:text-lg text-primary font-bold w-6">
+                <Flex key={i} className="flex items-center gap-2 2xl:gap-4">
+                  <span className="text-xs sm:text-base xl:text-lg 2xl:text-xl text-primary font-bold w-6">
                     {i + 1}
                   </span>
                   <Input
@@ -108,7 +108,7 @@ const ResultsContent = () => {
                       }
                     }}
                     disabled={!onEdit}
-                    className="w-full text-xs sm:text-base xl:text-lg font-bold min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center"
+                    className="w-full text-xs sm:text-base xl:text-lg  font-semibold xl:font-bold min-w-[60px] sm:min-w-[70px] bg-card-foreground border border-dark-lighter text-white rounded px-2 py-1 text-center 2xl:h-10"
                   />
                 </Flex>
               ))}
