@@ -86,30 +86,32 @@ const HeaderPlayDetail = () => {
   }, [userNumber]);
 
   return (
-    <HeaderSection title={' Realizar Jugadas'}>
+    <HeaderSection title={' Realizar Jugadas'} className='gap-2'>
       {role !== USER_TYPE.CASHIER && (
-        <Flex className="flex-col sm:flex-row w-full flex-wrap justify-start sm:justify-end gap-2 sm:gap-3 lg:gap-1.5">
+        <Flex className=" w-full  justify-start sm:justify-end gap-1 sm:gap-2 xl:gap-3 ">
           <Flex className={'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
-            <Label htmlFor={'user'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap"> Usuario</Label>
+            <Label htmlFor={'user'} className="hidden sm:inline text-xs sm:text-sm lg:text-base whitespace-nowrap"> Usuario</Label>
             <Input
               type={'number'}
               inputMode="numeric"
               id={'user'}
               name={'user'}
-              className={'w-20 sm:max-w-[100px] text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7'}
+              placeholder='Usuario'
+              className={'w-20 sm:max-w-[100px] text-xs sm:text-sm lg:text-base h-8 sm:h-9 lg:h-7'}
               value={userNumber?.toString() ?? ''}
               onChange={(e) => {
                 handleSearch(e.target.value);
               }}
             />
-            <div className="flex-1 sm:w-32 md:w-40 lg:w-28 truncate">
-              <Label htmlFor={'user'} className="text-xs sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
+            <div className="flex-1 truncate">
+              <Label htmlFor={'user'} className="text-xs w-20 sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
             </div>
           </Flex>
-          <Flex className={'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
-            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap"> Ticket</Label>
+          
+          <Flex className={'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
+            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">Ticket</Label>
             <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
-              <SelectTrigger className="min-w-[120px] sm:min-w-48 lg:min-w-32 border-dark-lighter text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7">
+              <SelectTrigger className=" border-dark-lighter text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7">
                 <SelectValue placeholder="Seleccione uno" />
               </SelectTrigger>
               <SelectContent>
