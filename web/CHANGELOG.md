@@ -9,6 +9,171 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2025-11-21
 
+#### Results Components - RadioGroupSection Refactor
+- **RadioGroupSection.tsx**: Created reusable radio group component
+  - Path: `web/src/features/results/components/RadioGroupSection.tsx`
+  - **New Generic Component:**
+    - Accepts generic `RadioItem` type with `id` and `label`
+    - Props: `title`, `icon`, `items`, `onValueChange`, optional `keyboardRefs`, `getItemLabel`
+    - Handles responsive icon sizing automatically
+    - Configurable label formatter via `getItemLabel` function
+  - **Benefits:**
+    - Single source of truth for radio group UI
+    - Type-safe with TypeScript generics
+    - Eliminates code duplication
+
+- **shifts.tsx**: Refactored to use RadioGroupSection
+  - Path: `web/src/features/results/shifts.tsx`
+  - **Changes:**
+    - Removed JSX return markup (moved to RadioGroupSection)
+    - Transforms schedules to `ShiftItem[]` with id/label
+    - Uses `getItemLabel` to format labels with time and F-key shortcuts
+    - Maintains keyboard shortcuts logic (F1-F10)
+    - Passes keyboard refs to RadioGroupSection
+  - Code reduction: ~30 lines
+
+- **quini-check.tsx**: Refactored to use RadioGroupSection
+  - Path: `web/src/features/results/quini-check.tsx`
+  - **Changes:**
+    - Removed JSX return markup (moved to RadioGroupSection)
+    - Transforms lotteries to `QuiniItem[]` with id/label
+    - Uses default label (lottery name)
+    - No keyboard refs needed
+  - Code reduction: ~25 lines
+
+- **Refactor Summary:**
+  - Before: Duplicate UI markup in both components
+  - After: Shared RadioGroupSection component
+  - Total code reduction: ~55 lines
+  - Easier to maintain and update styling
+  - Consistent UI behavior across both components
+
+#### Results Components - Text Wrapping Fix
+- **quini-check.tsx & shifts.tsx**: Prevent text wrapping in labels
+  - Paths: `web/src/features/results/quini-check.tsx`, `web/src/features/results/shifts.tsx`
+  - **Changes:**
+    - Added `whitespace-nowrap` to prevent line breaks
+    - Removed incomplete `text-` class from quini-check
+    - Cleaned up extra spaces in class names
+  - **Benefits:**
+    - Labels stay on single line (no wrapping at spaces)
+    - More consistent visual appearance
+    - Better readability
+
+#### Results Shifts Component - Layout Update
+- **shifts.tsx**: Changed grid layout to horizontal row
+  - Path: `web/src/features/results/shifts.tsx`
+  - **Layout Changes:**
+    - Before: `grid grid-flow-row` (vertical grid)
+    - After: `flex flex-row flex-wrap` (horizontal row with wrapping)
+    - Responsive gaps: `gap-2 md:gap-3 1440:gap-4`
+  - **Benefits:**
+    - Items display horizontally in a single row
+    - Automatically wraps to next line when needed
+    - More compact horizontal layout
+    - Better space utilization
+
+#### Aside Component - Responsive Typography & Icons
+- **index.tsx**: Responsive text and icon sizing throughout sidebar
+  - Path: `web/src/components/aside/index.tsx`
+  - **Typography Changes:**
+    - All menu items: `text-xs lg:text-base` (12px → 16px at lg breakpoint)
+    - Parent items (collapsible triggers): Responsive text
+    - Child items (nested menu): Responsive text
+    - Single items (no children): Responsive text
+    - Footer (logout button): `text-xs lg:text-base`
+  - **Icon Size Changes:**
+    - Menu icons: `w-3.5 h-3.5 lg:w-5 lg:h-5` (14px → 20px at lg breakpoint)
+    - ChevronRight (collapsible indicator): `w-3.5 h-3.5 lg:w-4 lg:h-4`
+    - Power icon (logout): `w-3.5 h-3.5 lg:w-5 lg:h-5`
+    - Uses `[&>svg]` selector to target nested SVG icons
+  - **Removed:** Fixed `!text-[14px]` classes
+  - **Benefits:**
+    - Icons scale proportionally with text size
+    - Better visual balance between text and icons
+    - More compact on small screens, comfortable on large screens
+    - Consistent responsive pattern across all sidebar elements
+    - Improved accessibility with scalable typography and iconography
+
+#### SelectDayToSearch Component - Mobile Responsiveness
+- **SelectDayToSearch.tsx**: Optimized for small screens
+  - Path: `web/src/components/button/SelectDayToSearch.tsx`
+  - **Mobile Improvements:**
+    - Reduced max-width: `max-w-[180px]` on mobile vs `max-w-[240px]` on desktop
+    - Smaller padding: `px-2 py-1.5` on mobile vs `px-4 py-2` on desktop
+    - Smaller icon: `h-3.5 w-3.5` on mobile vs `h-4 w-4` on desktop
+    - Reduced gap between icon and text: `gap-1` on mobile vs `gap-2` on desktop
+  - **Date Format Changes:**
+    - Mobile (< sm): Short format `dd/MM/yy` (e.g., "21/11/25")
+    - Desktop (≥ sm): Full format `PPP` (e.g., "21 de noviembre de 2025")
+    - Placeholder text: "Fecha" on mobile, "Seleccionar Fecha" on desktop
+  - **Calendar Popover:** Smaller padding on mobile (`p-2` vs `p-3`)
+  - Benefits: Saves horizontal space on mobile, better UX on small screens
+
+#### Results Feature - Provider Pattern Refactor
+- **ResultsContext.tsx**: Created centralized context for type safety
+  - Path: `web/src/features/results/context/ResultsContext.tsx`
+  - **Type Definitions:**
+    - `ResultsState`: All state variables (results, selections, UI flags, refs)
+    - `ResultsActions`: All handler functions (handleScheduleSelect, handleLotterySelect, etc.)
+    - `ResultsContextType`: Combined type for full context
+  - Custom hook: `useResults()` with error boundary check
+  - Benefits: Type-safe access to context, clear separation of concerns
+
+- **ResultsProvider.tsx**: Centralized state management and business logic
+  - Path: `web/src/features/results/provider/ResultsProvider.tsx`
+  - **Migrated State (10 state variables):**
+    - `isOpen`, `isOpenDeleteResult` - Modal visibility
+    - `results` - Array of 20 result strings
+    - `selectedSchedule`, `selectedLottery`, `selectedDate` - User selections
+    - `scheduleWinners` - Winner generation schedule
+    - `onEdit` - Edit mode flag
+    - `inputRefs` - Refs for input navigation
+  - **Migrated Logic (5 handlers + 1 derived state):**
+    - `handleScheduleSelect`, `handleLotterySelect` - Selection handlers
+    - `handleGenerate` - Generate winners with toast notifications
+    - `handleSave` - Create/update results with validation
+    - `handleDeleteResult` - Delete results with confirmation
+    - `canSave` - Computed flag for save button state
+  - **Data Fetching:** All hooks moved to provider (useSchedules, useLotteries, useResults, mutations)
+  - **Effects:** Syncs results state with fetched data, resets edit mode
+  - Why: Single source of truth, eliminates prop drilling
+
+- **index.tsx**: Simplified to pure presentation component
+  - Path: `web/src/features/results/index.tsx`
+  - **Removed:** ~130 lines of state, logic, and hook calls
+  - **Now only contains:** UI rendering and layout structure
+  - Uses `useResults()` hook to access all state/actions
+  - Wrapped with `ResultsContentWithProvider` HOC
+  - Benefits: Cleaner component tree, easier to test and maintain
+
+- **quini-check.tsx**: Refactored to consume context
+  - Path: `web/src/features/results/quini-check.tsx`
+  - **Removed props:** `quini` array, `onLotterySelect` callback
+  - **Now reads from context:** `lotteries`, `handleLotterySelect`
+  - No longer needs props passed from parent
+  - Simplified component signature: `const QuiniChecks = () => {}`
+  - Benefits: Self-contained, no prop drilling
+
+- **shifts.tsx**: Refactored to consume context
+  - Path: `web/src/features/results/shifts.tsx`
+  - **Removed props:** `schedules` array, `onScheduleSelect` callback
+  - **Now reads from context:** `fetchSchedules`, `handleScheduleSelect`
+  - Maintains keyboard shortcuts (F1-F10) for schedule selection
+  - No longer needs props passed from parent
+  - Simplified component signature: `const ResultShifts = () => {}`
+  - Benefits: Self-contained, no prop drilling
+
+- **Refactor Summary:**
+  - Before: Props passed through 2-3 component levels
+  - After: Direct context access in leaf components
+  - Code reduction: ~150 lines eliminated across files
+  - Maintenance: Single place to update business logic
+  - Testing: Provider can be tested independently
+  - Pattern consistency: Matches MakePlaysProvider pattern
+
+
+
 #### Modal System - IconButton Integration & Mobile Responsiveness
 - **All Modal Components**: Updated to use IconButton and improved mobile responsiveness
   - Paths: `web/src/components/modals/*.tsx`

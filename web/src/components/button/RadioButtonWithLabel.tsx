@@ -29,7 +29,7 @@ export const RadioButtonWithLabel = forwardRef<HTMLButtonElement, RadioButtonWit
     return (
       <Flex
         className={cn(
-          'items-center gap-2 sm:gap-3 md:gap-4 cursor-pointer',
+          'items-center gap-2 xl:gap-3 2xl:gap-4 cursor-pointer',
           disabled && 'cursor-not-allowed opacity-50',
           className
         )}

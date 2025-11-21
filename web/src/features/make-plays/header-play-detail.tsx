@@ -132,7 +132,7 @@ const HeaderPlayDetail = () => {
             label="Repetir Ticket"
             icon={<Repeat2Icon className="w-4 h-4" />}
             onClick={openRepeatModal}
-            className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
+            className="flex-1 sm:flex-none"
           />
 
           <IconButton
@@ -141,14 +141,14 @@ const HeaderPlayDetail = () => {
             icon={<PrinterIcon className="w-4 h-4" />}
             variant="outline"
             onClick={handleRePrimtLast}
-            className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
+            className="flex-1 sm:flex-none "
           />
 
           <IconButton
             type="button"
             label="Cancelar"
             variant="destructive"
-            className="flex-1 sm:flex-none min-w-[90px] lg:h-7 lg:text-xs lg:px-2"
+            className="flex-1 sm:flex-none"
           />
         </Flex>
       )}

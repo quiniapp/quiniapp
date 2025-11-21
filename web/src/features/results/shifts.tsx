@@ -1,13 +1,7 @@
 import { Clock } from 'lucide-react';
-// @UI
-import { RadioGroup } from '@/components/ui/radio-group';
-import { RadioButtonWithLabel } from '@/components/button/RadioButtonWithLabel';
-// @Components
-import Box from '@/components/box';
-import HeaderTitleSection from '@/components/header-title-section';
-// @Hooks
-import { useMediaQuery } from '@/hooks/useMediaQuery.ts';
 import { useEffect, useRef } from 'react';
+import { useResults } from './context/ResultsContext';
+import { RadioGroupSection } from './components/RadioGroupSection';
 
 type Shift = {
   schedule_id: string;
@@ -15,12 +9,14 @@ type Shift = {
   time: string;
 };
 
-interface ResultShiftsProps {
-  schedules: Shift[];
-  onScheduleSelect: (shiftId: string) => void;
+interface ShiftItem extends Shift {
+  id: string;
+  label: string;
 }
 
-const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
+const ResultShifts = () => {
+  const { fetchSchedules, handleScheduleSelect } = useResults();
+
   const refF1 = useRef<HTMLButtonElement>(null);
   const refF2 = useRef<HTMLButtonElement>(null);
   const refF3 = useRef<HTMLButtonElement>(null);
@@ -32,6 +28,7 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
   const refF8 = useRef<HTMLButtonElement>(null);
   const refF9 = useRef<HTMLButtonElement>(null);
   const refF10 = useRef<HTMLButtonElement>(null);
+
   const keyMap: Record<string, number> = {
     F1: 0,
     F2: 1,
@@ -44,6 +41,7 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
     F9: 8,
     F10: 9,
   };
+
   const keyboardMap = [
     { key: 'F1', ref: refF1 },
     { key: 'F2', ref: refF2 },
@@ -58,7 +56,6 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
   ];
 
   const handleKeyDown = (e: KeyboardEvent) => {
-
     const index = keyMap[e.key];
 
     if (index !== undefined) {
@@ -70,37 +67,29 @@ const ResultShifts = ({ schedules, onScheduleSelect }: ResultShiftsProps) => {
       }
     }
   };
+
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return (
-    <Box className="  rounded-lg px-4 1440:py-8 py-4 bg-card">
+  // Transform schedules to match RadioItem interface
+  const scheduleItems: ShiftItem[] = (fetchSchedules ?? []).map((schedule) => ({
+    ...schedule,
+    id: schedule.schedule_id,
+    label: schedule.name,
+  }));
 
-      <HeaderTitleSection
-        title={'Turno'}
-        icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-        variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
-        className={'pb-2'}
-      />
-      <RadioGroup onValueChange={onScheduleSelect}>
-        <Box className="grid 1440:grid-cols-3 grid-cols-2 1440:gap-4 gap-1">
-          {schedules?.map((turno: Shift, index) => (
-            <RadioButtonWithLabel
-              key={turno.schedule_id}
-              ref={keyboardMap[index]?.ref}
-              id={turno.schedule_id}
-              value={turno.schedule_id}
-              label={`${turno.name} [${turno.time}] [F${index + 1}]`}
-              radioClassName="border border-primary"
-              labelClassName="text-xs  md:text-base xl:text-lg md:font-semibold"
-              className="h-[36px]"
-            />
-          ))}
-        </Box>
-      </RadioGroup>
-    </Box>
+  return (
+    <RadioGroupSection
+      title="Turno"
+      icon={<Clock />}
+      items={scheduleItems}
+      
+      onValueChange={handleScheduleSelect}
+      keyboardRefs={keyboardMap.map((k) => k.ref)}
+      getItemLabel={(item, index) => `${item.name} [${item.time}] [F${index + 1}]`}
+    />
   );
 };
 
