@@ -46,12 +46,12 @@
 **Tiempo:** 3-4 días
 **Razón:** Es la mejora de performance más rápida y con mayor impacto inmediato
 
-#### Día 1: Auditoría
-- [ ] Ejecutar queries de diagnóstico en Supabase
-- [ ] Listar todos los índices actuales por tabla
-- [ ] Identificar índices faltantes críticos
-- [ ] Identificar índices redundantes o no utilizados
-- [ ] Documentar findings en spreadsheet
+#### Día 1: Auditoría ✅ COMPLETADO (2025-11-21)
+- [x] Ejecutar queries de diagnóstico en Supabase
+- [x] Listar todos los índices actuales por tabla
+- [x] Identificar índices faltantes críticos
+- [x] Identificar índices redundantes o no utilizados
+- [x] Documentar findings en `db_index_analysis.md`
 
 **Queries a ejecutar:**
 ```sql
@@ -74,21 +74,23 @@ ORDER BY mean_time DESC
 LIMIT 20;
 ```
 
-#### Día 2: Análisis de Queries
-- [ ] Revisar queries más frecuentes en repositories
-- [ ] Ejecutar EXPLAIN ANALYZE en queries problemáticas
-- [ ] Identificar columnas sin índices en WHERE/ORDER BY
-- [ ] Priorizar índices por impacto esperado
-- [ ] Crear lista de índices a agregar/eliminar
+#### Día 2: Análisis de Queries ✅ COMPLETADO (2025-11-21)
+- [x] Revisar queries más frecuentes en repositories
+- [x] Identificar columnas sin índices en WHERE/ORDER BY
+- [x] Priorizar índices por impacto esperado
+- [x] Crear lista de índices a agregar/eliminar
+- [x] Crear script SQL de migración en `db_migration_indexes.sql`
+- [x] Documentar análisis en `day2_query_analysis.md`
+- [ ] Ejecutar EXPLAIN ANALYZE en queries problemáticas (DÍA 3)
 
-**Módulos prioritarios:**
-1. `ticket/repository` (queries más frecuentes)
-2. `bet/repository` (volumen alto)
-3. `results/repository` (queries complejas)
-4. `winners/repository` (joins pesados)
+**Módulos revisados:**
+1. ✅ `ticket/repository` - 4 queries críticas identificadas
+2. ✅ `bet/repository` - 2 queries críticas identificadas
+3. ✅ `winners/repository` - 1 query crítica identificada
+4. ⚠️ `results/repository` - No requiere cambios (ya bien indexado)
 
-#### Día 3: Implementación
-- [ ] Crear archivo de migración SQL con índices
+#### Día 3: Implementación ⏳ EN PROGRESO
+- [x] Crear archivo de migración SQL con índices
 - [ ] Benchmark ANTES: medir tiempos actuales
 - [ ] Aplicar índices en ambiente de desarrollo
 - [ ] Medir impacto en queries específicas
@@ -350,9 +352,9 @@ interface DashboardSummary {
 ## 📋 Checklist de Inicio Inmediato
 
 ### Esta Semana (Prioridad Máxima)
-- [ ] **HOY**: Ejecutar queries de diagnóstico de índices
-- [ ] **Mañana**: Analizar findings y crear lista de índices
-- [ ] **Día 3**: Implementar índices críticos en dev
+- [x] **Día 1 (2025-11-21)**: Ejecutar queries de diagnóstico de índices
+- [x] **Día 2 (2025-11-21)**: Analizar findings y crear lista de índices
+- [ ] **Día 3 (2025-11-22)**: Implementar índices críticos en dev
 - [ ] **Día 4**: Testing y deploy de índices a producción
 - [ ] **Día 5**: Implementar purga de ticket_prizes_by_turn
 

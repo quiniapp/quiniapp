@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-11-21
+
+#### Database Index Optimization - Days 1 & 2 Completed
+- **Index Audit Completed**: Comprehensive analysis of database indices
+  - **Files created:**
+    - `db_index_analysis.md` - Day 1 audit results
+    - `day2_query_analysis.md` - Query pattern analysis
+    - `db_migration_indexes.sql` - Migration script ready to execute
+    - `resumen_para_manana.md` - Summary and next steps
+  - **Key findings:**
+    - 4 unused indices identified (64 KB wasted space)
+    - `tickets` table critically under-indexed
+    - `bets` table well-indexed (2,708 uses on primary index)
+    - No `winners` table exists (uses `winner` column in tickets/bets)
+  - **Tables analyzed:**
+    - `tickets`: 13 columns, 104 KB total, 4 critical indices needed
+    - `bets`: 23 columns, 6.9 MB total, 3 optional indices proposed
+    - `ticket_prizes_by_turn`: PK with 0 uses (requires investigation)
+    - `results`: Well optimized, possible redundancy detected
+  - **Repository queries analyzed:**
+    - `WinnerRepository.getAllWinners()` - Full table scan (500-1000ms)
+    - `TicketRepository.getAll()` - Missing composite indices (200-500ms)
+    - `TicketRepository.getAllTicketNumber()` - Same as getAll()
+    - `BetRepository.getWinnerBets()` - Partial index scan (80-150ms)
+    - `BetRepository.getAllBets()` - Uses existing indices well
+  - **Proposed indices (7 new, 1 to drop):**
+    - **Priority HIGH - tickets (4 indices):**
+      - `idx_tickets_date_deleted_winner_created` - 60-80% improvement
+      - `idx_tickets_user_date_deleted_created` - 70-90% improvement
+      - `idx_tickets_winner_deleted_created` - 80-95% improvement
+      - `idx_tickets_winner_user_deleted_created` - 85-95% improvement
+    - **Priority MEDIUM - bets (3 indices):**
+      - `idx_bets_date_winner_deleted_created` - 40-60% improvement
+      - `idx_bets_date_schedule_winner_deleted` - 50-70% improvement
+      - `idx_bets_user_date_deleted` - 30-50% improvement
+    - **To drop:**
+      - `idx_tpt_ticket` on `ticket_prizes_by_turn` (0 uses)
+  - **Expected impact:**
+    - 60-95% faster queries on tickets by date/user/winner
+    - 40-70% faster queries on winner bets
+    - Minimal impact on INSERTs (5-10% slower, acceptable trade-off)
+    - +140-280 KB disk space (negligible)
+  - **Validation with Production Data:**
+    - Analyzed Supabase Performance Insights from production
+    - **CONFIRMED**: Tickets query is #1 most problematic
+      - 707 calls, 15.8ms average, 11.17 seconds total (7.98% of total time)
+      - Filters by user_id, date, deleted_at
+      - Orders by created_at DESC
+      - Exactly matches `TicketRepository.getAll()` identified in analysis
+    - **CONFIRMED**: Bets table well-indexed
+      - 216 calls, 16.67ms average (excellent performance)
+      - Cache hit rate: 99.999%
+      - Current indices working perfectly
+    - **CONFIRMED**: Schedules query excellent
+      - 1,489 calls but only 1.68ms average (super fast)
+      - No changes needed
+    - **CONFIRMED**: Write RPCs acceptable
+      - create_ticket_with_bets: 70-111ms (reasonable for complex INSERT)
+      - generate_winners: 44-109ms (reasonable for complex logic)
+    - **Expected impact validated:**
+      - Conservative: 70% improvement on tickets query → saves ~7.8 seconds
+      - Optimistic: 85% improvement → saves ~9.5 seconds
+      - Additional 20-30% improvement on generate_winners RPCs (~1.8-2.7s)
+      - Total: 6.9-8.7% improvement in total query time
+    - File: `supabase_query_analysis.md`
+  - **Next steps (Day 3):**
+    - Execute EXPLAIN ANALYZE benchmarks BEFORE
+    - Apply indices in development environment
+    - Measure specific improvements
+    - Validate no INSERT/UPDATE degradation
+    - Prepare production deployment
+  - **Technical decisions:**
+    - All indices use partial indexes (`WHERE deleted_at IS NULL`)
+    - Column order optimized (equality → range → order)
+    - Using `CONCURRENTLY` for production safety
+    - Rollback plan documented in SQL script
+
 ### Added - 2025-11-20
 
 #### Action Plan for TODOs Implementation
