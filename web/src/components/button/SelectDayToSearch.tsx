@@ -43,17 +43,24 @@ export function SelectDayToSearch({
         <Button
           variant="outline"
           className={cn(
-            'w-fit sm:max-w-[240px] justify-start text-left font-normal',
+            'w-full sm:w-auto flex items-center gap-1 md:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2 cursor-pointer',
             !date && 'text-muted-foreground',
             className
           )}
         >
-          <CalendarIcon color="white" className="mr-2 h-4 w-4 flex-shrink-0" />
-          <span className="truncate">
+          <CalendarIcon color="white" className="h-2 w-2  lg:h-4 lg:w-4 flex-shrink-0" />
+          <span className="truncate text-white font-semibold  text-xs md:text-sm lg:text-base text-nowrap">
             {date ? (
-              format(date, 'PPP', { locale: es })
+              // Show shorter format on mobile
+              <span className="hidden sm:inline">{format(date, 'PPP', { locale: es })}</span>
+            ) : null}
+            {date ? (
+              <span className="inline sm:hidden">{format(date, 'dd/MM/yy', { locale: es })}</span>
             ) : (
-              <span className="text-white font-semibold">Seleccionar Fecha</span>
+              <span className="">
+                <span className="hidden sm:inline">Seleccionar Fecha</span>
+                <span className="inline sm:hidden">Fecha</span>
+              </span>
             )}
           </span>
         </Button>
@@ -66,7 +73,7 @@ export function SelectDayToSearch({
           locale={es}
           toDate={toDate}
           initialFocus
-          className={cn('p-3 pointer-events-auto')}
+          className={cn('p-2 sm:p-3 pointer-events-auto')}
         />
       </PopoverContent>
     </Popover>
