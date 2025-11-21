@@ -58,35 +58,35 @@ const ResultsOverview = () => {
           {/* Desktop: Two columns layout */}
           <Flex className="hidden sm:flex gap-2 lg:gap-1.5">
             <FlexCol>
-              <span className="text-sm whitespace-nowrap">Monto parcial</span>
-              <span className="text-sm whitespace-nowrap">Total</span>
+              <span className="text-sm lg:text-base whitespace-nowrap">Monto parcial</span>
+              <span className="text-sm lg:text-base whitespace-nowrap">Total</span>
             </FlexCol>
             <FlexCol>
-              <span className="text-sm font-semibold">
+              <span className="text-sm lg:text-base font-semibold">
                 $ {partialAmount.toLocaleString('es-AR')}
               </span>
-              <span className="text-sm font-semibold">$ {totalAmount.toLocaleString('es-AR')}</span>
+              <span className="text-sm lg:text-base font-semibold">$ {totalAmount.toLocaleString('es-AR')}</span>
             </FlexCol>
           </Flex>
         </Flex>
-        <FlexCol className="hidden md:flex ">
+        <FlexCol className="hidden sm:flex ">
           <RadioGroup defaultValue="option-one">
             <Flex className="items-center space-x-2">
               <RadioGroupItem value="option-one" id="option-one" />
-              <Label className="text-sm md:text-base " htmlFor="option-one">
+              <Label className="text-sm lg:text-base " htmlFor="option-one">
                 Imprimir
               </Label>
             </Flex>
             <Flex className="items-center space-x-2">
               <RadioGroupItem value="option-two" id="option-two" />
-              <Label className="text-sm md:text-base" htmlFor="option-two">
+              <Label className="text-sm lg:text-base" htmlFor="option-two">
                 Exportar
               </Label>
             </Flex>
           </RadioGroup>
         </FlexCol>
       </Flex>
-      <Flex className={'gap-2 lg:gap-1.5 items-center w-full sm:w-auto justify-center flex-wrap'}>
+      <Flex className={'gap-1 md:gap-2 items-center w-full lg:w-auto justify-end flex-wrap'}>
         <IconButton
           label="Cerrar Ticket"
           onClick={() => handleCreateBet()}
