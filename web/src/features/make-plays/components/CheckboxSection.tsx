@@ -11,7 +11,7 @@ interface CheckboxSectionProps {
 
 const CheckboxSection = ({ title, icon, children, className = '' }: CheckboxSectionProps) => {
   return (
-    <FlexCol className={`border-2 p-2 sm:p-4 lg:p-1.5 rounded-[--rounded-form] gap-2 lg:gap-1 ${className}`}>
+    <FlexCol className={`border-2 p-1 sm:p-4 lg:p-1.5 rounded-lg gap-1 lg:gap-1 ${className}`}>
       <HeaderTitleSection title={title} icon={icon} variant="small" />
       {children}
     </FlexCol>
