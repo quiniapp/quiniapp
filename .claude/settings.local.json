@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(python -c \"\ncontent = ''''''# QuiniApp Web - Performance Audit & Optimization Report\n\n**Date:** 2025-11-30  \n**Audited by:** Claude (Sonnet 4.5)  \n**Current Bundle Size:** ~1.7MB (dist folder)  \n**Main Bundle:** ~1.1MB JavaScript + 52KB CSS  \n**Total Lines of Code:** ~9,463 lines (TypeScript/TSX)\n\n---\n\n## Executive Summary\n\nThis comprehensive performance audit identifies critical optimization opportunities across the QuiniApp web application. The application currently loads **ALL routes, features, and dependencies upfront**, resulting in a large initial bundle (~1.1MB JS) that significantly impacts Time to Interactive (TTI), especially for unauthenticated users who only need the login page.\n\n### Key Findings:\n\n1. **CRITICAL - No Code Splitting:** All 17 pages loaded immediately, even for login-only users\n2. **HIGH - Missing Lazy Loading:** Only 6 components use React.lazy (out of 55+ feature files)\n3. **MEDIUM - No Route-Based Splitting:** React Router configured with eager imports\n4. **MEDIUM - Heavy Dependencies:** dayjs, jspdf, lucide-react loaded globally\n5. **LOW - Limited Memoization:** Only 67 useMemo/useCallback instances across 20 files, no React.memo\n\n### Estimated Impact:\n- **Initial Load Reduction:** 70-85% for unauthenticated users (from ~1.1MB to ~150-300KB)\n- **TTI Improvement:** 2-5 seconds faster on 3G connections\n- **First Contentful Paint:** 40-60% improvement\n''''''\n\nwith open(''performance.md'', ''w'', encoding=''utf-8'') as f:\n    f.write(content)\n\nprint(''Created performance.md (partial - part 1)'')\n\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
