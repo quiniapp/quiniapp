@@ -11,7 +11,7 @@ import {
 import { IBetEntityFront } from '@helper/types/bet.type';
 import toast from 'react-hot-toast';
 import { Copy, Check, Loader2 } from 'lucide-react';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
@@ -63,18 +63,18 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   // Contenedor scrolleable
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
 
-  // Hook centralizado de infinite scroll - carga cuando la fila 75 es visible
+  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     root: scrollRootRef.current,
-    triggerIndex: 75,
+    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
     totalItems: bets.length,
   });
 
   // Actualizar totales cuando cambian los datos
-  useMemo(() => {
+  useEffect(() => {
     const agg = data?.pages?.[0]?.aggregates;
     onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
   }, [data, onTotalsUpdate]);

@@ -49,13 +49,13 @@ const TableTerminalTicket = ({
   // Contenedor que scrollea
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  // Hook centralizado de infinite scroll - carga cuando la fila 75 es visible
+  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     root: rootRef.current,
-    triggerIndex: 75,
+    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
     totalItems: tickets.length,
   });
 
