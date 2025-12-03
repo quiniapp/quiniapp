@@ -11,11 +11,12 @@ import {
 import { IBetEntityFront } from '@helper/types/bet.type';
 import toast from 'react-hot-toast';
 import { Copy, Check, Loader2 } from 'lucide-react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 type Props = {
   onTotalsUpdate?: (totalAmount?: number, totalPrize?: number) => void;
@@ -46,11 +47,10 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     quatern,
     tern,
     winners,
-    limit: 100,
+    limit: 150,
   });
 
-  // Flatten all pages into a single array
-  // Reemplazá tu 'bets' por este 'bets' deduplicado
+
   const bets = useMemo(() => {
     return data?.pages.flatMap((p) => p.data) ?? [];
   }, [data]);
@@ -60,46 +60,24 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     return Number.isFinite(n) ? n : def;
   };
 
-  useEffect(() => {
+  // Contenedor scrolleable
+  const scrollRootRef = useRef<HTMLDivElement | null>(null);
+
+  // Hook centralizado de infinite scroll - carga cuando la fila 75 es visible
+  const { setTriggerRef, triggerIndex } = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    root: scrollRootRef.current,
+    triggerIndex: 75,
+    totalItems: bets.length,
+  });
+
+  // Actualizar totales cuando cambian los datos
+  useMemo(() => {
     const agg = data?.pages?.[0]?.aggregates;
     onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
   }, [data, onTotalsUpdate]);
-
-  // 1) Contenedor scrolleable (root del IO) + sentinel al final
-  const scrollRootRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  // 2) IntersectionObserver usando el contenedor como root
-  useEffect(() => {
-    const root = scrollRootRef.current;
-    const target = sentinelRef.current;
-    if (!root || !target) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      {
-        root, // 👈 contenedor que scrollea
-        rootMargin: '0px 0px 800px 0px', // prefetch antes de llegar al fondo
-        threshold: 0,
-      }
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // 3) Si el contenido no llena el viewport del contenedor, trae más hasta que llene o no haya más
-  useEffect(() => {
-    const root = scrollRootRef.current;
-    if (!root) return;
-    if (root.scrollHeight <= root.clientHeight && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [bets.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading) {
     return (
@@ -154,8 +132,11 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bets?.map((bet: IBetEntityFront) => (
-              <TableRow key={bet?.bet_id ?? Math.random()}>
+            {bets?.map((bet: IBetEntityFront, index: number) => (
+              <TableRow
+                key={bet?.bet_id ?? Math.random()}
+                ref={index === triggerIndex ? setTriggerRef : undefined}
+              >
                 <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
                   {bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}
                 </TableCell>
@@ -216,9 +197,10 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
           <p className="text-center text-sm text-muted-foreground">No se encontraron jugadas</p>
         )}
 
-        {bets?.map((bet) => (
+        {bets?.map((bet, index) => (
           <div
             key={bet?.bet_id ?? Math.random()}
+            ref={index === triggerIndex ? setTriggerRef : undefined}
             className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
           >
             <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
@@ -271,9 +253,6 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
           </div>
         )}
       </div>
-
-      {/* 👇 Sentinel al final del contenedor scrolleable */}
-      <div ref={sentinelRef} className="h-px w-full" />
     </div>
   );
 };

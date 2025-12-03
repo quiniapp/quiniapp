@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-03
+
+#### Infinite Scroll Hook - Centralized Logic
+- **useInfiniteScroll.ts**: Created centralized hook for infinite scroll functionality
+  - Path: `web/src/hooks/useInfiniteScroll.ts`
+  - **Features:**
+    - Observes specific row index (default: 75) to trigger pagination
+    - Returns callback ref (`setTriggerRef`) to assign to trigger element
+    - Auto-loads when content doesn't fill viewport
+    - Configurable trigger index and root margin
+    - Automatic cleanup on unmount
+  - **Benefits:**
+    - Single source of truth for infinite scroll logic
+    - Eliminates code duplication across table components
+    - More predictable loading behavior (triggers at specific row)
+    - Easier to adjust loading threshold globally
+
+### Changed - 2025-12-03
+
+#### Infinite Scroll Implementation - Table Components
+- **plays-and-hits-table.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/plays-and-hits/plays-and-hits-table.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Triggers pagination when row 75 is visible
+  - Code reduction: ~40 lines
+
+- **table-terminal-ticket.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/terminal-ticket/table-terminal-ticket.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Triggers pagination when row 75 is visible
+  - Code reduction: ~30 lines
+
+- **termina-ticket-play-table.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/terminal-ticket/termina-ticket-play-table.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Triggers pagination when row 75 is visible
+  - Code reduction: ~30 lines
+
+- **terminal-ticket-matches-table.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/terminal-ticket/terminal-ticket-matches-table.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Triggers pagination when row 75 is visible
+  - Code reduction: ~30 lines
+
+- **ticket-table-row.tsx**: Enhanced with forwardRef support
+  - Path: `web/src/features/terminal-ticket/ticket-table-row.tsx`
+  - Added forwardRef to TicketTableRow component
+  - Allows parent components to assign refs for intersection observation
+  - Maintains backward compatibility with existing props
+
+- **Refactor Summary:**
+  - Before: Manual IntersectionObserver in each component with sentinel at end
+  - After: Centralized hook with row-based trigger (row 75)
+  - Total code reduction: ~130 lines
+  - Consistent loading behavior across all tables
+  - More predictable UX - always loads at row 75 instead of at the end
+
 ### Changed - 2025-11-21
 
 #### Results Components - RadioGroupSection Refactor
