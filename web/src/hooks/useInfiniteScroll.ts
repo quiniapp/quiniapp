@@ -78,17 +78,6 @@ export function useInfiniteScroll({
   const isFetchingNextPageRef = useRef(isFetchingNextPage);
   const lastTriggerIndexRef = useRef<number>(-1);
 
-  console.log('🔄 [useInfiniteScroll] Hook ejecutado con:', {
-    triggerIndex,
-    totalItems,
-    offsetFromEnd,
-    hasNextPage,
-    isFetchingNextPage,
-    observedIndices: Array.from(observedElementsRef.current.keys()),
-    root: root ? 'presente' : 'null',
-    rootMargin,
-  });
-
   // Mantener refs actualizadas
   useEffect(() => {
     fetchNextPageRef.current = fetchNextPage;
@@ -98,49 +87,27 @@ export function useInfiniteScroll({
 
   // Limpiar elementos observados de índices antiguos
   useEffect(() => {
-    // Eliminar elementos de índices que ya no son el trigger actual
     const currentElements = observedElementsRef.current.get(triggerIndex);
     observedElementsRef.current.clear();
     if (currentElements) {
       observedElementsRef.current.set(triggerIndex, currentElements);
     }
-    console.log('🧹 [Effect Cleanup Old] Limpiando índices antiguos, actual:', triggerIndex);
   }, [triggerIndex]);
 
   // Crear o recrear observer cuando cambian las configuraciones
   useEffect(() => {
-    console.log('🔄 [Effect] Recreando observer:', {
-      triggerIndex,
-      hasNextPage,
-      isFetchingNextPage,
-      totalItems,
-    });
-
     // Desconectar observer anterior
     if (observerRef.current) {
-      console.log('🧹 [Effect] Desconectando observer anterior');
       observerRef.current.disconnect();
       observerRef.current = null;
     }
 
     // Crear nuevo observer
     if (hasNextPage && !isFetchingNextPage) {
-      console.log('✅ [Effect] Creando nuevo observer');
       observerRef.current = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             const isVisible = (entry.target as HTMLElement).offsetParent !== null;
-
-            console.log('👁️ [Observer Callback] Entry:', {
-              isIntersecting: entry.isIntersecting,
-              intersectionRatio: entry.intersectionRatio,
-              hasNextPage: hasNextPageRef.current,
-              isFetchingNextPage: isFetchingNextPageRef.current,
-              target: entry.target.nodeName,
-              targetVisible: isVisible,
-              currentTriggerIndex: triggerIndex,
-              lastTriggerIndex: lastTriggerIndexRef.current,
-            });
 
             // Solo disparar si:
             // 1. El elemento está intersectando
@@ -155,19 +122,8 @@ export function useInfiniteScroll({
               isVisible &&
               lastTriggerIndexRef.current !== triggerIndex
             ) {
-              console.log('🚀 [Observer Callback] Disparando fetchNextPage!');
               lastTriggerIndexRef.current = triggerIndex;
               fetchNextPageRef.current();
-            } else {
-              console.log('❌ [Observer Callback] No se dispara porque:', {
-                isIntersecting: entry.isIntersecting,
-                hasNextPage: hasNextPageRef.current,
-                isFetchingNextPage: isFetchingNextPageRef.current,
-                isVisible,
-                isNewTrigger: lastTriggerIndexRef.current !== triggerIndex,
-                lastTrigger: lastTriggerIndexRef.current,
-                currentTrigger: triggerIndex,
-              });
             }
           });
         },
@@ -183,7 +139,6 @@ export function useInfiniteScroll({
       if (currentElements) {
         currentElements.forEach((element) => {
           if (observerRef.current) {
-            console.log('🔗 [Effect] Re-observando elemento:', element.nodeName);
             observerRef.current.observe(element);
           }
         });
@@ -192,7 +147,6 @@ export function useInfiniteScroll({
 
     return () => {
       if (observerRef.current) {
-        console.log('🧹 [Effect Cleanup] Desconectando observer');
         observerRef.current.disconnect();
       }
     };
@@ -202,16 +156,7 @@ export function useInfiniteScroll({
    * Callback ref que maneja múltiples elementos por índice
    */
   const setTriggerRef = useCallback((node: HTMLElement | null) => {
-    console.log('📍 [setTriggerRef] Nodo asignado:', {
-      node: node ? 'elemento presente' : 'null',
-      nodeType: node?.nodeName,
-      isVisible: node ? (node as HTMLElement).offsetParent !== null : false,
-      triggerIndex,
-      totalItems,
-    });
-
     if (!node) {
-      console.log('⚠️ [setTriggerRef] Nodo null (desmontaje), no se hace nada');
       return;
     }
 
@@ -224,21 +169,16 @@ export function useInfiniteScroll({
 
     // Agregar elemento al set de este índice
     elementsAtIndex.add(node);
-    console.log('📦 [setTriggerRef] Elementos en índice', triggerIndex, ':', elementsAtIndex.size);
 
     // Si hay observer activo, observar el nuevo elemento
     if (observerRef.current) {
-      console.log('🔗 [setTriggerRef] Observando nuevo elemento');
       observerRef.current.observe(node);
-    } else {
-      console.log('⚠️ [setTriggerRef] No hay observer activo aún');
     }
   }, [triggerIndex, totalItems]);
 
   // Cleanup al desmontar
   useEffect(() => {
     return () => {
-      console.log('🧹 [Cleanup Final] Limpiando todo');
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
@@ -251,26 +191,11 @@ export function useInfiniteScroll({
    * Útil para la carga inicial o cuando hay pocos items
    */
   useEffect(() => {
-    console.log('📏 [Effect Auto-Load] Verificando si necesita auto-cargar:', {
-      root: root ? 'presente' : 'null',
-      scrollHeight: root?.scrollHeight,
-      clientHeight: root?.clientHeight,
-      hasNextPage,
-      isFetchingNextPage,
-      totalItems,
-    });
-
-    if (!root) {
-      console.log('⚠️ [Effect Auto-Load] No hay root, saliendo');
-      return;
-    }
+    if (!root) return;
 
     // Si el contenido no llena el contenedor y hay más páginas, cargar automáticamente
     if (root.scrollHeight <= root.clientHeight && hasNextPage && !isFetchingNextPage) {
-      console.log('🚀 [Effect Auto-Load] Auto-cargando porque el contenido no llena el viewport');
       fetchNextPage();
-    } else {
-      console.log('✅ [Effect Auto-Load] No se necesita auto-cargar');
     }
   }, [totalItems, hasNextPage, isFetchingNextPage, fetchNextPage, root]);
 
