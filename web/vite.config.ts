@@ -82,39 +82,34 @@ export default defineConfig({
         manualChunks: (id) => {
           // Vendor chunks - dependencias externas
           if (id.includes('node_modules')) {
-            // React core
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'react-vendor';
-            }
-
-            // TanStack Query
-            if (id.includes('@tanstack/react-query')) {
-              return 'query-vendor';
-            }
-
-            // Radix UI components
-            if (id.includes('@radix-ui')) {
-              return 'ui-vendor';
-            }
-
-            // Utility libraries
-            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
-              return 'utils-vendor';
-            }
-
-            // Date libraries
-            if (id.includes('dayjs') || id.includes('date-fns')) {
-              return 'date-vendor';
-            }
-
             // PDF generation (lazy-loaded, separate chunk)
+            // DEBE estar primero porque NO depende de React
             if (id.includes('jspdf')) {
               return 'pdf-vendor';
             }
 
-            // Icons
-            if (id.includes('lucide-react')) {
-              return 'icons-vendor';
+            // Date libraries (lazy-loaded con ClockProvider)
+            // Puede estar separado porque no depende de React directamente
+            if (id.includes('dayjs') || id.includes('date-fns')) {
+              return 'date-vendor';
+            }
+
+            // React ecosystem - TODO en el mismo chunk para evitar problemas de dependencias
+            // React + librerías que dependen de React DEBEN estar juntas
+            if (
+              id.includes('react') ||
+              id.includes('react-dom') ||
+              id.includes('react-router') ||
+              id.includes('@tanstack/react-query') ||
+              id.includes('@radix-ui') ||
+              id.includes('lucide-react')
+            ) {
+              return 'vendor';
+            }
+
+            // Utility libraries (no dependen de React)
+            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
+              return 'vendor';
             }
 
             // Otras dependencias

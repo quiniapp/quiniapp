@@ -15,12 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bundle adicional post-auth:** ~90 KB → **~30 KB gzip** (Layout + providers)
 - **Mejora bundle inicial:** **72% reducción** (1.1MB → 320KB gzip) ✅
 
-#### Vendor Chunks (Code Splitting)
-- `react-vendor`: 376 KB → 119 KB gzip (React + ReactDOM + Router)
-- `vendor`: 564 KB → 161 KB gzip (Radix UI, Zustand, otras deps)
+#### Vendor Chunks (Code Splitting) - Updated 2025-12-04
+- `vendor`: 967 KB → 288 KB gzip (React ecosystem: React + Radix UI + TanStack Query + lucide-react + utilities)
 - `pdf-vendor`: 368 KB → 118 KB gzip (jsPDF, lazy-loaded) 🚀
 - `date-vendor`: 46 KB → 14 KB gzip (dayjs, lazy-loaded) 🚀
-- `utils-vendor`: 26 KB → 8 KB gzip (clsx, tailwind-merge)
+
+**Note:** Consolidated React dependencies into single vendor chunk to fix loading order issues (see Fixed section)
 
 #### Feature Chunks (Lazy-Loaded)
 - `feature-make-plays`: 55 KB → 16 KB gzip
@@ -62,7 +62,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - ClockProvider con intervalos no se ejecuta en login
     - Reducción de overhead de React context en login page
 
-### Changed - 2025-12-04
+### Fixed - 2025-12-04
+
+#### Critical Bug Fix - Vendor Chunk Dependencies
+- **vite.config.ts**: Fixed React dependency order causing production crashes
+  - Path: `web/vite.config.ts`
+  - **Problem:**
+    - Separated React into `react-vendor` chunk
+    - Radix UI, TanStack Query, lucide-react in separate chunks
+    - These libraries depend on React but could load before `react-vendor`
+    - Caused error: `Cannot read properties of undefined (reading 'useLayoutEffect')`
+  - **Solution:**
+    - Consolidated React ecosystem into single `vendor` chunk
+    - React + all React-dependent libraries now load together
+    - Ensures proper dependency order
+  - **New chunk structure:**
+    - `vendor`: 967 KB → 288 KB gzip (React + Radix UI + TanStack Query + lucide-react + utilities)
+    - `pdf-vendor`: 368 KB → 118 KB gzip (lazy-loaded, no React dependency)
+    - `date-vendor`: 46 KB → 14 KB gzip (lazy-loaded with ClockProvider)
+  - **Why this is better:**
+    - Eliminates chunk loading order issues
+    - Better browser caching (single vendor chunk)
+    - Still maintains lazy loading for heavy deps (PDF, dates)
 
 #### Bug Fix - Login Page useClock Dependency
 - **login/index.tsx**: Removed useClock dependency from login page
