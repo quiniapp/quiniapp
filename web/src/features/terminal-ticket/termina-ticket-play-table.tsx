@@ -4,10 +4,11 @@ import {
 } from '@/components/ui/table';
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { IBetEntityFront } from '@helper/types/bet.type';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Props {
   ticket_number?: string;
@@ -37,7 +38,7 @@ const TerminalTicketPlayTable = ({
   const {
     data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
   } = useInfiniteBetsByTicketNumber({
-    date, ticket_number, limit: 100,
+    date, ticket_number, limit: 150,
   });
 
   const bets = useMemo(() => {
@@ -45,31 +46,17 @@ const TerminalTicketPlayTable = ({
     return dedupe(flat, (b: IBetEntityFront) => String(b.bet_id));
   }, [data]);
 
-
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const root = rootRef.current;
-    const target = sentinelRef.current;
-    if (!root || !target) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage?.();
-      },
-      { root, rootMargin: '0px 0px 800px 0px', threshold: 0 }
-    );
-    io.observe(target);
-    return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    if (root.scrollHeight <= root.clientHeight && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage?.();
-    }
-  }, [bets.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
+  const { setTriggerRef, triggerIndex } = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    root: rootRef.current,
+    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
+    totalItems: bets.length,
+  });
 
   if (isLoading) return <SkeletonList />;
 
@@ -92,8 +79,11 @@ const TerminalTicketPlayTable = ({
         <div ref={rootRef} className={`overflow-y-auto ${maxBodyHeightClass}`}>
           <Table className="table-fixed">
             <TableBody>
-              {bets.map((bet) => (
-                <TableRow key={String(bet.bet_id)}>
+              {bets.map((bet, index) => (
+                <TableRow
+                  key={String(bet.bet_id)}
+                  ref={index === triggerIndex ? setTriggerRef : undefined}
+                >
                   <TableCell className="truncate">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
                   <TableCell className="whitespace-nowrap">${bet.amount}</TableCell>
                   <TableCell className="truncate">{bet.lottery.name}</TableCell>
@@ -124,8 +114,6 @@ const TerminalTicketPlayTable = ({
               )}
             </TableBody>
           </Table>
-
-          {hasNextPage && !isFetchingNextPage && <div ref={sentinelRef} className="h-px w-full" />}
         </div>
       </div>
     </div>

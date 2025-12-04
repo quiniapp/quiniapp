@@ -30,7 +30,7 @@ export async function fetchPaginatedBetsByTicketNumber(
     quatern,
     tern,
     ticket_number,
-    limit = 100,
+    limit = 150,
   } = props;
 
   if (!date || !ticket_number) {

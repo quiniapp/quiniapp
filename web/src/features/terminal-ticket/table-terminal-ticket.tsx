@@ -4,10 +4,11 @@ import {
 } from '@/components/ui/table';
 import { useSearchParams } from 'react-router-dom';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteTickets } from '@/hooks/fetchs/tickets/useInfiniteTickets';
 import { TicketTableHeader, TicketTableRow } from './ticket-table-row';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface TableTerminalTicketProps {
   user_id?: string;
@@ -36,7 +37,7 @@ const TableTerminalTicket = ({
   const {
     data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
   } = useInfiniteTickets({
-    user_id, date, winner, paid, not_paid, limit: 100,
+    user_id, date, winner, paid, not_paid, limit: 150,
   });
 
   // Flatten + dedupe por ticket_id
@@ -45,36 +46,18 @@ const TableTerminalTicket = ({
     return dedupe(flat, (t: ITicketEntityFront) => String(t.ticket_id));
   }, [data]);
 
-  // Contenedor que scrollea (root) y sentinel al final
+  // Contenedor que scrollea
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // IO con root y prefetch 800px antes del fondo
-  useEffect(() => {
-    const root = rootRef.current;
-    const target = sentinelRef.current;
-    if (!root || !target) return;
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage?.();
-        }
-      },
-      { root, rootMargin: '0px 0px 800px 0px', threshold: 0 }
-    );
-    io.observe(target);
-    return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Si no llena el contenedor, traigo otra página hasta llenar (o no haya más)
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    if (root.scrollHeight <= root.clientHeight && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage?.();
-    }
-  }, [tickets.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
+  const { setTriggerRef, triggerIndex } = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    root: rootRef.current,
+    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
+    totalItems: tickets.length,
+  });
 
   const handleClick = (ticket_number: string) => {
     if (selected === ticket_number) {
@@ -110,9 +93,10 @@ const TableTerminalTicket = ({
         <div ref={rootRef} className="overflow-y-auto h-[200px] 1440:h-[300px]">
           <Table className="min-w-full table-fixed">
             <TableBody>
-              {tickets.map((item) => (
+              {tickets.map((item, index) => (
                 <TicketTableRow
                   key={String(item.ticket_id)}
+                  ref={index === triggerIndex ? setTriggerRef : undefined}
                   ticket={item}
                   isSelected={selected === item.ticket_number}
                   onClick={handleClick}
@@ -141,9 +125,6 @@ const TableTerminalTicket = ({
               )}
             </TableBody>
           </Table>
-
-          {/* sentinel */}
-          {hasNextPage && !isFetchingNextPage && <div ref={sentinelRef} className="h-px w-full" />}
         </div>
       </div>
 

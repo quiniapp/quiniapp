@@ -15,8 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePlatform } from '@/hooks/use-platform';
 import { ROUTES } from '@/types/routes.type';
-import { useClock } from '@/providers/ClockProvider';
-import { useAuth } from '@/contexts/AuthContext'; // ⬅️ nuevo
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
   username: string;
@@ -29,10 +28,9 @@ const validationSchemaLogin = z.object({
 });
 
 const LoginContent = () => {
-  const { login, isAuth, loading } = useAuth(); // ⬅️ usamos el provider
+  const { login, isAuth, loading } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { refresh } = useClock();
   const platform = usePlatform();
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -49,12 +47,12 @@ const LoginContent = () => {
     }
   };
 
+  // Redirigir si el usuario ya está autenticado
   useEffect(() => {
     if (isAuth) {
-      void refresh();
       navigate(ROUTES.MAKE_PLAYS, { replace: true });
     }
-  }, [isAuth, navigate, refresh]);
+  }, [isAuth, navigate]);
 
   return (
     <Flex className="h-screen flex-col md:flex-row">
