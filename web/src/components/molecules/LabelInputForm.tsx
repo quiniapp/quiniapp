@@ -3,6 +3,7 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import * as React from 'react';
 import { useFormContext, FieldValues, Path } from 'react-hook-form';
+import { ErrorMessage } from '../atoms/ErrorMessage';
 
 type BaseProps<T extends FieldValues> = {
   name: Path<T>;
@@ -53,9 +54,9 @@ function LabelInputForm<T extends FieldValues>({
 
       {/* Error inline (opcional) */}
       {errors?.[name as string] && (
-        <span className="text-red-500 text-xs">
+        <ErrorMessage size="xs">
           {(errors[name as keyof typeof errors]?.message as string) ?? 'Inválido'}
-        </span>
+        </ErrorMessage>
       )}
     </Flex>
   );

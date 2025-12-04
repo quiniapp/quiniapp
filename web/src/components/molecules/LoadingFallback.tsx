@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { Text } from '../atoms/Text';
 
 interface LoadingFallbackProps {
   message?: string;
@@ -17,7 +18,9 @@ export function LoadingFallback({
     <div className={containerClass}>
       <div className="flex flex-col items-center gap-2">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="text-sm text-muted-foreground">{message}</span>
+        <Text size="sm" color="muted">
+          {message}
+        </Text>
       </div>
     </div>
   );

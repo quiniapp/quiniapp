@@ -18,6 +18,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
 import { ResultsProvider } from './provider/ResultsProvider';
 import { useResults } from './context/ResultsContext';
+import { LoadingState } from '@/components/molecules/LoadingState';
 
 const ResultsContent = () => {
   const { role } = useAuth();
@@ -143,7 +144,7 @@ const ResultsContent = () => {
           </FlexCol>
         </FlexCol>
       </FlexCol>
-      <Suspense fallback={<div>Cargando...</div>}>
+      <Suspense fallback={<LoadingState />}>
         <GenerateWinnersModal
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}

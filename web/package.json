@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": " vite build",
     "preview": "vite preview",
+    "build:preview": "npm run build && npm run preview",
+    "build:analyze": "npm run build && start dist/stats.html",
     "postinstall": "patch-package",
     "prepare": "test -z \"$CI\" && husky install || echo 'Skipping husky install in CI'",
     "format": "prettier --write .",

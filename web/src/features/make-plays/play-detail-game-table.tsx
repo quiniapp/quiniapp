@@ -48,7 +48,7 @@ const PlayDetailGameTable = () => {
       {/* Mobile: Cards */}
       <FlexCol className="md:hidden justify-center space-y-2 p-2">
         {bets.length === 0 ? (
-          <NoPlaysFound />
+          <NoPlaysFoundMobile />
         ) : (
           bets.map((bet, index) => (
             <BetCard
@@ -77,7 +77,7 @@ const PlayDetailGameTable = () => {
 
           <TableBody>
             {bets.length === 0 ? (
-              <NoPlaysFound />
+              <NoPlaysFoundTable />
             ) : (
               bets.map((bet, index) => {
                 return (
@@ -204,9 +204,22 @@ const BetCard = ({
 
 export default PlayDetailGameTable;
 
-const NoPlaysFound = () => (
-  <TableRow className='w-full'>
-    <TableCell colSpan={5} className="flex justify-center md:table-cell text-center !py-[36px]">
+// Version para mobile (sin TableRow)
+const NoPlaysFoundMobile = () => (
+  <div className="w-full py-12 flex justify-center">
+    <FlexCol className="items-center justify-center gap-3">
+      <Typography variant={'large'}>No se encontraron jugadas</Typography>
+      <Typography variant={'small'} className={'font-light text-muted-foreground'}>
+        Por favor cargue nuevas jugadas
+      </Typography>
+    </FlexCol>
+  </div>
+);
+
+// Version para desktop/table (con TableRow)
+const NoPlaysFoundTable = () => (
+  <TableRow>
+    <TableCell colSpan={5} className="text-center py-12">
       <FlexCol className="items-center justify-center gap-3">
         <Typography variant={'large'}>No se encontraron jugadas</Typography>
         <Typography variant={'small'} className={'font-light text-muted-foreground'}>

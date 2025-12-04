@@ -9,6 +9,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { CASHIER_TYPE } from '@helper/types/user.type';
 import { Button } from '../ui/button';
 import { Typography } from '../typography';
+import { ErrorMessage } from '@/components/atoms/ErrorMessage';
 interface UserFormProps<T extends FieldValues> {
   methods: UseFormReturn;
   onSubmit: SubmitHandler<T>;
@@ -51,7 +52,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                           }}
                           {...rest}
                         />
-                        {errors.number && <p className="text-red-600">{errors.number.message}</p>}
+                        {errors.number?.message && (
+                          <ErrorMessage>{errors.number.message}</ErrorMessage>
+                        )}
                       </>
                     )}
                   />
@@ -73,7 +76,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                       </Select>
                     )}
                   />
-                  {errors.user_type && <p className="text-red-600">{errors.user_type.message}</p>}
+                  {errors.user_type?.message && (
+                    <ErrorMessage>{errors.user_type.message}</ErrorMessage>
+                  )}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="cashier_type">Tipo de pasador</Label>
@@ -92,8 +97,8 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                       </Select>
                     )}
                   />
-                  {errors.cashier_type && (
-                    <p className="text-red-600">{errors.cashier_type.message}</p>
+                  {errors.cashier_type?.message && (
+                    <ErrorMessage>{errors.cashier_type.message}</ErrorMessage>
                   )}
                 </FlexCol>
               </Box>
@@ -142,7 +147,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'name'} {...field} />}
                   />
-                  {errors.name && <p className="text-red-600">{errors.name.message}</p>}
+                  {errors.name?.message && (
+                    <ErrorMessage>{errors.name.message}</ErrorMessage>
+                  )}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="last_name">Apellido</Label>
@@ -151,7 +158,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'last_name'} {...field} />}
                   />
-                  {errors.last_name && <p className="text-red-600">{errors.last_name.message}</p>}
+                  {errors.last_name?.message && (
+                    <ErrorMessage>{errors.last_name.message}</ErrorMessage>
+                  )}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="address">Dirección</Label>
@@ -160,7 +169,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'address'} {...field} />}
                   />
-                  {errors.address && <p className="text-red-600">{errors.address.message}</p>}
+                  {errors.address?.message && (
+                    <ErrorMessage>{errors.address.message}</ErrorMessage>
+                  )}
                 </FlexCol>
               </Flex>
 
@@ -172,7 +183,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'phone'} type={'tel'} {...field} />}
                   />
-                  {errors.phone && <p className="text-red-600">{errors.phone.message}</p>}
+                  {errors.phone?.message && (
+                    <ErrorMessage>{errors.phone.message}</ErrorMessage>
+                  )}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="email">Email</Label>
@@ -181,7 +194,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'email'} type={'email'} {...field} />}
                   />
-                  {errors.email && <p className="text-red-600">{errors.email.message}</p>}
+                  {errors.email?.message && (
+                    <ErrorMessage>{errors.email.message}</ErrorMessage>
+                  )}
                 </FlexCol>
               </Flex>
             </FlexCol>
@@ -198,7 +213,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'username'} {...field} />}
                   />
-                  {errors.username && <p className="text-red-600">{errors.username.message}</p>}
+                  {errors.username?.message && (
+                    <ErrorMessage>{errors.username.message}</ErrorMessage>
+                  )}
                 </FlexCol>
                 <FlexCol className={'w-full space-y-4'}>
                   <Label htmlFor="password">Contraseña</Label>
@@ -207,7 +224,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
                     control={control}
                     render={({ field }) => <Input id={'password'} type={'text'} {...field} />}
                   />
-                  {errors.password && <p className="text-red-600">{errors.password.message}</p>}
+                  {errors.password?.message && (
+                    <ErrorMessage>{errors.password.message}</ErrorMessage>
+                  )}
                 </FlexCol>
               </Flex>
             </fieldset>
@@ -258,7 +277,9 @@ const InputForm = ({onChange , onBlur, onClick , value, }) => {
         }}
         {...rest}
       />
-      {errors.number && <p className="text-red-600">{errors.number.message}</p>}
+      {errors.number?.message && (
+        <ErrorMessage>{errors.number.message}</ErrorMessage>
+      )}
     </Fragment>
   );
 };
