@@ -9,7 +9,8 @@ import {
 } from '../ui/table';
 import SkeletonList from '../skeletons/skeleton-list';
 import { Flex, FlexCol } from '../flex';
-import { Typography } from '../typography';
+import { Text } from '../atoms/Text';
+import { Caption } from '../atoms/Caption';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { IconButton } from '../button/IconButton';
 import Modal from './custom-modal';
@@ -148,10 +149,10 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
               <TableRow>
                 <TableCell colSpan={14} className="text-center">
                   <FlexCol className="w-full items-center justify-center gap-3 py-8">
-                    <Typography variant="large">No se encontraron Datos</Typography>
-                    <Typography variant="small" className="font-light text-muted-foreground">
+                    <Text size="lg" weight="semibold">No se encontraron Datos</Text>
+                    <Caption size="sm" color="muted" className="font-light">
                       Por favor realice una nueva búsqueda
-                    </Typography>
+                    </Caption>
                   </FlexCol>
                 </TableCell>
               </TableRow>

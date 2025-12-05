@@ -1,5 +1,5 @@
 import { Flex } from '@/components/flex';
-import { Typography } from '@/components/typography';
+import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,7 +17,7 @@ const HeaderUserList = () => {
   return (
     <Flex className={'items-center gap-4'}>
       <Flex className={'gap-4 items-center'}>
-        <Typography variant={'small'}>Tipo de usuario </Typography>
+        <Text size="sm" weight="medium">Tipo de usuario</Text>
         <Select defaultValue="TODOS">
           <SelectTrigger className="w-[200px] bg-dark-light border-dark-lighter">
             <SelectValue placeholder="Tipo de Usuario" />

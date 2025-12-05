@@ -11,7 +11,7 @@ import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 import { IconButton } from '../button/IconButton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import SkeletonList from '../skeletons/skeleton-list';
-import { Typography } from '../typography';
+import { Text } from '../atoms/Text';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -190,7 +190,7 @@ const UserCurrentAccountModal = ({
                     <TableRow>
                       <TableCell colSpan={14} className="text-center">
                         <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">No se encontraron tickets</Typography>
+                          <Text size="lg" weight="semibold">No se encontraron tickets</Text>
                         </FlexCol>
                       </TableCell>
                     </TableRow>
@@ -232,9 +232,9 @@ const UserCurrentAccountModal = ({
                     <TableRow>
                       <TableCell colSpan={14} className="text-center">
                         <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">
+                          <Text size="lg" weight="semibold">
                             No se encontraron jugadas ganadoras
-                          </Typography>
+                          </Text>
                         </FlexCol>
                       </TableCell>
                     </TableRow>
