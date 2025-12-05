@@ -78,7 +78,7 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label className="text-white">Nombre</Label>
+                      <Label>Nombre</Label>
                       <Input {...field} type="text" placeholder="Nombre de usuario" autoComplete="username" />
                       {errors.username?.message && (
                         <ErrorMessage>{errors.username.message}</ErrorMessage>
@@ -91,7 +91,7 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label className="text-white">Contraseña</Label>
+                      <Label>Contraseña</Label>
                       <Input {...field} type="password" placeholder="******" autoComplete="current-password" />
                       {errors.password?.message && (
                         <ErrorMessage>{errors.password.message}</ErrorMessage>

@@ -148,12 +148,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Maintains accessibility standards
     - Reduces code duplication
 
+#### Typography Uniformization - Component Migrations
+- **Migrated 12 files** from Typography/TypographyMuted to new Text/Heading/Caption atoms
+  - **Files migrated:**
+    - `web/src/features/user-list/user-list-form.tsx` (2 Typography → Text)
+    - `web/src/components/form/UserForm.tsx` (2 Typography → Text)
+    - `web/src/features/make-plays/play-detail-game-table.tsx` (8 Typography → Text/Caption)
+    - `web/src/components/header-title-section/index.tsx` (Complete refactor: variant → size/weight props)
+    - `web/src/components/modals/UserCurrentAccountModal.tsx` (2 Typography → Text)
+    - `web/src/components/modals/GenerateLiquitationModal.tsx` (2 Typography → Text/Caption)
+    - `web/src/features/terminal-ticket/form-header-filter.tsx` (1 TypographyMuted → Text)
+    - `web/src/features/current-account/CurrentAcoountByUserTable.tsx` (6 Typography → Text)
+    - `web/src/features/current-account/current-account-table/index.tsx` (3 Typography → Text/Caption)
+    - `web/src/features/plays-and-hits/play-and-hits-select.tsx` (4 TypographyMuted → Text)
+    - `web/src/components/modals/repeat-ticket-modal.tsx` (1 Typography → Text)
+    - `web/src/features/upcoming-lotteries/index.tsx` (1 Typography → Text, 2 HeaderTitleSection variant → size)
+    - `web/src/features/user-list/header-user-list.tsx` (1 Typography → Text)
+  - **Total:** ~35 Typography/TypographyMuted instances migrated to atomic components
+  - **Pattern migration:**
+    - `Typography variant="small"` → `<Text size="sm" weight="medium">`
+    - `Typography variant="large"` → `<Text size="lg" weight="semibold">`
+    - `Typography variant="small" className="text-muted-foreground"` → `<Caption>`
+    - `TypographyMuted label="text"` → `<Text size="sm">text</Text>`
+    - HeaderTitleSection: `variant` prop → `size` and `weight` props
+  - **Benefits:**
+    - Consistent typography API across the entire application
+    - Better TypeScript intellisense and type safety
+    - Unified styling with CVA variants
+    - Easier to maintain, extend, and theme
+    - Eliminated legacy Typography wrapper components
+
+#### Color System Enhancement
+- **Added missing colors** to tailwind.config.ts for consistency
+  - `success`: HSL(142 76% 36%) - emerald green for success states
+  - `warning`: HSL(38 92% 50%) - amber for warnings
+  - `cyan`: HSL(180 100% 50%) - cyan for highlights (8+ uses in app)
+  - `blue-light-80`: HSL(220 70% 80% / 0.8) - light blue for labels (4+ uses)
+- **Updated atom components** to use new color system
+  - Text: Uses success, warning from config
+  - Heading: Added warning color variant
+  - Caption: Added label variant with blue-light-80
+- **All colors now defined in tailwind.config** for better maintainability
+
+#### Form Controls Typography Standardization
+- **Updated Input component** (`web/src/components/ui/input.tsx`)
+  - **Text color fixed:** Changed from `text-primary` (azul/blue) to `text-white`
+  - **Placeholder color:** Changed from `text-primary-ligth` to `text-muted-foreground`
+  - **Selection color:** `selection:text-white` for better contrast
+  - **Typography:** `text-sm font-normal` (consistent across all breakpoints)
+  - Uses tailwind.config fontSize system: 0.875rem (14px) with lineHeight 1.25rem
+  - Removed responsive text sizing (`md:text-sm`) for consistency
+  - Letter-spacing: 0.01em (from tailwind.config)
+  - **Fixed:** Input text now visible with proper contrast against dark backgrounds
+
+- **Updated Label component** (`web/src/components/ui/label.tsx`)
+  - **Default color:** Added `text-white` to base styles
+  - All labels now white by default (no need for `className="text-white"`)
+  - Typography: `text-sm font-medium` with proper letter-spacing
+  - Consistent styling across forms, modals, and pages
+
+- **Updated Select components** (`web/src/components/ui/select.tsx`)
+  - **SelectTrigger**: `text-sm font-normal` for consistent sizing
+  - **SelectItem**: `text-sm font-normal` for dropdown options
+  - **SelectLabel**: `text-xs font-medium` for section headers
+  - All select components now align with typography system
+
+- **Cleaned up inline styles across 8+ files**
+  - Removed redundant `className="text-white"` from Labels:
+    - `login/index.tsx` (2 labels)
+    - `CurrentAcoountByUserTable.tsx` (1 label)
+    - `DeleteUsersModal.tsx` (3 labels)
+    - `ModalCreateBetsUnavailable.tsx` (1 label)
+    - `ResetPartialModal.tsx` (1 label)
+    - `LabelInputForm.tsx` (1 label)
+  - Fixed incorrect imports: Changed `@radix-ui/react-label` → `../ui/label`
+    - `ModalCreateBetsUnavailable.tsx`
+    - `ResetPartialModal.tsx`
+  - Removed custom text sizing from `header-play-detail.tsx` SelectTrigger
+
+- **Benefits:**
+  - ✅ Input text now readable (white instead of blue)
+  - ✅ Proper contrast against dark backgrounds
+  - ✅ Labels white by default (DRY principle)
+  - ✅ Consistent user experience across all forms
+  - ✅ Easier to maintain form styling globally
+  - ✅ Better readability with optimized colors
+  - ✅ Reduced CSS specificity conflicts
+  - ✅ Aligned with accessibility best practices
+
 #### Production Build Validation - 2025-12-04
-- **Build Status**: ✅ Successful
+- **Build Status**: ✅ Successful (Latest: Form controls colors & typography fixed)
   - Zero compilation errors
   - Zero TypeScript errors
   - All new components compiled correctly
-  - All migrations validated
+  - All 35+ Typography/TypographyMuted migrations validated
+  - Input text color fixed (blue → white)
+  - Label default color set to white
+  - Select typography standardized
+  - New colors working correctly
+  - HeaderTitleSection refactored successfully
+  - 8+ files cleaned of redundant text-white classes
 - **Bundle Analysis:**
   - Total bundle: ~550 KB gzip
   - Login bundle: ~320 KB gzip (72% reduction from original)
@@ -161,12 +255,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PDF vendor (lazy): 368 KB → 118 KB gzip
   - Date vendor (lazy): 46 KB → 14 KB gzip
   - CSS: 65 KB → 12 KB gzip
+  - Feature chunks remain optimal (make-plays: 56KB → 16KB gzip)
 - **Preview Testing**: ✅ Passed
   - No console errors
   - No DOM nesting warnings
   - Login flow working correctly
   - Error messages displaying with ErrorMessage component
   - Loading states displaying with LoadingState component
+  - Typography migrations working correctly across all features
+  - Empty states displaying correctly in tables
+  - Form labels using new Text component
+  - Modal headers using new Text component
+  - Input fields have consistent text-sm typography with white text
+  - Input text clearly visible (fixed blue text issue)
+  - Labels display white by default
+  - Select dropdowns have consistent text-sm typography
+  - Colors displaying with proper contrast
   - Lazy loading functioning properly
   - All forms validated successfully
 

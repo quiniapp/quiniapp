@@ -129,7 +129,7 @@ const ResultsContent = () => {
                   icon={<PencilIcon />}
                   label="Editar"
                   onClick={() => setOnEdit(!onEdit)}
-                  className="bg-cyan hover:bg-[var(--bg-card)] text-dark font-medium"
+                  className="hover:bg-[var(--bg-card)] text-dark font-medium"
                 />
                 <IconButton
                   variant="default"

@@ -4,7 +4,6 @@ import { Controller, useForm, Resolver } from 'react-hook-form';
 
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
-import { Typography } from '@/components/typography';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +25,7 @@ import { toast } from 'react-hot-toast';
 import { useMemo } from 'react';
 import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type';
 import { ErrorMessage } from '@/components/atoms/ErrorMessage';
+import { Text } from '@/components/atoms/Text';
 
 export default function UserListAddNewUserForm() {
   const {
@@ -323,9 +323,9 @@ export default function UserListAddNewUserForm() {
         <Button type="submit" className={'hover:cursor-pointer hover:bg-[--primary-800]'}>
           <Flex className={'items-center gap-4'}>
             <SaveIcon />
-            <Typography variant={'small'}>
+            <Text size="sm" weight="medium">
               {isPending ? 'Guardando' : 'Guardar Nuevo Usuario'}
-            </Typography>
+            </Text>
           </Flex>
         </Button>
         <Button
@@ -337,7 +337,7 @@ export default function UserListAddNewUserForm() {
         >
           <Flex className={'items-center gap-4'}>
             <BanIcon />
-            <Typography variant={'small'}>Borrar</Typography>
+            <Text size="sm" weight="medium">Borrar</Text>
           </Flex>
         </Button>
       </Box>

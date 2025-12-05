@@ -30,8 +30,8 @@ const textVariants = cva('', {
       muted: 'text-muted-foreground',
       white: 'text-white',
       error: 'text-destructive',
-      success: 'text-emerald-600',
-      warning: 'text-yellow-500',
+      success: 'text-success',
+      warning: 'text-warning',
     },
     align: {
       left: 'text-left',

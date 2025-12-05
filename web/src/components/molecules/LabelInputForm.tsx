@@ -32,7 +32,7 @@ function LabelInputForm<T extends FieldValues>({
 
   return (
     <Flex className="p-1 gap-1 sm:gap-4 items-center">
-      <Label htmlFor={id} className="text-white text-center text-nowrap text-xs sm:text-sm">
+      <Label htmlFor={id} className="text-center text-nowrap text-xs sm:text-sm">
         {label}
       </Label>
 

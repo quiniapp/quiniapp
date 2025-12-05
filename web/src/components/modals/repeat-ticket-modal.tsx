@@ -1,7 +1,7 @@
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
 import Modal from '@/components/modals/custom-modal.tsx';
-import { Typography } from '@/components/typography';
+import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { QuinielaFieldset } from '@/features/make-plays/quiniela-fieldset';
@@ -225,7 +225,7 @@ useEffect(() => {
     >
       <Box className={'grid grid-cols-[1fr_3fr_1fr_5fr] items-center gap-1 sm:gap-3'}>
         <Flex className={'justify-end'}>
-          <Typography variant={'small'}> Ticket N°: </Typography>
+          <Text size="sm" weight="medium">Ticket N°:</Text>
         </Flex>
         <Input
           type={'number'}

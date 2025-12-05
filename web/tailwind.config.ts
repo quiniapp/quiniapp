@@ -47,6 +47,22 @@ const config: Config = {
           foreground: 'var(--card-foreground)',
           bg: 'var(--bg-card)',
         },
+        success: {
+          DEFAULT: 'hsl(142 76% 36%)',
+          foreground: 'hsl(142 76% 96%)',
+        },
+        warning: {
+          DEFAULT: 'hsl(38 92% 50%)',
+          foreground: 'hsl(38 92% 10%)',
+        },
+        cyan: {
+          DEFAULT: 'hsl(180 100% 50%)',
+          foreground: 'hsl(180 100% 10%)',
+        },
+        'blue-light': {
+          DEFAULT: 'hsl(220 70% 80%)',
+          '80': 'hsl(220 70% 80% / 0.8)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -1,5 +1,6 @@
 import { Flex, FlexCol } from '@/components/flex';
-import { Typography } from '@/components/typography';
+import { Caption } from '@/components/atoms/Caption';
+import { Text } from '@/components/atoms/Text';
 import {
   Table,
   TableBody,
@@ -158,20 +159,20 @@ const BetCard = ({
     >
       <Flex className="justify-between items-start mb-1">
         <div>
-          <Typography variant="small" className="text-muted-foreground text-xs">
+          <Caption size="xs">
             Jugada
-          </Typography>
-          <Typography variant="large" className="font-semibold text-base">
+          </Caption>
+          <Text size="base" weight="semibold">
             {bet.number}
-          </Typography>
+          </Text>
         </div>
         <div className="text-right">
-          <Typography variant="small" className="text-muted-foreground text-xs">
+          <Caption size="xs">
             Monto
-          </Typography>
-          <Typography variant="large" className="font-semibold text-base text-primary">
+          </Caption>
+          <Text size="base" weight="semibold" color="primary">
             ${bet.amount}
-          </Typography>
+          </Text>
         </div>
       </Flex>
 
@@ -189,14 +190,14 @@ const BetCard = ({
       </div>
 
       <div className="mt-1 pt-1 border-t border-border">
-        <Typography variant="small" className="text-muted-foreground text-xs mb-1">
+        <Caption size="xs" className="mb-1">
           Turnos/Quinielas
-        </Typography>
-        <Typography variant="small" className="text-xs line-clamp-7">
+        </Caption>
+        <Text size="xs" className="line-clamp-7">
           {bet.scheduleLottery.map((lotSched) => {
             return `${lotSched.schedule.name}-[${lotSched.lotteries.map((lot) => lot.name).join(', ')}] `;
           })}
-        </Typography>
+        </Text>
       </div>
     </div>
   );
@@ -208,10 +209,10 @@ export default PlayDetailGameTable;
 const NoPlaysFoundMobile = () => (
   <div className="w-full py-12 flex justify-center">
     <FlexCol className="items-center justify-center gap-3">
-      <Typography variant={'large'}>No se encontraron jugadas</Typography>
-      <Typography variant={'small'} className={'font-light text-muted-foreground'}>
+      <Text size="lg" weight="semibold">No se encontraron jugadas</Text>
+      <Caption size='sm'  weight="light">
         Por favor cargue nuevas jugadas
-      </Typography>
+      </Caption>
     </FlexCol>
   </div>
 );
@@ -221,10 +222,10 @@ const NoPlaysFoundTable = () => (
   <TableRow>
     <TableCell colSpan={5} className="text-center py-12">
       <FlexCol className="items-center justify-center gap-3">
-        <Typography variant={'large'}>No se encontraron jugadas</Typography>
-        <Typography variant={'small'} className={'font-light text-muted-foreground'}>
+        <Text size="lg" weight="semibold">No se encontraron jugadas</Text>
+        <Caption size='sm' weight="light">
           Por favor cargue nuevas jugadas
-        </Typography>
+        </Caption>
       </FlexCol>
     </TableCell>
   </TableRow>

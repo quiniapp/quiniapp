@@ -27,7 +27,8 @@ const headingVariants = cva('font-bold', {
       muted: 'text-muted-foreground',
       white: 'text-white',
       error: 'text-destructive',
-      success: 'text-emerald-600',
+      success: 'text-success',
+      warning: 'text-warning',
     },
     align: {
       left: 'text-left',

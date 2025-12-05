@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { USER_TYPE } from '@helper/types/user.type';
 import { CASHIER_TYPE } from '@helper/types/user.type';
 import { Button } from '../ui/button';
-import { Typography } from '../typography';
 import { ErrorMessage } from '@/components/atoms/ErrorMessage';
+import { Text } from '../atoms/Text';
 interface UserFormProps<T extends FieldValues> {
   methods: UseFormReturn;
   onSubmit: SubmitHandler<T>;
@@ -238,9 +238,9 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
         <Button type="submit" className={'hover:cursor-pointer hover:bg-[--primary-800]'}>
           <Flex className={'items-center gap-4'}>
             <SaveIcon />
-            <Typography variant={'small'}>
+            <Text size="sm" weight="medium">
               {isPending ? 'Guardando' : 'Guardar Nuevo Usuario'}
-            </Typography>
+            </Text>
           </Flex>
         </Button>
         <Button
@@ -252,7 +252,7 @@ export const UserForm = <T extends FieldValues,>({ methods, onSubmit, loading, o
         >
           <Flex className={'items-center gap-4'}>
             <BanIcon />
-            <Typography variant={'small'}>Borrar</Typography>
+            <Text size="sm" weight="medium">Borrar</Text>
           </Flex>
         </Button>
       </Box>
