@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-05
+
+#### Make Plays - Checkbox Components Refactoring
+- **Lotteries & Schedules Checkbox List Components**: Separated mobile and desktop implementations for better maintainability
+
+  - **Lotteries Components:**
+    - **lotteries-checkbox-list-desktop.tsx**: Created dedicated desktop component
+      - Path: `web/src/features/make-plays/lotteries-checkbox-list-desktop.tsx`
+      - Uses CheckboxSection wrapper with grid layout
+      - Maintains existing desktop functionality with grid layout
+    - **lotteries-checkbox-list-mobile.tsx**: Created dedicated mobile component
+      - Path: `web/src/features/make-plays/lotteries-checkbox-list-mobile.tsx`
+      - **No CheckboxSection** - saves vertical space on mobile
+      - Popover-based selection with Command component
+      - Multi-select functionality with "Limpiar" and "Listo" buttons
+    - **lotteries-checkbox-list.tsx**: Refactored as responsive wrapper
+      - Path: `web/src/features/make-plays/lotteries-checkbox-list.tsx`
+      - Renders desktop version on `sm` breakpoint and above
+      - Renders mobile version below `sm` breakpoint
+
+  - **Schedules Components:**
+    - **schedules-checkbox-list-desktop.tsx**: Created dedicated desktop component
+      - Path: `web/src/features/make-plays/schedules-checkbox-list-desktop.tsx`
+      - Uses CheckboxSection wrapper with grid layout
+      - Maintains F-key shortcuts (F1-F10) for quick selection
+      - Clock-based validation (isScheduleAfter, isLessThanTenMinutes)
+    - **schedules-checkbox-list-mobile.tsx**: Created dedicated mobile component
+      - Path: `web/src/features/make-plays/schedules-checkbox-list-mobile.tsx`
+      - **No CheckboxSection** - saves vertical space on mobile
+      - Popover-based selection with Command component
+      - Schedule validation and disabled state for closed schedules
+      - Multi-select functionality with "Limpiar" and "Listo" buttons
+    - **schedules-checkbox-list.tsx**: Refactored as responsive wrapper
+      - Path: `web/src/features/make-plays/schedules-checkbox-list.tsx`
+      - Renders desktop version on `sm` breakpoint and above
+      - Renders mobile version below `sm` breakpoint
+
+  - **Benefits:**
+    - Cleaner separation of concerns between mobile and desktop
+    - Easier to maintain and update each version independently
+    - Mobile versions save vertical space without CheckboxSection wrapper
+    - Desktop versions maintain familiar grid layout with full features
+    - Consistent interface and props across all implementations
+    - Better code organization and readability
+
 ### Performance Metrics - 2025-12-04
 
 #### Bundle Analysis Results (Post-Optimization)
