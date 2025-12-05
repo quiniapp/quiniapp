@@ -42,6 +42,7 @@ export class TicketRepository {
     if (error) throw error;
     return data;
   }
+
   async getAll({
     user_id,
     date,

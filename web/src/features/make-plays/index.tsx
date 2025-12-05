@@ -6,6 +6,7 @@ import { PageWrapper } from '@/components/wrapper/PageWrapper';
 import { MakePlaysProvider } from './provider/MakePlaysProvider';
 import React, { Suspense } from 'react';
 import { usePlayDetails } from './context/MakePlaysContext';
+import { LoadingState } from '@/components/molecules/LoadingState';
 
 const ResetPartialModal = React.lazy(() => import('../../components/modals/ResetPartialModal'));
 
@@ -23,7 +24,7 @@ const MakePlaysContent = () => {
       <FillOutATicket />
       <PlayDetailGameTable />
       <ResultsOverview />
-      <Suspense fallback={<div>Cargando...</div>}>
+      <Suspense fallback={<LoadingState />}>
         <ResetPartialModal
           isOpen={openDeleteModal}
           onClose={() => setOpenDeleteModal(false)}

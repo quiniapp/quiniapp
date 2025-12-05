@@ -7,6 +7,545 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-05
+
+#### Make Plays - Checkbox Components Refactoring
+- **Lotteries & Schedules Checkbox List Components**: Separated mobile and desktop implementations for better maintainability
+
+  - **Lotteries Components:**
+    - **lotteries-checkbox-list-desktop.tsx**: Created dedicated desktop component
+      - Path: `web/src/features/make-plays/lotteries-checkbox-list-desktop.tsx`
+      - Uses CheckboxSection wrapper with grid layout
+      - Maintains existing desktop functionality with grid layout
+    - **lotteries-checkbox-list-mobile.tsx**: Created dedicated mobile component
+      - Path: `web/src/features/make-plays/lotteries-checkbox-list-mobile.tsx`
+      - **No CheckboxSection** - saves vertical space on mobile
+      - Popover-based selection with Command component
+      - Multi-select functionality with "Limpiar" and "Listo" buttons
+    - **lotteries-checkbox-list.tsx**: Refactored as responsive wrapper
+      - Path: `web/src/features/make-plays/lotteries-checkbox-list.tsx`
+      - Renders desktop version on `sm` breakpoint and above
+      - Renders mobile version below `sm` breakpoint
+
+  - **Schedules Components:**
+    - **schedules-checkbox-list-desktop.tsx**: Created dedicated desktop component
+      - Path: `web/src/features/make-plays/schedules-checkbox-list-desktop.tsx`
+      - Uses CheckboxSection wrapper with grid layout
+      - Maintains F-key shortcuts (F1-F10) for quick selection
+      - Clock-based validation (isScheduleAfter, isLessThanTenMinutes)
+    - **schedules-checkbox-list-mobile.tsx**: Created dedicated mobile component
+      - Path: `web/src/features/make-plays/schedules-checkbox-list-mobile.tsx`
+      - **No CheckboxSection** - saves vertical space on mobile
+      - Popover-based selection with Command component
+      - Schedule validation and disabled state for closed schedules
+      - Multi-select functionality with "Limpiar" and "Listo" buttons
+    - **schedules-checkbox-list.tsx**: Refactored as responsive wrapper
+      - Path: `web/src/features/make-plays/schedules-checkbox-list.tsx`
+      - Renders desktop version on `sm` breakpoint and above
+      - Renders mobile version below `sm` breakpoint
+
+  - **Benefits:**
+    - Cleaner separation of concerns between mobile and desktop
+    - Easier to maintain and update each version independently
+    - Mobile versions save vertical space without CheckboxSection wrapper
+    - Desktop versions maintain familiar grid layout with full features
+    - Consistent interface and props across all implementations
+    - Better code organization and readability
+
+### Performance Metrics - 2025-12-04
+
+#### Bundle Analysis Results (Post-Optimization)
+- **Bundle total producción:** 3.5 MB (dist) → ~550 KB gzip
+- **Bundle Login (usuario no autenticado):** ~1.0 MB → **~320 KB gzip** ⚡
+- **Bundle adicional post-auth:** ~90 KB → **~30 KB gzip** (Layout + providers)
+- **Mejora bundle inicial:** **72% reducción** (1.1MB → 320KB gzip) ✅
+
+#### Vendor Chunks (Code Splitting) - Updated 2025-12-04
+- `vendor`: 967 KB → 288 KB gzip (React ecosystem: React + Radix UI + TanStack Query + lucide-react + utilities)
+- `pdf-vendor`: 368 KB → 118 KB gzip (jsPDF, lazy-loaded) 🚀
+- `date-vendor`: 46 KB → 14 KB gzip (dayjs, lazy-loaded) 🚀
+
+**Note:** Consolidated React dependencies into single vendor chunk to fix loading order issues (see Fixed section)
+
+#### Feature Chunks (Lazy-Loaded)
+- `feature-make-plays`: 55 KB → 16 KB gzip
+- `current-account`: 32 KB → 8 KB gzip
+- `feature-plays-hits`: 22 KB → 7 KB gzip
+- `feature-tickets`: 16 KB → 5 KB gzip
+- `feature-results`: 11 KB → 4 KB gzip
+
+#### Estimated Performance Improvements
+- **TTI (Time to Interactive):** 5-8s → **1.5-2.5s** (mejora 60-70%) ⚡
+- **FCP (First Contentful Paint):** 2-3s → **0.8-1.2s** (mejora 50-60%) ⚡
+- **LCP (Largest Contentful Paint):** 3-4s → **< 2s** (objetivo alcanzado) ✅
+
+#### Testing Documentation
+- Created `TESTING-FASE-1.md` with comprehensive testing guide
+- Bundle analyzer visualization available in `dist/stats.html` (generated on build)
+- Manual testing checklist for login flow, navigation, and cache behavior
+
+### Added - 2025-12-04
+
+#### Performance Optimization - Lazy Loading Routes
+- **LoadingFallback Component**: Created reusable loading component for Suspense fallbacks
+  - Path: `web/src/components/molecules/LoadingFallback.tsx`
+  - Features centered spinner with customizable message
+  - Supports `fullScreen` mode for layout loading
+  - Used as fallback for all lazy-loaded routes
+
+#### Performance Optimization - Conditional Providers
+- **ConditionalProviders Component**: Lazy-load providers solo para usuarios autenticados
+  - Path: `web/src/providers/ConditionalProviders.tsx`
+  - **Features:**
+    - Lazy-load ClockProvider (~50KB con dayjs + plugins) solo si usuario autenticado
+    - Lazy-load ModalProvider solo si usuario autenticado
+    - Usa hook `useAuth()` para verificar estado de autenticación
+    - Fallback transparente (sin flash de loading)
+  - **Benefits:**
+    - Usuarios no autenticados (página de login) no descargan providers innecesarios
+    - Ahorro estimado de ~50KB en bundle inicial
+    - ClockProvider con intervalos no se ejecuta en login
+    - Reducción de overhead de React context en login page
+
+#### Component Architecture - Atomic Design System
+- **Atomic Design Implementation**: Created base component system following Atomic Design pattern
+  - **Purpose:**
+    - Reduce code duplication across the app
+    - Establish consistent typography system
+    - Create reusable, composable components
+    - Improve maintainability and scalability
+  - **Benefits:**
+    - Consistent styling across features
+    - Easier theme customization via Tailwind tokens
+    - Type-safe component APIs with TypeScript
+    - Accessibility built-in (ARIA attributes, semantic HTML)
+
+##### Atoms (Base Components)
+- **Text Component**: Universal text component with CVA variants
+  - Path: `web/src/components/atoms/Text/Text.tsx`
+  - Features: size (xs-5xl), weight, color, align, transform, truncate, responsive
+  - Polymorphic: renders as p, span, div, or label
+  - Uses forwardRef for proper ref handling
+
+- **Heading Component**: Semantic heading component (h1-h6)
+  - Path: `web/src/components/atoms/Heading/Heading.tsx`
+  - Features: level (1-6), weight, color, align, truncate
+  - Responsive sizing with mobile/desktop breakpoints
+  - Semantic HTML for SEO and accessibility
+
+- **ErrorMessage Component**: Form error and validation feedback
+  - Path: `web/src/components/atoms/ErrorMessage/ErrorMessage.tsx`
+  - Features: error icon (lucide-react AlertCircle), customizable size
+  - Built on Text atom for consistency
+  - Accessible with role="alert" and aria-live="polite"
+  - Used in forms for validation feedback
+
+- **Caption Component**: Labels, helper text, and metadata
+  - Path: `web/src/components/atoms/Caption/Caption.tsx`
+  - Features: small size (xs/sm), muted color by default
+  - Built on Text atom
+  - Perfect for labels, timestamps, secondary information
+
+##### Molecules (Composite Components)
+- **LoadingState Component**: Standardized loading indicator
+  - Path: `web/src/components/molecules/LoadingState/LoadingState.tsx`
+  - Features: size variants (sm/md/lg), fullScreen mode, customizable message
+  - Uses Text atom for consistent typography
+  - Animated spinner with configurable sizing
+  - Updated LoadingFallback to use Text atom
+
+- **EmptyState Component**: "No data" scenarios
+  - Path: `web/src/components/molecules/EmptyState/EmptyState.tsx`
+  - Features: title, description, icon, action slot, size variants
+  - Uses Heading and Text atoms
+  - Perfect for empty lists, no results, etc.
+  - Flexible and composable design
+
+#### Migration - Error Messages to ErrorMessage Component
+- **Migrated 40+ error messages** across the application to use the new ErrorMessage atom
+  - **Files migrated:**
+    - `web/src/features/login/index.tsx` (2 errors)
+    - `web/src/components/modals/UpdateUserModal.tsx` (9 errors)
+    - `web/src/features/user-list/user-list-form.tsx` (10 errors)
+    - `web/src/components/form/UserForm.tsx` (11 errors)
+    - `web/src/components/molecules/LabelInputForm.tsx` (1 error)
+  - **Benefits:**
+    - Consistent error styling across all forms
+    - Built-in accessibility (role="alert", aria-live)
+    - Icon integration (AlertCircle from lucide-react)
+    - Easy to customize sizing (xs, sm, md)
+    - Reduces code duplication
+
+#### Migration - Loading States to LoadingState Component
+- **Migrated 6+ loading indicators** to use the new LoadingState molecule
+  - **Files migrated:**
+    - `web/src/components/table/InfiniteScrollTable.tsx` (2 loading states + empty state)
+    - `web/src/features/results/index.tsx` (1 Suspense fallback)
+    - `web/src/features/make-plays/index.tsx` (1 Suspense fallback)
+  - **Changes:**
+    - Replaced manual Loader2 + span combos with LoadingState component
+    - Added size variants (sm, md, lg) for different contexts
+    - Standardized loading messages and styling
+    - Used Text atom for empty state messages
+  - **Benefits:**
+    - Consistent loading UX across the application
+    - Easy to customize message and sizing
+    - Maintains accessibility standards
+    - Reduces code duplication
+
+#### Typography Uniformization - Component Migrations
+- **Migrated 12 files** from Typography/TypographyMuted to new Text/Heading/Caption atoms
+  - **Files migrated:**
+    - `web/src/features/user-list/user-list-form.tsx` (2 Typography → Text)
+    - `web/src/components/form/UserForm.tsx` (2 Typography → Text)
+    - `web/src/features/make-plays/play-detail-game-table.tsx` (8 Typography → Text/Caption)
+    - `web/src/components/header-title-section/index.tsx` (Complete refactor: variant → size/weight props)
+    - `web/src/components/modals/UserCurrentAccountModal.tsx` (2 Typography → Text)
+    - `web/src/components/modals/GenerateLiquitationModal.tsx` (2 Typography → Text/Caption)
+    - `web/src/features/terminal-ticket/form-header-filter.tsx` (1 TypographyMuted → Text)
+    - `web/src/features/current-account/CurrentAcoountByUserTable.tsx` (6 Typography → Text)
+    - `web/src/features/current-account/current-account-table/index.tsx` (3 Typography → Text/Caption)
+    - `web/src/features/plays-and-hits/play-and-hits-select.tsx` (4 TypographyMuted → Text)
+    - `web/src/components/modals/repeat-ticket-modal.tsx` (1 Typography → Text)
+    - `web/src/features/upcoming-lotteries/index.tsx` (1 Typography → Text, 2 HeaderTitleSection variant → size)
+    - `web/src/features/user-list/header-user-list.tsx` (1 Typography → Text)
+  - **Total:** ~35 Typography/TypographyMuted instances migrated to atomic components
+  - **Pattern migration:**
+    - `Typography variant="small"` → `<Text size="sm" weight="medium">`
+    - `Typography variant="large"` → `<Text size="lg" weight="semibold">`
+    - `Typography variant="small" className="text-muted-foreground"` → `<Caption>`
+    - `TypographyMuted label="text"` → `<Text size="sm">text</Text>`
+    - HeaderTitleSection: `variant` prop → `size` and `weight` props
+  - **Benefits:**
+    - Consistent typography API across the entire application
+    - Better TypeScript intellisense and type safety
+    - Unified styling with CVA variants
+    - Easier to maintain, extend, and theme
+    - Eliminated legacy Typography wrapper components
+
+#### Color System Enhancement
+- **Added missing colors** to tailwind.config.ts for consistency
+  - `success`: HSL(142 76% 36%) - emerald green for success states
+  - `warning`: HSL(38 92% 50%) - amber for warnings
+  - `cyan`: HSL(180 100% 50%) - cyan for highlights (8+ uses in app)
+  - `blue-light-80`: HSL(220 70% 80% / 0.8) - light blue for labels (4+ uses)
+- **Updated atom components** to use new color system
+  - Text: Uses success, warning from config
+  - Heading: Added warning color variant
+  - Caption: Added label variant with blue-light-80
+- **All colors now defined in tailwind.config** for better maintainability
+
+#### Form Controls Typography Standardization
+- **Updated Input component** (`web/src/components/ui/input.tsx`)
+  - **Text color fixed:** Changed from `text-primary` (azul/blue) to `text-white`
+  - **Placeholder color:** Changed from `text-primary-ligth` to `text-muted-foreground`
+  - **Selection color:** `selection:text-white` for better contrast
+  - **Typography:** `text-sm font-normal` (consistent across all breakpoints)
+  - Uses tailwind.config fontSize system: 0.875rem (14px) with lineHeight 1.25rem
+  - Removed responsive text sizing (`md:text-sm`) for consistency
+  - Letter-spacing: 0.01em (from tailwind.config)
+  - **Fixed:** Input text now visible with proper contrast against dark backgrounds
+
+- **Updated Label component** (`web/src/components/ui/label.tsx`)
+  - **Default color:** Added `text-white` to base styles
+  - All labels now white by default (no need for `className="text-white"`)
+  - Typography: `text-sm font-medium` with proper letter-spacing
+  - Consistent styling across forms, modals, and pages
+
+- **Updated Select components** (`web/src/components/ui/select.tsx`)
+  - **SelectTrigger**: `text-sm font-normal` for consistent sizing
+  - **SelectItem**: `text-sm font-normal` for dropdown options
+  - **SelectLabel**: `text-xs font-medium` for section headers
+  - All select components now align with typography system
+
+- **Cleaned up inline styles across 8+ files**
+  - Removed redundant `className="text-white"` from Labels:
+    - `login/index.tsx` (2 labels)
+    - `CurrentAcoountByUserTable.tsx` (1 label)
+    - `DeleteUsersModal.tsx` (3 labels)
+    - `ModalCreateBetsUnavailable.tsx` (1 label)
+    - `ResetPartialModal.tsx` (1 label)
+    - `LabelInputForm.tsx` (1 label)
+  - Fixed incorrect imports: Changed `@radix-ui/react-label` → `../ui/label`
+    - `ModalCreateBetsUnavailable.tsx`
+    - `ResetPartialModal.tsx`
+  - Removed custom text sizing from `header-play-detail.tsx` SelectTrigger
+
+- **Benefits:**
+  - ✅ Input text now readable (white instead of blue)
+  - ✅ Proper contrast against dark backgrounds
+  - ✅ Labels white by default (DRY principle)
+  - ✅ Consistent user experience across all forms
+  - ✅ Easier to maintain form styling globally
+  - ✅ Better readability with optimized colors
+  - ✅ Reduced CSS specificity conflicts
+  - ✅ Aligned with accessibility best practices
+
+#### Production Build Validation - 2025-12-04
+- **Build Status**: ✅ Successful (Latest: Form controls colors & typography fixed)
+  - Zero compilation errors
+  - Zero TypeScript errors
+  - All new components compiled correctly
+  - All 35+ Typography/TypographyMuted migrations validated
+  - Input text color fixed (blue → white)
+  - Label default color set to white
+  - Select typography standardized
+  - New colors working correctly
+  - HeaderTitleSection refactored successfully
+  - 8+ files cleaned of redundant text-white classes
+- **Bundle Analysis:**
+  - Total bundle: ~550 KB gzip
+  - Login bundle: ~320 KB gzip (72% reduction from original)
+  - Vendor chunk: 967 KB → 288 KB gzip
+  - PDF vendor (lazy): 368 KB → 118 KB gzip
+  - Date vendor (lazy): 46 KB → 14 KB gzip
+  - CSS: 65 KB → 12 KB gzip
+  - Feature chunks remain optimal (make-plays: 56KB → 16KB gzip)
+- **Preview Testing**: ✅ Passed
+  - No console errors
+  - No DOM nesting warnings
+  - Login flow working correctly
+  - Error messages displaying with ErrorMessage component
+  - Loading states displaying with LoadingState component
+  - Typography migrations working correctly across all features
+  - Empty states displaying correctly in tables
+  - Form labels using new Text component
+  - Modal headers using new Text component
+  - Input fields have consistent text-sm typography with white text
+  - Input text clearly visible (fixed blue text issue)
+  - Labels display white by default
+  - Select dropdowns have consistent text-sm typography
+  - Colors displaying with proper contrast
+  - Lazy loading functioning properly
+  - All forms validated successfully
+
+### Changed - 2025-12-04
+
+#### Tailwind Configuration - Typography Tokens
+- **tailwind.config.ts**: Extended typography system with custom tokens
+  - Path: `web/tailwind.config.ts`
+  - **fontSize tokens**: Added lineHeight and letterSpacing for each size
+    - xs-5xl with optimized line heights
+    - Negative letter-spacing for larger text (improved readability)
+    - Consistent spacing system across components
+  - **fontWeight tokens**: Standardized weight scale (300-800)
+  - **lineHeight tokens**: Named line heights (tight, snug, normal, relaxed, loose)
+  - **Benefits:**
+    - Consistent typography across the app
+    - Better readability with optimized spacing
+    - Easier customization via Tailwind utilities
+    - Type-safe sizing in components
+
+### Fixed - 2025-12-04
+
+#### DOM Nesting Warning - NoPlaysFound Component
+- **play-detail-game-table.tsx**: Fixed DOM nesting validation warning
+  - Path: `web/src/features/make-plays/play-detail-game-table.tsx`
+  - **Problem:**
+    - Single `NoPlaysFound` component rendered `<TableRow>` in both contexts
+    - Mobile: `<TableRow>` inside `<FlexCol>` (div) ❌
+    - Desktop: `<TableRow>` inside `<TableBody>` ✅
+    - Warning: `<tr> cannot appear as a child of <div>`
+  - **Solution:**
+    - Split into two components:
+      - `NoPlaysFoundMobile` - Renders `<div>` for mobile card layout
+      - `NoPlaysFoundTable` - Renders `<TableRow>` for desktop table
+    - Each component used in appropriate context
+  - **Result:** No more React DOM nesting warnings
+
+#### Critical Bug Fix - Vendor Chunk Dependencies
+- **vite.config.ts**: Fixed React dependency order causing production crashes
+  - Path: `web/vite.config.ts`
+  - **Problem:**
+    - Separated React into `react-vendor` chunk
+    - Radix UI, TanStack Query, lucide-react in separate chunks
+    - These libraries depend on React but could load before `react-vendor`
+    - Caused error: `Cannot read properties of undefined (reading 'useLayoutEffect')`
+  - **Solution:**
+    - Consolidated React ecosystem into single `vendor` chunk
+    - React + all React-dependent libraries now load together
+    - Ensures proper dependency order
+  - **New chunk structure:**
+    - `vendor`: 967 KB → 288 KB gzip (React + Radix UI + TanStack Query + lucide-react + utilities)
+    - `pdf-vendor`: 368 KB → 118 KB gzip (lazy-loaded, no React dependency)
+    - `date-vendor`: 46 KB → 14 KB gzip (lazy-loaded with ClockProvider)
+  - **Why this is better:**
+    - Eliminates chunk loading order issues
+    - Better browser caching (single vendor chunk)
+    - Still maintains lazy loading for heavy deps (PDF, dates)
+
+#### Bug Fix - Login Page useClock Dependency
+- **login/index.tsx**: Removed useClock dependency from login page
+  - Path: `web/src/features/login/index.tsx`
+  - **Problem:** LoginPage attempted to use `useClock()` hook, but ClockProvider is now conditional (only loaded for authenticated users)
+  - **Solution:** Removed `useClock` import and `refresh()` call from login
+  - **Why it's safe:**
+    - Clock synchronization happens automatically when Layout mounts (post-authentication)
+    - Login page doesn't need clock functionality
+    - Redirect for already-authenticated users doesn't require clock sync
+  - **Result:** Login page now compatible with ConditionalProviders architecture
+
+#### Provider Architecture - App.tsx
+- **App.tsx**: Refactored provider structure para optimizar bundle inicial
+  - Path: `web/src/pages/App.tsx`
+  - **What changed:**
+    - Reemplazado ClockProvider y ModalProvider directos con ConditionalProviders
+    - ClockProvider y ModalProvider ahora se cargan bajo demanda
+    - Estructura de providers más eficiente para login vs authenticated states
+  - **Benefits:**
+    - Bundle de login reducido en ~50KB
+    - ClockProvider (con dayjs + timezone plugins) no se carga en login
+    - Intervalos de sincronización de reloj no se ejecutan innecesariamente
+    - Mejor separación entre código público y código autenticado
+
+#### Build Configuration - vite.config.ts
+- **vite.config.ts**: Optimized build configuration para performance y caching
+  - Path: `web/vite.config.ts`
+  - **What changed:**
+    - **Bundle Analyzer**: Agregado `rollup-plugin-visualizer` para análisis de bundle
+      - Genera `dist/stats.html` con visualización treemap del bundle
+      - Muestra tamaños gzipped y brotli
+    - **Manual Chunks**: Code splitting optimizado por tipo de dependencia
+      - `react-vendor`: React, ReactDOM, React Router (~150KB)
+      - `query-vendor`: TanStack Query (~50KB)
+      - `ui-vendor`: Radix UI components (~100KB)
+      - `utils-vendor`: clsx, tailwind-merge, CVA (~20KB)
+      - `date-vendor`: dayjs, date-fns (~30KB)
+      - `pdf-vendor`: jsPDF + autotable (~230KB, lazy-loaded)
+      - `icons-vendor`: lucide-react (~100KB)
+      - `feature-*`: Chunks separados por feature (make-plays, plays-hits, results, tickets)
+    - **Terser Options**: Minificación agresiva en producción
+      - Remueve console.log, console.info, console.debug, console.trace
+      - Remueve debugger statements
+      - Compatibilidad con Safari 10
+    - **Asset Organization**: Assets organizados por tipo en carpetas
+      - `js/[name]-[hash].js` - JavaScript chunks con hash para cache busting
+      - `css/[name]-[hash].css` - CSS con hash
+      - `images/[name]-[hash].[ext]` - Imágenes optimizadas
+      - `fonts/[name]-[hash].[ext]` - Fuentes
+    - **Optimization**: Pre-bundling optimizado
+      - Include: React, ReactDOM, React Router, TanStack Query
+      - Exclude: jsPDF (para lazy loading)
+  - **Benefits:**
+    - **Mejor caching**: Vendor chunks estables, solo app chunks cambian
+    - **Parallel loading**: Browser puede cargar múltiples chunks simultáneamente
+    - **Smaller bundles**: Code splitting reduce bundle inicial
+    - **Bundle analysis**: Visualizer permite identificar dependencias pesadas
+    - **Production optimization**: Console logs removidos automáticamente
+    - **Faster builds**: Pre-bundling de dependencias comunes
+  - **Development tools:**
+    - Ejecutar `npm run build` genera `dist/stats.html` con análisis visual del bundle
+    - Identificar fácilmente qué dependencias ocupan más espacio
+
+#### Code Splitting - Route-Based Lazy Loading
+- **route.tsx**: Implemented lazy loading for all routes and pages
+  - Path: `web/src/routes/route.tsx`
+  - **What changed:**
+    - Converted all page imports from eager to `React.lazy()`
+    - **Layout component now lazy-loaded** (critical optimization)
+    - All 15+ pages (Index, MakePlays, PlaysAndHits, TerminalTicket, Results, etc.) lazy-loaded
+    - Created `withSuspense()` helper to wrap lazy components
+    - Added Suspense boundaries with LoadingFallback
+  - **What stayed eager:**
+    - LoginPage (critical for initial load)
+    - ProtectedRoute (authentication wrapper)
+    - ROUTES constants (route definitions)
+  - **Route structure optimization:**
+    - `/login` → LoginPage **sin Layout** (eager, minimal bundle)
+    - `/` → ProtectedRoute → **Layout lazy-loaded** → rutas hijas
+    - Layout (Header + Aside + Footer + Outlet) solo se descarga cuando usuario está autenticado
+    - ProtectedRoute redirige a `/login` si `!isAuth`
+  - **Benefits:**
+    - Reduces initial bundle from ~1.1MB to ~200-300KB (estimated 70-80% reduction)
+    - **LoginPage loads instantly** without downloading Layout components
+    - Layout (~200KB) solo se descarga después de autenticación exitosa
+    - Each route loads on-demand when user navigates
+    - Better caching with code splitting
+    - Improved Time to Interactive (TTI) from 5-8s to 1.5-2.5s (estimated)
+  - **Technical details:**
+    - Used `module.then()` pattern for named exports (Index, TerminalTicketPage)
+    - Layout has fullScreen fallback for better UX
+    - Child routes use regular LoadingFallback
+    - NotFound page also lazy-loaded
+    - Layout wraps: Header, Aside (sidebar), Footer, main content area
+
+### Added - 2025-12-03
+
+#### Infinite Scroll Hook - Centralized Logic
+- **useInfiniteScroll.ts**: Created centralized hook for infinite scroll functionality
+  - Path: `web/src/hooks/useInfiniteScroll.ts`
+  - **Features:**
+    - **Dynamic trigger calculation**: Uses `offsetFromEnd` (default: 75) to calculate trigger index
+      - Example: With 150 items and offset=75, triggers at index 75 (150-75)
+      - When 300 items loaded, automatically triggers at index 225 (300-75)
+    - **Multi-element support**: Observes both desktop and mobile elements simultaneously
+    - **Prevents duplicate triggers**: Tracks last triggered index to avoid multiple fetches
+    - **CSS visibility detection**: Only triggers on visible elements (ignores hidden elements)
+    - Returns callback ref (`setTriggerRef`) to assign to trigger element
+    - Auto-loads when content doesn't fill viewport
+    - Configurable offset and root margin
+    - Automatic cleanup on unmount
+  - **Benefits:**
+    - Single source of truth for infinite scroll logic
+    - Eliminates code duplication across table components
+    - Dynamic loading threshold (always N rows before end)
+    - Handles responsive layouts (desktop + mobile) automatically
+    - Prevents infinite loops and duplicate API calls
+    - Easier to adjust loading threshold globally
+
+### Changed - 2025-12-03
+
+#### Infinite Scroll Implementation - Table Components
+- **plays-and-hits-table.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/plays-and-hits/plays-and-hits-table.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Uses `offsetFromEnd: 75` (triggers when 75 rows from end)
+  - Handles both desktop table and mobile card list
+  - Code reduction: ~40 lines
+
+- **table-terminal-ticket.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/terminal-ticket/table-terminal-ticket.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Uses `offsetFromEnd: 75` (triggers when 75 rows from end)
+  - Code reduction: ~30 lines
+
+- **termina-ticket-play-table.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/terminal-ticket/termina-ticket-play-table.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Uses `offsetFromEnd: 75` (triggers when 75 rows from end)
+  - Code reduction: ~30 lines
+
+- **terminal-ticket-matches-table.tsx**: Migrated to useInfiniteScroll hook
+  - Path: `web/src/features/terminal-ticket/terminal-ticket-matches-table.tsx`
+  - Removed manual IntersectionObserver setup
+  - Removed sentinel element at end of list
+  - Uses `offsetFromEnd: 75` (triggers when 75 rows from end)
+  - Code reduction: ~30 lines
+
+- **ticket-table-row.tsx**: Enhanced with forwardRef support
+  - Path: `web/src/features/terminal-ticket/ticket-table-row.tsx`
+  - Added forwardRef to TicketTableRow component
+  - Allows parent components to assign refs for intersection observation
+  - Maintains backward compatibility with existing props
+
+- **table.tsx**: Enhanced TableRow with forwardRef support
+  - Path: `web/src/components/ui/table.tsx`
+  - Added forwardRef to TableRow component
+  - Enables ref assignment for intersection observation
+  - Maintains all existing functionality
+
+- **Refactor Summary:**
+  - Before: Manual IntersectionObserver in each component with sentinel at end
+  - After: Centralized hook with dynamic trigger (always 75 rows from end)
+  - Total code reduction: ~130 lines
+  - Consistent loading behavior across all tables
+  - Dynamic threshold - automatically adjusts as more data loads
+  - Prevents multiple simultaneous fetches
+  - Handles responsive layouts (desktop + mobile) automatically
+
 ### Changed - 2025-11-21
 
 #### Results Components - RadioGroupSection Refactor

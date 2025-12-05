@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { LoadingState } from '../molecules/LoadingState';
+import { Text } from '../atoms/Text';
 
 interface InfiniteScrollTableProps<T> {
   data: T[];
@@ -41,18 +42,13 @@ export function InfiniteScrollTable<T>({
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-2 text-sm">Cargando datos...</span>
-      </div>
-    );
+    return <LoadingState message="Cargando datos..." className="p-8" />;
   }
 
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
-        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+        <Text size="sm" color="muted">{emptyMessage}</Text>
       </div>
     );
   }
@@ -73,18 +69,17 @@ export function InfiniteScrollTable<T>({
 
       {/* Loading indicator */}
       {isFetchingNextPage && (
-        <div className="flex items-center justify-center p-4 border-t">
-          <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-          <span className="text-sm text-muted-foreground">Cargando más registros...</span>
+        <div className="border-t">
+          <LoadingState size="sm" message="Cargando más registros..." className="p-4" />
         </div>
       )}
 
       {/* End of list indicator */}
       {!hasNextPage && data.length > 0 && (
         <div className="flex items-center justify-center p-4 border-t">
-          <span className="text-sm text-muted-foreground">
+          <Text size="sm" color="muted">
             No hay más registros ({data.length} total)
-          </span>
+          </Text>
         </div>
       )}
     </div>

@@ -111,7 +111,7 @@ const HeaderPlayDetail = () => {
           <Flex className={'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
             <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">Ticket</Label>
             <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
-              <SelectTrigger className=" border-dark-lighter text-xs sm:text-sm lg:text-xs h-8 sm:h-9 lg:h-7">
+              <SelectTrigger className="border-dark-lighter h-8 sm:h-9 lg:h-7">
                 <SelectValue placeholder="Seleccione uno" />
               </SelectTrigger>
               <SelectContent>

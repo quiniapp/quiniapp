@@ -22,15 +22,15 @@ const DeleteUsersModal = ({ isOpen, onClose, onClick,user, isPending }: DeleteUs
       className="flex flex-col items-center !max-w-[90vw] sm:!max-w-[500px] md:!max-w-[600px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
       <FlexCol className="items-center pt-2 gap-4 px-2 sm:px-4 w-full">
-        <Label className="text-white text-center text-sm sm:text-base">
+        <Label className="text-center text-sm sm:text-base">
           ¿Estás seguro de que quieres eliminar a este usuario?
         </Label>
         <Flex className="justify-center">
-            <Label className="text-white text-center font-semibold text-sm sm:text-base">
+            <Label className="text-center font-semibold text-sm sm:text-base">
                 {`${user?.name} - ${user?.number}`}
             </Label>
         </Flex>
-        <Label className="text-white text-center text-xs sm:text-sm text-muted-foreground">
+        <Label className="text-center text-xs sm:text-sm text-muted-foreground">
           Esta acción no se puede deshacer.
         </Label>
         <IconButton

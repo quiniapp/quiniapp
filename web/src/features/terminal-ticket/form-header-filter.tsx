@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
-import { TypographyMuted } from '@/components/ui/typography-muted.tsx';
+import { Text } from '@/components/atoms/Text';
 import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 
 import IsRoleCashier from '@/components/is-role-cashier';
@@ -102,9 +102,9 @@ const FormHeaderFilter = () => {
               toDate={dayjs().toDate()}
             />
             <Flex className={' items-center gap-3'}>
-         
-                <TypographyMuted label={'Tickets'} />
-          
+
+                <Text size="sm">Tickets</Text>
+
               <Select
                 onValueChange={(value: 'all' | 'winner' | 'paid' | 'not_paid') => {
                   onChangeFilter(value);

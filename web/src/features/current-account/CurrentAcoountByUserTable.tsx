@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import SkeletonList from '@/components/skeletons/skeleton-list';
-import { Typography } from '@/components/typography';
+import { Text } from '@/components/atoms/Text';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -124,9 +124,9 @@ const CurrentAcoountByUserTable = () => {
         </Flex>
       </Flex>
 
-      <Typography className="mt-3 px-3 sm:px-0" variant="large">
+      <Text size="lg" weight="semibold" className="mt-3 px-3 sm:px-0">
         {`Fecha de Liquidación: ${dayjs(currentAccount?.date).format('DD-MM-YYYY')}`}
-      </Typography>
+      </Text>
 
       <FormProvider {...methods}>
         <form className="w-full">
@@ -211,7 +211,7 @@ const CurrentAcoountByUserTable = () => {
             </FlexCol>
           </Flex>
           <Flex className="p-1 gap-1 sm:gap-4 items-center justify-center">
-            <Label className="text-white text-center text-nowrap text-base sm:text-lg uppercase font-bold">
+            <Label className="text-center text-nowrap text-base sm:text-lg uppercase font-bold">
               {`${methods.getValues('total') > 0 ? 'Debe' : 'Cobra'}: $ ${money(Math.abs(methods.getValues('total')))}`}
             </Label>
           </Flex>
@@ -227,7 +227,7 @@ const CurrentAcoountByUserTable = () => {
                   <SkeletonList />
                 ) : tickets?.length === 0 ? (
                   <div className="text-center py-4 rounded-md border border-dashed">
-                    <Typography variant="large">No se encontraron tickets</Typography>
+                    <Text size="lg" weight="semibold">No se encontraron tickets</Text>
                   </div>
                 ) : (
                   tickets?.map((t: ITicketEntityFront) => (
@@ -271,7 +271,7 @@ const CurrentAcoountByUserTable = () => {
                       <TableRow>
                         <TableCell colSpan={3} className="text-center">
                           <FlexCol className="items-center justify-center gap-1">
-                            <Typography variant="large">No se encontraron tickets</Typography>
+                            <Text size="lg" weight="semibold">No se encontraron tickets</Text>
                           </FlexCol>
                         </TableCell>
                       </TableRow>
@@ -303,7 +303,7 @@ const CurrentAcoountByUserTable = () => {
                   <SkeletonList />
                 ) : bets?.length === 0 ? (
                   <div className="text-center py-4 rounded-md border border-dashed">
-                    <Typography variant="large">No se encontraron jugadas ganadoras</Typography>
+                    <Text size="lg" weight="semibold">No se encontraron jugadas ganadoras</Text>
                   </div>
                 ) : (
                   bets?.map((b: IBetEntityFront) => (
@@ -369,9 +369,9 @@ const CurrentAcoountByUserTable = () => {
                       <TableRow>
                         <TableCell colSpan={7} className="text-center">
                           <FlexCol className="items-center justify-center gap-1">
-                            <Typography variant="large">
+                            <Text size="lg" weight="semibold">
                               No se encontraron jugadas ganadoras
-                            </Typography>
+                            </Text>
                           </FlexCol>
                         </TableCell>
                       </TableRow>

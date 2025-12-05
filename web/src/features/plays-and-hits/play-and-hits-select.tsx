@@ -6,7 +6,7 @@ import {
   SelectValue,
   SelectTrigger,
 } from '@/components/ui/select';
-import { TypographyMuted } from '@/components/ui/typography-muted';
+import { Text } from '@/components/atoms/Text';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
@@ -42,7 +42,7 @@ const PlayAndHitsSelect = () => {
       {role !== USER_TYPE.CASHIER && (
         <Fragment>
           <Flex className={'flex-1 gap-3 items-center'}>
-            <TypographyMuted label={'Pasador'} />
+            <Text size="sm">Pasador</Text>
             <Select
               value={selectedCashier ?? ''}
               onValueChange={(value) => {
@@ -65,7 +65,7 @@ const PlayAndHitsSelect = () => {
             </Select>
           </Flex>
           <Flex className={'flex-1 gap-3 items-center'}>
-            <TypographyMuted label={'Grupo'} />
+            <Text size="sm">Grupo</Text>
             <Select>
               <SelectTrigger className={'border   w-full  bg-[var(--bg-card)]'}>
                 <SelectValue placeholder={ALL} />
@@ -82,7 +82,7 @@ const PlayAndHitsSelect = () => {
         </Fragment>
       )}
       <Flex className={'flex-1 gap-3 items-center'}>
-        <TypographyMuted label={'Turno'} />
+        <Text size="sm">Turno</Text>
         <Select
           value={selectedSchedule ?? ''}
           onValueChange={(value) => {
@@ -103,7 +103,7 @@ const PlayAndHitsSelect = () => {
         </Select>
       </Flex>
       <Flex className={'flex-1 gap-3 items-center'}>
-        <TypographyMuted label={'Quniela'} />
+        <Text size="sm">Quniela</Text>
         <Select
           value={selectedLottery ?? ''}
           onValueChange={(value) => {
