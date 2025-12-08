@@ -27,7 +27,7 @@ const fetchPaginatedTickets = async (
   if (props.user_id) params.append('cashier_id', props.user_id);
   if (props.winner) params.append('winner', 'true');
   if (props.paid) params.append('paid', 'true');
-  if (props.not_paid) params.append('not_paid', 'true');
+  if (props.not_paid) params.append('paid', 'false');
 
   const res = await fetch(`${BACKEND_ROUTES.ticket.base}?${params.toString()}`, {
     headers: { 'Content-Type': 'application/json' },
