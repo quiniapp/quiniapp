@@ -1,14 +1,12 @@
 // TableTerminalTicket.tsx
-import {
-  Table, TableHeader, TableBody, TableCell, TableRow,
-} from '@/components/ui/table';
-import { useSearchParams } from 'react-router-dom';
+import { Table, TableHeader, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteTickets } from '@/hooks/fetchs/tickets/useInfiniteTickets';
 import { TicketTableHeader, TicketTableRow } from './ticket-table-row';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 interface TableTerminalTicketProps {
   user_id?: string;
@@ -23,21 +21,30 @@ const dedupe = <T, K>(arr: T[], getKey: (x: T) => K) => {
   const out: T[] = [];
   for (const item of arr) {
     const k = getKey(item);
-    if (!seen.has(k)) { seen.add(k); out.push(item); }
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(item);
+    }
   }
   return out;
 };
 
 const TableTerminalTicket = ({
-  user_id, date, winner, paid, not_paid,
+  user_id,
+  date,
+  winner,
+  paid,
+  not_paid,
 }: TableTerminalTicketProps) => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selected = searchParams.get('ticket_number');
+  const { ticket_number, toggleTicketNumber, setTicketPaid } = useTerminalTicket();
 
-  const {
-    data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
-  } = useInfiniteTickets({
-    user_id, date, winner, paid, not_paid, limit: 150,
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteTickets({
+    user_id,
+    date,
+    winner,
+    paid,
+    not_paid,
+    limit: 150,
   });
 
   // Flatten + dedupe por ticket_id
@@ -59,16 +66,9 @@ const TableTerminalTicket = ({
     totalItems: tickets.length,
   });
 
-  const handleClick = (ticket_number: string) => {
-    if (selected === ticket_number) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('ticket_number');
-      setSearchParams(next);
-    } else {
-      const next = new URLSearchParams(searchParams);
-      next.set('ticket_number', ticket_number);
-      setSearchParams(next);
-    }
+  const handleClick = (ticketNumber: string) => {
+    toggleTicketNumber(ticketNumber);
+    setTicketPaid(tickets.find((t) => t.ticket_number === ticketNumber)?.paid);
   };
 
   if (isLoading) {
@@ -98,7 +98,7 @@ const TableTerminalTicket = ({
                   key={String(item.ticket_id)}
                   ref={index === triggerIndex ? setTriggerRef : undefined}
                   ticket={item}
-                  isSelected={selected === item.ticket_number}
+                  isSelected={ticket_number === item.ticket_number}
                   onClick={handleClick}
                 />
               ))}

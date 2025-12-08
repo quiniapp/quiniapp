@@ -20,6 +20,7 @@ export class TicketRouter {
     this.router.get('/number', this.getAllTicketNumberHandler);
     this.router.get('/deleted', this.getAllDeletedTicketHandler);
     this.router.get('/:id', this.getTicketHandler);
+    this.router.put('/paid/:id', this.payTicketHandler);
     this.router.put('/:id', this.updateTicketHandler);
     this.router.post('/', this.newTicketHandler);
     this.router.delete('/:id', this.deleteTicketHandler);
@@ -435,6 +436,80 @@ export class TicketRouter {
       if (error instanceof Error) {
         let statusCode = 500;
         if (
+          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
+          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
+        ) {
+          statusCode = 401;
+        }
+
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(statusCode).json(response);
+        return;
+      }
+    }
+  };
+
+  private payTicketHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { id: ticket_number } = req.params;
+
+    // Validar que el usuario esté autenticado
+    if (!user?.user?.user_id) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: ERROR_MESSAGE.USER_NOT_FOUND,
+        },
+      };
+      res.status(401).json(response);
+      return;
+    }
+
+    // Validar que ticket_number exista
+    if (!ticket_number) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    try {
+      const result = await this.controller.paid({
+        ticket_number,
+        user_id: user.user.user_id,
+      });
+
+      const response: APIResponse<typeof result> = {
+        data: result,
+      };
+      res.status(200).json(response);
+      return;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        let statusCode = 500;
+
+        // Mapear errores específicos a códigos HTTP apropiados
+        if (error.message === ERROR_MESSAGE.TICKET_NOT_FOUND) {
+          statusCode = 404;
+        } else if (error.message === ERROR_MESSAGE.TICKET_NOT_OWNED) {
+          statusCode = 403;
+        } else if (
+          error.message === ERROR_MESSAGE.TICKET_ALREADY_PAID ||
+          error.message === ERROR_MESSAGE.TICKET_NOT_WINNER ||
+          error.message === ERROR_MESSAGE.INVALID_USER_ID
+        ) {
+          statusCode = 400;
+        } else if (
           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
         ) {

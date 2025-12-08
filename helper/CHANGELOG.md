@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-07
+
+#### Error Messages - Ticket Payment Validation
+- **New Error Constants**: Added ticket payment-related error messages
+  - Path: `helper/types/errors.type.ts`
+  - `TICKET_NOT_OWNED`: "El ticket no pertenece al usuario"
+    - Used when a user tries to pay a ticket they didn't create
+    - Returns 403 Forbidden status
+  - `TICKET_ALREADY_PAID`: "El ticket ya fue pagado"
+    - Prevents duplicate payment attempts
+    - Returns 400 Bad Request status
+  - `TICKET_NOT_WINNER`: "El ticket no es ganador"
+    - Prevents paying tickets that have no winning bets
+    - Returns 400 Bad Request status
+  - `INVALID_USER_ID`: "ID de usuario inválido"
+    - Validates user_id format (UUID) at database level
+    - Returns 400 Bad Request status
+  - **Why:** Improves security and user experience by providing clear, specific error messages for ticket payment operations
+
 ### Added - 2025-11-11
 
 #### Type Enhancements

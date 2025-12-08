@@ -57,3 +57,5 @@ export type ITicketEntityFrontCompact = Omit<
 
 export type IGetAllTicketNumberEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
   Partial<Pick<ITicketEntityBase, 'date' | 'winner'>> & { cashier_id?: string };
+
+export type IPayTicketEntity = Pick<ITicketEntityBase, 'ticket_number' | 'user_id'>;

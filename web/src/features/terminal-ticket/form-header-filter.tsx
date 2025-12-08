@@ -18,45 +18,36 @@ import IsRoleCashier from '@/components/is-role-cashier';
 import { useEffect, useState } from 'react';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import dayjs from 'dayjs';
-import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { USER_TYPE } from '@helper/types/user.type';
+import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 const FormHeaderFilter = () => {
   const { role } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { cashier_id, setDate, toggleCashier, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
   const { data: cashiers } = useUsers(role);
   const [inputValue, setInputValue] = useState('');
 
-  const selectValue = searchParams.get('cashier_id') ?? undefined;
-
   const handleSearch = () => {
-    const params = new URLSearchParams(searchParams);
-    params.set('ticket_number', inputValue.trim());
-    setSearchParams(params);
+    setTicketNumber(inputValue.trim());
     setInputValue('');
   };
 
   const handleReset = () => {
     setInputValue('');
-    searchParams.delete('ticket_number')
-    setSearchParams(searchParams);
+    resetTicketNumber();
   };
 
   const handleSelectCashier = (id: string) => {
-    if (searchParams.get('cashier_id') === id) searchParams.delete('cashier_id');
-    else {
-      searchParams.set('cashier_id', id);
-    }
-    setSearchParams(searchParams);
+    toggleCashier(id);
   };
+
   const handleSelectDate = (date?: string) => {
-    setSearchParams({ date: date ?? dayjs().format('YYYY-MM-DD') });
+    setDate(date);
   };
-  const onChangeFilter = (value: string) => {
-    searchParams.delete('ticket_number');
-    searchParams.set('filter', value);
-    setSearchParams(searchParams);
+
+  const onChangeFilter = (value: 'all' | 'winner' | 'paid' | 'not_paid') => {
+    setFilter(value);
   };
 
   useEffect(() => {
@@ -73,7 +64,7 @@ const FormHeaderFilter = () => {
             <Flex className={' gap-3'}>
               <Select
                 defaultValue={undefined}
-                value={selectValue}
+                value={cashier_id}
                 onValueChange={(value) => {
                   handleSelectCashier(value);
                 }}
