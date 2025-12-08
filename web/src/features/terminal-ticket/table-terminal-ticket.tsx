@@ -1,7 +1,7 @@
 // TableTerminalTicket.tsx
 import { Table, TableHeader, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteTickets } from '@/hooks/fetchs/tickets/useInfiniteTickets';
 import { TicketTableHeader, TicketTableRow } from './ticket-table-row';
@@ -44,7 +44,7 @@ const TableTerminalTicket = ({
     winner,
     paid,
     not_paid,
-    limit: 150,
+    limit: 50,
   });
 
   // Flatten + dedupe por ticket_id
@@ -56,21 +56,24 @@ const TableTerminalTicket = ({
   // Contenedor que scrollea
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
+
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     root: rootRef.current,
-    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
+    offsetFromEnd: 30,
     totalItems: tickets.length,
   });
 
-  const handleClick = (ticketNumber: string) => {
-    toggleTicketNumber(ticketNumber);
-    const ticket = tickets.find((t) => t.ticket_number === ticketNumber)
-    setPayTicket(!ticket?.paid && ticket?.winner);
-  };
+  const handleClick = useCallback(
+    (ticketNumber: string) => {
+      toggleTicketNumber(ticketNumber);
+      const ticket = tickets.find((t) => t.ticket_number === ticketNumber);
+      setPayTicket(!ticket?.paid && ticket?.winner);
+    },
+    [toggleTicketNumber, tickets, setPayTicket]
+  );
 
   if (isLoading) {
     return (

@@ -11,7 +11,7 @@ import {
 import { IBetEntityFront } from '@helper/types/bet.type';
 import toast from 'react-hot-toast';
 import { Copy, Check, Loader2 } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, memo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
@@ -47,7 +47,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     quatern,
     tern,
     winners,
-    limit: 150,
+    limit: 50,
   });
 
 
@@ -63,13 +63,13 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   // Contenedor scrolleable
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
 
-  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
+  // Hook centralizado de infinite scroll - carga cuando faltan 15 filas para el final
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     root: scrollRootRef.current,
-    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
+    offsetFromEnd: 30,
     totalItems: bets.length,
   });
 
@@ -133,38 +133,11 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
           </TableHeader>
           <TableBody>
             {bets?.map((bet: IBetEntityFront, index: number) => (
-              <TableRow
+              <BetRowDesktop
                 key={bet?.bet_id ?? Math.random()}
-                ref={index === triggerIndex ? setTriggerRef : undefined}
-              >
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
-                  {bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {currency(bet.amount)}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {bet.schedule?.name}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {bet.lottery?.name}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {bet.hits}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-                  {currency(bet.prize)}
-                </TableCell>
-                <TableCell className="px-2 sm:px-3">
-                  <CopyableTicket ticketNumber={bet.ticket_number} />
-                </TableCell>
-                <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg max-w-[150px] truncate">
-                  {bet.cashier_name}
-                </TableCell>
-              </TableRow>
+                bet={bet}
+                triggerRef={index === triggerIndex ? setTriggerRef : undefined}
+              />
             ))}
 
             {isFetchingNextPage && (
@@ -198,44 +171,11 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
         )}
 
         {bets?.map((bet, index) => (
-          <div
+          <BetRowMobile
             key={bet?.bet_id ?? Math.random()}
-            ref={index === triggerIndex ? setTriggerRef : undefined}
-            className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
-          >
-            <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
-              <div>
-                <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
-                  Jugada
-                </span>
-                <p className="text-lg font-bold text-white">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
-                  Monto
-                </span>
-                <p className="text-lg font-bold text-primary">{currency(bet.amount)}</p>
-              </div>
-            </div>
-
-            {/* Grid de información */}
-            <div className="grid grid-cols-3 gap-x-4 gap-y-3 mb-3">
-              <Field label="Tipo" value={betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)} />
-              <Field label="Aciertos" value={String(bet.hits ?? 0)} />
-              <Field label="Turno" value={bet.schedule?.name} />
-              <Field label="Quiniela" value={bet.lottery?.name} />
-              <Field label="Premio" value={currency(bet.prize)} />
-              <Field label="Usuario" value={bet.cashier_name} />
-            </div>
-
-            {/* Ticket destacado y clickeable */}
-            <div className="mt-3 pt-3 border-t border-white/10">
-              <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide block mb-2">
-                Número de Ticket
-              </span>
-              <CopyableTicket ticketNumber={bet.ticket_number} isMobile />
-            </div>
-          </div>
+            bet={bet}
+            triggerRef={index === triggerIndex ? setTriggerRef : undefined}
+          />
         ))}
 
         {isFetchingNextPage && (
@@ -258,25 +198,25 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
 };
 
 /** Subcomponente para fila label → valor */
-const Field: React.FC<{
+const Field = memo<{
   label: string;
   value?: string;
-}> = ({ label, value = '-' }) => {
+}>(function Field({ label, value = '-' }) {
   return (
     <div className="flex flex-col">
       <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">{label}</span>
       <span className="text-sm font-semibold text-white truncate">{value}</span>
     </div>
   );
-};
+});
 /** Componente para copiar número de ticket */
-const CopyableTicket: React.FC<{
+const CopyableTicket = memo<{
   ticketNumber?: string;
   isMobile?: boolean;
-}> = ({ ticketNumber, isMobile = false }) => {
+}>(function CopyableTicket({ ticketNumber, isMobile = false }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (!ticketNumber) return;
 
     try {
@@ -291,7 +231,7 @@ const CopyableTicket: React.FC<{
     } catch (err) {
       toast.error('Error al copiar el ticket');
     }
-  };
+  }, [ticketNumber]);
 
   if (isMobile) {
     return (
@@ -330,6 +270,100 @@ const CopyableTicket: React.FC<{
       )}
     </button>
   );
-};
+});
+
+/** Fila desktop memoizada */
+const BetRowDesktop = memo<{
+  bet: IBetEntityFront;
+  triggerRef?: (node: HTMLTableRowElement | null) => void;
+}>(function BetRowDesktop({ bet, triggerRef }) {
+  return (
+    <TableRow
+      key={bet?.bet_id ?? Math.random()}
+      ref={triggerRef}
+    >
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
+        {bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+        {currency(bet.amount)}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+        {betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+        {bet.schedule?.name}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+        {bet.lottery?.name}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+        {bet.hits}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+        {currency(bet.prize)}
+      </TableCell>
+      <TableCell className="px-2 sm:px-3">
+        <CopyableTicket ticketNumber={bet.ticket_number} />
+      </TableCell>
+      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg max-w-[150px] truncate">
+        {bet.cashier_name}
+      </TableCell>
+    </TableRow>
+  );
+}, (prev, next) => {
+  // Solo re-render si el bet_id cambió
+  return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
+});
+
+/** Fila mobile memoizada */
+const BetRowMobile = memo<{
+  bet: IBetEntityFront;
+  triggerRef?: (node: HTMLDivElement | null) => void;
+}>(function BetRowMobile({ bet, triggerRef }) {
+  return (
+    <div
+      key={bet?.bet_id ?? Math.random()}
+      ref={triggerRef}
+      className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
+    >
+      <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
+        <div>
+          <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
+            Jugada
+          </span>
+          <p className="text-lg font-bold text-white">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</p>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
+            Monto
+          </span>
+          <p className="text-lg font-bold text-primary">{currency(bet.amount)}</p>
+        </div>
+      </div>
+
+      {/* Grid de información */}
+      <div className="grid grid-cols-3 gap-x-4 gap-y-3 mb-3">
+        <Field label="Tipo" value={betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)} />
+        <Field label="Aciertos" value={String(bet.hits ?? 0)} />
+        <Field label="Turno" value={bet.schedule?.name} />
+        <Field label="Quiniela" value={bet.lottery?.name} />
+        <Field label="Premio" value={currency(bet.prize)} />
+        <Field label="Usuario" value={bet.cashier_name} />
+      </div>
+
+      {/* Ticket destacado y clickeable */}
+      <div className="mt-3 pt-3 border-t border-white/10">
+        <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide block mb-2">
+          Número de Ticket
+        </span>
+        <CopyableTicket ticketNumber={bet.ticket_number} isMobile />
+      </div>
+    </div>
+  );
+}, (prev, next) => {
+  // Solo re-render si el bet_id cambió
+  return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
+});
 
 export default PlaysAndHitsTable;

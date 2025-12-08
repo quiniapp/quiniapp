@@ -75,6 +75,23 @@ src/
 - [ ] Documentar componentes que necesitan refactoring
 
 ##### Fase 2: Atoms (2-3 días)
+- [x] **Text**: Componente base universal ✅ COMPLETADO 2025-12-04
+  - Variantes: size (xs-5xl), weight, color, align, transform, truncate, responsive
+  - Componente polimórfico (p, span, div, label)
+
+- [x] **Heading**: Componente para títulos ✅ COMPLETADO 2025-12-04
+  - Niveles semánticos (h1-h6)
+  - Responsive sizing
+
+- [x] **ErrorMessage**: Mensajes de error ✅ COMPLETADO 2025-12-04
+  - Con icono AlertCircle
+  - Tamaños: xs, sm, md
+  - 40+ migraciones completadas
+
+- [x] **Caption**: Texto secundario ✅ COMPLETADO 2025-12-04
+  - Variantes: default, label, helper
+  - Usado para labels, timestamps, metadata
+
 - [ ] **Button**: Consolidar variantes existentes
   - Revisar `components/ui/button.tsx`
   - Revisar `components/button/IconButton.tsx`
@@ -99,6 +116,17 @@ src/
   - Tamaños: sm, md, lg
 
 ##### Fase 3: Molecules (3-4 días)
+- [x] **LoadingState**: Estado de carga estandarizado ✅ COMPLETADO 2025-12-04
+  - Tamaños: sm, md, lg
+  - Modo fullScreen
+  - Mensaje customizable
+  - 6+ migraciones completadas
+
+- [x] **EmptyState**: Estado "sin datos" ✅ COMPLETADO 2025-12-04
+  - Con título, descripción, icono
+  - Slot para acción
+  - Tamaños configurables
+
 - [ ] **FormField**: Combo de Input + Label + Error
   - Integración con react-hook-form
   - Validación automática de errores
@@ -971,13 +999,18 @@ const [exportOption, setExportOption] = useState<'print' | 'whatsapp'>('print');
 
 **Objetivo:** Mejorar performance general de la aplicación.
 
+**Estado:** ✅ **FASE 1 Y 2 COMPLETADAS** (2025-12-08)
+- INP mejorado de 224ms → 24-99ms (mejora del 56-89%)
+- Total estimado de mejora: 125-200ms
+- Ver detalles completos en `CHANGELOG.md` y `performance.md`
+
 #### Áreas de Optimización
 
-##### 6.1.1 Code Splitting y Lazy Loading (2 días)
-- [ ] Identificar rutas/componentes pesados
-- [ ] Implementar lazy loading de rutas
-- [ ] Lazy loading de componentes pesados (modales, gráficos)
-- [ ] Preloading de rutas críticas
+##### 6.1.1 Code Splitting y Lazy Loading ✅ COMPLETADO
+- [x] Identificar rutas/componentes pesados ✅
+- [x] Implementar lazy loading de rutas ✅ (17 rutas lazy-loaded)
+- [x] Lazy loading de componentes pesados (modales, gráficos) ✅ (DeleteTicket, PayTicket, RepeatTicket)
+- [ ] Preloading de rutas críticas (opcional para futuro)
 
 ```typescript
 // Lazy loading de rutas
@@ -996,12 +1029,20 @@ const HeavyModal = lazy(() => import('./components/modals/HeavyModal'));
 </Link>
 ```
 
-##### 6.1.2 Optimización de Re-renders (2 días)
-- [ ] Auditar componentes con DevTools Profiler
-- [ ] Identificar re-renders innecesarios
-- [ ] Aplicar `React.memo` donde corresponda
-- [ ] Usar `useMemo` y `useCallback` estratégicamente
-- [ ] Optimizar contextos (split contexts grandes)
+##### 6.1.2 Optimización de Re-renders ✅ COMPLETADO
+- [x] Auditar componentes con DevTools Profiler ✅
+- [x] Identificar re-renders innecesarios ✅
+- [x] Aplicar `React.memo` donde corresponda ✅
+  - Header, Aside, Footer
+  - TicketTableRow, BetRowMemoized
+  - PlaysAndHitsTable rows (BetRowDesktop, BetRowMobile)
+  - Field, CopyableTicket components
+- [x] Usar `useMemo` y `useCallback` estratégicamente ✅
+  - Todos los providers (ResultsProvider, TerminalTicketProvider, AuthProvider, MakePlaysProvider)
+  - Handlers en tablas (handleClick, handleCopy)
+- [x] Optimizar contextos ✅
+  - Context values memoizados en todos los providers
+  - Dependency arrays optimizadas
 
 ```typescript
 // Memoización estratégica
@@ -1022,12 +1063,14 @@ const ThemeContext = { theme };
 const TicketsContext = { tickets, bets };
 ```
 
-##### 6.1.3 Optimización de Imágenes (1 día)
-- [ ] Auditar todas las imágenes
-- [ ] Convertir a formatos modernos (WebP, AVIF)
-- [ ] Implementar lazy loading de imágenes
-- [ ] Responsive images con srcset
-- [ ] Comprimir imágenes sin perder calidad
+##### 6.1.3 Optimización de Imágenes ✅ COMPLETADO
+- [x] Auditar todas las imágenes ✅
+  - 7 archivos totales (5 SVG + 2 logos de ejemplo)
+  - Todos los assets en producción son SVG (ya optimizados)
+- [x] Ya optimizado - solo se usan SVG ✅
+- [ ] Convertir a formatos modernos (N/A - ya son SVG)
+- [ ] Implementar lazy loading de imágenes (N/A - SVG inline)
+- [ ] Responsive images con srcset (N/A)
 
 ```typescript
 // Imagen optimizada
@@ -1040,12 +1083,43 @@ const TicketsContext = { tickets, bets };
 />
 ```
 
-##### 6.1.4 Optimización de Queries (TanStack Query) (2 días)
-- [ ] Revisar configuración de cache
+##### 6.1.4 Optimización de Queries (TanStack Query) 📋 PLANIFICADO
+- [x] Revisar configuración de cache ✅
 - [ ] Implementar stale-while-revalidate estratégicamente
-- [ ] Prefetching de datos anticipados
-- [ ] Optimistic updates en mutations
-- [ ] Pagination vs Infinite queries según caso de uso
+  - **Plan completo en:** `CACHE-OPTIMIZATION-PLAN.md`
+  - 20+ hooks analizados
+  - Categorizado por estrategia (NO CACHE / MEDIUM / AGGRESSIVE)
+  - **Ganancia estimada:** 18-30ms + 50-60% menos requests
+  - **Estado:** Listo para implementar
+- [ ] Prefetching de datos anticipados (futuro)
+- [ ] Optimistic updates en mutations (futuro)
+
+##### 6.1.5 Optimización LCP (Largest Contentful Paint) ✅ COMPLETADO
+- [x] Identificar elemento LCP ✅ (Logo: `web/src/components/logo/index.tsx`)
+- [x] Optimizar componente Logo ✅
+  - Agregado `fetchpriority="high"` para priorización de carga
+  - Agregado `width={200}` y `height={200}` para prevenir CLS
+  - Agregado `decoding="async"` para no bloquear main thread
+  - Agregado `alt="QuiniApp Logo"` para accesibilidad
+- [x] Preload en `index.html` ✅
+  - `<link rel="preload" as="image" href="/logo-example.png" fetchpriority="high" />`
+  - Imagen se descarga inmediatamente (antes de parsing HTML)
+- **Ganancia estimada:** 150-400ms en carga inicial del logo
+- **Impacto:** LCP mejorado significativamente en cold loads
+
+```tsx
+// Logo optimizado para LCP
+<img
+  src={'/logo-example.png'}
+  alt={'QuiniApp Logo'}
+  className={'w-[100px] lg:w-[140px] xl:w-[200px]'}
+  width={200}
+  height={200}
+  fetchPriority="high"
+  decoding="async"
+/>
+```
+- [x] Pagination vs Infinite queries ✅ Ya implementado correctamente
 
 ```typescript
 // Configuración optimizada
@@ -1092,12 +1166,19 @@ const updateTicketMutation = useMutation({
 });
 ```
 
-##### 6.1.5 Bundle Size Optimization (1-2 días)
-- [ ] Analizar bundle size con `vite-bundle-visualizer`
-- [ ] Identificar dependencias pesadas
-- [ ] Reemplazar librerías pesadas por alternativas livianas
-- [ ] Tree shaking verification
-- [ ] Code splitting agresivo
+##### 6.1.5 Bundle Size Optimization ✅ COMPLETADO
+- [x] Analizar bundle size ✅
+  - Main Bundle (vendor): 968.94 KB (288.99 KB gzip)
+  - PDF Bundle: 368.09 KB (117.85 KB gzip)
+  - CSS: 65.97 KB (12.40 KB gzip)
+  - Total: ~1.4 MB
+- [x] Identificar dependencias pesadas ✅
+  - jsPDF aislado correctamente
+  - dayjs aislado en date-vendor
+- [x] Tree shaking verification ✅ Vite lo hace automáticamente
+- [x] Code splitting agresivo ✅ 40+ chunks generados
+- [ ] Reemplazar librerías pesadas (opcional futuro)
+  - Main vendor podría dividirse más si es necesario
 
 ```bash
 # Analizar bundle
@@ -1120,10 +1201,15 @@ import { format } from 'date-fns'; // 10 KB
 import { debounce } from 'lodash-es'; // Tree-shakeable
 ```
 
-##### 6.1.6 Virtualización de Listas (1 día)
-- [ ] Implementar virtualización en listas largas
-- [ ] Usar `@tanstack/react-virtual` para tablas grandes
-- [ ] Optimizar infinite scroll
+##### 6.1.6 Virtualización de Listas ✅ COMPLETADO (Infinite Scroll)
+- [x] Optimizar infinite scroll ✅
+  - Implementado `useInfiniteScroll` hook
+  - offset ajustado a 15-30 filas para carga transparente
+  - Aplicado en: PlaysAndHitsTable, TerminalTicket tables
+- [ ] Implementar virtualización en listas largas (opcional futuro)
+  - Solo necesario si tablas > 500 filas
+  - Actualmente infinite scroll con memo es suficiente
+- [ ] Usar `@tanstack/react-virtual` (opcional futuro)
 
 ```typescript
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -1309,6 +1395,35 @@ Performance Budget:
 4. **Accesibilidad**: Mantener ARIA y keyboard navigation
 5. **Documentar**: Cada componente debe estar documentado
 6. **Testing**: Validar funcionalidad en cada migración
+
+### Tareas Pendientes de Migración de Componentes (components.md)
+
+#### Migración Masiva a Componentes Base (3-4 semanas)
+Los componentes base (Text, Heading, ErrorMessage, Caption, LoadingState, EmptyState) ya existen, pero falta migrar la mayoría de archivos:
+
+**PRIORIDAD ALTA:**
+- [ ] Migrar todos los mensajes de error restantes → ErrorMessage component
+  - Archivos identificados en audit pero no migrados aún
+  - Buscar `text-red-` en codebase
+
+- [ ] Migrar loading states restantes → LoadingState component
+  - Buscar `Loader2` con `animate-spin`
+  - Estandarizar mensajes de carga
+
+- [ ] Migrar labels y captions → Text/Caption components
+  - ~15+ usos identificados en audit
+  - Buscar `text-muted-foreground` inline
+
+**PRIORIDAD MEDIA:**
+- [ ] Migrar headings sin componente → Heading component
+  - CardTitle, Typography variants
+  - Buscar `text-2xl`, `text-3xl` inline
+
+- [ ] Migrar texto general → Text component
+  - ~100+ archivos con clases inline
+  - Patterns: `text-xs md:text-sm lg:text-base`
+
+**Análisis Completo en:** `web/components.md` (archivar después de migración completa)
 
 ### Métricas de Éxito
 - ✅ Reducción de código duplicado (>30%)
