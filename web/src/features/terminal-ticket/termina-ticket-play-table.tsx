@@ -4,7 +4,7 @@ import {
 } from '@/components/ui/table';
 import SkeletonList from '@/components/skeletons/skeleton-list';
 import { IBetEntityFront } from '@helper/types/bet.type';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
@@ -27,6 +27,27 @@ const dedupe = <T, K>(arr: T[], getKey: (x: T) => K) => {
   return out;
 };
 
+/** Fila memoizada para plays */
+const BetRowMemoized = memo<{
+  bet: IBetEntityFront;
+  triggerRef?: (node: HTMLTableRowElement | null) => void;
+}>(function BetRowMemoized({ bet, triggerRef }) {
+  return (
+    <TableRow
+      key={String(bet.bet_id)}
+      ref={triggerRef}
+    >
+      <TableCell className="truncate">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
+      <TableCell className="whitespace-nowrap">${bet.amount}</TableCell>
+      <TableCell className="truncate">{bet.lottery.name}</TableCell>
+      <TableCell className="truncate">{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>
+      <TableCell className="truncate">{bet.schedule.name}</TableCell>
+    </TableRow>
+  );
+}, (prev, next) => {
+  return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
+});
+
 const TerminalTicketPlayTable = ({
   amount,
   count,
@@ -37,7 +58,7 @@ const TerminalTicketPlayTable = ({
   const {
     data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
   } = useInfiniteBetsByTicketNumber({
-    date, ticket_number, limit: 150,
+    date, ticket_number, limit: 50,
   });
 
   const bets = useMemo(() => {
@@ -47,13 +68,12 @@ const TerminalTicketPlayTable = ({
 
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  // Hook centralizado de infinite scroll - carga cuando faltan 75 filas para el final
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     root: rootRef.current,
-    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
+    offsetFromEnd: 30, 
     totalItems: bets.length,
   });
 
@@ -79,16 +99,11 @@ const TerminalTicketPlayTable = ({
           <Table className="table-fixed">
             <TableBody>
               {bets.map((bet, index) => (
-                <TableRow
+                <BetRowMemoized
                   key={String(bet.bet_id)}
-                  ref={index === triggerIndex ? setTriggerRef : undefined}
-                >
-                  <TableCell className="truncate">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
-                  <TableCell className="whitespace-nowrap">${bet.amount}</TableCell>
-                  <TableCell className="truncate">{bet.lottery.name}</TableCell>
-                  <TableCell className="truncate">{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>
-                  <TableCell className="truncate">{bet.schedule.name}</TableCell>
-                </TableRow>
+                  bet={bet}
+                  triggerRef={index === triggerIndex ? setTriggerRef : undefined}
+                />
               ))}
 
               {isFetchingNextPage && (

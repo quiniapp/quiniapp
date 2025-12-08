@@ -47,7 +47,7 @@ const TerminalTicketMatchesTable = ({
       date,
       ticket_number,
       winners: 'true',
-      limit: 150,
+      limit: 50,
     });
 
   const bets = useMemo(() => {
@@ -63,7 +63,7 @@ const TerminalTicketMatchesTable = ({
     hasNextPage,
     isFetchingNextPage,
     root: rootRef.current,
-    offsetFromEnd: 75, // Dispara cuando faltan 75 filas para llegar al final
+    offsetFromEnd: 30, // Dispara cuando faltan 75 filas para llegar al final
     totalItems: bets.length,
   });
 

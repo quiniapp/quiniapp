@@ -78,8 +78,10 @@ export class TicketRepository {
     }
 
     if (typeof paid === 'boolean') {
-      console.log(paid);
       query = query.is('paid', paid);
+      if (!paid) {
+        query = query.is('winner', true);
+      }
     }
 
     const { data, error, count } = await query;

@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { LayoutIcon, UserIcon } from 'lucide-react';
 
 import { FlexCol } from '@/components/flex';
@@ -8,17 +9,17 @@ interface HeaderProps {
   setIsOpen: (isOpen: (prev: boolean) => boolean) => void;
 }
 
-const Header = ({ setIsOpen }: HeaderProps) => {
+const Header = memo(function Header({ setIsOpen }: HeaderProps) {
   const { user } = useAuth();
   const { toggleSidebar, isMobile } = useSidebar();
 
-  const handleToggle = () => {
+  const handleToggle = useCallback(() => {
     if (isMobile) {
       toggleSidebar();
     } else {
       setIsOpen((prev) => !prev);
     }
-  };
+  }, [isMobile, toggleSidebar, setIsOpen]);
 
   return (
     <div className="bg-primary text-white sm:min-h-[50px] flex justify-between items-center p-1 ">
@@ -39,6 +40,6 @@ const Header = ({ setIsOpen }: HeaderProps) => {
       </div>
     </div>
   );
-};
+});
 
 export default Header;
