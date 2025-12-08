@@ -152,6 +152,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       winner,
       paid,
       not_paid,
+      payTicket,
       setDate,
       setCashierId,
       setFilter,

@@ -214,39 +214,62 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     [cashier, user?.user_type]
   );
 
-  const value: MakePlaysContextType = {
-    // state
-    ticketId,
-    totalAmount,
-    partialAmount,
-    bets,
-    cashier,
-    lotteries,
-    schedules,
-    selectedIndexes,
-    userNumber,
-    isEnabledCreateBet,
-    isPendingCreate,
-    isPendingEdit,
-    openDeleteModal,
-    setBets,
-    setTotalAmount,
-    setPartialAmount,
-    setOpenDeleteModal,
-    // derived
-    isEnabledCreateBetByAdmin,
-    // actions
-    setUserNumber,
-    setSelectedIndexes,
-    setLotteries,
-    setSchedules,
-    setIsEnabledCreateBet,
-    handleRecreateBet,
-    handleCreateBet,
-    handleEditTicket,
-    handleResetBets,
-    handleDeleteSelectedBets,
-  };
+  const value: MakePlaysContextType = useMemo(
+    () => ({
+      // state
+      ticketId,
+      totalAmount,
+      partialAmount,
+      bets,
+      cashier,
+      lotteries,
+      schedules,
+      selectedIndexes,
+      userNumber,
+      isEnabledCreateBet,
+      isPendingCreate,
+      isPendingEdit,
+      openDeleteModal,
+      setBets,
+      setTotalAmount,
+      setPartialAmount,
+      setOpenDeleteModal,
+      // derived
+      isEnabledCreateBetByAdmin,
+      // actions
+      setUserNumber,
+      setSelectedIndexes,
+      setLotteries,
+      setSchedules,
+      setIsEnabledCreateBet,
+      handleRecreateBet,
+      handleCreateBet,
+      handleEditTicket,
+      handleResetBets,
+      handleDeleteSelectedBets,
+    }),
+    [
+      ticketId,
+      totalAmount,
+      partialAmount,
+      bets,
+      cashier,
+      lotteries,
+      schedules,
+      selectedIndexes,
+      userNumber,
+      isEnabledCreateBet,
+      isPendingCreate,
+      isPendingEdit,
+      openDeleteModal,
+      isEnabledCreateBetByAdmin,
+      handleRecreateBet,
+      handleCreateBet,
+      handleEditTicket,
+      handleResetBets,
+      handleDeleteSelectedBets,
+    ]
+  );
 
   return <MakePlaysContext.Provider value={value}>{children}</MakePlaysContext.Provider>;
 };

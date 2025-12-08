@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
@@ -184,16 +184,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [armInactivityTimer]);
 
-  const value: AuthContextValue = {
-    isAuth,
-    loading,
-    user,
-    role,
-    login,
-    logout,
-    validate,
-    hasRole,
-  };
+  const value: AuthContextValue = useMemo(
+    () => ({
+      isAuth,
+      loading,
+      user,
+      role,
+      login,
+      logout,
+      validate,
+      hasRole,
+    }),
+    [isAuth, loading, user, role, login, logout, validate, hasRole]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

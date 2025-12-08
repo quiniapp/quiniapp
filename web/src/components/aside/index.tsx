@@ -1,6 +1,6 @@
 // src/components/layout/Aside.tsx (o donde esté)
 import { ChevronRight, Power } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 
 import { Flex } from '@/components/flex';
@@ -28,7 +28,7 @@ interface AsideProps {
   isOpen?: boolean;
 }
 
-const Aside = ({ isOpen }: AsideProps) => {
+const Aside = memo(function Aside({ isOpen }: AsideProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ const Aside = ({ isOpen }: AsideProps) => {
   // Menú visible según rol (memo para evitar recalcular cada render)
   const visibleMenu = useMemo(() => filterMenuItemsByRole(role, MENU_ITEMS), [role]);
 
-  const goTo = (route: string, id: string) => {
+  const goTo = useCallback((route: string, id: string) => {
     setOpenId(null);
     setActiveId(id);
 
@@ -50,7 +50,7 @@ const Aside = ({ isOpen }: AsideProps) => {
     } else {
       navigate(route);
     }
-  };
+  }, [location.pathname, navigate]);
 
   // Marcar activo por URL (opcional, mejora UX si se recarga la página)
   // Si cada item tiene route único podés sincronizar activeId así:
@@ -61,10 +61,10 @@ const Aside = ({ isOpen }: AsideProps) => {
     setActiveId(current?.id ?? null);
   }, [location.pathname, visibleMenu]);
 
-  const handleLogoutClick = async () => {
+  const handleLogoutClick = useCallback(async () => {
     await logout();
     navigate('/login', { replace: true }); // 👈 mover la navegación acá
-  };
+  }, [logout, navigate]);
 
   return (
     <Sidebar
@@ -184,6 +184,6 @@ const Aside = ({ isOpen }: AsideProps) => {
       </SidebarFooter>
     </Sidebar>
   );
-};
+});
 
 export default Aside;

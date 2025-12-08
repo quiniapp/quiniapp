@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 
@@ -45,15 +45,15 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
   const { mutate: deleteResults, isPending: isPendingDeleteResults } = useDeleteResults();
 
   // ---- Handlers
-  const handleScheduleSelect = (scheduleId: string) => {
+  const handleScheduleSelect = useCallback((scheduleId: string) => {
     setSelectedSchedule(scheduleId);
-  };
+  }, []);
 
-  const handleLotterySelect = (lotteryId: string) => {
+  const handleLotterySelect = useCallback((lotteryId: string) => {
     setSelectedLottery(lotteryId);
-  };
+  }, []);
 
-  const handleGenerate = () => {
+  const handleGenerate = useCallback(() => {
     generateWinners(undefined, {
       onSuccess: () => {
         toast.success('Ganadores generados y cuenta corriente actualizada');
@@ -62,9 +62,9 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
         toast.error(`Error al generar ganadores: ${error.message}`);
       },
     });
-  };
+  }, [generateWinners]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!selectedSchedule || !selectedLottery) return;
 
     // Validate that all results have exactly 4 digits
@@ -111,9 +111,9 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
       );
     }
     setOnEdit(false);
-  };
+  }, [selectedSchedule, selectedLottery, results, selectedDate, getResults, createResults, updateResults]);
 
-  const handleDeleteResult = () => {
+  const handleDeleteResult = useCallback(() => {
     if (getResults?.results_id)
       deleteResults(
         {
@@ -132,10 +132,13 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
           },
         }
       );
-  };
+  }, [getResults?.results_id, selectedDate, selectedLottery, selectedSchedule, deleteResults]);
 
   // ---- Derived state
-  const canSave = onEdit && results.every((result) => result.length === 4);
+  const canSave = useMemo(
+    () => onEdit && results.every((result) => result.length === 4),
+    [onEdit, results]
+  );
 
   // ---- Effects
   useEffect(() => {
@@ -148,44 +151,70 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
       }
     }
     setOnEdit(false);
-  }, [isSuccess, selectedLottery, selectedDate, selectedSchedule, isOpenDeleteResult]);
+  }, [isSuccess, selectedLottery, selectedDate, selectedSchedule, isOpenDeleteResult, getResults?.results]);
 
-  const value: ResultsContextType = {
-    // State
-    results,
-    selectedSchedule,
-    selectedLottery,
-    selectedDate,
-    scheduleWinners,
-    isOpen,
-    isOpenDeleteResult,
-    onEdit,
-    fetchSchedules,
-    lotteries,
-    getResults,
-    isPending,
-    isPendingResults,
-    isPendingWinners,
-    isPendingDeleteResults,
-    isSuccess,
-    inputRefs,
-    // Setters
-    setResults,
-    setSelectedSchedule,
-    setSelectedLottery,
-    setSelectedDate,
-    setScheduleWinners,
-    setIsOpen,
-    setIsOpenDeleteResult,
-    setOnEdit,
-    // Actions
-    handleScheduleSelect,
-    handleLotterySelect,
-    handleGenerate,
-    handleSave,
-    handleDeleteResult,
-    canSave,
-  };
+  const value: ResultsContextType = useMemo(
+    () => ({
+      // State
+      results,
+      selectedSchedule,
+      selectedLottery,
+      selectedDate,
+      scheduleWinners,
+      isOpen,
+      isOpenDeleteResult,
+      onEdit,
+      fetchSchedules,
+      lotteries,
+      getResults,
+      isPending,
+      isPendingResults,
+      isPendingWinners,
+      isPendingDeleteResults,
+      isSuccess,
+      inputRefs,
+      // Setters
+      setResults,
+      setSelectedSchedule,
+      setSelectedLottery,
+      setSelectedDate,
+      setScheduleWinners,
+      setIsOpen,
+      setIsOpenDeleteResult,
+      setOnEdit,
+      // Actions
+      handleScheduleSelect,
+      handleLotterySelect,
+      handleGenerate,
+      handleSave,
+      handleDeleteResult,
+      canSave,
+    }),
+    [
+      results,
+      selectedSchedule,
+      selectedLottery,
+      selectedDate,
+      scheduleWinners,
+      isOpen,
+      isOpenDeleteResult,
+      onEdit,
+      fetchSchedules,
+      lotteries,
+      getResults,
+      isPending,
+      isPendingResults,
+      isPendingWinners,
+      isPendingDeleteResults,
+      isSuccess,
+      handleScheduleSelect,
+      handleLotterySelect,
+      handleGenerate,
+      handleSave,
+      handleDeleteResult,
+      canSave,
+    ]
+  );
 
   return <ResultsContext.Provider value={value}>{children}</ResultsContext.Provider>;
 };
