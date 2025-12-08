@@ -6,7 +6,7 @@ import { IPaginatedBetsResponse } from '@helper/request/pagination.response';
 export interface FetchInfiniteBetsByTicketNumberProps {
   lottery_id?: string | null;
   schedule_id?: string | null;
-  date: string | null;
+  date?: string | null;
   cashier_id?: string | null;
   grouped?: string | null;
   winners?: string | null;

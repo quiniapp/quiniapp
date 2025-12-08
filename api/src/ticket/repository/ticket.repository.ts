@@ -3,6 +3,7 @@ import {
   IDeleteTicketEntity,
   IEditTicketBaseEntity,
   INewTicketBaseEntity,
+  IPayTicketEntity,
 } from '@helper/request/ticket.response';
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
@@ -47,12 +48,14 @@ export class TicketRepository {
     user_id,
     date,
     winner,
+    paid,
     page = 1,
     limit = 100,
   }: {
     user_id?: string;
     date: string;
-    winner: boolean;
+    winner?: boolean;
+    paid?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -73,6 +76,12 @@ export class TicketRepository {
     if (winner) {
       query = query.is('winner', true);
     }
+
+    if (typeof paid === 'boolean') {
+      console.log(paid);
+      query = query.is('paid', paid);
+    }
+
     const { data, error, count } = await query;
     if (error) throw error;
     return { data, count: count ?? 0 };
@@ -173,6 +182,24 @@ export class TicketRepository {
     }
     const { data, error } = await query;
     if (error) throw error;
+    return data;
+  }
+
+  async payTicket({ ticket_number, user_id }: IPayTicketEntity): Promise<{
+    success: boolean;
+    ticket_id: string;
+    bets_updated: number;
+  }> {
+    const { data, error } = await supabase.rpc('pay_ticket', {
+      p_ticket_number: ticket_number,
+      p_user_id: user_id,
+    });
+
+    if (error) {
+      // El RPC lanza excepciones específicas que debemos propagar
+      throw error;
+    }
+
     return data;
   }
 }

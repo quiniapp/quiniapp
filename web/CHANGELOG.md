@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-07
+
+#### Terminal Ticket - Modals Lazy Loading
+- **index.tsx**: Converted modals to lazy imports for better performance
+  - `DeleteTicketModal` and `PayTicketModal` now load on-demand using `React.lazy()`
+  - Wrapped modals with `<Suspense fallback={null}>`
+  - **Benefits:**
+    - Reduces initial bundle size
+    - Modals only load when needed (when user clicks delete/pay buttons)
+    - Improves Time to Interactive (TTI)
+
+#### Terminal Ticket - Search Params Refactoring
+- **TerminalTicketProvider**: Created centralized provider for search params management
+  - Path: `web/src/features/terminal-ticket/TerminalTicketProvider.tsx`
+  - **Context Values:**
+    - `date`, `cashier_id`, `filter`, `ticket_number` - Raw search param values
+    - `winner`, `paid`, `not_paid` - Computed boolean values for filtering
+  - **Setter Functions:**
+    - `setDate(date?)` - Set or reset date filter
+    - `setCashierId(id?)` - Set or clear cashier filter
+    - `toggleCashier(id)` - Toggle cashier selection
+    - `setFilter(filter)` - Set ticket filter type (all/winner/paid/not_paid)
+    - `setTicketNumber(ticketNumber?)` - Set or clear selected ticket
+    - `toggleTicketNumber(ticketNumber)` - Toggle ticket selection
+  - **Utilities:**
+    - `resetTicketNumber()` - Clear ticket selection with replace navigation
+    - `resetAllFilters()` - Reset all filters to default state
+  - **Custom Hook:** `useTerminalTicket()` - Access context values and functions
+  - **Why:** Eliminates prop drilling, centralizes URL state logic, simplifies component code
+
+- **Component Refactoring** - Migrated all terminal-ticket components to use provider:
+  - **index.tsx**:
+    - Removed `useSearchParams` hook usage
+    - Wrapped main component with `TerminalTicketProvider`
+    - Uses `useTerminalTicket()` for state access
+    - Simplified delete handler with `resetTicketNumber()`
+  - **table-terminal-ticket.tsx**:
+    - Removed `useSearchParams` hook
+    - Uses `ticket_number` and `toggleTicketNumber()` from context
+    - Simplified row click handler
+  - **form-header-filter.tsx**:
+    - Removed `useSearchParams` hook and manual param manipulation
+    - Uses context setters: `setDate`, `toggleCashier`, `setTicketNumber`, `setFilter`
+    - Cleaner, more declarative state updates
+  - **TicketDetails.tsx**:
+    - Removed `useSearchParams` hook
+    - Uses `ticket_number` and `date` from context
+
+- **Benefits:**
+  - Single source of truth for terminal ticket state
+  - No prop drilling or duplicate search param logic
+  - Type-safe filter values with FilterType union
+  - Memoized context value prevents unnecessary re-renders
+  - Consistent API across all terminal ticket components
+
 ### Changed - 2025-12-05
 
 #### Make Plays - Checkbox Components Refactoring

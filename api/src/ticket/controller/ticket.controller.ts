@@ -62,7 +62,8 @@ export class TicketController {
         result = await this.repository.getAll({
           user_id: props.user_id,
           date: props.date ?? '',
-          winner: !!props.winner,
+          winner: props?.winner,
+          paid: props?.paid,
           page,
           limit,
         });
@@ -70,7 +71,8 @@ export class TicketController {
         result = await this.repository.getAll({
           date: props.date ?? '',
           user_id: props?.cashier_id,
-          winner: !!props.winner,
+          winner: props?.winner,
+          paid: props?.paid,
           page,
           limit,
         });
@@ -174,6 +176,16 @@ export class TicketController {
       return parseTicket(ticket);
     } catch (error) {
       console.error('update error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  paid = async ({ ticket_number, user_id }: { ticket_number: string; user_id: string }) => {
+    try {
+      const result = await this.repository.payTicket({ ticket_number, user_id });
+      return result;
+    } catch (error) {
+      console.error('Paid error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
