@@ -177,4 +177,24 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+
+  paid = async ({
+    ticket_number,
+    user_id,
+  }: {
+    ticket_number: string;
+    user_id: string;
+  }): Promise<{
+    success: boolean;
+    ticket_id: string;
+    bets_updated: number;
+  }> => {
+    try {
+      const result = await this.repository.payTicket({ ticket_number, user_id });
+      return result;
+    } catch (error) {
+      console.error('Paid error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
 }

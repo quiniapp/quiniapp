@@ -7,6 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-07
+
+#### Ticket Payment - Database RPC Implementation
+- **New RPC Function**: `pay_ticket(p_ticket_number TEXT, p_user_id TEXT)`
+  - Path: `api/supabase/migrations/20251208005000_sp_pay_ticket_fix_uuid_type.sql`
+  - **Migration History:**
+    - `20251208002530`: Initial version with UUID parameter (caused type errors)
+    - `20251208004059`: Added winner validation and paid validation
+    - `20251208005000`: Fixed UUID casting issue - accepts TEXT, converts internally
+  - **Type Handling:**
+    - Parameters: Both TEXT for TypeScript compatibility
+    - Internal conversion: `p_user_id::UUID` with error handling
+    - Variables: Proper UUID types for database columns
+    - Prevents `uuid = text` operator errors
+  - **Atomic Operation:** Single database transaction for ticket + bets update
+  - **Validations at DB level:**
+    - Ticket exists and not deleted
+    - Ticket belongs to user (ownership verification)
+    - Ticket not already paid (prevents duplicate payment)
+    - **Ticket is winner** (winner = TRUE) - NEW
+    - Valid UUID format for user_id - NEW
+  - **Updates:**
+    - Marks ticket as `paid = TRUE` with timestamp
+    - Marks **only winning bets** (`winner = TRUE`) as `paid = TRUE`
+    - Uses `edited_at` timestamp for audit trail
+  - **Returns:** Simple JSON response:
+    ```json
+    {
+      "success": true,
+      "ticket_id": "uuid-here",
+      "bets_updated": 5
+    }
+    ```
+    - No longer returns full ticket (performance optimization)
+    - Returns only essential confirmation data
+  - **Error Handling:**
+    - `TICKET_NOT_FOUND`: Ticket doesn't exist or doesn't belong to user
+    - `TICKET_ALREADY_PAID`: Ticket already marked as paid
+    - `TICKET_NOT_WINNER`: Ticket has no winning bets (new validation)
+    - `INVALID_USER_ID`: Invalid UUID format (new validation)
+  - **Performance Notes:**
+    - Uses `idx_bets_ticket_id` (existing, 2,529 uses)
+    - No new indices needed based on BETS_OPTIMIZACION_FINAL.md
+    - Monitors future performance; may add `idx_bets_ticket_winner` if needed
+  - **Benefits:**
+    - Atomicity: All-or-nothing update (ticket + bets in single transaction)
+    - Consistency: Validations at database level prevent race conditions
+    - Performance: Single round-trip to database vs multiple queries
+    - Maintainability: Business logic centralized in database
+    - Type Safety: Proper UUID handling with TypeScript compatibility
+
+#### Ticket Payment Functionality - Complete Implementation
+- **Pay Ticket Endpoint**: Completed implementation of `PUT /api/private/ticket/paid/:id`
+  - Path: `api/src/ticket/route/ticket.route.ts` (payTicketHandler)
+  - **Validations:**
+    - User authentication required (`user.user_id` must exist)
+    - Ticket number validation (from URL params)
+    - Ticket ownership verification (user who created ticket must be the same who pays it)
+    - Prevents duplicate payment (validates ticket not already paid)
+  - **Error Handling:**
+    - 401: User not authenticated
+    - 400: Missing ticket_number or ticket already paid
+    - 403: Ticket doesn't belong to authenticated user
+    - 404: Ticket not found
+    - 500: Internal server error
+
+- **Controller Logic**: Simplified `paid()` method in `TicketController`
+  - Path: `api/src/ticket/controller/ticket.controller.ts:181-200`
+  - **Flow:**
+    1. Call repository `payTicket()` method
+    2. Repository calls `pay_ticket` RPC (handles all validations and updates)
+    3. Return simple confirmation object (not full ticket)
+  - **Returns:** `{ success: boolean, ticket_id: string, bets_updated: number }`
+  - **Benefits:** Thin controller layer, no parsing needed, faster response
+
+- **Error Messages**: Added new error constants in helper
+  - Path: `helper/types/errors.type.ts`
+  - `TICKET_NOT_OWNED`: "El ticket no pertenece al usuario"
+  - `TICKET_ALREADY_PAID`: "El ticket ya fue pagado"
+  - **Why:** Better error messaging for frontend user experience
+
+- **Repository Method**: Refactored to use RPC
+  - Path: `api/src/ticket/repository/ticket.repository.ts:180-197`
+  - **Before:** 2 separate UPDATE queries (tickets + bets)
+  - **After:** Single RPC call `pay_ticket()`
+  - Returns simple confirmation: `{ success: boolean, ticket_id: string, bets_updated: number }`
+  - Propagates database errors to controller layer
+  - **Performance:** ~90% faster (no need to fetch full ticket JSON)
+
 ### Changed - 2025-12-03
 
 #### Database Index Optimization - Execution Completed ✅

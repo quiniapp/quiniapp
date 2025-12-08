@@ -1,5 +1,5 @@
-import { TicketX } from 'lucide-react';
-import { useState } from 'react';
+import { HandCoinsIcon, TicketX } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
 
 // @Components
 import { IconButton } from '@/components/button/IconButton';
@@ -7,32 +7,35 @@ import { Flex, FlexCol } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import FormHeaderFilter from '@/features/terminal-ticket/form-header-filter';
 import TableTerminalTicket from '@/features/terminal-ticket/table-terminal-ticket'; // @Hooks
-import DeleteTicketModal from '@/components/modals/DeleteTicketModal';
 
 import TicketDetails from './TicketDetails';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useDeleteTicket } from '@/hooks/mutations/tickets/useDeleteTicket';
 import toast from 'react-hot-toast';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
+import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
+import { TerminalTicketProvider, useTerminalTicket } from './provider/TerminalTicketProvider';
+import { usePaidTicket } from '@/hooks/mutations/tickets/usePayTicket';
 
-export const TerminalTicketContent = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+// Lazy load modals
+const DeleteTicketModal = lazy(() => import('@/components/modals/DeleteTicketModal'));
+const PayTicketModal = lazy(() => import('@/components/modals/PayTicketModal'));
+
+const TerminalTicketContentInner = () => {
+  const { role } = useAuth();
+  const { date, cashier_id, winner, paid, not_paid, ticket_number, resetTicketNumber, payTicket } =
+    useTerminalTicket();
   const [isOpenDeleteTicket, setIsOpenDeleteTicket] = useState(false);
-  const navigate = useNavigate()
-  const date = searchParams.get('date') ?? undefined;
-  const cashier_id = searchParams.get('cashier_id') ?? undefined;
-  const filter = searchParams.get('filter') ?? undefined;
-  const ticket_number = searchParams.get('ticket_number') ?? undefined;
-
+  const [isOpenPayTicket, setIsOpenPayTicket] = useState(false);
+  const navigate = useNavigate();
+  const { mutate: runPayTicket, isPending: isPendingPay } = usePaidTicket();
   const { mutate: runDeleteTicket, isPending: isPendingDelete } = useDeleteTicket();
 
   const handleDeleteTicket = () => {
     runDeleteTicket(ticket_number, {
       onSuccess: () => {
-        const next = new URLSearchParams(searchParams); // ✅ crear nuevo
-        next.delete('ticket_number');
-        setSearchParams(next, { replace: true }); // ✅ asegura navegación sin push
-
+        resetTicketNumber();
         setIsOpenDeleteTicket(false);
         toast.success('Ticket eliminado correctamente');
       },
@@ -42,48 +45,90 @@ export const TerminalTicketContent = () => {
     });
   };
 
-  const handleClose = ()=>{
-    navigate('/')
-  }
+  const handlePayTicket = () => {
+    runPayTicket(ticket_number, {
+      onSuccess: () => {
+        resetTicketNumber();
+        setIsOpenPayTicket(false);
+        toast.success('Ticket eliminado correctamente');
+      },
+      onError: () => {
+        toast.error('Ocurrió un error al eliminar el ticket, intente nuevamente');
+      },
+    });
+  };
+
+  const handleClose = () => {
+    navigate('/');
+  };
   return (
     <PageWrapper>
       <HeaderSection title={'Revisar Tickets'} className={'w-full sticky top-0'} />
       <FlexCol className={'1440:py-[36px] py-2 sm:py-4 flex-1'}>
+        <FlexCol>
+          <FormHeaderFilter />
 
-          <FlexCol>
-            <FormHeaderFilter />
-
-  
           <FlexCol>
             <TableTerminalTicket
               user_id={cashier_id}
               date={date}
-              winner={filter === 'winner' ? true : undefined}
-              paid={filter === 'paid' ? true : undefined}
-              not_paid={filter === 'not_paid' ? true : undefined}
+              winner={winner}
+              paid={paid}
+              not_paid={not_paid}
             />
             <Flex className={'w-full justify-between 1440:py-8 py-3 border-t gap-2'}>
-              <IconButton
-                label="Eliminar Ticket"
-                icon={<TicketX />}
-                variant="destructive"
-                disabled={!ticket_number}
-                onClick={() => setIsOpenDeleteTicket(true)}
-              />
-              <IconButton label="Cerrar" variant="outline" onClick={()=>handleClose()}/>
+              <Flex className="gap-1 sm:gap-2 2xl:gap-4">
+                <IconButton
+                  label="Eliminar Ticket"
+                  icon={<TicketX />}
+                  variant="destructive"
+                  disabled={!ticket_number}
+                  onClick={() => setIsOpenDeleteTicket(true)}
+                />
+                {role === USER_TYPE.CASHIER && (
+                  <IconButton
+                    label="Pagar ticket"
+                    icon={<HandCoinsIcon />}
+                    variant="success"
+                    disabled={!ticket_number || !payTicket}
+                    onClick={() => setIsOpenPayTicket(true)}
+                  />
+                )}
+              </Flex>
+              <IconButton label="Cerrar" variant="outline" onClick={() => handleClose()} />
             </Flex>
           </FlexCol>
         </FlexCol>
         <TicketDetails />
       </FlexCol>
 
-      <DeleteTicketModal
-        isOpen={isOpenDeleteTicket}
-        ticketNumber={ticket_number}
-        onClose={() => setIsOpenDeleteTicket(false)}
-        onClick={handleDeleteTicket}
-        isPendingDelete={isPendingDelete}
-      />
+      <Suspense fallback={null}>
+        <DeleteTicketModal
+          isOpen={isOpenDeleteTicket}
+          ticketNumber={ticket_number}
+          onClose={() => setIsOpenDeleteTicket(false)}
+          onClick={handleDeleteTicket}
+          isPendingDelete={isPendingDelete}
+        />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <PayTicketModal
+          isOpen={isOpenPayTicket}
+          ticketNumber={ticket_number}
+          onClose={() => setIsOpenPayTicket(false)}
+          onClick={handlePayTicket}
+          isPendingDelete={isPendingPay}
+        />
+      </Suspense>
     </PageWrapper>
+  );
+};
+
+export const TerminalTicketContent = () => {
+  return (
+    <TerminalTicketProvider>
+      <TerminalTicketContentInner />
+    </TerminalTicketProvider>
   );
 };

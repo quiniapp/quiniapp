@@ -36,4 +36,8 @@ export const ERROR_MESSAGE = {
 
   INVALID_DELETE_TIME: 'Pasaron más de 2 minutos desde la creación',
   TICKET_NOT_FOUND: 'Ticket no encontrado',
+  TICKET_NOT_OWNED: 'El ticket no pertenece al usuario',
+  TICKET_ALREADY_PAID: 'El ticket ya fue pagado',
+  TICKET_NOT_WINNER: 'El ticket no es ganador',
+  INVALID_USER_ID: 'ID de usuario inválido',
 };

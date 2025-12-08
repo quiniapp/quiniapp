@@ -14,10 +14,9 @@ import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 interface Props {
-  ticket_number?: string;
-  date: string;
   maxBodyHeightClass?: string;
   prize: number;
   winners_count: number;
@@ -37,12 +36,12 @@ const dedupe = <T, K>(arr: T[], getKey: (x: T) => K) => {
 };
 
 const TerminalTicketMatchesTable = ({
-  ticket_number,
-  date,
   maxBodyHeightClass = 'max-h-[50vh]',
   prize,
   winners_count,
 }: Props) => {
+  
+      const { ticket_number, date } = useTerminalTicket();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteBetsByTicketNumber({
       date,
