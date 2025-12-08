@@ -1093,6 +1093,32 @@ const TicketsContext = { tickets, bets };
   - **Estado:** Listo para implementar
 - [ ] Prefetching de datos anticipados (futuro)
 - [ ] Optimistic updates en mutations (futuro)
+
+##### 6.1.5 Optimización LCP (Largest Contentful Paint) ✅ COMPLETADO
+- [x] Identificar elemento LCP ✅ (Logo: `web/src/components/logo/index.tsx`)
+- [x] Optimizar componente Logo ✅
+  - Agregado `fetchpriority="high"` para priorización de carga
+  - Agregado `width={200}` y `height={200}` para prevenir CLS
+  - Agregado `decoding="async"` para no bloquear main thread
+  - Agregado `alt="QuiniApp Logo"` para accesibilidad
+- [x] Preload en `index.html` ✅
+  - `<link rel="preload" as="image" href="/logo-example.png" fetchpriority="high" />`
+  - Imagen se descarga inmediatamente (antes de parsing HTML)
+- **Ganancia estimada:** 150-400ms en carga inicial del logo
+- **Impacto:** LCP mejorado significativamente en cold loads
+
+```tsx
+// Logo optimizado para LCP
+<img
+  src={'/logo-example.png'}
+  alt={'QuiniApp Logo'}
+  className={'w-[100px] lg:w-[140px] xl:w-[200px]'}
+  width={200}
+  height={200}
+  fetchPriority="high"
+  decoding="async"
+/>
+```
 - [x] Pagination vs Infinite queries ✅ Ya implementado correctamente
 
 ```typescript
