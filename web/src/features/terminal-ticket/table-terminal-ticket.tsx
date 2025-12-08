@@ -36,7 +36,7 @@ const TableTerminalTicket = ({
   paid,
   not_paid,
 }: TableTerminalTicketProps) => {
-  const { ticket_number, toggleTicketNumber, setTicketPaid } = useTerminalTicket();
+  const { ticket_number, toggleTicketNumber, setPayTicket } = useTerminalTicket();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteTickets({
     user_id,
@@ -68,7 +68,8 @@ const TableTerminalTicket = ({
 
   const handleClick = (ticketNumber: string) => {
     toggleTicketNumber(ticketNumber);
-    setTicketPaid(tickets.find((t) => t.ticket_number === ticketNumber)?.paid);
+    const ticket = tickets.find((t) => t.ticket_number === ticketNumber)
+    setPayTicket(!ticket?.paid && ticket?.winner);
   };
 
   if (isLoading) {

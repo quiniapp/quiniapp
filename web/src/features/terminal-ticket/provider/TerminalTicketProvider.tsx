@@ -11,7 +11,7 @@ interface TerminalTicketProviderProps {
 
 export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const[ticketPaid, setTicketPaid] = useState<undefined|boolean>()
+  const[payTicket, setPayTicket] = useState<undefined|boolean>()
   // Get values from search params
   const date = searchParams.get('date') ?? undefined;
   const cashier_id = searchParams.get('cashier_id') ?? undefined;
@@ -129,10 +129,10 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       winner,
       paid,
       not_paid,
-      ticketPaid,
+      payTicket,
 
       // Setters
-      setTicketPaid,
+      setPayTicket,
       setDate,
       setCashierId,
       setFilter,

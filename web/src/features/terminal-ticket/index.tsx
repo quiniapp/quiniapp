@@ -24,7 +24,7 @@ const PayTicketModal = lazy(() => import('@/components/modals/PayTicketModal'));
 
 const TerminalTicketContentInner = () => {
   const { role } = useAuth();
-  const { date, cashier_id, winner, paid, not_paid, ticket_number, resetTicketNumber, ticketPaid } =
+  const { date, cashier_id, winner, paid, not_paid, ticket_number, resetTicketNumber, payTicket } =
     useTerminalTicket();
   const [isOpenDeleteTicket, setIsOpenDeleteTicket] = useState(false);
   const [isOpenPayTicket, setIsOpenPayTicket] = useState(false);
@@ -90,7 +90,7 @@ const TerminalTicketContentInner = () => {
                     label="Pagar ticket"
                     icon={<HandCoinsIcon />}
                     variant="success"
-                    disabled={!ticket_number || ticketPaid}
+                    disabled={!ticket_number || !payTicket}
                     onClick={() => setIsOpenPayTicket(true)}
                   />
                 )}

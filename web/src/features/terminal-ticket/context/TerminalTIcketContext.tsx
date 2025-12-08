@@ -12,10 +12,10 @@ interface TerminalTicketContextValue {
   winner: boolean | undefined;
   paid: boolean | undefined;
   not_paid: boolean | undefined;
-  ticketPaid: boolean | undefined;
+  payTicket: boolean | undefined;
 
   // Setters
-  setTicketPaid: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+  setPayTicket: React.Dispatch<React.SetStateAction<boolean | undefined>>;
   setDate: (date?: string) => void;
   setCashierId: (id?: string) => void;
   setFilter: (filter: FilterType) => void;
