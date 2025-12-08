@@ -145,7 +145,8 @@ export class TicketRouter {
 
   private getAllTicketHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, ticket_number, cashier_id, winner, page, limit } = req.query;
+    const { date, ticket_number, cashier_id, winner, page, limit, paid } = req.query;
+
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -180,6 +181,7 @@ export class TicketRouter {
           res.status(500).json(response);
           return;
         }
+
         const result = await this.controller.getAll({
           user_type: user.user.user_type,
           user_id: user.user.user_id,
@@ -188,6 +190,11 @@ export class TicketRouter {
           ...(typeof winner === 'string' && winner === 'true'
             ? { winner: true }
             : { winner: false }),
+          ...(typeof paid === 'undefined'
+            ? paid
+            : typeof paid === 'string' && paid === 'true'
+              ? { paid: true }
+              : { paid: false }),
           page: typeof page === 'string' ? parseInt(page, 10) : 1,
           limit: typeof limit === 'string' ? parseInt(limit, 10) : 100,
         });
@@ -489,7 +496,7 @@ export class TicketRouter {
       });
 
       const response: APIResponse<typeof result> = {
-        data: result,
+        data: { result },
       };
       res.status(200).json(response);
       return;

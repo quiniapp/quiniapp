@@ -48,12 +48,14 @@ export class TicketRepository {
     user_id,
     date,
     winner,
+    paid,
     page = 1,
     limit = 100,
   }: {
     user_id?: string;
     date: string;
-    winner: boolean;
+    winner?: boolean;
+    paid?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -74,6 +76,12 @@ export class TicketRepository {
     if (winner) {
       query = query.is('winner', true);
     }
+
+    if (typeof paid === 'boolean') {
+      console.log(paid);
+      query = query.is('paid', paid);
+    }
+
     const { data, error, count } = await query;
     if (error) throw error;
     return { data, count: count ?? 0 };
