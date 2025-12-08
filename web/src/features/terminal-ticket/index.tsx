@@ -50,10 +50,10 @@ const TerminalTicketContentInner = () => {
       onSuccess: () => {
         resetTicketNumber();
         setIsOpenPayTicket(false);
-        toast.success('Ticket eliminado correctamente');
+        toast.success('Ticket pagado correctamente');
       },
       onError: () => {
-        toast.error('Ocurrió un error al eliminar el ticket, intente nuevamente');
+        toast.error('Ocurrió un error al pagar el ticket, intente nuevamente');
       },
     });
   };

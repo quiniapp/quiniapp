@@ -22,7 +22,7 @@ export const ScheduleRadioList = ({ selectedSchedule, handleSchedule }: Schedule
   if (isLoading) return <SkeletonList row={2} />;
   return (
     <RadioGroup
-      className="flex justify-between"
+      className="flex justify-between gap-2 md:gap-3 2xl:gap-4"
       onValueChange={handleSchedule}
       value={selectedSchedule}
     >
