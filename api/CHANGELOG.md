@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-10
+
+#### Authentication Middleware - Incorrect HTTP Status Code
+**Issue:** Middleware returned 400 (Bad Request) when authentication token was missing
+**Root Cause:** Missing token is an authentication issue, not a malformed request
+**Solution:** Changed HTTP status code from 400 to 401 in `api/middlewares/auth.middleware.ts:29`
+**Impact:**
+- Frontend AuthProvider now correctly handles missing tokens
+- Eliminates 400 errors in console during initial app load
+- Proper REST API semantics (401 = Unauthorized, 400 = Bad Request)
+
+---
+
 ### Added - 2025-12-07
 
 #### Ticket Payment - Database RPC Implementation

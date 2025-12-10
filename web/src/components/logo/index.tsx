@@ -7,7 +7,7 @@ const Logo = () => {
         className={'w-[100px] lg:w-[140px] xl:w-[200px]'}
         width={200}
         height={200}
-        fetchPriority="high"
+        fetchpriority="high"
         decoding="async"
       />
     </div>
