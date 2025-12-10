@@ -222,6 +222,21 @@ export function ClockProvider({
 
 export function useClock() {
   const ctx = useContext(ClockContext);
-  if (!ctx) throw new Error('useClock debe usarse dentro de <ClockProvider>');
+
+  // Fallback seguro durante lazy loading o transiciones
+  if (!ctx) {
+    const now = dayjs();
+    return {
+      time: now.format('HH:mm:ss'),
+      date: now.format('dddd, D [de] MMMM [de] YYYY'),
+      now,
+      tz: 'America/Argentina/Buenos_Aires',
+      isScheduleAfter: () => false,
+      isLessThanTenMinutes: () => false,
+      isScheduleEnabled: () => false,
+      refresh: async () => {},
+    };
+  }
+
   return ctx;
 }
