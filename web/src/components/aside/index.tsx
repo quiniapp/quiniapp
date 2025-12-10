@@ -22,7 +22,8 @@ import MENU_ITEMS from '@/constants/SidebarMenu';
 import { cn } from '@/lib/utils';
 import { filterMenuItemsByRole } from '@/utils/menu-access';
 import { MENU_ITEM } from '@/types/menu-item';
-import { useAuth } from '@/contexts/AuthContext'; // ⬅️ nuevo
+import { useAuth } from '@/contexts/AuthContext';
+import { usePrefetchRoute } from '@/hooks/usePrefetchRoute';
 
 interface AsideProps {
   isOpen?: boolean;
@@ -33,7 +34,8 @@ const Aside = memo(function Aside({ isOpen }: AsideProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { role, logout, loading } = useAuth(); // ⬅️ role + logout del provider
+  const { role, logout, loading } = useAuth();
+  const prefetch = usePrefetchRoute();
 
   // Menú visible según rol (memo para evitar recalcular cada render)
   const visibleMenu = useMemo(() => filterMenuItemsByRole(role, MENU_ITEMS), [role]);
@@ -125,6 +127,7 @@ const Aside = memo(function Aside({ isOpen }: AsideProps) {
                               onClick={() => {
                                 goTo(child.route, child.id);
                               }}
+                              onMouseEnter={() => prefetch(child.route)}
                               className={cn(
                                 'text-neutral-300 !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors text-xs lg:text-base',
                                 active && '!bg-primary'
@@ -156,6 +159,7 @@ const Aside = memo(function Aside({ isOpen }: AsideProps) {
                     onClick={() => {
                       setOpenId(null);goTo(item.route, item.id)
                     }}
+                    onMouseEnter={() => prefetch(item.route)}
                     className={cn(
                       'h-[36px] px-3 !rounded-none transition-colors cursor-pointer text-xs lg:text-base',
                       isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
