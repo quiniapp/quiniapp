@@ -20,7 +20,7 @@ const ROUTE_PREFETCH_MAP: Partial<Record<ROUTES, () => Promise<any>>> = {
   [ROUTES.CURRENT_ACCOUNT]: () => import('@/pages/current-account.tsx'),
   [ROUTES.SHIFTS]: () => import('@/pages/shifts'),
   [ROUTES.USERS]: () => import('@/pages/users'),
-  [ROUTES.USERS_List]: () => import('@/pages/user-list'),
+  [ROUTES.USERS_LIST]: () => import('@/pages/user-list'),
   [ROUTES.REPORTS]: () => import('@/pages/reports'),
   [ROUTES.SETTINGS]: () => import('@/pages/settings'),
   [ROUTES.LOTTERIES]: () => import('@/pages/upcoming-lotteries.tsx'),
