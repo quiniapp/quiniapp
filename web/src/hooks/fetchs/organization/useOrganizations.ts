@@ -25,11 +25,11 @@ export const useOrganizations = (role: USER_TYPE | null) => {
     queryFn: fetchOrganizations,
     enabled: !!role && role === USER_TYPE.OWNER, // Solo OWNER puede ver organizaciones
 
-    staleTime: 12 * 60 * 60 * 1000, // 12 horas
-    gcTime: 60 * 60 * 1000, // 60 minutos
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutos - tiempo razonable para refetch
+    gcTime: 30 * 60 * 1000, // 30 minutos en caché
+    refetchOnWindowFocus: true, // Refetch cuando vuelve al tab
     refetchOnReconnect: true,
-    refetchOnMount: false,
+    refetchOnMount: true, // IMPORTANTE: refetch después de invalidaciones
     retry: 1,
   });
 };

@@ -70,18 +70,18 @@ const ShiftsContent = () => {
             <Table>
               <TableHeader className="bg-dark-light">
                 <TableRow>
-                  <TableHead className="text-cyan">Nombre</TableHead>
-                  <TableHead className="text-cyan">Hora</TableHead>
-                  <TableHead className="text-cyan">Estado</TableHead>
-                  <TableHead className="text-cyan">Editar</TableHead>
-                  <TableHead className="text-cyan">Eliminar</TableHead>
+                  <TableHead className="text-white">Nombre</TableHead>
+                  <TableHead className="text-white">Hora</TableHead>
+                  <TableHead className="text-white">Estado</TableHead>
+                  <TableHead className="text-white">Editar</TableHead>
+                  <TableHead className="text-white">Eliminar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {schedules.map((schedule) => (
                   <TableRow key={schedule.schedule_id} className="hover:bg-dark-lighter/50">
                     <TableCell className="font-medium">{schedule.name}</TableCell>
-                    <TableCell>{schedule.time}</TableCell>
+                    <TableCell>{schedule.time.slice(0,5)}</TableCell>
                     <TableCell>
                       <span
                         className={`text-xs px-2 py-1 rounded ${

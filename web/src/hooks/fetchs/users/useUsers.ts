@@ -24,11 +24,11 @@ export const useUsers = (role: USER_TYPE | null) => {
     queryFn:  fetchUsers,
     enabled: !!role && role !== USER_TYPE.CASHIER, // deshabilita si es cashier
 
-    staleTime: 12 * 60 * 60 * 1000, // 12 horas sin refetch por foco/mount
-    gcTime: 60 * 60 * 1000, // 60 minutos en caché aunque no haya subscriptores
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutos - tiempo razonable para refetch
+    gcTime: 30 * 60 * 1000, // 30 minutos en caché
+    refetchOnWindowFocus: true, // Refetch cuando vuelve al tab
     refetchOnReconnect: true,
-    refetchOnMount: false,
+    refetchOnMount: true, // IMPORTANTE: refetch después de invalidaciones
     retry: 1,
   });
 };

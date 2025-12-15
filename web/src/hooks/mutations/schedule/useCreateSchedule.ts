@@ -1,7 +1,6 @@
-import { INewScheduleEntity } from "@helper/request/schedule.request";
-import { useMutation, UseMutationOptions, useQueryClient } from "@tanstack/react-query";
-import { BACKEND_ROUTES } from "../../../../routes/routes.ts";
-
+import { INewScheduleEntity } from '@helper/request/schedule.request';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 const createSchedule = async (newSchedule: Omit<INewScheduleEntity, 'organization_id'>) => {
   const response = await fetch(BACKEND_ROUTES.schedule.base, {
@@ -29,7 +28,7 @@ export const useCreateSchedule = (
   return useMutation({
     mutationFn: createSchedule,
     onSuccess: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      await queryClient.invalidateQueries({ queryKey: ['schedules'], refetchType: 'active' });
       options?.onSuccess?.(...args);
     },
     ...options,

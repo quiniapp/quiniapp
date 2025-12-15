@@ -6,6 +6,8 @@ import {
   UserIcon,
   UsersIcon,
   Building2,
+  Clock,
+  Clipboard,
 } from 'lucide-react';
 
 import { MENU_ITEM } from '@/types/menu-item.tsx';
@@ -47,28 +49,28 @@ const MENU_ITEMS: MENU_ITEM[] = [
   },
   // Admin ve Qunielas
   {
-    id: 'Quinielas',
-    name: 'Qunielas',
-    route: ROUTES.CLIENTS,
+    id: 'LoteriesAndSchedules',
+    name: 'Qunielas y Turnos',
+    route: ROUTES.UPCOMING_LOTTERIES,
     icon: <UserIcon size={20} />,
     children: [
       {
-        id: 'AgentCommission',
+        id: 'UpcomingLotteries',
         name: 'Qunielas a jugarse',
         route: ROUTES.UPCOMING_LOTTERIES,
         icon: <FileTextIcon size={20} />,
       },
       {
-        id: 'Shifts',
+        id: 'Schedules',
         name: 'Turnos',
-        route: ROUTES.SHIFTS,
-        icon: <FileTextIcon size={20} />,
+        route: ROUTES.SCHEDULES,
+        icon: <Clock size={20} />,
       },
       {
         id: 'Loteries',
         name: 'Loterias',
         route: ROUTES.LOTTERIES,
-        icon: <FileTextIcon size={20} />,
+        icon: <TicketIcon size={20} />,
       },
     ],
   },

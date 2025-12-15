@@ -38,7 +38,7 @@ const CreateScheduleModal = ({ isOpen, onClose }: CreateScheduleModalProps) => {
       toast.error('La hora es requerida');
       return;
     }
-    createSchedule({ name: name.trim(), time: time.trim(), active: true });
+    createSchedule({ name: name.trim(), time: time.trim().slice(0,5), active: true });
   };
 
   const handleClose = () => {

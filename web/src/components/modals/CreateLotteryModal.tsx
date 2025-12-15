@@ -92,7 +92,7 @@ const CreateLotteryModal = ({ isOpen, onClose, nextOrder }: CreateLotteryModalPr
             <IconButton
               type="submit"
               label={isPending ? 'Creando...' : 'Crear'}
-              onClick={handleSubmit}
+              onClick={()=>handleSubmit}
               disabled={isPending}
               className="w-full"
             />
