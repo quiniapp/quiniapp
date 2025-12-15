@@ -1,4 +1,4 @@
-import { ITicketEntityFrontCompact } from '@helper/request/ticket.response';
+import { ITicketEntityFrontCompact } from '@helper/request/ticket.request';
 import { ITicketEntityBack } from '@helper/types/ticket.type';
 // import { parseBet } from 'api/src/bet/helper/parseBet';
 

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.response.ts';
+import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.request.ts';
 
 type UpdateVars = {
   date: string;

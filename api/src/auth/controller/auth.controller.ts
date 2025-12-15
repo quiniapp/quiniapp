@@ -7,7 +7,9 @@ import { generateEmail } from 'api/helper/generateEmail';
 export class AuthController {
   private repository = new AuthRepository();
 
-  login = async (props: IAuthLogin): Promise<IUserEntityFront> => {
+  login = async (
+    props: IAuthLogin
+  ): Promise<{ user: IUserEntityFront; organization_id: string }> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: generateEmail(props.username),
@@ -17,9 +19,12 @@ export class AuthController {
         console.error(error);
         throw new Error(error.message);
       }
-      const user: IUserEntityBack = await this.repository.login({ ...props });
+      const userData: IUserEntityBack = await this.repository.login({ ...props });
 
-      return parseUser(user);
+      return {
+        user: parseUser(userData),
+        organization_id: userData.organization_id,
+      };
     } catch (error) {
       if (error instanceof Error) {
         console.error('Login error:', error.message);

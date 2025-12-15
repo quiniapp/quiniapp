@@ -3,6 +3,7 @@ import { IUserEntityFront } from './user.type';
 export interface ITokenPayload {
   user: IUserEntityFront;
   token: string;
+  organization_id: string;
 }
 export interface IAuthLogin {
   username: string;

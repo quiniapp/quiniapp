@@ -1,7 +1,7 @@
 import { USER_TYPE } from '@helper/types/user.type';
 import { parseTicket } from 'api/src/ticket/helper/parseTicket';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { IGetAllTicketEntity } from '@helper/request/ticket.response';
+import { IGetAllTicketEntity } from '@helper/request/ticket.request';
 import { WinnerRepository } from '../repository/winners.repository';
 
 export class WinnerController {

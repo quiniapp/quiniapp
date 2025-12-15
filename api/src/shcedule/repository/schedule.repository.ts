@@ -27,8 +27,8 @@ export class ScheduleRepository {
     return data;
   }
 
-  async getAll(organization_id: string) {
-    const { data, error } = await supabase
+  async getAll(organization_id: string, all?: boolean) {
+    let query = supabase
       .from('schedules')
       .select(
         `
@@ -43,7 +43,13 @@ export class ScheduleRepository {
     )
   `
       )
-      .eq('organization_id', organization_id)
+      .eq('organization_id', organization_id);
+
+    if (!all) {
+      query = query.eq('active', true);
+    }
+
+    const { data, error } = await query
       .order('time', { ascending: true })
       .order('day', { referencedTable: 'schedule_lotteries', ascending: true });
 
@@ -58,7 +64,7 @@ export class ScheduleRepository {
     return data;
   }
 
-  async update(id: string, organization_id: string, payload: any) {
+  async update(id: string, payload: any, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('schedules')

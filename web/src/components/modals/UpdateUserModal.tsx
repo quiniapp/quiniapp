@@ -3,7 +3,7 @@ import { Flex, FlexCol } from '../flex';
 import { Label } from '../ui/label';
 import { IconButton } from '../button/IconButton';
 import { CASHIER_TYPE, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { IUpdateUserEntity } from '@helper/request/user.response';
+import { IUpdateUserEntity } from '@helper/request/user.request';
 import { Controller, useForm } from 'react-hook-form';
 import { useMemo } from 'react';
 import { Input } from '../ui/input';

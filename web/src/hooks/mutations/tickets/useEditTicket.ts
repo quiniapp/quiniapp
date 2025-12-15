@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IEditTicketEntity } from '@helper/request/ticket.response.ts';
+import { IEditTicketEntity } from '@helper/request/ticket.request.ts';
 
 const doEditTicket = async ({ ticket_id, bets }: IEditTicketEntity) => {
   const res = await fetch(BACKEND_ROUTES.ticket.id(ticket_id), {
@@ -9,7 +9,7 @@ const doEditTicket = async ({ ticket_id, bets }: IEditTicketEntity) => {
     credentials: 'include',
     body: JSON.stringify({ bets: bets }),
   });
-  console.log(res)
+
   if (!res.ok) throw new Error('Error creating ticket');
   return res.json();
 };

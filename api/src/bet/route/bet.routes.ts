@@ -3,7 +3,7 @@ import { BetController } from '../controller/bet.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
-import { TicketSums } from '@helper/request/bet.response';
+import { TicketSums } from '@helper/request/bet.request';
 
 export class BetRouter {
   public router: Router;

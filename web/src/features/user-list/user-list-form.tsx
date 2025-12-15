@@ -1,6 +1,6 @@
-import { zodResolver } from '@hookform/resolvers/zod';
+
 import { BanIcon, SaveIcon } from 'lucide-react';
-import { Controller, useForm, Resolver } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/select';
 // @@helpers
 
-import type { INewUserEntityForm } from '@/types/user.type';
 
 // @Hooks
 import { useAddNewUser } from '@/hooks/mutations/users/useAddNewUser.ts';
@@ -26,6 +25,7 @@ import { useMemo } from 'react';
 import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type';
 import { ErrorMessage } from '@/components/atoms/ErrorMessage';
 import { Text } from '@/components/atoms/Text';
+import { INewUserEntity } from '@helper/request/user.request';
 
 export default function UserListAddNewUserForm() {
   const {
@@ -34,7 +34,7 @@ export default function UserListAddNewUserForm() {
     reset,
     watch,
     formState: { errors },
-  } = useForm<INewUserEntityForm>({
+  } = useForm<INewUserEntity>({
     // resolver: zodResolver(UserSchema) as Resolver<INewUserEntityForm>,
     mode: 'onBlur',
     defaultValues: {
@@ -42,8 +42,8 @@ export default function UserListAddNewUserForm() {
       name: '',
       user_type: USER_TYPE.CASHIER,
       cashier_type: CASHIER_TYPE.PC,
-      fee: undefined,
-      fee_plus: undefined,
+      fee: 0,
+      fee_plus: 0,
       username: '',
       password: '',
       group_id: '',
@@ -64,7 +64,7 @@ export default function UserListAddNewUserForm() {
     },
   });
 
-  const onSubmit = (data: INewUserEntityForm) => {
+  const onSubmit = (data: INewUserEntity) => {
     addUser(data);
   };
 
@@ -131,7 +131,7 @@ export default function UserListAddNewUserForm() {
                     name="cashier_type"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                         <SelectTrigger className="w-full border-dark-lighter">
                           <SelectValue placeholder="Seleccione uno" />
                         </SelectTrigger>
@@ -174,13 +174,14 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="fee"
                     control={control}
-                    render={({ field }) => (
+                    render={({ field: { value, onChange, ...rest } }) => (
                       <Input
-                        {...field}
+                        {...rest}
                         id="fee"
                         type="number"
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                        
+                        value={value ?? ''}
+                        onChange={(e) => onChange(e.target.valueAsNumber || 0)}
+
                       />
                     )}
                   />
@@ -190,13 +191,14 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="fee_plus"
                     control={control}
-                    render={({ field }) => (
+                    render={({ field: { value, onChange, ...rest } }) => (
                       <Input
-                        {...field}
+                        {...rest}
                         id="fee_plus"
                         type="number"
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                 
+                        value={value ?? ''}
+                        onChange={(e) => onChange(e.target.valueAsNumber || 0)}
+
                       />
                     )}
                   />
@@ -224,8 +226,8 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="last_name"
                     control={control}
-                    render={({ field }) => (
-                      <Input id={'last_name'}  {...field} />
+                    render={({ field: { value, ...rest } }) => (
+                      <Input id={'last_name'} value={value ?? ''} {...rest} />
                     )}
                   />
                   {errors.last_name?.message && (
@@ -237,8 +239,8 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="address"
                     control={control}
-                    render={({ field }) => (
-                      <Input id={'address'}  {...field} />
+                    render={({ field: { value, ...rest } }) => (
+                      <Input id={'address'} value={value ?? ''} {...rest} />
                     )}
                   />
                   {errors.address?.message && (
@@ -253,8 +255,8 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="phone"
                     control={control}
-                    render={({ field }) => (
-                      <Input id={'phone'} type={'tel'}  {...field} />
+                    render={({ field: { value, ...rest } }) => (
+                      <Input id={'phone'} type={'tel'} value={value ?? ''} {...rest} />
                     )}
                   />
                   {errors.phone?.message && (
@@ -266,12 +268,12 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="email"
                     control={control}
-                    render={({ field }) => (
+                    render={({ field: { value, ...rest } }) => (
                       <Input
                         id={'email'}
                         type={'email'}
-                        
-                        {...field}
+                        value={value ?? ''}
+                        {...rest}
                       />
                     )}
                   />
@@ -292,8 +294,8 @@ export default function UserListAddNewUserForm() {
                   <Controller
                     name="username"
                     control={control}
-                    render={({ field }) => (
-                      <Input id={'username'} {...field} />
+                    render={({ field: { value, ...rest } }) => (
+                      <Input id={'username'} value={value ?? ''} {...rest} />
                     )}
                   />
                   {errors.username?.message && (

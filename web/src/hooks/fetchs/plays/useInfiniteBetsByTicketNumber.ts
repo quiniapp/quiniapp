@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
-import { IPaginatedBetsResponse } from '@helper/request/pagination.response';
+import { IPaginatedBetsResponse } from '@helper/request/pagination.request';
 
 export interface FetchInfiniteBetsByTicketNumberProps {
   lottery_id?: string | null;

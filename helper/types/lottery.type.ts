@@ -3,6 +3,7 @@ export interface ILotteryEntityBack {
   organization_id: string;
   name: string;
   active: boolean;
+  order: number;
   created_at: string;
   edited_at: string;
   deleted_at: string | null;
@@ -10,5 +11,5 @@ export interface ILotteryEntityBack {
 
 export type ILotteryEntityFront = Omit<
   ILotteryEntityBack,
-  'created_at' | 'edited_at' | 'deleted_at'
+  'created_at' | 'edited_at' | 'deleted_at' | 'organization_id'
 >;

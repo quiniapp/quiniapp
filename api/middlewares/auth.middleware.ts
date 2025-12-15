@@ -32,13 +32,14 @@ export const isAuthenticated = async (
   }
 
   try {
-    const userDecoded = verifyUserToken(userToken);
+    const userDecoded = verifyUserToken(userToken) as any;
     const user = userDecoded as unknown as IUserEntityFront;
     req.user = {
       user,
       token: authToken,
+      organization_id: userDecoded.organization_id,
     };
-    req.organization_id = user.organization_id;
+    req.organization_id = userDecoded.organization_id;
 
     next();
   } catch (err) {

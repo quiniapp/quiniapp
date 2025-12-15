@@ -31,7 +31,7 @@ export class UserRepository {
     const { data, error } = await query;
 
     if (error) throw new Error(error.details);
-    return data;
+    return data || [];
   }
 
   async create(newUser: IUserEntityBack) {
@@ -41,7 +41,7 @@ export class UserRepository {
     return data;
   }
 
-  async update(id: string, organization_id: string, payload: any) {
+  async update(id: string, payload: any, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')

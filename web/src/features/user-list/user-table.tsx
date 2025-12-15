@@ -55,11 +55,18 @@ const UsersTable = () => {
             <TableHead className="text-cyan">Conexion</TableHead>
             <TableHead className="text-cyan">Cuenta</TableHead>
             <TableHead className="text-cyan">Editar</TableHead>
-            <TableHead className="">Eliminar</TableHead>
+            <TableHead className="text-cyan">Eliminar</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.map((user: IUserEntityFront) => (
+          {data && data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                No hay usuarios disponibles
+              </TableCell>
+            </TableRow>
+          ) : (
+            data?.map((user: IUserEntityFront) => (
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
               <TableCell>{user.name}</TableCell>
@@ -95,7 +102,7 @@ const UsersTable = () => {
                 </Button>
               </TableCell>
             </TableRow>
-          ))}
+          )))}
         </TableBody>
       </Table>
       <Suspense fallback={<div>Cargando...</div>}>

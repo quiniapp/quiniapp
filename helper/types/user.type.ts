@@ -49,7 +49,7 @@ export type IUserEntityBack = OwnerOrAdminUserEntityBack | CashierUserEntityBack
 
 export type IBaseUserEntityFront = Omit<
   BaseUserEntityBack,
-  'created_at' | 'deleted_at' | 'edited_at'
+  'created_at' | 'deleted_at' | 'edited_at' | 'organization_id'
 >;
 
 // Usuario tipo OWNER o ADMIN

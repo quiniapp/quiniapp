@@ -100,7 +100,7 @@ export class OrganizationRouter {
     const user = req.user;
 
     // Si no es OWNER, solo puede ver su propia organización
-    if (user?.user.user_type !== USER_TYPE.OWNER && user?.user.organization_id !== id) {
+    if (user?.user.user_type !== USER_TYPE.OWNER && user?.organization_id !== id) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };

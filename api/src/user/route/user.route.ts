@@ -1,6 +1,6 @@
 import { Request, RequestHandler, Response, Router } from 'express';
 import { UserController } from '../controller/user.controller';
-import { INewUserEntity } from '@helper/request/user.response';
+import { INewUserEntity } from '@helper/request/user.request';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
@@ -117,7 +117,7 @@ export class UserRouter {
       return;
     }
     try {
-      const user = await this.controller.get({ user_id, organization_id: req.organization_id });
+      const user = await this.controller.get({ user_id }, req.organization_id!);
       if (!user) {
         const response: APIResponse<undefined> = {
           error: {
@@ -242,11 +242,7 @@ export class UserRouter {
       return;
     } */
     try {
-      const user = await this.controller.update(
-        user_id,
-        { ...updateUser, organization_id: req.organization_id! },
-        req.organization_id!
-      );
+      const user = await this.controller.update(user_id, updateUser, req.organization_id!);
 
       const response: APIResponse<IUserEntityFront> = {
         data: {
@@ -300,7 +296,7 @@ export class UserRouter {
       return;
     }
     try {
-      const user = await this.controller.delete({ user_id, organization_id: req.organization_id! });
+      const user = await this.controller.delete({ user_id }, req.organization_id!);
 
       const response: APIResponse<IUserEntityFront> = {
         data: {

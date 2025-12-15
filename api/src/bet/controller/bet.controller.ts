@@ -1,7 +1,7 @@
 import { BetRepository } from '../repository/bet.repository';
 import { IBetEntityBack, IBetEntityFront } from '@helper/types/bet.type';
 import { parseBet } from '../helper/parseBet';
-import { IPaginatedBetsResponse } from '@helper/request/pagination.response';
+import { IPaginatedBetsResponse } from '@helper/request/pagination.request';
 
 export class BetController {
   private repository = new BetRepository();

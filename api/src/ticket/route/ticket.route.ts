@@ -64,10 +64,7 @@ export class TicketRouter {
       return;
     }
     try {
-      const ticket = await this.controller.create({
-        ...newTicket,
-        organization_id: req.organization_id!,
-      });
+      const ticket = await this.controller.create(newTicket, req.organization_id!);
       const response: APIResponse<ITicketEntityFront> = {
         data: {
           ticket: ticket,
@@ -112,10 +109,7 @@ export class TicketRouter {
     }
 
     try {
-      const ticket = await this.controller.get({
-        ticket_id,
-        organization_id: req.organization_id,
-      });
+      const ticket = await this.controller.get({ ticket_id }, req.organization_id!);
 
       const response: APIResponse<ITicketEntityFront> = {
         data: {
@@ -164,10 +158,7 @@ export class TicketRouter {
 
     try {
       if (typeof ticket_number === 'string') {
-        const ticketData = await this.controller.get({
-          ticket_number: ticket_number,
-          organization_id: req.organization_id,
-        });
+        const ticketData = await this.controller.get({ ticket_number }, req.organization_id!);
         const response: APIResponse<ITicketEntityFront[]> = {
           data: {
             ticket: [ticketData],
@@ -394,11 +385,7 @@ export class TicketRouter {
     } */
 
     try {
-      const ticket = await this.controller.update({
-        ticket_id,
-        bets,
-        organization_id: req.organization_id!,
-      });
+      const ticket = await this.controller.update({ ticket_id, bets }, req.organization_id!);
       const response: APIResponse<ITicketEntityFront> = {
         data: {
           ticket,
@@ -443,12 +430,14 @@ export class TicketRouter {
       return;
     }
     try {
-      await this.controller.delete({
-        ticket_number,
-        organization_id: req.organization_id!,
-        user_type: user?.user?.user_type,
-        user_id: user.user.user_id,
-      });
+      await this.controller.delete(
+        {
+          ticket_number,
+          user_type: user?.user?.user_type,
+          user_id: user.user.user_id,
+        },
+        req.organization_id!
+      );
       res.sendStatus(200);
       return;
     } catch (error) {
