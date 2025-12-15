@@ -24,7 +24,7 @@ const ShiftsContent = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<IScheduleEntityFront | null>(null);
 
-  const { data: schedules, isLoading } = useSchedules();
+  const { data: schedules, isLoading } = useSchedules(true);
 
   const handleEdit = (schedule: IScheduleEntityFront) => {
     setSelectedSchedule(schedule);
@@ -35,7 +35,7 @@ const ShiftsContent = () => {
     setSelectedSchedule(schedule);
     setDeleteModalOpen(true);
   };
-
+  console.log(schedules)
   if (isLoading) {
     return (
       <Box className="grid grid-rows-[auto_1fr] h-full">

@@ -1,5 +1,5 @@
 
-import { useMutation, UseMutationOptions, useQueryClient } from "@tanstack/react-query";
+import { useMutation,  useQueryClient } from "@tanstack/react-query";
 import { BACKEND_ROUTES } from "../../../../routes/routes.ts";
 
 const deleteSchedule = async (schedule_id: string) => {
@@ -20,16 +20,18 @@ const deleteSchedule = async (schedule_id: string) => {
 };
 
 export const useDeleteSchedule = (
-  options?: UseMutationOptions<any, Error, string>
+ 
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: deleteSchedule,
-    onSuccess: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      options?.onSuccess?.(...args);
+    onSuccess: async (   ) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['schedules'],
+        exact: false,
+        refetchType: 'active',
+      });
     },
-    ...options,
   });
 };

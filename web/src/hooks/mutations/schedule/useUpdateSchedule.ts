@@ -1,6 +1,6 @@
-import {  IUpdateScheduleEntity } from "@helper/request/schedule.request";
-import { useMutation, UseMutationOptions, useQueryClient } from "@tanstack/react-query";
-import { BACKEND_ROUTES } from "../../../../routes/routes.ts";
+import { IUpdateScheduleEntity } from '@helper/request/schedule.request';
+import { useMutation,  useQueryClient } from '@tanstack/react-query';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 interface UpdateScheduleParams {
   schedule_id: string;
@@ -26,16 +26,17 @@ const updateSchedule = async ({ schedule_id, updateSchedule }: UpdateSchedulePar
 };
 
 export const useUpdateSchedule = (
-  options?: UseMutationOptions<any, Error, UpdateScheduleParams>
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: updateSchedule,
-    onSuccess: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      options?.onSuccess?.(...args);
-    },
-    ...options,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['schedules'],
+        exact: false,
+        refetchType: 'active',
+      });
+    }
   });
 };

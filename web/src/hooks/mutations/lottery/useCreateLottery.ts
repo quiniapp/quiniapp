@@ -1,7 +1,6 @@
-import { INewLotteryEntity } from "@helper/request/lottery.request";
-import { useMutation, UseMutationOptions, useQueryClient } from "@tanstack/react-query";
-import { BACKEND_ROUTES } from "../../../../routes/routes.ts";
-
+import { INewLotteryEntity } from '@helper/request/lottery.request';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 const createLottery = async (newLottery: Omit<INewLotteryEntity, 'organization_id'>) => {
   const response = await fetch(BACKEND_ROUTES.lottery.base, {
@@ -21,17 +20,17 @@ const createLottery = async (newLottery: Omit<INewLotteryEntity, 'organization_i
   return await response.json();
 };
 
-export const useCreateLottery = (
-  options?: UseMutationOptions<any, Error, Omit<INewLotteryEntity, 'organization_id'>>
-) => {
+export const useCreateLottery = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createLottery,
-    onSuccess: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ['lotteries'] });
-      options?.onSuccess?.(...args);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['lotteries'],
+        exact: false,
+        refetchType: 'active',
+      });
     },
-    ...options,
   });
 };

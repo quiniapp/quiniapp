@@ -12,7 +12,6 @@ export class TicketRepository {
   async create(ticket: INewTicketBaseEntity & { organization_id: string }) {
     const { data, error } = await supabase.rpc('create_ticket_with_bets', {
       ticket: ticket,
-      bets: ticket.bets,
       p_organization_id: ticket.organization_id,
     });
     if (error) throw error;

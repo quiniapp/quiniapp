@@ -1,6 +1,6 @@
 
 
-import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 const deleteLottery = async (lottery_id: string) => {
@@ -21,16 +21,15 @@ const deleteLottery = async (lottery_id: string) => {
 };
 
 export const useDeleteLottery = (
-  options?: UseMutationOptions<any, Error, string>
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: deleteLottery,
-    onSuccess: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ['lotteries'] });
-      options?.onSuccess?.(...args);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['lotteries'],
+        exact: false,
+        refetchType: 'active', });
     },
-    ...options,
   });
 };
