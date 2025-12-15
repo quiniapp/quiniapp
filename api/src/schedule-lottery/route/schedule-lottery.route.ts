@@ -56,7 +56,13 @@ export class ScheduleLotteryRouter {
         const schedules = scheduleLottery[dayStr] ?? {};
         for (const schedule_id of Object.keys(schedules)) {
           // 1) borro combinación
-          deletePromises.push(this.controller.deleteAllForScheduleAndDay({ day, schedule_id }));
+          deletePromises.push(
+            this.controller.deleteAllForScheduleAndDay({
+              day,
+              schedule_id,
+              organization_id: req.organization_id!,
+            })
+          );
           // 2) preparo inserts
           for (const lottery_id of schedules[schedule_id] ?? []) {
             if (!lotteries.includes(lottery_id)) lotteries.push(lottery_id);
@@ -69,10 +75,10 @@ export class ScheduleLotteryRouter {
 
       let data: IScheduleLotteryEntityFront | undefined;
       if (insertData.length) {
-        data = await this.controller.bulkInsert(insertData);
+        data = await this.controller.bulkInsert(insertData, req.organization_id!);
       }
 
-      await this.controller.bulkActiveLotteries(lotteries);
+      await this.controller.bulkActiveLotteries(lotteries, req.organization_id!);
 
       // ====== invalidación de cache ======
       invalidateScheduleLotteries();
@@ -104,7 +110,7 @@ export class ScheduleLotteryRouter {
     try {
       const snap = await globalCacheManager.getOrLoad(
         CACHE_KEY,
-        () => this.controller.getAllScheduleLotteries(),
+        () => this.controller.getAllScheduleLotteries(req.organization_id!),
         { ttl: TTL_MS, etagStrategy: 'hash' }
       );
 

@@ -12,6 +12,7 @@ export type INewBetEntity = Omit<
   | 'prize'
   | 'ticket_number'
   | 'hits'
+  | 'organization_id'
 >;
 
 export type IDeleteBetEntity = Pick<IBetEntityBase, 'bet_id'>;

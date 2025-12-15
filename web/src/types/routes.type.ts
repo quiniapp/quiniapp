@@ -10,7 +10,7 @@ export enum ROUTES {
   AGENT_COMMISSION = '/agent-commission',
   SHIFTS = '/shifts',
   USERS = '/users',
-  USERS_List = '/user-list',
+  USERS_LIST = '/user-list',
   REPORTS = '/reports',
   SETTINGS = '/settings',
   LOGIN = '/login',
@@ -18,5 +18,6 @@ export enum ROUTES {
   CURRENT_ACCOUNT = '/current-account',
   GROUPS = '/groups',
   NEW_USER = '/new-user',
-  RESET_PASSWORD = '/reset-password'
+  RESET_PASSWORD = '/reset-password',
+  ORGANIZATIONS = '/organizations'
 }

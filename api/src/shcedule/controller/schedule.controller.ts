@@ -15,7 +15,7 @@ export class ScheduleController {
   create = async (props: INewScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
       const newSchedule = scheduleBase(props);
-      const schedule = await this.repository.create(newSchedule);
+      const schedule = await this.repository.create(newSchedule, props.organization_id);
       return parseSchedule(schedule);
     } catch (error) {
       console.error('Creation error:', error);
@@ -25,7 +25,7 @@ export class ScheduleController {
 
   get = async (props: IGetScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
-      const schedule = await this.repository.getById(props.schedule_id);
+      const schedule = await this.repository.getById(props.schedule_id, props.organization_id);
       return parseSchedule(schedule);
     } catch (error) {
       console.error('Get error:', error);
@@ -33,9 +33,9 @@ export class ScheduleController {
     }
   };
 
-  getAll = async (): Promise<IScheduleEntityFront[]> => {
+  getAll = async (organization_id: string): Promise<IScheduleEntityFront[]> => {
     try {
-      const schedules: IScheduleEntityBack[] = await this.repository.getAll();
+      const schedules: IScheduleEntityBack[] = await this.repository.getAll(organization_id);
 
       return schedules.map((schedule) => {
         return parseSchedule(schedule);
@@ -48,7 +48,7 @@ export class ScheduleController {
 
   update = async (id: string, props: IUpdateScheduleEntity): Promise<IScheduleEntityFront> => {
     try {
-      const schedule = await this.repository.update(id, props);
+      const schedule = await this.repository.update(id, props, props.organization_id!);
       return parseSchedule(schedule);
     } catch (error) {
       console.error('Update error:', error);
@@ -57,7 +57,7 @@ export class ScheduleController {
   };
   delete = async (props: IDeleteScheduleEntity) => {
     try {
-      await this.repository.delete(props.schedule_id);
+      await this.repository.delete(props.schedule_id, props.organization_id);
       return;
     } catch (error) {
       console.error('Delete error:', error);

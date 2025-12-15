@@ -1,5 +1,6 @@
 export interface ILotteryEntityBack {
   lottery_id: string;
+  organization_id: string;
   name: string;
   active: boolean;
   created_at: string;

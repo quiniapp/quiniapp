@@ -4,6 +4,7 @@ import { IScheduleEntityBack, IScheduleEntityFront } from './schedule.type';
 // Base sin relaciones
 export interface IResultsBase {
   results_id: string;
+  organization_id: string;
   date: string;
   results: string[];
   lottery_id: string;

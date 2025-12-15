@@ -7,6 +7,7 @@ import {
   IGetAllTicketEntity,
   IGetTicketEntity,
   INewTicketEntity,
+  IPayTicketEntity,
 } from '@helper/request/ticket.response';
 import { ticketBase } from '../helper/ticketBase';
 import { parseTicket } from '../helper/parseTicket';
@@ -23,7 +24,10 @@ export class TicketController {
   create = async (props: INewTicketEntity) => {
     const newTicket = ticketBase(props);
     try {
-      const result = await this.repository.create(newTicket);
+      const result = await this.repository.create({
+        ...newTicket,
+        organization_id: props.organization_id,
+      });
       return parseTicket(result);
     } catch (error) {
       console.error('Creation error:', error);
@@ -34,9 +38,9 @@ export class TicketController {
     try {
       let ticket;
       if (props.ticket_id) {
-        ticket = await this.repository.getById(props?.ticket_id);
+        ticket = await this.repository.getById(props?.ticket_id, props.organization_id!);
       } else if (props.ticket_number) {
-        ticket = await this.repository.getByNumber(props.ticket_number);
+        ticket = await this.repository.getByNumber(props.ticket_number, props.organization_id!);
       }
       if (!ticket) {
         // lanzar error controlado o devolver null y que router lo traduzca
@@ -60,6 +64,7 @@ export class TicketController {
       let result;
       if (props.user_type === USER_TYPE.CASHIER) {
         result = await this.repository.getAll({
+          organization_id: props.organization_id,
           user_id: props.user_id,
           date: props.date ?? '',
           winner: props?.winner,
@@ -69,6 +74,7 @@ export class TicketController {
         });
       } else {
         result = await this.repository.getAll({
+          organization_id: props.organization_id,
           date: props.date ?? '',
           user_id: props?.cashier_id,
           winner: props?.winner,
@@ -106,12 +112,14 @@ export class TicketController {
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
         tickets = await this.repository.getAllTicketNumber({
+          organization_id: props.organization_id,
           user_id: props.user_id,
           date: props.date ?? '',
           winner: !!props.winner,
         });
       } else {
         tickets = await this.repository.getAllTicketNumber({
+          organization_id: props.organization_id,
           date: props.date ?? '',
           user_id: props?.cashier_id,
           winner: !!props.winner,
@@ -127,12 +135,12 @@ export class TicketController {
 
   delete = async (props: IDeleteTicketEntity) => {
     try {
-      const ticket = await this.repository.getByNumber(props.ticket_number);
+      const ticket = await this.repository.getByNumber(props.ticket_number, props.organization_id);
       if (props.user_type === USER_TYPE.CASHIER) {
         if (dayjs().diff(ticket.created_at, 'minutes') > 2)
           throw new Error(ERROR_MESSAGE.INVALID_DELETE_TIME);
       }
-      await this.repository.delete(props);
+      await this.repository.delete({ ...props, organization_id: props.organization_id });
       return;
     } catch (error) {
       console.error('Delete error:', error);
@@ -155,9 +163,18 @@ export class TicketController {
   //     throw error instanceof Error ? error : new Error('Unknown error');
   //   }
   // };
-  getAllDeletedTickets = async ({ user_id, date }: { user_id?: string; date: string }) => {
+  getAllDeletedTickets = async ({
+    user_id,
+    date,
+    organization_id,
+  }: {
+    user_id?: string;
+    date: string;
+    organization_id: string;
+  }) => {
     try {
       const tickets = await this.repository.getAllDeletedTickets({
+        organization_id,
         user_id: user_id,
         date: date,
       });
@@ -171,7 +188,11 @@ export class TicketController {
   update = async (props: IEditTicketEntity) => {
     try {
       const updateBase = props.bets.map((b: IBetTable) => betBase(b));
-      const ticket = await this.repository.update({ bets: updateBase, ticket_id: props.ticket_id });
+      const ticket = await this.repository.update({
+        bets: updateBase,
+        ticket_id: props.ticket_id,
+        organization_id: props.organization_id,
+      });
 
       return parseTicket(ticket);
     } catch (error) {
@@ -180,9 +201,9 @@ export class TicketController {
     }
   };
 
-  paid = async ({ ticket_number, user_id }: { ticket_number: string; user_id: string }) => {
+  paid = async ({ ticket_number, user_id, organization_id }: IPayTicketEntity) => {
     try {
-      const result = await this.repository.payTicket({ ticket_number, user_id });
+      const result = await this.repository.payTicket({ ticket_number, user_id, organization_id });
       return result;
     } catch (error) {
       console.error('Paid error:', error);

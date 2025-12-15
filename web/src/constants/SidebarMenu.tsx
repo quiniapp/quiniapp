@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   UserIcon,
   UsersIcon,
+  Building2,
 } from 'lucide-react';
 
 import { MENU_ITEM } from '@/types/menu-item.tsx';
@@ -91,6 +92,12 @@ const MENU_ITEMS: MENU_ITEM[] = [
     name: 'Cuenta Corriente',
     route: ROUTES.CURRENT_ACCOUNT,
     icon: <FileTextIcon size={20} />,
+  },
+  {
+    id: 'Organizations',
+    name: 'Organizaciones',
+    route: ROUTES.ORGANIZATIONS,
+    icon: <Building2 size={20} />,
   },
 
   {

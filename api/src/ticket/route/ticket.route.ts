@@ -64,7 +64,10 @@ export class TicketRouter {
       return;
     }
     try {
-      const ticket = await this.controller.create(newTicket);
+      const ticket = await this.controller.create({
+        ...newTicket,
+        organization_id: req.organization_id!,
+      });
       const response: APIResponse<ITicketEntityFront> = {
         data: {
           ticket: ticket,
@@ -111,6 +114,7 @@ export class TicketRouter {
     try {
       const ticket = await this.controller.get({
         ticket_id,
+        organization_id: req.organization_id,
       });
 
       const response: APIResponse<ITicketEntityFront> = {
@@ -162,6 +166,7 @@ export class TicketRouter {
       if (typeof ticket_number === 'string') {
         const ticketData = await this.controller.get({
           ticket_number: ticket_number,
+          organization_id: req.organization_id,
         });
         const response: APIResponse<ITicketEntityFront[]> = {
           data: {
@@ -185,6 +190,7 @@ export class TicketRouter {
         const result = await this.controller.getAll({
           user_type: user.user.user_type,
           user_id: user.user.user_id,
+          organization_id: req.organization_id!,
           date: date,
           ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
           ...(typeof winner === 'string' && winner === 'true'
@@ -261,6 +267,7 @@ export class TicketRouter {
       ticket = await this.controller.getAllTicketNumber({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
+        organization_id: req.organization_id!,
         date: date,
         ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
         ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
@@ -323,6 +330,7 @@ export class TicketRouter {
     try {
       const ticket = await this.controller.getAllDeletedTickets({
         date,
+        organization_id: req.organization_id!,
         user_id: typeof cashier_id === 'string' ? cashier_id : undefined,
       });
 
@@ -386,7 +394,11 @@ export class TicketRouter {
     } */
 
     try {
-      const ticket = await this.controller.update({ ticket_id, bets });
+      const ticket = await this.controller.update({
+        ticket_id,
+        bets,
+        organization_id: req.organization_id!,
+      });
       const response: APIResponse<ITicketEntityFront> = {
         data: {
           ticket,
@@ -433,6 +445,7 @@ export class TicketRouter {
     try {
       await this.controller.delete({
         ticket_number,
+        organization_id: req.organization_id!,
         user_type: user?.user?.user_type,
         user_id: user.user.user_id,
       });
@@ -493,6 +506,7 @@ export class TicketRouter {
       const result = await this.controller.paid({
         ticket_number,
         user_id: user.user.user_id,
+        organization_id: req.organization_id!,
       });
 
       const response: APIResponse<typeof result> = {

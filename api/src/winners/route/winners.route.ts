@@ -20,10 +20,10 @@ export class WinnerRouter {
   }
 
   private generateWinnersHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
+    const { user, organization_id } = req;
     const { id: schedule_id } = req.params;
     const { date } = req.query;
-    if (!user?.user || user.user.user_type === USER_TYPE.CASHIER) {
+    if (!user?.user || user.user.user_type === USER_TYPE.CASHIER || !organization_id) {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -44,7 +44,7 @@ export class WinnerRouter {
       return;
     }
     try {
-      await this.controller.generateWinners(schedule_id, date);
+      await this.controller.generateWinners({ schedule_id, date, organization_id });
       const response: APIResponse<boolean> = {
         data: {
           winner: true,
@@ -75,9 +75,9 @@ export class WinnerRouter {
   };
 
   private getAllWinnersHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
+    const { user, organization_id } = req;
     const { date } = req.query;
-    if (!user?.user) {
+    if (!user?.user || !organization_id) {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -102,6 +102,7 @@ export class WinnerRouter {
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date,
+        organization_id: organization_id,
       });
 
       const response: APIResponse<ITicketEntityFront[]> = {

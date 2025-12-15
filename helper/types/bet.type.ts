@@ -19,6 +19,7 @@ export enum PLACE_TYPE {
 
 export interface IBetEntityBase {
   bet_id: string;
+  organization_id: string;
   bet_type: BET_TYPE;
   ticket_id: string;
   user_id: string;

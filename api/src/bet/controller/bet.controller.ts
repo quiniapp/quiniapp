@@ -16,6 +16,7 @@ export class BetController {
     tern,
     quatern,
     ticket_number,
+    organization_id,
     page = 1,
     limit = 100,
   }: {
@@ -28,6 +29,7 @@ export class BetController {
     tern?: boolean;
     quatern?: boolean;
     ticket_number?: string;
+    organization_id: string;
     page?: number;
     limit?: number;
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
@@ -35,6 +37,7 @@ export class BetController {
       if (grouped) {
         // Grouped no tiene paginación por ahora, mantener comportamiento anterior
         const bets = await this.repository.getAllBetsGrouped({
+          organization_id,
           schedule_id,
           date,
           cashier_id,
@@ -57,6 +60,7 @@ export class BetController {
       } else {
         // Con paginación
         const { data: bets, count } = await this.repository.getAllBets({
+          organization_id,
           schedule_id,
           date,
           cashier_id,
@@ -81,7 +85,10 @@ export class BetController {
         } = {};
 
         if (ticket_number) {
-          const ticketSums = await this.repository.getAmountsByTicket({ ticket_number });
+          const ticketSums = await this.repository.getAmountsByTicket({
+            ticket_number,
+            organization_id,
+          });
           aggregates = {
             totalAmount: ticketSums.total_amount,
             totalPrize: ticketSums.total_prize,
@@ -91,8 +98,20 @@ export class BetController {
         } else {
           // Obtener totales generales en paralelo
           const [totalAmount, totalPrize] = await Promise.all([
-            this.repository.getTotalAmount({ date, schedule_id, cashier_id, lottery_id }),
-            this.repository.getTotalPrize({ date, schedule_id, cashier_id, lottery_id }),
+            this.repository.getTotalAmount({
+              date,
+              schedule_id,
+              cashier_id,
+              lottery_id,
+              organization_id,
+            }),
+            this.repository.getTotalPrize({
+              date,
+              schedule_id,
+              cashier_id,
+              lottery_id,
+              organization_id,
+            }),
           ]);
           aggregates = {
             totalAmount,
@@ -123,11 +142,13 @@ export class BetController {
     schedule_id,
     cashier_id,
     lottery_id,
+    organization_id,
   }: {
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
+    organization_id: string;
   }) => {
     try {
       const total = await this.repository.getTotalAmount({
@@ -135,6 +156,7 @@ export class BetController {
         schedule_id,
         cashier_id,
         lottery_id,
+        organization_id,
       });
       return total;
     } catch (error) {
@@ -148,11 +170,13 @@ export class BetController {
     schedule_id,
     cashier_id,
     lottery_id,
+    organization_id,
   }: {
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
+    organization_id: string;
   }) => {
     try {
       const total = await this.repository.getTotalPrize({
@@ -160,6 +184,7 @@ export class BetController {
         schedule_id,
         cashier_id,
         lottery_id,
+        organization_id,
       });
       return total;
     } catch (error) {
@@ -168,10 +193,17 @@ export class BetController {
     }
   };
 
-  getAmountsByTicket = async ({ ticket_number }: { ticket_number: string }) => {
+  getAmountsByTicket = async ({
+    ticket_number,
+    organization_id,
+  }: {
+    ticket_number: string;
+    organization_id: string;
+  }) => {
     try {
       const totals = await this.repository.getAmountsByTicket({
         ticket_number,
+        organization_id,
       });
       return totals;
     } catch (error) {
