@@ -12,7 +12,7 @@ import {
 import { MENU_ITEM } from '@/types/menu-item.tsx';
 import { ROUTES } from '@/types/routes.type';
 
-const MENU_ITEMS: MENU_ITEM[] = [
+export const MENU_ITEMS: MENU_ITEM[] = [
   {
     id: 'Home',
     name: 'Jugadas',
