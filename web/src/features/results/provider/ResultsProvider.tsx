@@ -8,9 +8,9 @@ import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useResults as useFetchResults } from '@/hooks/fetchs/results/useResults';
 import { useUpdateResults } from '@/hooks/mutations/results/useUpdateResults.mutation';
-import { useCreateResults } from '@/hooks/mutations/results/useCreateResults.mutation';
 import { useGenerateWinners } from '@/hooks/mutations/winner/useWinner';
 import { useDeleteResults } from '@/hooks/mutations/results/useDeleteResults';
+import { useCreateResults } from '@/hooks/mutations/results/useCreateresults.mutation';
 
 export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   // ---- State
