@@ -24,7 +24,7 @@ const ShiftsContent = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<IScheduleEntityFront | null>(null);
 
-  const { data: schedules, isLoading } = useSchedules();
+  const { data: schedules, isLoading } = useSchedules(true);
 
   const handleEdit = (schedule: IScheduleEntityFront) => {
     setSelectedSchedule(schedule);

@@ -1,6 +1,6 @@
 
 import { IUpdateLotteryEntity } from '@helper/request/lottery.request';
-import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
+import { useMutation,  useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 
 interface UpdateLotteryParams {
@@ -27,16 +27,15 @@ const updateLottery = async ({ lottery_id, updateLottery }: UpdateLotteryParams)
 };
 
 export const useUpdateLottery = (
-  options?: UseMutationOptions<any, Error, UpdateLotteryParams>
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: updateLottery,
-    onSuccess: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ['lotteries'] });
-      options?.onSuccess?.(...args);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['lotteries'],
+        exact: false,
+        refetchType: 'active', });
     },
-    ...options,
   });
 };
