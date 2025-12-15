@@ -4,7 +4,7 @@ import { CASHIER_TYPE, IUserEntityBack, USER_TYPE } from '@helper/types/user.typ
 import dayjs from 'dayjs';
 import { generateEmail } from 'api/helper/generateEmail';
 
-const getBaseUserFields = (user: INewUserEntity) => {
+const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
   const timestamp = dayjs().toISOString();
 
   return {
@@ -12,6 +12,7 @@ const getBaseUserFields = (user: INewUserEntity) => {
     number: user.number,
     user_type: user.user_type,
     name: user.name,
+    organization_id,
     last_name: user.last_name ?? null,
     address: user.address ?? null,
     phone: user.phone ?? null,
@@ -23,8 +24,11 @@ const getBaseUserFields = (user: INewUserEntity) => {
   };
 };
 
-export const buildUserForDB = async (user: INewUserEntity): Promise<IUserEntityBack> => {
-  const baseUser = getBaseUserFields(user);
+export const buildUserForDB = async (
+  user: INewUserEntity,
+  organization_id: string
+): Promise<IUserEntityBack> => {
+  const baseUser = getBaseUserFields(user, organization_id);
 
   return {
     ...baseUser,

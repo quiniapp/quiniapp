@@ -117,7 +117,7 @@ export class UserRouter {
       return;
     }
     try {
-      const user = await this.controller.get({ user_id, organization_id: req.organization_id });
+      const user = await this.controller.get({ user_id }, req.organization_id!);
       if (!user) {
         const response: APIResponse<undefined> = {
           error: {
@@ -242,11 +242,7 @@ export class UserRouter {
       return;
     } */
     try {
-      const user = await this.controller.update(
-        user_id,
-        { ...updateUser, organization_id: req.organization_id! },
-        req.organization_id!
-      );
+      const user = await this.controller.update(user_id, updateUser, req.organization_id!);
 
       const response: APIResponse<IUserEntityFront> = {
         data: {
@@ -300,7 +296,7 @@ export class UserRouter {
       return;
     }
     try {
-      const user = await this.controller.delete({ user_id, organization_id: req.organization_id! });
+      const user = await this.controller.delete({ user_id }, req.organization_id!);
 
       const response: APIResponse<IUserEntityFront> = {
         data: {

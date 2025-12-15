@@ -11,10 +11,13 @@ import { resultsBase } from '../helper/resultsBase';
 export class ResultsController {
   private repository = new ResultsRepository();
 
-  create = async (props: INewResultsEntity): Promise<IResultsEntityFront> => {
+  create = async (
+    props: INewResultsEntity,
+    organization_id: string
+  ): Promise<IResultsEntityFront> => {
     try {
-      const newResults = resultsBase(props);
-      const results = await this.repository.create(newResults, props.organization_id);
+      const newResults = resultsBase(props, organization_id);
+      const results = await this.repository.create(newResults);
 
       return parseResults(results);
     } catch (error) {
@@ -23,12 +26,15 @@ export class ResultsController {
     }
   };
 
-  get = async (props: IGetResultsEntity): Promise<IResultsEntityFront | []> => {
+  get = async (
+    props: IGetResultsEntity,
+    organization_id: string
+  ): Promise<IResultsEntityFront | []> => {
     let results;
     try {
       if (props?.results_id) {
-        results = await this.repository.getById(props.results_id, props.organization_id!);
-      } else results = await this.repository.get(props, props.organization_id!);
+        results = await this.repository.getById(props.results_id, organization_id);
+      } else results = await this.repository.get({ ...props, organization_id });
       if (!results.length) return [];
       return parseResults(results[0]);
     } catch (error) {
@@ -49,9 +55,13 @@ export class ResultsController {
     }
   };
 
-  update = async (id: string, props: IUpdateResultsEntity): Promise<IResultsEntityFront> => {
+  update = async (
+    id: string,
+    props: IUpdateResultsEntity,
+    organization_id: string
+  ): Promise<IResultsEntityFront> => {
     try {
-      const results = await this.repository.update(id, props, props.organization_id!);
+      const results = await this.repository.update(id, props, organization_id);
       return parseResults(results);
     } catch (error) {
       console.error('Update error:', error);

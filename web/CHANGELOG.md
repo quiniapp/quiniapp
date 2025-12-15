@@ -7,6 +7,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-15
+
+#### Security Enhancement: organization_id No Longer Exposed in Types
+
+**Impact**: No frontend code changes required. This is a transparent security improvement.
+
+**What Changed**:
+- All Frontend entity types (`*EntityFront`) from `@helper/types/*` no longer include `organization_id`
+- The field has been removed from:
+  - User entities (`IUserEntityFront`)
+  - Lottery entities (`ILotteryEntityFront`)
+  - Ticket entities (`ITicketEntityFront`)
+  - Results entities (`IResultsEntityFront`)
+  - Current account entities (`ICurrentAccountEntityFront`)
+  - Bet entities (`IBetEntityFront`)
+  - Organization entities (`IOrganizationEntityFront`)
+
+**Why**:
+- `organization_id` is a security-sensitive parameter that should only exist on the backend
+- The backend extracts it from the authenticated user's JWT token
+- Frontend never needed to send or track this value
+
+**Migration**:
+- ✅ No changes required in frontend code
+- ✅ API requests remain unchanged (backend handles organization_id from auth context)
+- ✅ TypeScript will catch any accidental references to `organization_id` on front entities
+
+### Added - 2025-12-15
+
+#### Lotteries Management Page - Complete CRUD with Drag & Drop
+- **New Page**: `web/src/features/lotteries/index.tsx`
+  - Full CRUD functionality for lotteries
+  - **Drag & Drop Ordering**: Reorder lotteries by dragging (uses @dnd-kit)
+  - Real-time order updates saved to backend
+  - Display lottery status (active/inactive)
+  - Show associated schedules/shifts for each lottery
+  - Empty state with call-to-action
+  - Responsive design with loading states
+
+#### Shifts/Schedules Management Page - Complete CRUD
+- **New Page**: `web/src/features/shifts/index.tsx`
+  - Full CRUD functionality for schedules/shifts
+  - Table view with name, time, and active status
+  - Edit and delete actions in table rows
+  - Active/inactive toggle in edit modal
+  - Ordered by time (handled by backend)
+  - Empty state with call-to-action
+  - Responsive table design
+
+#### Lottery Mutation Hooks
+- **useCreateLottery**: `web/src/hooks/mutations/lottery/useCreateLottery.ts`
+  - Creates new lottery with name and order
+  - Invalidates lottery cache on success
+- **useUpdateLottery**: `web/src/hooks/mutations/lottery/useUpdateLottery.ts`
+  - Updates lottery name, order, and active status
+  - Used for both manual edits and drag & drop order updates
+- **useDeleteLottery**: `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+  - Soft deletes lottery (sets deleted_at)
+  - Invalidates lottery cache
+
+#### Schedule Mutation Hooks
+- **useCreateSchedule**: `web/src/hooks/mutations/schedule/useCreateSchedule.ts`
+  - Creates new schedule with name, time, and active status
+  - Invalidates schedule cache on success
+- **useUpdateSchedule**: `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+  - Updates schedule name, time, and active status
+  - Includes active/inactive toggle functionality
+- **useDeleteSchedule**: `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+  - Permanently deletes schedule
+  - Invalidates schedule cache
+
+#### Lottery Modals
+- **CreateLotteryModal**: `web/src/components/modals/CreateLotteryModal.tsx`
+  - Form with name and order fields
+  - Auto-suggests next order number
+  - Validation and error handling
+- **UpdateLotteryModal**: `web/src/components/modals/UpdateLotteryModal.tsx`
+  - Edit name, order, and active status
+  - Switch component for active/inactive toggle
+  - Pre-populated with current values
+- **DeleteLotteryModal**: `web/src/components/modals/DeleteLotteryModal.tsx`
+  - Confirmation dialog before deletion
+  - Shows lottery name for context
+  - Cancel/confirm actions
+
+#### Schedule Modals
+- **CreateScheduleModal**: `web/src/components/modals/CreateScheduleModal.tsx`
+  - Form with name and time fields
+  - HTML time input for hour selection
+  - Defaults to active state
+- **UpdateScheduleModal**: `web/src/components/modals/UpdateScheduleModal.tsx`
+  - Edit name, time, and active status
+  - Switch component for active/inactive toggle
+  - Pre-populated with current values
+- **DeleteScheduleModal**: `web/src/components/modals/DeleteScheduleModal.tsx`
+  - Confirmation dialog before deletion
+  - Shows schedule name and time
+  - Cancel/confirm actions
+
+#### Dependencies Required
+- **@dnd-kit/core**, **@dnd-kit/sortable**, **@dnd-kit/utilities**
+  - Required for drag & drop functionality in lotteries page
+  - Installation instructions in `INSTALL_DEPENDENCIES.md`
+
 ### Fixed - 2025-12-15
 
 #### User List Table - UI Improvements

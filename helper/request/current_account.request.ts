@@ -8,14 +8,12 @@ export type IUpdateCurrentAccountEntity = Partial<
   >
 >;
 
-export type IGetAllCurrentAccountEntity = Pick<
-  IUserEntityBack,
-  'user_id' | 'user_type' | 'organization_id'
-> &
-  Partial<Pick<ICurrentAccountEntityBack, 'date'>>;
+export type IGetAllCurrentAccountEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
+  Partial<Pick<ICurrentAccountEntityBack, 'date'>> & {
+    organization_id: string;
+  };
 
-export type IGetCurrentAccountEntity = Pick<
-  IUserEntityBack,
-  'user_id' | 'user_type' | 'organization_id'
-> &
-  Partial<Pick<ICurrentAccountEntityBack, 'date'>>;
+export type IGetCurrentAccountEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
+  Partial<Pick<ICurrentAccountEntityBack, 'date'>> & {
+    organization_id: string;
+  };

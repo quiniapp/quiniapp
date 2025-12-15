@@ -8,5 +8,5 @@ export interface IOrganizationEntityBack {
 
 export type IOrganizationEntityFront = Omit<
   IOrganizationEntityBack,
-  'created_at' | 'deleted_at' | 'edited_at'
+  'created_at' | 'deleted_at' | 'edited_at' | 'organization_id'
 >;

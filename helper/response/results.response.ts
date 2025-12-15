@@ -1,7 +1,7 @@
-import { IResultEntityFront } from '../types/results.type';
+import { IResultsEntityFront } from '../types/results.type';
 
 // Single result response
-export type ResultResponse = IResultEntityFront;
+export type ResultResponse = IResultsEntityFront;
 
 // List of results response
-export type ListResultsResponse = IResultEntityFront[];
+export type ListResultsResponse = IResultsEntityFront[];

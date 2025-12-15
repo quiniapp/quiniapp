@@ -47,7 +47,12 @@ export class ScheduleLotteryRouter {
     }
 
     const deletePromises: Promise<void>[] = [];
-    const insertData: Array<{ day: SCHEDULE_DAY; schedule_id: string; lottery_id: string }> = [];
+    const insertData: Array<{
+      day: SCHEDULE_DAY;
+      schedule_id: string;
+      lottery_id: string;
+      organization_id: string;
+    }> = [];
     const lotteries: string[] = [];
 
     try {
@@ -66,7 +71,12 @@ export class ScheduleLotteryRouter {
           // 2) preparo inserts
           for (const lottery_id of schedules[schedule_id] ?? []) {
             if (!lotteries.includes(lottery_id)) lotteries.push(lottery_id);
-            insertData.push({ day, schedule_id, lottery_id });
+            insertData.push({
+              day,
+              schedule_id,
+              lottery_id,
+              organization_id: req.organization_id!,
+            });
           }
         }
       }

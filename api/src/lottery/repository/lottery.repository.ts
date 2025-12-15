@@ -21,7 +21,7 @@ export class LotteryRepository {
     if (!all) {
       query = query.eq('active', true);
     }
-    const { data, error } = await query.order('created_at', { ascending: true });
+    const { data, error } = await query.order('order', { ascending: true });
     if (error) throw new Error(error.details);
     return data;
   }
@@ -33,7 +33,7 @@ export class LotteryRepository {
     return data;
   }
 
-  async update(id: string, organization_id: string, payload: any) {
+  async update(id: string, payload: any, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('lotteries')

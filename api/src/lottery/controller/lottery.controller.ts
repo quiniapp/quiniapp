@@ -11,19 +11,19 @@ import { ILotteryEntityFront } from '@helper/types/lottery.type';
 export class LotteryController {
   private repository = new LotteryRepository();
 
-  create = async (props: INewLotteryEntity) => {
-    const newLottery = lotteryBase(props);
+  create = async (props: INewLotteryEntity, organization_id: string) => {
+    const newLottery = lotteryBase(props, organization_id);
     try {
-      const result = await this.repository.create(newLottery, props.organization_id);
+      const result = await this.repository.create(newLottery);
       return parseLottery(result);
     } catch (error) {
       console.error('Creation error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  get = async (props: IGetLotteryEntity): Promise<ILotteryEntityFront> => {
+  get = async (props: IGetLotteryEntity, organization_id: string): Promise<ILotteryEntityFront> => {
     try {
-      const lottery = await this.repository.getById(props.lottery_id, props.organization_id);
+      const lottery = await this.repository.getById(props.lottery_id, organization_id);
       return parseLottery(lottery);
     } catch (error) {
       console.error('Get error:', error);
@@ -44,18 +44,22 @@ export class LotteryController {
     }
   };
 
-  update = async (id: string, props: IUpdateLotteryEntity): Promise<ILotteryEntityFront> => {
+  update = async (
+    id: string,
+    props: IUpdateLotteryEntity,
+    organization_id: string
+  ): Promise<ILotteryEntityFront> => {
     try {
-      const lottery = await this.repository.update(id, props, props.organization_id!);
+      const lottery = await this.repository.update(id, props, organization_id);
       return parseLottery(lottery);
     } catch (error) {
       console.error('Update error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  delete = async (props: IDeleteLotteryEntity) => {
+  delete = async (props: IDeleteLotteryEntity, organization_id: string) => {
     try {
-      await this.repository.delete(props.lottery_id, props.organization_id);
+      await this.repository.delete(props.lottery_id, organization_id);
       return;
     } catch (error) {
       console.error('Delete error:', error);

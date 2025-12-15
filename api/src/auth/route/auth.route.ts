@@ -68,10 +68,10 @@ export class AuthRouter {
       const loginResponse = await this.controller.login({ username, password });
       const response: APIResponse<IUserEntityFront> = {
         data: {
-          user: loginResponse,
+          user: loginResponse.user,
         },
       };
-      res.cookie('user_token', signUserToken(loginResponse), {
+      res.cookie('user_token', signUserToken(loginResponse.user, loginResponse.organization_id), {
         httpOnly: true,
         secure: true,
         sameSite: 'none',

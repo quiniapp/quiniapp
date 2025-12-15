@@ -7,7 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-15
+
+#### Type System Corrections - Organization ID and Import Fixes
+- **Auth Types**: Added organization_id to ITokenPayload
+  - File: `helper/types/auth.type.ts`
+  - ITokenPayload now includes: user, token, and organization_id
+  - Reason: JWT needs organization_id at payload level since IUserEntityFront doesn't include it
+
+- **Import Fixes**:
+  - `helper/response/results.response.ts`: Fixed typo IResultEntityFront -> IResultsEntityFront
+  - `helper/types/ticket.type.ts`: Fixed import path from '../request/ticket.response' to '../request/ticket.request'
+
+- **Ticket Request Types**:
+  - `helper/request/ticket.request.ts`:
+    - ITicketEntityFrontCompact: Changed to omit 'organization_id' (was omitting 'bets' incorrectly)
+    - IPayTicketEntity: Added organization_id field
+    - IGetAllTicketEntity: Added organization_id field as required
+
+- **Current Account Request Types**:
+  - `helper/request/current_account.request.ts`:
+    - IGetAllCurrentAccountEntity: Added organization_id as required field
+    - IGetCurrentAccountEntity: Added organization_id as required field
+
+### Added - 2025-12-15
+
+#### Lottery and Schedule Type Enhancements
+
+##### Lottery Types
+- **ILotteryEntityBack**: Added `order: number` field
+  - Path: `helper/types/lottery.type.ts:6`
+  - Supports custom ordering of lotteries in UI
+  - Reflected in `ILotteryEntityFront` type
+- **Request Types**:
+  - `INewLotteryEntity`: Added optional `order?: number` field
+    - Path: `helper/request/lottery.request.ts:3-5`
+    - Allows setting order when creating lottery
+  - `IUpdateLotteryEntity`: Includes `order` in updatable fields
+    - Path: `helper/request/lottery.request.ts:7-9`
+
+##### Schedule Types
+- **IScheduleEntityBack**: Added `active: boolean` field
+  - Path: `helper/types/schedule.type.ts:8`
+  - Allows marking schedules as active/inactive
+  - Reflected in `IScheduleEntityFront` type
+- **Request Types**:
+  - `INewScheduleEntity`: Added optional `active?: boolean` field
+    - Path: `helper/request/schedule.request.ts:3-5`
+    - Defaults to true if not specified (via database default)
+  - `IUpdateScheduleEntity`: Includes `active` in updatable fields
+    - Path: `helper/request/schedule.request.ts:7-9`
+
 ### Changed - 2025-12-15
+
+#### Security Enhancement: organization_id Removed from Frontend Types
+
+**BREAKING CHANGE**: All Frontend entity types (`*EntityFront`) no longer expose `organization_id` to ensure this sensitive parameter is never accessible from the client.
+
+**Rationale**: `organization_id` is a security-sensitive parameter that should only be obtained from authenticated user context on the backend, never sent from or exposed to the frontend.
+
+**Files Modified**:
+
+##### Type Definitions (helper/types/)
+- `helper/types/organization.type.ts`
+  - `IOrganizationEntityFront`: Now omits `organization_id`
+- `helper/types/user.type.ts`
+  - `IBaseUserEntityFront`: Now omits `organization_id`
+  - Affects: `OwnerOrAdminUserEntityFront`, `CashierUserEntityFront`
+- `helper/types/lottery.type.ts`
+  - `ILotteryEntityFront`: Now omits `organization_id`
+- `helper/types/ticket.type.ts`
+  - `ITicketEntityFront`: Now omits `organization_id`
+- `helper/types/results.type.ts`
+  - `IResultsEntityFront`: Now omits `organization_id`
+- `helper/types/current_account.type.ts`
+  - `ICurrentAccountEntityFront`: Now omits `organization_id`
+- `helper/types/bet.type.ts`
+  - `IBetEntityFront`: Now omits `organization_id`
+
+**Note**: `IScheduleEntityFront` already correctly excluded `organization_id`
+
+##### Request Types (helper/request/)
+All request types have been updated to remove `organization_id` since it's now provided exclusively from backend authentication context:
+
+- `helper/request/user.request.ts`
+  - `IUpdateUserEntity`: Removed `organization_id` from Pick
+  - `IDeleteUserEntity`: Removed `organization_id`
+  - `IGetUserEntity`: Removed `organization_id`
+  - `INewUserEntity`: Already excluded (correct)
+
+- `helper/request/lottery.request.ts`
+  - `INewLotteryEntity`: Removed `organization_id`
+  - `IUpdateLotteryEntity`: Removed `organization_id`
+  - `IDeleteLotteryEntity`: Removed `organization_id`
+  - `IGetLotteryEntity`: Removed `organization_id`
+
+- `helper/request/schedule.request.ts`
+  - `INewScheduleEntity`: Removed `organization_id`
+  - `IUpdateScheduleEntity`: Removed `organization_id`
+  - `IDeleteScheduleEntity`: Removed `organization_id`
+  - `IGetScheduleEntity`: Removed `organization_id`
+
+- `helper/request/ticket.request.ts`
+  - `INewTicketEntity`: Removed `organization_id`
+  - `IEditTicketEntity`: Removed `organization_id`
+  - `IEditTicketBaseEntity`: Removed `organization_id`
+  - `IDeleteTicketEntity`: Removed `organization_id`
+  - `IGetTicketEntity`: Removed `organization_id`
+  - Note: `IGetAllTicketEntity` and `IPayTicketEntity` retain `organization_id` as they're used internally in backend controller methods
+
+- `helper/request/results.request.ts`
+  - `INewResultsEntity`: Removed `organization_id`
+  - `IUpdateResultsEntity`: Removed `organization_id`
+  - `IDeleteResultsEntity`: Removed `organization_id`
+  - `IGetResultsEntity`: Removed `organization_id`
+
+- `helper/request/current_account.request.ts`
+  - `IUpdateCurrentAccountEntity`: Already excluded (correct)
+  - Note: `IGetAllCurrentAccountEntity` and `IGetCurrentAccountEntity` retain `organization_id` as they're used internally in backend controller methods
+
+**Migration Path**:
+- Backend: All API routes now extract `organization_id` from `req.organization_id!` (provided by auth middleware)
+- Backend: All controllers receive `organization_id` as an explicit parameter, not from request props
+- Frontend: No changes required - frontend never needed to send `organization_id` (auth provides it)
 
 #### Request Files Renamed
 - **File Extension Update**: Renamed all request type files from `.response.ts` to `.request.ts`

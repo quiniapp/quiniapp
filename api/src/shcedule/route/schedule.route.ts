@@ -12,6 +12,7 @@ const CACHE_KEY = 'schedules:all';
 
 function invalidateSchedules() {
   globalCacheManager.invalidate(CACHE_KEY);
+  globalCacheManager.invalidate(`${CACHE_KEY}:all=true`);
 }
 
 export class ScheduleRouter {
@@ -34,12 +35,19 @@ export class ScheduleRouter {
   }
 
   private newSchedulehandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
+    const { user, organization_id } = req;
     const { newSchedule } = req.body;
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (!organization_id) {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.BAD_REQUEST, message: ERROR_MESSAGE.BAD_REQUEST },
       };
       res.status(403).json(response);
       return;
@@ -55,10 +63,7 @@ export class ScheduleRouter {
     }
 
     try {
-      const schedule = await this.controller.create({
-        ...newSchedule,
-        organization_id: req.organization_id!,
-      });
+      const schedule = await this.controller.create(newSchedule, req.organization_id!);
       invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
@@ -81,6 +86,8 @@ export class ScheduleRouter {
 
   private getAllScheduleHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const allFlag = !!req.query.all;
+
     if (!user?.user) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.BAD_REQUEST, message: ERROR_MESSAGE.BAD_REQUEST },
@@ -90,9 +97,10 @@ export class ScheduleRouter {
     }
 
     try {
+      const key = allFlag ? `${CACHE_KEY}:all=true` : CACHE_KEY;
       const snap = await globalCacheManager.getOrLoad(
-        CACHE_KEY,
-        () => this.controller.getAll(req.organization_id!),
+        key,
+        () => this.controller.getAll(req.organization_id!, allFlag),
         {
           etagStrategy: 'counter',
         }
@@ -149,10 +157,11 @@ export class ScheduleRouter {
     }
 
     try {
-      const schedule = await this.controller.update(schedule_id, {
-        ...updateSchedule,
-        organization_id: req.organization_id,
-      });
+      const schedule = await this.controller.update(
+        schedule_id,
+        updateSchedule,
+        req.organization_id!
+      );
       invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
@@ -186,7 +195,7 @@ export class ScheduleRouter {
     }
 
     try {
-      await this.controller.delete({ schedule_id, organization_id: req.organization_id! });
+      await this.controller.delete({ schedule_id }, req.organization_id!);
       invalidateSchedules();
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {

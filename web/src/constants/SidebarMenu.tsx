@@ -55,13 +55,19 @@ const MENU_ITEMS: MENU_ITEM[] = [
       {
         id: 'AgentCommission',
         name: 'Qunielas a jugarse',
-        route: ROUTES.LOTTERIES,
+        route: ROUTES.UPCOMING_LOTTERIES,
         icon: <FileTextIcon size={20} />,
       },
       {
         id: 'Shifts',
         name: 'Turnos',
         route: ROUTES.SHIFTS,
+        icon: <FileTextIcon size={20} />,
+      },
+      {
+        id: 'Loteries',
+        name: 'Loterias',
+        route: ROUTES.LOTTERIES,
         icon: <FileTextIcon size={20} />,
       },
     ],

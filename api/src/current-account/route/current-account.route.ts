@@ -100,10 +100,10 @@ export class CurrentAccountRouter {
     try {
       // Calculate solo recalcula, no liquida (leave = false)
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
+        req.organization_id!,
         date as string,
         false,
-        false,
-        req.organization_id!
+        false
       );
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
@@ -152,10 +152,10 @@ export class CurrentAccountRouter {
     try {
       // Liquidate liquida y puede marcar como leave
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
+        req.organization_id!,
         date as string,
         typeof leave === 'string' && leave === 'true',
-        true,
-        req.organization_id!
+        true
       );
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
@@ -216,10 +216,8 @@ export class CurrentAccountRouter {
     try {
       const currentaccount = await this.controller.updateCurrentAccountHandler(
         current_account_id,
-        {
-          ...updateCurrentAccount,
-          organization_id: req.organization_id!,
-        },
+        updateCurrentAccount,
+        req.organization_id!,
         typeof leave === 'string' && leave === 'true'
       );
 
@@ -366,10 +364,7 @@ export class CurrentAccountRouter {
       if (entries.length > 0) {
         const results = await Promise.allSettled(
           entries.map(([id, payload]) =>
-            this.controller.updateCurrentAccountByUserHandler(id, {
-              ...payload,
-              organization_id: req.organization_id!,
-            })
+            this.controller.updateCurrentAccountByUserHandler(id, payload, req.organization_id!)
           )
         );
 
@@ -386,10 +381,10 @@ export class CurrentAccountRouter {
       // 2) Siempre ejecuto el cálculo del día (regla nueva: aunque no haya updates y leave=false)
       //    `liquidatedFlag` viaja al controller para tu lógica de "liquidado" del día.
       await this.controller.calculateCurrentAccountHandler(
+        req.organization_id!,
         String(date),
         leaveFlag,
-        true,
-        req.organization_id!
+        true
       );
 
       const statusCode = failed.length ? 207 : 200;

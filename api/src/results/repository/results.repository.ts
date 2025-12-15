@@ -62,7 +62,7 @@ export class ResultsRepository {
     return data;
   }
 
-  async update(id: string, organization_id: string, payload: any) {
+  async update(id: string, payload: any, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('results')

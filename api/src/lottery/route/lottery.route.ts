@@ -54,7 +54,7 @@ export class LotteryRouter {
     }
 
     try {
-      const lottery = await this.controller.create({ name, organization_id: req.organization_id! });
+      const lottery = await this.controller.create({ name }, req.organization_id!);
 
       // invalidación (ambas variantes all=true/false)
       invalidateAllLotteries();
@@ -159,10 +159,7 @@ export class LotteryRouter {
     }
 
     try {
-      const lottery = await this.controller.update(lottery_id, {
-        ...updateLottery,
-        organization_id: req.organization_id,
-      });
+      const lottery = await this.controller.update(lottery_id, updateLottery, req.organization_id!);
 
       invalidateAllLotteries();
 
@@ -199,7 +196,7 @@ export class LotteryRouter {
     }
 
     try {
-      await this.controller.delete({ lottery_id, organization_id: req.organization_id! });
+      await this.controller.delete({ lottery_id }, req.organization_id!);
 
       invalidateAllLotteries();
 

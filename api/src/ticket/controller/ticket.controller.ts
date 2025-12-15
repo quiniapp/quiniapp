@@ -21,12 +21,12 @@ import { IPaginatedResponse } from '@helper/request/pagination.request';
 export class TicketController {
   private repository = new TicketRepository();
 
-  create = async (props: INewTicketEntity) => {
+  create = async (props: INewTicketEntity, organization_id: string) => {
     const newTicket = ticketBase(props);
     try {
       const result = await this.repository.create({
         ...newTicket,
-        organization_id: props.organization_id,
+        organization_id: organization_id,
       });
       return parseTicket(result);
     } catch (error) {
@@ -34,13 +34,13 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  get = async (props: IGetTicketEntity): Promise<ITicketEntityFront> => {
+  get = async (props: IGetTicketEntity, organization_id: string): Promise<ITicketEntityFront> => {
     try {
       let ticket;
       if (props.ticket_id) {
-        ticket = await this.repository.getById(props?.ticket_id, props.organization_id!);
+        ticket = await this.repository.getById(props?.ticket_id, organization_id);
       } else if (props.ticket_number) {
-        ticket = await this.repository.getByNumber(props.ticket_number, props.organization_id!);
+        ticket = await this.repository.getByNumber(props.ticket_number, organization_id);
       }
       if (!ticket) {
         // lanzar error controlado o devolver null y que router lo traduzca
@@ -133,14 +133,14 @@ export class TicketController {
     }
   };
 
-  delete = async (props: IDeleteTicketEntity) => {
+  delete = async (props: IDeleteTicketEntity, organization_id: string) => {
     try {
-      const ticket = await this.repository.getByNumber(props.ticket_number, props.organization_id);
+      const ticket = await this.repository.getByNumber(props.ticket_number, organization_id);
       if (props.user_type === USER_TYPE.CASHIER) {
         if (dayjs().diff(ticket.created_at, 'minutes') > 2)
           throw new Error(ERROR_MESSAGE.INVALID_DELETE_TIME);
       }
-      await this.repository.delete({ ...props, organization_id: props.organization_id });
+      await this.repository.delete({ ...props, organization_id: organization_id });
       return;
     } catch (error) {
       console.error('Delete error:', error);
@@ -185,13 +185,13 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  update = async (props: IEditTicketEntity) => {
+  update = async (props: IEditTicketEntity, organization_id: string) => {
     try {
       const updateBase = props.bets.map((b: IBetTable) => betBase(b));
       const ticket = await this.repository.update({
         bets: updateBase,
         ticket_id: props.ticket_id,
-        organization_id: props.organization_id,
+        organization_id: organization_id,
       });
 
       return parseTicket(ticket);

@@ -7,6 +7,198 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-15
+
+#### Type System Refactoring - Organization ID in JWT and Type Safety
+- **Auth Middleware**: Fixed organization_id extraction from JWT token
+  - File: `api/middlewares/auth.middleware.ts`
+  - Changed from accessing `user.organization_id` to `userDecoded.organization_id`
+  - Updated ITokenPayload to include organization_id at top level
+  - Reason: IUserEntityFront no longer includes organization_id (removed to separate concerns)
+
+- **JWT Token Management**: Updated token signing to include organization_id
+  - File: `api/helper/JWT.ts`
+  - Added organization_id parameter to signUserToken function
+  - JWT payload now includes: user, token, and organization_id
+
+- **Auth Controller**: Return organization_id separately from user object
+  - File: `api/src/auth/controller/auth.controller.ts`
+  - login method now returns `{ user: IUserEntityFront; organization_id: string }`
+  - Organization ID extracted from database user object
+
+- **Auth Route**: Updated to pass organization_id when signing user token
+  - File: `api/src/auth/route/auth.route.ts`
+  - Calls signUserToken with both user and organization_id
+
+- **Helper Base Functions**: Added organization_id parameter to entity builders
+  - `api/src/lottery/helper/lotteryBase.ts`: Added organization_id and order field
+  - `api/src/shcedule/helper/scheduleBase.ts`: Added organization_id parameter
+  - `api/src/user/helper/userBase.ts`: Added organization_id parameter to buildUserForDB
+  - `api/src/results/helper/resultsBase.ts`: Added organization_id parameter
+  - `api/src/ticket/helper/ticketBase.ts`: Changed return type to Omit organization_id (added in controller)
+
+- **Parse Functions**: Added missing fields to entity parsers
+  - `api/src/lottery/helper/parseLottery.ts`: Added order field to output
+
+- **Repository Method Signatures**: Standardized parameter order (id, payload, organization_id)
+  - `api/src/lottery/repository/lottery.repository.ts`: Fixed update method signature
+  - `api/src/shcedule/repository/schedule.repository.ts`: Fixed update method signature
+  - `api/src/user/repository/user.repository.ts`: Fixed update method signature
+  - `api/src/results/repository/results.repository.ts`: Fixed update method signature
+
+- **Controllers**: Updated to pass organization_id to base functions and repositories
+  - Lottery: Pass organization_id to lotteryBase
+  - Schedule: Pass organization_id to scheduleBase
+  - User: Pass organization_id to buildUserForDB
+  - Results: Pass organization_id to resultsBase and repository get method
+
+- **Organization Route**: Fixed organization_id access
+  - File: `api/src/organization/route/organization.route.ts`
+  - Changed from `user?.user.organization_id` to `user?.organization_id`
+
+- **Schedule-Lottery Route**: Added organization_id to insertData array
+  - File: `api/src/schedule-lottery/route/schedule-lottery.route.ts`
+  - insertData now includes organization_id for each item
+
+- **Type Definitions**: Fixed import errors and added organization_id to request types
+  - `helper/response/results.response.ts`: Fixed typo IResultEntityFront -> IResultsEntityFront
+  - `helper/types/ticket.type.ts`: Fixed import path from ticket.response to ticket.request
+  - `helper/request/ticket.request.ts`:
+    - Fixed ITicketEntityFrontCompact to omit organization_id
+    - Added organization_id to IPayTicketEntity
+    - Added organization_id to IGetAllTicketEntity
+  - `helper/request/current_account.request.ts`: Added organization_id to request types
+  - `helper/types/auth.type.ts`: Added organization_id to ITokenPayload
+
+### Changed - 2025-12-15
+
+#### API Controllers and Routes - Organization ID Refactoring
+- **Refactored all API modules**: Standardized organization_id parameter handling across 8 modules
+  - **Pattern**: Controllers now accept `organization_id` as a separate parameter instead of including it in request props
+  - **Benefits**:
+    - Consistent signature across all controller methods
+    - Clearer separation of concerns (business data vs context)
+    - Matches pattern already established in lottery module
+    - Easier to maintain and understand
+
+  **Modules Updated:**
+
+  1. **Schedule Module**
+     - Controller: `api/src/shcedule/controller/schedule.controller.ts`
+       - `create(props, organization_id)`
+       - `get(props, organization_id)`
+       - `update(id, props, organization_id)`
+       - `delete(props, organization_id)`
+     - Route: `api/src/shcedule/route/schedule.route.ts`
+       - All handlers pass `req.organization_id!` as separate argument
+
+  2. **Ticket Module**
+     - Controller: `api/src/ticket/controller/ticket.controller.ts`
+       - `create(props, organization_id)`
+       - `get(props, organization_id)`
+       - `update(props, organization_id)`
+       - `delete(props, organization_id)`
+     - Route: `api/src/ticket/route/ticket.route.ts`
+       - All handlers pass `req.organization_id!` as separate argument
+
+  3. **User Module**
+     - Controller: `api/src/user/controller/user.controller.ts`
+       - `get(props, organization_id)`
+       - `update(user_id, props, organization_id)`
+       - `delete(props, organization_id)`
+     - Route: `api/src/user/route/user.route.ts`
+       - All handlers pass `req.organization_id!` as separate argument
+
+  4. **Results Module**
+     - Controller: `api/src/results/controller/results.controller.ts`
+       - `create(props, organization_id)`
+       - `get(props, organization_id)`
+       - `update(id, props, organization_id)`
+     - Route: `api/src/results/route/results.route.ts`
+       - All handlers pass `req.organization_id!` as separate argument
+
+  5. **Winners Module**
+     - Controller: `api/src/winners/controller/winners.controller.ts`
+       - Already using correct pattern (organization_id as separate parameter)
+     - Route: `api/src/winners/route/winners.route.ts`
+       - Already using correct pattern
+
+  6. **Bet Module**
+     - Controller: `api/src/bet/controller/bet.controller.ts`
+       - Already using correct pattern (organization_id as separate parameter in object destructuring)
+     - Route: `api/src/bet/route/bet.routes.ts`
+       - Already using correct pattern
+
+  7. **Current-Account Module**
+     - Controller: `api/src/current-account/controller/current-account.controller.ts`
+       - Already using correct pattern
+     - Route: `api/src/current-account/route/current-account.route.ts`
+       - Fixed parameter order in `calculateCurrentAccountHandler` calls
+       - Fixed `updateCurrentAccountHandler` to pass organization_id as separate parameter
+       - Fixed `bulkUpdateCurrentAccountHandler` to pass organization_id as separate parameter
+
+  8. **Schedule-Lottery Module**
+     - Controller: `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+       - Already using correct pattern
+     - Route: `api/src/schedule-lottery/route/schedule-lottery.route.ts`
+       - Already using correct pattern
+
+- **Repository Layer**: No changes required (repositories already accept organization_id as separate parameter)
+- **Impact**: Breaking change for internal API, but improves code consistency and maintainability
+- **Migration Notes**: All route handlers updated to extract organization_id from `req.organization_id!` and pass as separate argument
+
+### Fixed - 2025-12-15
+
+#### User Repository - Empty List Handling
+- **Issue**: Repository could return null instead of empty array when no users found
+- **Fix**: `api/src/user/repository/user.repository.ts:34`
+  - Changed `return data;` to `return data || [];`
+  - Ensures empty array is always returned when no users match criteria
+  - Prevents null reference errors in frontend
+- **Impact**: User list displays "No hay usuarios disponibles" instead of error
+
+### Added - 2025-12-15
+
+#### Database Migrations - Lotteries and Schedules Enhancement
+
+##### Lotteries Order Column
+- **Migration**: `api/supabase/migrations/20251215162729_alter_lotteries_add_order_column.sql`
+- **New Column**: `order INTEGER NOT NULL DEFAULT 0`
+  - Allows custom ordering of lotteries in UI
+  - Indexed for better query performance
+  - Default value 0 for backward compatibility
+- **Repository Update**: `api/src/lottery/repository/lottery.repository.ts:24`
+  - Changed ordering from `created_at` to `order` column
+  - Lotteries now returned in user-defined order
+- **Type Update**: `ILotteryEntityBack` now includes `order: number`
+- **Request Types**: `INewLotteryEntity` and `IUpdateLotteryEntity` support `order` field
+
+##### Schedules Active Column
+- **Migration**: `api/supabase/migrations/20251215163544_alter_schedules_add_active_column.sql`
+- **New Column**: `active BOOLEAN NOT NULL DEFAULT true`
+  - Allows marking schedules as active/inactive
+  - Indexed for better query performance
+  - Default value true for backward compatibility
+- **Repository Update**: `api/src/shcedule/repository/schedule.repository.ts:30-58`
+  - Added `all` parameter to `getAll()` method
+  - Filters by `active=true` by default (unless `all=true`)
+  - Maintains ordering by `time` column
+- **Controller Update**: `api/src/shcedule/controller/schedule.controller.ts:36`
+  - Added `all` parameter support
+- **Route Update**: `api/src/shcedule/route/schedule.route.ts:82-102`
+  - Added `?all` query parameter support
+  - Updated cache keys to differentiate active vs all schedules
+  - Cache invalidation handles both variants
+- **Type Update**: `IScheduleEntityBack` now includes `active: boolean`
+- **Request Types**: `INewScheduleEntity` and `IUpdateScheduleEntity` support `active` field
+
+#### CASHIER Access Control (Already Implemented)
+- **Lottery Routes**: CASHIER users receive 403 Forbidden on create/update/delete
+  - Paths: `api/src/lottery/route/lottery.route.ts:48,144,193`
+- **Schedule Routes**: CASHIER users receive 403 Forbidden on create/update/delete
+  - Paths: `api/src/shcedule/route/schedule.route.ts:40,134,180`
+- **Security**: Only ADMIN, OWNER, and SUPERADMIN can modify lotteries and schedules
+
 ### Fixed - 2025-12-10
 
 #### Authentication Middleware - Incorrect HTTP Status Code

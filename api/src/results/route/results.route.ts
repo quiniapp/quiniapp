@@ -57,10 +57,7 @@ export class ResultsRouter {
     }
 
     try {
-      const results = await this.controller.create({
-        ...newResults,
-        organization_id: req.organization_id!,
-      });
+      const results = await this.controller.create(newResults, req.organization_id!);
       const response: APIResponse<IResultsEntityFront> = {
         data: {
           results,
@@ -128,13 +125,15 @@ export class ResultsRouter {
         return;
       }
       const { results_id, date, lottery_id, schedule_id } = parsed.data;
-      const results = await this.controller.get({
-        results_id,
-        date,
-        lottery_id,
-        schedule_id,
-        organization_id: req.organization_id,
-      });
+      const results = await this.controller.get(
+        {
+          results_id,
+          date,
+          lottery_id,
+          schedule_id,
+        },
+        req.organization_id!
+      );
       const response: APIResponse<IResultsEntityFront | []> = {
         data: {
           results,
@@ -193,10 +192,7 @@ export class ResultsRouter {
       return;
     }
     try {
-      const results = await this.controller.update(results_id, {
-        ...updateResults,
-        organization_id: req.organization_id,
-      });
+      const results = await this.controller.update(results_id, updateResults, req.organization_id!);
       const response: APIResponse<IResultsEntityFront> = {
         data: {
           results,

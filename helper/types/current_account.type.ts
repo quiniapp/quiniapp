@@ -27,5 +27,5 @@ export interface ICurrentAccountEntityBack {
 
 export type ICurrentAccountEntityFront = Omit<
   ICurrentAccountEntityBack,
-  'created_at' | 'edited_at'
+  'created_at' | 'edited_at' | 'organization_id'
 >;

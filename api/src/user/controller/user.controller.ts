@@ -15,9 +15,9 @@ export class UserController {
   private repository = new UserRepository();
 
   create = async (newUser: INewUserEntity, organization_id: string): Promise<IUserEntityFront> => {
-    const user = await buildUserForDB(newUser);
+    const user = await buildUserForDB(newUser, organization_id);
     try {
-      const result = await this.repository.create(user, organization_id);
+      const result = await this.repository.create(user);
       if (user.cashier_type !== CASHIER_TYPE.STREET) {
         const { error } = await supabase.auth.signUp({
           email: user.email!,
@@ -25,7 +25,7 @@ export class UserController {
         });
 
         if (error) {
-          await this.repository.deleteFailedUser(result.user_id, organization_id);
+          await this.repository.deleteFailedUser(result.user_id);
           console.error('Supabase creation error:', error);
           throw new Error(error.message);
         }
@@ -37,9 +37,9 @@ export class UserController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  get = async (props: IGetUserEntity): Promise<IUserEntityFront> => {
+  get = async (props: IGetUserEntity, organization_id: string): Promise<IUserEntityFront> => {
     try {
-      const result = await this.repository.getById(props.user_id!, props.organization_id!);
+      const result = await this.repository.getById(props.user_id!, organization_id);
 
       return parseUser(result);
     } catch (error) {
@@ -61,9 +61,13 @@ export class UserController {
     }
   };
 
-  update = async (user_id: string, props: IUpdateUserEntity): Promise<IUserEntityFront> => {
+  update = async (
+    user_id: string,
+    props: IUpdateUserEntity,
+    organization_id: string
+  ): Promise<IUserEntityFront> => {
     try {
-      const result = await this.repository.update(user_id, props, props.organization_id);
+      const result = await this.repository.update(user_id, props, organization_id);
 
       // TO DO: validar el password despues
       // if (user.cashier_type !== CASHIER_TYPE.STREET) {
@@ -86,9 +90,9 @@ export class UserController {
     }
   };
 
-  delete = async (props: IDeleteUserEntity) => {
+  delete = async (props: IDeleteUserEntity, organization_id: string) => {
     try {
-      const response = await this.repository.delete(props.user_id, props.organization_id);
+      const response = await this.repository.delete(props.user_id, organization_id);
       return parseUser(response);
     } catch (error) {
       console.error('Delete error:', error);
