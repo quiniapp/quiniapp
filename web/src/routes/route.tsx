@@ -99,7 +99,7 @@ export const RoutesContent = [
         element: withSuspense(UsersPage),
       },
       {
-        path: ROUTES.USERS_List,
+        path: ROUTES.USERS_LIST,
         id: 'UsersList',
         element: withSuspense(UserListPage),
       },

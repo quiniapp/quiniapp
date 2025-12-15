@@ -14,7 +14,7 @@ import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleL
 import dayjs from 'dayjs';
 import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { usePlayDetails } from './context/MakePlaysContext';

@@ -1,4 +1,4 @@
-import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.response';
+import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.request';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';

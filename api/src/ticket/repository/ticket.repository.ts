@@ -4,7 +4,7 @@ import {
   IEditTicketBaseEntity,
   INewTicketBaseEntity,
   IPayTicketEntity,
-} from '@helper/request/ticket.response';
+} from '@helper/request/ticket.request';
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
 

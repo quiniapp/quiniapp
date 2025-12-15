@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-15
+
+#### User List Table - UI Improvements
+- **Table Headers**: Fixed missing white text color on "Eliminar" column header
+  - Path: `web/src/features/user-list/user-table.tsx:58`
+  - All table headers now consistently use `text-cyan` class
+  - Previously one header was missing the color class
+
+- **Empty State Handling**: Fixed error display when no users exist
+  - Path: `web/src/features/user-list/user-table.tsx:62-68`
+  - Now displays "No hay usuarios disponibles" message in empty table
+  - Previously showed error message when data array was empty
+  - Added conditional rendering with proper empty state UI
+
+#### User Form - Type Consistency
+- **Default Values**: Fixed inconsistent type defaults in new user form
+  - Path: `web/src/features/user-list/user-list-form.tsx:45-46`
+  - Changed `fee` and `fee_plus` defaults from `undefined` to `0`
+  - Now matches `CashierUserEntityBack` type requirements (number, not undefined)
+  - Ensures type consistency when `user_type` is `CASHIER`
+
+- **Null Value Handling**: Fixed TypeScript errors for null values in form inputs
+  - Paths: Multiple fields in `web/src/features/user-list/user-list-form.tsx`
+  - **Line 134**: `cashier_type` - Convert null to undefined for Select component
+  - **Lines 177-183, 194-200**: `fee` and `fee_plus` - Handle null values with `value ?? ''` and fallback to 0
+  - **Lines 229-230**: `last_name` - Convert null to empty string
+  - **Lines 242-243**: `address` - Convert null to empty string
+  - **Lines 258-259**: `phone` - Convert null to empty string
+  - **Lines 271-275**: `email` - Convert null to empty string
+  - **Lines 297-298**: `username` - Convert null to empty string
+  - **Why**: React Hook Form fields can be null from type definitions, but Input/Select components require string/number/undefined
+  - **Solution**: Destructure field value and use nullish coalescing (`value ?? ''`) to convert null to empty string
+
+#### Settings - Access Control
+- **Owner-Only Delete Card**: Restricted data deletion feature to OWNER role
+  - Path: `web/src/features/settings/index.tsx:105-155`
+  - Delete data card now only visible to users with OWNER role
+  - Added `useAuth` hook integration and `USER_TYPE.OWNER` check
+  - Prevents non-owner users from accessing data deletion feature
+  - Improves security by enforcing role-based access control
+
+### Changed - 2025-12-15
+
+#### Import Updates
+- **Request Types**: Updated all imports from `.response` to `.request` extension
+  - Multiple files across web workspace
+  - Reflects proper naming convention: request types sent from frontend to backend
+  - No functional changes, improved code organization and clarity
+
 ### Added - 2025-12-10
 
 #### Route Prefetching on Hover

@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { supabase } from '@database/db.connection';
-import { IGetResultsEntity } from '@helper/request/results.response';
+import { IGetResultsEntity } from '@helper/request/results.request';
 const RESULTS_VIEW = `
   *,
   lottery:lottery_id (*),

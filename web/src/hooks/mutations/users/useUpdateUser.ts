@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { IUpdateUserEntity } from '@helper/request/user.response';
+import { IUpdateUserEntity } from '@helper/request/user.request';
 
 const updateUser = async (payload: IUpdateUserEntity) => {
 

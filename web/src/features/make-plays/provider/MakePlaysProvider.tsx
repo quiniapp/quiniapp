@@ -9,7 +9,7 @@ import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';

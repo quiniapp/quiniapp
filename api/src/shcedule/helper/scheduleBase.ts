@@ -1,4 +1,4 @@
-import { INewScheduleEntity } from '@helper/request/schedule.response';
+import { INewScheduleEntity } from '@helper/request/schedule.request';
 import { IScheduleEntityBack } from '@helper/types/schedule.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';

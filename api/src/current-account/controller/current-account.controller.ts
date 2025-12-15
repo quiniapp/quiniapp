@@ -3,7 +3,7 @@ import {
   IGetAllCurrentAccountEntity,
   IGetCurrentAccountEntity,
   IUpdateCurrentAccountEntity,
-} from '@helper/request/current_account.response';
+} from '@helper/request/current_account.request';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
 
 import { parseCurrentAccount } from '../helper/parseCurrentAccount';

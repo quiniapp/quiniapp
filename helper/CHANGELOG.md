@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-15
+
+#### Request Files Renamed
+- **File Extension Update**: Renamed all request type files from `.response.ts` to `.request.ts`
+  - `helper/request/bet.response.ts` → `helper/request/bet.request.ts`
+  - `helper/request/cashier.response.ts` → `helper/request/cashier.request.ts`
+  - `helper/request/current_account.response.ts` → `helper/request/current_account.request.ts`
+  - `helper/request/group.response.ts` → `helper/request/group.request.ts`
+  - `helper/request/lottery.response.ts` → `helper/request/lottery.request.ts`
+  - `helper/request/pagination.response.ts` → `helper/request/pagination.request.ts`
+  - `helper/request/results.response.ts` → `helper/request/results.request.ts`
+  - `helper/request/schedule.response.ts` → `helper/request/schedule.request.ts`
+  - `helper/request/ticket.response.ts` → `helper/request/ticket.request.ts`
+  - `helper/request/user.response.ts` → `helper/request/user.request.ts`
+  - `helper/request/winner.response.ts` → `helper/request/winner.request.ts`
+  - **Why:** Clarifies that `helper/request/*` contains types sent FROM frontend TO backend
+  - **Impact:** All imports across web and api workspaces updated to use `.request` extension
+
+### Added - 2025-12-15
+
+#### Response Type Definitions
+- **New Response Files**: Created standardized response type files for backend-to-frontend communication
+  - `helper/response/user.response.ts` - User entity response types
+    - `UserResponse`: Single user response type (alias for `IUserEntityFront`)
+    - `ListUsersResponse`: Array of users response type
+  - `helper/response/ticket.response.ts` - Ticket entity response types
+    - `TicketResponse`: Single ticket response type
+    - `ListTicketsResponse`: Array of tickets response type
+  - `helper/response/bet.response.ts` - Bet entity response types
+    - `BetResponse`: Single bet response type
+    - `ListBetsResponse`: Array of bets response type
+  - `helper/response/lottery.response.ts` - Lottery entity response types
+    - `LotteryResponse`: Single lottery response type
+    - `ListLotteriesResponse`: Array of lotteries response type
+  - `helper/response/results.response.ts` - Results entity response types
+    - `ResultResponse`: Single result response type
+    - `ListResultsResponse`: Array of results response type
+  - `helper/response/schedule.response.ts` - Schedule entity response types
+    - `ScheduleResponse`: Single schedule response type
+    - `ListSchedulesResponse`: Array of schedules response type
+  - `helper/response/current_account.response.ts` - Current account response types
+    - `CurrentAccountResponse`: Single current account response type
+    - `ListCurrentAccountsResponse`: Array of current accounts response type
+  - **Why:** Establishes clear separation between request types (front→back) and response types (back→front)
+  - **Structure:** Each entity has both single and list response type aliases
+  - **Future Use:** Provides standardized types for API controller return values
+
 ### Added - 2025-12-07
 
 #### Error Messages - Ticket Payment Validation

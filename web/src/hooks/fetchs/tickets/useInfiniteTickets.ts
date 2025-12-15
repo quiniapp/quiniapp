@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { IPaginatedResponse } from '@helper/request/pagination.response';
+import { IPaginatedResponse } from '@helper/request/pagination.request';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import dayjs from 'dayjs';
 

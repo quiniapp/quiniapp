@@ -76,7 +76,7 @@ const MENU_ITEMS: MENU_ITEM[] = [
       {
         id: 'UsersLIst',
         name: 'Listado de Usuarios',
-        route: ROUTES.USERS_List,
+        route: ROUTES.USERS_LIST,
         icon: <UsersIcon size={20} />,
       },
       {

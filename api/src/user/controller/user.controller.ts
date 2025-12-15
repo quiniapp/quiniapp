@@ -4,7 +4,7 @@ import {
   IGetUserEntity,
   INewUserEntity,
   IUpdateUserEntity,
-} from '@helper/request/user.response';
+} from '@helper/request/user.request';
 import { CASHIER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
 import { buildUserForDB } from '../helper/userBase';

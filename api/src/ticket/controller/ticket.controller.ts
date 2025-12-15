@@ -8,7 +8,7 @@ import {
   IGetTicketEntity,
   INewTicketEntity,
   IPayTicketEntity,
-} from '@helper/request/ticket.response';
+} from '@helper/request/ticket.request';
 import { ticketBase } from '../helper/ticketBase';
 import { parseTicket } from '../helper/parseTicket';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
@@ -16,7 +16,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
 import { betBase } from 'src/bet/helper/betBase';
-import { IPaginatedResponse } from '@helper/request/pagination.response';
+import { IPaginatedResponse } from '@helper/request/pagination.request';
 
 export class TicketController {
   private repository = new TicketRepository();

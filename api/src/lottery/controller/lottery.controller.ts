@@ -4,7 +4,7 @@ import {
   IGetLotteryEntity,
   INewLotteryEntity,
   IUpdateLotteryEntity,
-} from '@helper/request/lottery.response';
+} from '@helper/request/lottery.request';
 import { lotteryBase } from '../helper/lotteryBase';
 import { parseLottery } from '../helper/parseLottery';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';

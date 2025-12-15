@@ -5,7 +5,7 @@ import {
   IGetScheduleEntity,
   INewScheduleEntity,
   IUpdateScheduleEntity,
-} from '@helper/request/schedule.response';
+} from '@helper/request/schedule.request';
 import { scheduleBase } from '../helper/scheduleBase';
 import { parseSchedule } from '../helper/parseSchedule';
 

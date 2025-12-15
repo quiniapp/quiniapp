@@ -1,4 +1,4 @@
-import { INewResultsEntity } from '@helper/request/results.response';
+import { INewResultsEntity } from '@helper/request/results.request';
 import { IResultsBase } from '@helper/types/results.type';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';

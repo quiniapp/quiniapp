@@ -1,5 +1,5 @@
 import { supabase } from '@database/db.connection';
-import { TicketSums } from '@helper/request/bet.response';
+import { TicketSums } from '@helper/request/bet.request';
 import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
 
 export class BetRepository {

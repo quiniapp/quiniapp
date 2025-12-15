@@ -20,7 +20,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useClock } from '@/providers/ClockProvider';
 import { useAuth } from '@/contexts/AuthContext';
-import { IBetTable } from '@helper/request/ticket.response';
+import { IBetTable } from '@helper/request/ticket.request';
 
 dayjs.extend(customParseFormat);
 const toHHMMSS = (t: string) => (t.length === 5 ? `${t}:00` : t);

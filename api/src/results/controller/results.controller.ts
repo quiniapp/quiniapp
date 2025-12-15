@@ -5,7 +5,7 @@ import {
   IGetResultsEntity,
   INewResultsEntity,
   IUpdateResultsEntity,
-} from '@helper/request/results.response';
+} from '@helper/request/results.request';
 import { resultsBase } from '../helper/resultsBase';
 
 export class ResultsController {
