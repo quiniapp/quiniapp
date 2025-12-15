@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-15
+
+#### User Validation Schema Updated for Nullable Numbers
+- **User Schema**: Updated Zod validation to support nullable numbers with conditional requirements
+  - File: `helper/schemas/user.schema.ts`
+  - Changed base schema: `number: z.number()` → `number: z.number().nullable()`
+  - Added `.refine()` validation to CASHIER schemas (both PC and STREET) to ensure number is not null
+  - Added `.refine()` validation to ADMIN schema to ensure number is not null
+  - OWNER and SUPERADMIN schemas allow null numbers (no refinement needed)
+  - Updated `updateBaseSchema` to include `number: z.number().nullable().optional()`
+  - Use case: Enforces business rule that ADMIN and CASHIER must have numbers, while OWNER and SUPERADMIN don't need them
+
+### Added - 2025-12-15
+
+#### Organization Request Types
+- **New File**: `helper/request/organization.request.ts`
+  - `INewOrganizationEntity`: Type for creating new organizations (Pick<IOrganizationEntityBack, 'name'>)
+  - `IUpdateOrganizationEntity`: Type for updating organizations (Partial<Pick<IOrganizationEntityBack, 'name'>>)
+  - `IDeleteOrganizationEntity`: Type for deleting organizations (Pick<IOrganizationEntityBack, 'organization_id'>)
+  - `IGetOrganizationEntity`: Type for getting organizations (Pick<IOrganizationEntityBack, 'organization_id'>)
+  - Use case: Standardized request types for organization operations, consistent with other entities
+
 ### Fixed - 2025-12-15
 
 #### Type System Corrections - Organization ID and Import Fixes

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-15
+
+#### User Number Field Made Conditionally Nullable
+- **Database Migration**: Made user number nullable for OWNER and SUPERADMIN users
+  - File: `api/supabase/migrations/20251215234045_alter_user_number_nullable.sql`
+  - Updated existing OWNER/SUPERADMIN users to have NULL numbers
+  - Made `number` column nullable in users table
+  - Replaced unique index with organization-scoped index: `unique_number_when_not_null_and_not_deleted`
+  - Added CHECK constraint: `check_number_required_for_admin_cashier`
+  - Constraint ensures number is NOT NULL for ADMIN and CASHIER, but allows NULL for OWNER and SUPERADMIN
+  - Use case: OWNER and SUPERADMIN users don't need user numbers, only ADMIN and CASHIER do
+
+- **User Creation Logic**: Updated to handle nullable numbers
+  - File: `api/src/user/helper/userBase.ts`
+  - `getBaseUserFields` now sets number to NULL for OWNER/SUPERADMIN users
+  - Added validation in `buildUserForDB` to throw error if ADMIN/CASHIER has null number
+  - Use case: Prevents invalid user creation at application level before database insertion
+
+- **User Repository**: Added null safety for number filtering
+  - File: `api/src/user/repository/user.repository.ts`
+  - Updated `getAll` method to check for undefined/null before filtering by cashier_number
+  - Use case: Prevents query errors when number is null
+
+#### Organization Creation with Super Admin User
+- **Organization Controller**: Updated to create organization and super admin user atomically
+  - File: `api/src/organization/controller/organization.controller.ts`
+  - Updated `create` method signature to accept `INewOrganizationEntity` and `INewUserEntity`
+  - Creates organization first, then creates super admin user with the organization_id
+  - Implements rollback: if super admin creation fails, the organization is deleted
+  - Use case: Ensures every new organization has a super admin user automatically
+
+- **Organization Route**: Updated to accept and validate super admin data
+  - File: `api/src/organization/route/organization.route.ts`
+  - Updated `createHandler` to extract both organization and superAdmin from request body
+  - Added validation for super admin data presence
+  - Passes both organization and superAdmin data to controller
+  - Use case: API endpoint now requires super admin data when creating organizations
+
 ### Fixed - 2025-12-15
 
 #### Type System Refactoring - Organization ID in JWT and Type Safety

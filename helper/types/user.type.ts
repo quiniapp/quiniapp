@@ -12,7 +12,7 @@ export enum CASHIER_TYPE {
 
 interface BaseUserEntityBack {
   user_id: string;
-  number: number;
+  number: number | null;
   user_type: USER_TYPE;
   name: string;
   organization_id: string;

@@ -26,12 +26,25 @@ export class OrganizationRouter {
 
   // Solo OWNER puede crear organizaciones
   private createHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { name } = req.body;
+    const { organization, superAdmin } = req.body;
     const user = req.user;
 
-    if (!name || typeof name !== 'string') {
+    // Validar que se reciban los datos de la organización
+    if (!organization || !organization.name || typeof organization.name !== 'string') {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.NAME_IS_REQUIRED, message: ERROR_MESSAGE.NAME_IS_REQUIRED },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Validar que se reciban los datos del super admin
+    if (!superAdmin) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: 'Los datos del Super Admin son requeridos',
+        },
       };
       res.status(400).json(response);
       return;
@@ -47,9 +60,9 @@ export class OrganizationRouter {
     }
 
     try {
-      const organization = await this.controller.create({ name });
+      const createdOrganization = await this.controller.create(organization, superAdmin);
       const response: APIResponse<IOrganizationEntityFront> = {
-        data: { organization },
+        data: { organization: createdOrganization },
       };
       res.status(201).json(response);
     } catch (error) {

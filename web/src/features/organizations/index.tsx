@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,8 @@ import { useDeleteOrganization } from '@/hooks/mutations/organization/useDeleteO
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { IOrganizationEntityFront } from '@helper/types/organization.type';
 import { USER_TYPE } from '@helper/types/user.type';
+import { INewUserEntity } from '@helper/request/user.request';
+import { INewOrganizationEntity } from '@helper/request/organization.request';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +23,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+type CreateOrganizationWithSuperAdminForm = {
+  organization: INewOrganizationEntity;
+  superAdmin: INewUserEntity;
+};
 
 const OrganizationsContent = () => {
   const { role } = useAuth();
@@ -34,8 +42,38 @@ const OrganizationsContent = () => {
   const [selectedOrg, setSelectedOrg] = useState<IOrganizationEntityFront | null>(null);
   const [formName, setFormName] = useState('');
 
+  // React Hook Form for create organization with capitalista
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<CreateOrganizationWithSuperAdminForm>({
+    mode: 'onBlur',
+    defaultValues: {
+      organization: {
+        name: '',
+      },
+      superAdmin: {
+        number: null,
+        name: '',
+        user_type: USER_TYPE.SUPERADMIN,
+        cashier_type: null,
+        fee: null,
+        fee_plus: null,
+        username: '',
+        password: '',
+        group_id: '',
+        last_name: '',
+        address: '',
+        phone: undefined,
+        email: '',
+      },
+    },
+  });
+
   const handleCreate = () => {
-    setFormName('');
+    reset();
     setIsCreateDialogOpen(true);
   };
 
@@ -50,13 +88,11 @@ const OrganizationsContent = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleSubmitCreate = async () => {
-    if (!formName.trim()) return;
-
+  const handleSubmitCreate = async (data: CreateOrganizationWithSuperAdminForm) => {
     try {
-      await createMutation.mutateAsync({ name: formName });
+      await createMutation.mutateAsync(data);
       setIsCreateDialogOpen(false);
-      setFormName('');
+      reset();
     } catch (error) {
       console.error('Error creando organización:', error);
     }
@@ -181,39 +217,149 @@ const OrganizationsContent = () => {
 
       {/* Dialog Crear */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nueva Organización</DialogTitle>
+            <DialogTitle>Nueva Organización con Capitalista</DialogTitle>
             <DialogDescription>
-              Ingresa el nombre de la nueva organización
+              Ingresa los datos de la organización y del usuario Capitalista
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ej: Mi Organización"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCreateDialogOpen(false)}
-              disabled={createMutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSubmitCreate}
-              disabled={!formName.trim() || createMutation.isPending}
-            >
-              {createMutation.isPending ? 'Creando...' : 'Crear'}
-            </Button>
-          </DialogFooter>
+          <form onSubmit={handleSubmit(handleSubmitCreate)} className="space-y-6">
+            <fieldset className="border px-4 py-4 rounded-md">
+              <legend className="px-2 text-sm font-semibold">Datos de la Organización</legend>
+              <div className="grid gap-4 pt-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="org-name">Nombre de la Organización</Label>
+                  <Controller
+                    name="organization.name"
+                    control={control}
+                    rules={{ required: 'El nombre de la organización es requerido' }}
+                    render={({ field }) => (
+                      <Input
+                        id="org-name"
+                        placeholder="Ej: Mi Organización"
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.organization?.name && (
+                    <p className="text-sm text-destructive">{errors.organization.name.message}</p>
+                  )}
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset className="border px-4 py-4 rounded-md">
+              <legend className="px-2 text-sm font-semibold">Datos del Capitalista</legend>
+              <div className="grid gap-4 pt-2">
+                
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="username">Usuario</Label>
+                    <Controller
+                      name="superAdmin.username"
+                      control={control}
+                      rules={{ required: 'El usuario es requerido' }}
+                      render={({ field: { value, ...rest } }) => (
+                        <Input id="username" value={value ?? ''} {...rest} />
+                      )}
+                    />
+                    {errors.superAdmin?.username && (
+                      <p className="text-sm text-destructive">{errors.superAdmin.username.message}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Controller
+                      name="superAdmin.password"
+                      control={control}
+                      rules={{ required: 'La contraseña es requerida' }}
+                      render={({ field }) => (
+                        <Input id="password" type="password" {...field} />
+                      )}
+                    />
+                    {errors.superAdmin?.password && (
+                      <p className="text-sm text-destructive">{errors.superAdmin.password.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="user-name">Nombre</Label>
+                    <Controller
+                      name="superAdmin.name"
+                      control={control}
+                      rules={{ required: 'El nombre es requerido' }}
+                      render={({ field }) => <Input id="user-name" {...field} />}
+                    />
+                    {errors.superAdmin?.name && (
+                      <p className="text-sm text-destructive">{errors.superAdmin.name.message}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="last_name">Apellido</Label>
+                    <Controller
+                      name="superAdmin.last_name"
+                      control={control}
+                      render={({ field: { value, ...rest } }) => (
+                        <Input id="last_name" value={value ?? ''} {...rest} />
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Controller
+                      name="superAdmin.email"
+                      control={control}
+                      render={({ field: { value, ...rest } }) => (
+                        <Input id="email" type="email" value={value ?? ''} {...rest} />
+                      )}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Teléfono</Label>
+                    <Controller
+                      name="superAdmin.phone"
+                      control={control}
+                      render={({ field: { value, ...rest } }) => (
+                        <Input id="phone" type="tel" value={value ?? ''} {...rest} />
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Dirección</Label>
+                  <Controller
+                    name="superAdmin.address"
+                    control={control}
+                    render={({ field: { value, ...rest } }) => (
+                      <Input id="address" value={value ?? ''} {...rest} />
+                    )}
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+                disabled={createMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? 'Creando...' : 'Crear Organización y Capitalista'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

@@ -7,7 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-15
+
+#### Organization Creation with Super Admin User
+- **Organization Form Enhancement**: Updated organization creation form to include super admin user fields
+  - File: `web/src/features/organizations/index.tsx`
+  - Implemented React Hook Form for managing organization and super admin data
+  - Form now includes two sections:
+    - **Organization Data**: Name field
+    - **Super Admin Data**: Username, password, name, last name, email, phone, address, user number
+  - Form type: `CreateOrganizationWithSuperAdminForm` with nested structure for organization and superAdmin data
+  - Added form validation with required field rules
+  - Use case: When creating an organization, a super admin user is automatically created for that organization
+
+- **Create Organization Mutation**: Updated mutation to send super admin data
+  - File: `web/src/hooks/mutations/organization/useCreateOrganization.ts`
+  - Updated payload interface: `CreateOrganizationWithSuperAdminPayload`
+  - Sends both organization and superAdmin data to backend
+  - Use case: Coordinates organization and super admin creation in a single request
+
 ### Changed - 2025-12-15
+
+#### User Number Field Made Conditionally Visible
+- **User List Form**: Updated to conditionally show number field
+  - File: `web/src/features/user-list/user-list-form.tsx`
+  - Changed default value from `0` to `null`
+  - Added `shouldShowNumberField` logic to show field only for ADMIN and CASHIER users
+  - Number field hidden for OWNER and SUPERADMIN users
+  - Added required field indicator (red asterisk) and validation
+  - Use case: Simplifies form for OWNER/SUPERADMIN creation by removing unnecessary number field
+
+- **Update User Modal**: Updated to conditionally show number field
+  - File: `web/src/components/modals/UpdateUserModal.tsx`
+  - Added `shouldShowNumberField` logic matching user list form
+  - Updated modal title to handle null numbers gracefully
+  - Number field hidden when editing OWNER/SUPERADMIN users
+  - Added required validation for ADMIN/CASHIER
+  - Use case: Prevents confusion when editing users who don't need numbers
+
+- **Organization Form**: Updated SUPERADMIN default values
+  - File: `web/src/features/organizations/index.tsx`
+  - Added `number: null` to superAdmin default values
+  - Form already doesn't display number field for SUPERADMIN (correct behavior maintained)
+  - Use case: Ensures SUPERADMIN users are created with null numbers
+
+#### Complete UX/UI Redesign of User Form
+- **Modern User Form Design**: Complete redesign with professional UI/UX improvements
+  - File: `web/src/features/user-list/user-list-form.tsx`
+  - **Visual Improvements**:
+    - Replaced fieldsets with modern Card components with shadows and hover effects
+    - Added contextual icons to each section and field label (Building2, User, Shield, Key, Phone, Mail, etc.)
+    - Color-coded sections: primary for app data, blue for personal data, green for login credentials
+    - Added section headers with titles and descriptive text for better context
+    - Improved visual hierarchy with icon badges in colored backgrounds
+    - Enhanced input fields with placeholder text and focus ring animations
+    - Added percentage (%) symbols inside commission fields for better UX
+    - **Consistent height (h-10)** for all inputs and select components across all breakpoints
+    - White text color on select components for better contrast
+  - **Responsive Layout**:
+    - Mobile (default): Single column, stacked layout
+    - Tablet (sm): 2 columns for most sections
+    - Desktop (lg): 3 columns for app and personal data
+    - Max-width constraint (7xl) with centered layout for better readability
+  - **Enhanced Interactivity**:
+    - Smooth transitions on all interactive elements
+    - Hover effects on cards (shadow-md)
+    - Focus rings with primary color on inputs (focus:ring-2)
+    - Button states with proper disabled styling
+    - Loading state with "Guardando..." text
+    - **Conditional field disabling**: "Tipo de pasador" field is automatically disabled when "Admin" user type is selected
+  - **Button Improvements**:
+    - Primary save button with shadow on hover
+    - Outline variant for reset button with destructive color scheme on hover
+    - Responsive button layout (stacked on mobile, side-by-side on desktop)
+    - Proper sizing (h-11) for better touch targets
+  - **Accessibility**:
+    - All labels properly associated with inputs
+    - Icon + text labels for better comprehension
+    - Descriptive placeholders for guidance
+    - Clear visual feedback on errors
+    - Semantic HTML structure with proper Card components
+    - Disabled states with proper cursor and opacity styling
+  - **Smart Form Logic**:
+    - Added `isAdmin` computed property to detect when Admin user type is selected
+    - Automatically disables "Tipo de pasador" select when user is Admin (admins don't need cashier type)
+  - Use case: Provides a modern, professional, and user-friendly interface for creating new users with clear visual hierarchy, smart form logic, and excellent mobile experience
 
 #### Fix: Query Hooks Now Refetch After Mutations
 
