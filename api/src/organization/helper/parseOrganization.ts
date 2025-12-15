@@ -3,5 +3,6 @@ import { IOrganizationEntityBack, IOrganizationEntityFront } from '@helper/types
 export const parseOrganization = (org: IOrganizationEntityBack): IOrganizationEntityFront => {
   return {
     name: org.name,
+    organization_id: org.organization_id,
   };
 };
