@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2025-12-15
 
+#### Fix: Query Hooks Now Refetch After Mutations
+
+**Problem**: Creating, updating, or deleting items (schedules, users, lotteries, organizations) didn't update the UI automatically - required page reload.
+
+**Root Cause**: Query hooks had overly aggressive cache settings:
+- `refetchOnMount: false` - prevented refetch even after cache invalidation
+- `staleTime: 12 hours` - extremely long stale time
+- `refetchOnWindowFocus: false` - no updates when returning to tab
+
+**Files Fixed**:
+- `web/src/hooks/fetchs/schedule/useSchedules.ts`
+- `web/src/hooks/fetchs/users/useUsers.ts`
+- `web/src/hooks/fetchs/lottery/useLotteries.ts`
+- `web/src/hooks/fetchs/organization/useOrganizations.ts`
+
+**New Configuration**:
+- `staleTime: 5 * 60 * 1000` - 5 minutes (reasonable for dynamic data)
+- `gcTime: 30 * 60 * 1000` - 30 minutes garbage collection
+- `refetchOnMount: true` - ✅ Refetch after invalidations
+- `refetchOnWindowFocus: true` - ✅ Refetch when returning to tab
+- `refetchOnReconnect: true` - ✅ Refetch on network recovery
+
+**Result**: UI now updates immediately after create/update/delete operations without page reload.
+
 #### Security Enhancement: organization_id No Longer Exposed in Types
 
 **Impact**: No frontend code changes required. This is a transparent security improvement.

@@ -28,7 +28,7 @@ export const useSaveScheduleLottery = () => {
     mutationFn: ( scheduleLottery : IScheduleLotteryEntityFront ) =>
       saveScheduleLottery(scheduleLottery),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedule-lottery'] });
+      queryClient.invalidateQueries({ queryKey: ['schedule-lottery', 'lotteries'] });
     },
   });
 };

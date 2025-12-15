@@ -6,9 +6,7 @@ export enum ROUTES {
   PLAYS_AND_HITS = '/plays-and-hits',
   TERMINAL_TICKET = '/terminal-ticket',
   RESULTS = '/results',
-  CLIENTS = '/clients',
-  AGENT_COMMISSION = '/agent-commission',
-  SHIFTS = '/shifts',
+  SCHEDULES = '/schedules',
   USERS = '/users',
   USERS_LIST = '/user-list',
   REPORTS = '/reports',
@@ -20,5 +18,5 @@ export enum ROUTES {
   GROUPS = '/groups',
   NEW_USER = '/new-user',
   RESET_PASSWORD = '/reset-password',
-  ORGANIZATIONS = '/organizations'
+  ORGANIZATIONS = '/organizations',
 }

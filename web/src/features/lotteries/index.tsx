@@ -1,4 +1,4 @@
-import { useState, useMemo, Suspense, lazy } from 'react';
+import { useState, useMemo, Suspense, lazy, } from 'react';
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,13 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { LoadingState } from '@/components/molecules/LoadingState';
+import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type';
 
 interface SortableItemProps {
   lottery: ILotteryEntityFront;
   onEdit: (lottery: ILotteryEntityFront) => void;
   onDelete: (lottery: ILotteryEntityFront) => void;
-  scheduleLotteries: any;
+  scheduleLotteries?: IScheduleLotteryEntityFront;
 }
 
 function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: SortableItemProps) {
@@ -46,8 +47,24 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
   };
 
   // Get schedules for this lottery
-  const lotterySchedules =
-    scheduleLotteries?.filter((sl: any) => sl.lottery?.lottery_id === lottery.lottery_id) || [];
+  const schedules = useMemo(() => {
+    if (!scheduleLotteries) return [];
+
+    const values = Object.values(scheduleLotteries) as Array<Record<string, string[]>>;
+
+    const found = new Set<string>();
+
+    for (const dayObj of values) {
+      for (const [lotteryId, scheduleIds] of Object.entries(dayObj)) {
+        // si en el string[] está el lottery_id actual
+        if (scheduleIds.includes(lottery.lottery_id)) {
+          found.add(lotteryId); // guardo el id (key string)
+        }
+      }
+    }
+
+    return Array.from(found);
+  }, [scheduleLotteries, lottery.lottery_id]);
 
   return (
     <div
@@ -55,7 +72,7 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
       style={style}
       className="bg-[#10121A] border border-border rounded-lg p-4 mb-2"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex lotteries-center gap-4">
         {/* Drag Handle */}
         <div
           {...attributes}
@@ -67,7 +84,7 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
 
         {/* Lottery Info */}
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex lotteries-center gap-2">
             <h3 className="text-lg font-semibold">{lottery.name}</h3>
             <span
               className={`text-xs px-2 py-1 rounded ${
@@ -78,21 +95,18 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
             </span>
           </div>
 
-          {lotterySchedules.length > 0 && (
+          {schedules?.length > 0 && (
             <p className="text-sm text-muted-foreground mt-1">
               Turnos:{' '}
-              {lotterySchedules.map((sl: any, idx: number) => (
-                <span key={sl.day}>
-                  {idx > 0 && ', '}
-                  {sl.day}
-                </span>
-              ))}
+              {schedules.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">Turnos: {schedules.join(', ')}</p>
+              )}
             </p>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex lotteries-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -125,15 +139,6 @@ const LotteriesContent = () => {
   const { data: scheduleLotteries } = useScheduleLottery();
   const { mutate: updateLottery } = useUpdateLottery();
 
-  const [items, setItems] = useState<ILotteryEntityFront[]>([]);
-
-  // Sync lotteries to local state when data loads
-  useMemo(() => {
-    if (lotteries) {
-      setItems([...lotteries]);
-    }
-  }, [lotteries]);
-
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -145,14 +150,13 @@ const LotteriesContent = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex((item) => item.lottery_id === active.id);
-      const newIndex = items.findIndex((item) => item.lottery_id === over.id);
+      const oldIndex = lotteries?.findIndex((item) => item.lottery_id === active.id);
+      const newIndex = lotteries?.findIndex((item) => item.lottery_id === over.id);
 
-      const newItems = arrayMove(items, oldIndex, newIndex);
-      setItems(newItems);
+      const newLotteries = arrayMove(lotteries ?? [], oldIndex ?? 0, newIndex ?? 0);
 
       // Update order in backend
-      newItems.forEach((lottery, index) => {
+      newLotteries.forEach((lottery, index) => {
         if (lottery.order !== index) {
           updateLottery(
             {
@@ -162,8 +166,6 @@ const LotteriesContent = () => {
             {
               onError: () => {
                 toast.error('Error al actualizar orden');
-                // Revert on error
-                setItems(lotteries || []);
               },
             }
           );
@@ -191,7 +193,7 @@ const LotteriesContent = () => {
     return (
       <Box className="grid grid-rows-[auto_1fr] h-full">
         <HeaderSection title="Loterías" />
-        <div className="flex items-center justify-center">
+        <div className="flex lotteries-center justify-center">
           <p className="text-muted-foreground">Cargando loterías...</p>
         </div>
       </Box>
@@ -208,8 +210,8 @@ const LotteriesContent = () => {
       </HeaderSection>
 
       <div className="overflow-y-auto px-6 py-4">
-        {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
+        {lotteries?.length === 0 ? (
+          <div className="flex flex-col lotteries-center justify-center py-12">
             <p className="text-muted-foreground text-center mb-4">No hay loterías creadas</p>
             <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
               <Plus size={20} />
@@ -223,10 +225,10 @@ const LotteriesContent = () => {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={items.map((item) => item.lottery_id)}
+              items={lotteries?.map((item) => item.lottery_id) ?? []}
               strategy={verticalListSortingStrategy}
             >
-              {items.map((lottery) => (
+              {lotteries?.map((lottery) => (
                 <SortableItem
                   key={lottery.lottery_id}
                   lottery={lottery}

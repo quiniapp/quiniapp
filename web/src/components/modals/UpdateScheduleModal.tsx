@@ -55,7 +55,7 @@ const UpdateScheduleModal = ({ isOpen, onClose, schedule }: UpdateScheduleModalP
       schedule_id: schedule.schedule_id,
       updateSchedule: {
         name: name.trim(),
-        time: time.trim(),
+        time: time.trim().slice(0,5),
         active,
       },
     });

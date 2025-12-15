@@ -13,5 +13,5 @@ export interface IScheduleEntityBack {
 
 export type IScheduleEntityFront = Omit<
   IScheduleEntityBack,
-  'created_at' | 'edited_at' | 'organization_id' | 'active'
+  'created_at' | 'edited_at' | 'organization_id'
 >;
