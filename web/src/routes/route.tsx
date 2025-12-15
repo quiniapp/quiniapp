@@ -25,6 +25,7 @@ const UpcomingLotteriesPage = lazy(() => import('@/pages/upcoming-lotteries.tsx'
 const UsersPage = lazy(() => import('@/pages/users'));
 const NewUserPage = lazy(() => import('@/pages/new-user.tsx'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const OrganizationsPage = lazy(() => import('@/pages/organizations'));
 
 // Helper para envolver componentes lazy con Suspense
 function withSuspense(Component: React.LazyExoticComponent<any>) {
@@ -131,6 +132,11 @@ export const RoutesContent = [
         path: ROUTES.RESET_PASSWORD,
         id: 'Reset_Password',
         element: withSuspense(ResetPassword),
+      },
+      {
+        path: ROUTES.ORGANIZATIONS,
+        id: 'Organizations',
+        element: withSuspense(OrganizationsPage),
       }
     ],
   },
