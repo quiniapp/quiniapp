@@ -9,7 +9,6 @@ import { ROUTES } from '@/types/routes.type';
 // Lazy imports (cargados bajo demanda)
 const Layout = lazy(() => import('@/components/layout'));
 const Index = lazy(() => import('@/pages').then((module) => ({ default: module.Index })));
-const ClientPage = lazy(() => import('@/pages/clients'));
 const CurrentAccountPage = lazy(() => import('@/pages/current-account.tsx'));
 const GroupsPage = lazy(() => import('@/pages/groups'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -82,18 +81,13 @@ export const RoutesContent = [
         element: withSuspense(ResultsPage),
       },
       {
-        path: ROUTES.CLIENTS,
-        id: 'Clients',
-        element: withSuspense(ClientPage),
-      },
-      {
         path: ROUTES.CURRENT_ACCOUNT,
         id: 'CurrentAccount',
         element: withSuspense(CurrentAccountPage),
       },
       {
-        path: ROUTES.SHIFTS,
-        id: 'Shifts',
+        path: ROUTES.SCHEDULES,
+        id: 'Schedules',
         element: withSuspense(ShiftsPage),
       },
       {

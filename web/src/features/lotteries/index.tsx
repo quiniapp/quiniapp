@@ -1,4 +1,4 @@
-import { useState, useMemo, Suspense, lazy } from 'react';
+import { useState, useMemo, Suspense, lazy, useEffect } from 'react';
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,13 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { LoadingState } from '@/components/molecules/LoadingState';
+import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type';
 
 interface SortableItemProps {
   lottery: ILotteryEntityFront;
   onEdit: (lottery: ILotteryEntityFront) => void;
   onDelete: (lottery: ILotteryEntityFront) => void;
-  scheduleLotteries: any;
+  scheduleLotteries?: IScheduleLotteryEntityFront;
 }
 
 function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: SortableItemProps) {
@@ -46,8 +47,24 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
   };
 
   // Get schedules for this lottery
-  const lotterySchedules =
-    scheduleLotteries?.filter((sl: any) => sl.lottery?.lottery_id === lottery.lottery_id) || [];
+  const schedules = useMemo(() => {
+    if (!scheduleLotteries) return [];
+
+    const values = Object.values(scheduleLotteries) as Array<Record<string, string[]>>;
+
+    const found = new Set<string>();
+
+    for (const dayObj of values) {
+      for (const [lotteryId, scheduleIds] of Object.entries(dayObj)) {
+        // si en el string[] está el lottery_id actual
+        if (scheduleIds.includes(lottery.lottery_id)) {
+          found.add(lotteryId); // guardo el id (key string)
+        }
+      }
+    }
+
+    return Array.from(found);
+  }, [scheduleLotteries, lottery.lottery_id]);
 
   return (
     <div
@@ -78,15 +95,12 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
             </span>
           </div>
 
-          {lotterySchedules.length > 0 && (
+          {schedules?.length > 0 && (
             <p className="text-sm text-muted-foreground mt-1">
               Turnos:{' '}
-              {lotterySchedules.map((sl: any, idx: number) => (
-                <span key={sl.day}>
-                  {idx > 0 && ', '}
-                  {sl.day}
-                </span>
-              ))}
+              {schedules.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">Turnos: {schedules.join(', ')}</p>
+              )}
             </p>
           )}
         </div>
@@ -124,14 +138,11 @@ const LotteriesContent = () => {
   const { data: lotteries, isLoading } = useLotteries(true); // Get all lotteries for admin
   const { data: scheduleLotteries } = useScheduleLottery();
   const { mutate: updateLottery } = useUpdateLottery();
-
   const [items, setItems] = useState<ILotteryEntityFront[]>([]);
 
   // Sync lotteries to local state when data loads
-  useMemo(() => {
-    if (lotteries) {
-      setItems([...lotteries]);
-    }
+  useEffect(() => {
+    if (lotteries) setItems([...lotteries]);
   }, [lotteries]);
 
   const sensors = useSensors(

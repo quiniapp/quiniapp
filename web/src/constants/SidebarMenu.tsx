@@ -7,7 +7,6 @@ import {
   UsersIcon,
   Building2,
   Clock,
-  Clipboard,
 } from 'lucide-react';
 
 import { MENU_ITEM } from '@/types/menu-item.tsx';
