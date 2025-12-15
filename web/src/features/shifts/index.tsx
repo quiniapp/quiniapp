@@ -35,7 +35,7 @@ const ShiftsContent = () => {
     setSelectedSchedule(schedule);
     setDeleteModalOpen(true);
   };
-
+  console.log(schedules)
   if (isLoading) {
     return (
       <Box className="grid grid-rows-[auto_1fr] h-full">
