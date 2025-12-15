@@ -49,6 +49,7 @@ export class CurrentAccountRouter {
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date as string,
+        organization_id: req.organization_id!,
       });
 
       const response: APIResponse<ICurrentAccountEntityFront[]> = {
@@ -101,7 +102,8 @@ export class CurrentAccountRouter {
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
         date as string,
         false,
-        false
+        false,
+        req.organization_id!
       );
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
@@ -152,7 +154,8 @@ export class CurrentAccountRouter {
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
         date as string,
         typeof leave === 'string' && leave === 'true',
-        true
+        true,
+        req.organization_id!
       );
       const response: APIResponse<ICurrentAccountEntityFront> = {
         data: {
@@ -215,6 +218,7 @@ export class CurrentAccountRouter {
         current_account_id,
         {
           ...updateCurrentAccount,
+          organization_id: req.organization_id!,
         },
         typeof leave === 'string' && leave === 'true'
       );
@@ -270,6 +274,7 @@ export class CurrentAccountRouter {
         user_type: user.user.user_type,
         user_id: id,
         date: typeof date === 'string' ? date : undefined,
+        organization_id: req.organization_id!,
       });
 
       const response: APIResponse<ICurrentAccountEntityFront> = {
@@ -361,7 +366,10 @@ export class CurrentAccountRouter {
       if (entries.length > 0) {
         const results = await Promise.allSettled(
           entries.map(([id, payload]) =>
-            this.controller.updateCurrentAccountByUserHandler(id, { ...payload })
+            this.controller.updateCurrentAccountByUserHandler(id, {
+              ...payload,
+              organization_id: req.organization_id!,
+            })
           )
         );
 
@@ -376,8 +384,13 @@ export class CurrentAccountRouter {
       }
 
       // 2) Siempre ejecuto el cálculo del día (regla nueva: aunque no haya updates y leave=false)
-      //    `liquidatedFlag` viaja al controller para tu lógica de “liquidado” del día.
-      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag, true);
+      //    `liquidatedFlag` viaja al controller para tu lógica de "liquidado" del día.
+      await this.controller.calculateCurrentAccountHandler(
+        String(date),
+        leaveFlag,
+        true,
+        req.organization_id!
+      );
 
       const statusCode = failed.length ? 207 : 200;
       const response: APIResponse<{

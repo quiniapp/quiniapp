@@ -8,6 +8,7 @@ import { IUserEntityFront } from '@helper/types/user.type';
 declare module 'express' {
   export interface Request {
     user?: ITokenPayload;
+    organization_id?: string;
   }
 }
 
@@ -32,10 +33,12 @@ export const isAuthenticated = async (
 
   try {
     const userDecoded = verifyUserToken(userToken);
+    const user = userDecoded as unknown as IUserEntityFront;
     req.user = {
-      user: userDecoded as unknown as IUserEntityFront,
+      user,
       token: authToken,
     };
+    req.organization_id = user.organization_id;
 
     next();
   } catch (err) {

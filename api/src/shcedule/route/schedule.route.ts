@@ -55,7 +55,10 @@ export class ScheduleRouter {
     }
 
     try {
-      const schedule = await this.controller.create(newSchedule);
+      const schedule = await this.controller.create({
+        ...newSchedule,
+        organization_id: req.organization_id!,
+      });
       invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
@@ -87,9 +90,13 @@ export class ScheduleRouter {
     }
 
     try {
-      const snap = await globalCacheManager.getOrLoad(CACHE_KEY, () => this.controller.getAll(), {
-        etagStrategy: 'counter',
-      });
+      const snap = await globalCacheManager.getOrLoad(
+        CACHE_KEY,
+        () => this.controller.getAll(req.organization_id!),
+        {
+          etagStrategy: 'counter',
+        }
+      );
 
       // ETag/304: si el cliente tiene la versión actual, no enviamos payload
       const inm = req.headers['if-none-match'];
@@ -142,7 +149,10 @@ export class ScheduleRouter {
     }
 
     try {
-      const schedule = await this.controller.update(schedule_id, updateSchedule);
+      const schedule = await this.controller.update(schedule_id, {
+        ...updateSchedule,
+        organization_id: req.organization_id,
+      });
       invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
@@ -176,7 +186,7 @@ export class ScheduleRouter {
     }
 
     try {
-      await this.controller.delete({ schedule_id });
+      await this.controller.delete({ schedule_id, organization_id: req.organization_id! });
       invalidateSchedules();
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {

@@ -61,7 +61,7 @@ export class UserRouter {
       return;
     } */
     try {
-      const user = await this.controller.create(newUser);
+      const user = await this.controller.create(newUser, req.organization_id!);
 
       const response: APIResponse<IUserEntityFront> = {
         data: {
@@ -117,7 +117,7 @@ export class UserRouter {
       return;
     }
     try {
-      const user = await this.controller.get({ user_id });
+      const user = await this.controller.get({ user_id, organization_id: req.organization_id });
       if (!user) {
         const response: APIResponse<undefined> = {
           error: {
@@ -174,7 +174,7 @@ export class UserRouter {
       parsedCashierNumber = parseInt(cashier_number, 10);
     }
     try {
-      const users = await this.controller.getAll(parsedCashierNumber);
+      const users = await this.controller.getAll(req.organization_id!, parsedCashierNumber);
       const response: APIResponse<IUserEntityFront[]> = {
         data: {
           users,
@@ -242,7 +242,11 @@ export class UserRouter {
       return;
     } */
     try {
-      const user = await this.controller.update(user_id, { ...updateUser });
+      const user = await this.controller.update(
+        user_id,
+        { ...updateUser, organization_id: req.organization_id! },
+        req.organization_id!
+      );
 
       const response: APIResponse<IUserEntityFront> = {
         data: {
@@ -296,7 +300,7 @@ export class UserRouter {
       return;
     }
     try {
-      const user = await this.controller.delete({ user_id });
+      const user = await this.controller.delete({ user_id, organization_id: req.organization_id! });
 
       const response: APIResponse<IUserEntityFront> = {
         data: {

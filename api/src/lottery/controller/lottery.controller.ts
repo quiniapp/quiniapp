@@ -14,7 +14,7 @@ export class LotteryController {
   create = async (props: INewLotteryEntity) => {
     const newLottery = lotteryBase(props);
     try {
-      const result = await this.repository.create(newLottery);
+      const result = await this.repository.create(newLottery, props.organization_id);
       return parseLottery(result);
     } catch (error) {
       console.error('Creation error:', error);
@@ -23,7 +23,7 @@ export class LotteryController {
   };
   get = async (props: IGetLotteryEntity): Promise<ILotteryEntityFront> => {
     try {
-      const lottery = await this.repository.getById(props.lottery_id);
+      const lottery = await this.repository.getById(props.lottery_id, props.organization_id);
       return parseLottery(lottery);
     } catch (error) {
       console.error('Get error:', error);
@@ -31,9 +31,9 @@ export class LotteryController {
     }
   };
 
-  getAll = async (all?: boolean): Promise<ILotteryEntityFront[]> => {
+  getAll = async (all?: boolean, organization_id?: string): Promise<ILotteryEntityFront[]> => {
     try {
-      const lotterys = await this.repository.getAll(all);
+      const lotterys = await this.repository.getAll(organization_id!, all);
 
       return lotterys.map((lottery) => {
         return parseLottery(lottery);
@@ -46,7 +46,7 @@ export class LotteryController {
 
   update = async (id: string, props: IUpdateLotteryEntity): Promise<ILotteryEntityFront> => {
     try {
-      const lottery = await this.repository.update(id, props);
+      const lottery = await this.repository.update(id, props, props.organization_id!);
       return parseLottery(lottery);
     } catch (error) {
       console.error('Update error:', error);
@@ -55,7 +55,7 @@ export class LotteryController {
   };
   delete = async (props: IDeleteLotteryEntity) => {
     try {
-      await this.repository.delete(props.lottery_id);
+      await this.repository.delete(props.lottery_id, props.organization_id);
       return;
     } catch (error) {
       console.error('Delete error:', error);

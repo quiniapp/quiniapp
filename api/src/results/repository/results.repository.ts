@@ -7,8 +7,12 @@ const RESULTS_VIEW = `
   schedule:schedule_id (*)
 `;
 export class ResultsRepository {
-  private baseQuery() {
-    return supabase.from('results').select(RESULTS_VIEW).is('deleted_at', null);
+  private baseQuery(organization_id: string) {
+    return supabase
+      .from('results')
+      .select(RESULTS_VIEW)
+      .eq('organization_id', organization_id)
+      .is('deleted_at', null);
   }
 
   async create(payload: any) {
@@ -22,7 +26,7 @@ export class ResultsRepository {
       schedule:schedule_id(*)
     `
       )
-      .single(); // devuelve una sola fila
+      .single();
 
     if (error) {
       console.error(error);
@@ -32,15 +36,15 @@ export class ResultsRepository {
     return data;
   }
 
-  async getById(id: string) {
-    const { data, error } = await this.baseQuery().eq('results_id', id).single();
+  async getById(id: string, organization_id: string) {
+    const { data, error } = await this.baseQuery(organization_id).eq('results_id', id).single();
 
     if (error) throw new Error(error.details ?? error.message);
     return data;
   }
 
-  async get(props: IGetResultsEntity) {
-    const { data, error } = await this.baseQuery()
+  async get(props: IGetResultsEntity & { organization_id: string }) {
+    const { data, error } = await this.baseQuery(props.organization_id)
       .eq('schedule_id', props.schedule_id)
       .eq('lottery_id', props.lottery_id)
       .eq('date', props.date);
@@ -49,20 +53,23 @@ export class ResultsRepository {
     return data;
   }
 
-  async getAll() {
-    const { data, error } = await this.baseQuery().order('date', { ascending: true });
+  async getAll(organization_id: string) {
+    const { data, error } = await this.baseQuery(organization_id).order('date', {
+      ascending: true,
+    });
 
     if (error) throw new Error(error.details ?? error.message);
     return data;
   }
 
-  async update(id: string, payload: any) {
+  async update(id: string, organization_id: string, payload: any) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('results')
       .update({ ...payload, edited_at: timestamp })
       .eq('results_id', id)
-      .is('deleted_at', null) // opcional: evitás editar registros ya eliminados
+      .eq('organization_id', organization_id)
+      .is('deleted_at', null)
       .select(RESULTS_VIEW)
       .single();
 
@@ -70,14 +77,14 @@ export class ResultsRepository {
     return data;
   }
 
-  /** Soft delete: setea deleted_at */
-  async delete(id: string) {
+  async delete(id: string, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('results')
       .update({ deleted_at: timestamp })
       .eq('results_id', id)
-      .select(RESULTS_VIEW) // devolvé el registro “borrado”
+      .eq('organization_id', organization_id)
+      .select(RESULTS_VIEW)
       .single();
 
     if (error) throw new Error(error.details ?? error.message);

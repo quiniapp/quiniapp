@@ -2,7 +2,7 @@ import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 
 export class ScheduleRepository {
-  async getById(id: string) {
+  async getById(id: string, organization_id: string) {
     const { data, error } = await supabase
       .from('schedules')
       .select(
@@ -19,14 +19,15 @@ export class ScheduleRepository {
   `
       )
       .eq('schedule_id', id)
-      .order('day', { referencedTable: 'schedule_lotteries', ascending: true }) // ordena las loterías por día
+      .eq('organization_id', organization_id)
+      .order('day', { referencedTable: 'schedule_lotteries', ascending: true })
       .single();
 
     if (error) throw new Error(error.details);
     return data;
   }
 
-  async getAll() {
+  async getAll(organization_id: string) {
     const { data, error } = await supabase
       .from('schedules')
       .select(
@@ -42,8 +43,9 @@ export class ScheduleRepository {
     )
   `
       )
-      .order('time', { ascending: true }) // ordena los schedules por hora
-      .order('day', { referencedTable: 'schedule_lotteries', ascending: true }); // ordena las loterías por día
+      .eq('organization_id', organization_id)
+      .order('time', { ascending: true })
+      .order('day', { referencedTable: 'schedule_lotteries', ascending: true });
 
     if (error) throw new Error(error.details);
     return data;
@@ -56,12 +58,13 @@ export class ScheduleRepository {
     return data;
   }
 
-  async update(id: string, payload: any) {
+  async update(id: string, organization_id: string, payload: any) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('schedules')
       .update({ ...payload, edited_at: timestamp })
       .eq('schedule_id', id)
+      .eq('organization_id', organization_id)
       .select()
       .single();
 
@@ -69,10 +72,13 @@ export class ScheduleRepository {
     return data;
   }
 
-  async delete(id: string) {
-    console.log(id);
-    const { error } = await supabase.from('schedules').delete().eq('schedule_id', id);
-    console.log(error);
+  async delete(id: string, organization_id: string) {
+    const { error } = await supabase
+      .from('schedules')
+      .delete()
+      .eq('schedule_id', id)
+      .eq('organization_id', organization_id);
+
     if (error) throw new Error(error.details);
     return;
   }

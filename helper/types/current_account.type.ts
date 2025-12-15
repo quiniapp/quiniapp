@@ -1,5 +1,6 @@
 export interface ICurrentAccountEntityBack {
   current_account_id: string;
+  organization_id: string;
   user_id: string;
   user_name: string;
   user_number: number;
