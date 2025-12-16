@@ -7,9 +7,13 @@ import { generateEmail } from 'api/helper/generateEmail';
 const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
   const timestamp = dayjs().toISOString();
 
+  // Determinar si el número debe ser null basado en el tipo de usuario
+  const shouldNumberBeNull =
+    user.user_type === USER_TYPE.OWNER || user.user_type === USER_TYPE.SUPERADMIN;
+
   return {
     user_id: uuidv4(),
-    number: user.number,
+    number: shouldNumberBeNull ? null : (user.number ?? null),
     user_type: user.user_type,
     name: user.name,
     organization_id,
@@ -29,6 +33,14 @@ export const buildUserForDB = async (
   organization_id: string
 ): Promise<IUserEntityBack> => {
   const baseUser = getBaseUserFields(user, organization_id);
+
+  // Validar que ADMIN y CASHIER tengan número
+  if (
+    (user.user_type === USER_TYPE.ADMIN || user.user_type === USER_TYPE.CASHIER) &&
+    baseUser.number === null
+  ) {
+    throw new Error(`Number is required for ${user.user_type} users`);
+  }
 
   return {
     ...baseUser,

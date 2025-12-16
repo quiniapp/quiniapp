@@ -24,7 +24,8 @@ export class UserRepository {
       .is('deleted_at', null)
       .order('number', { ascending: true });
 
-    if (cashier_number) {
+    // Solo filtrar por número si se proporciona un valor válido
+    if (cashier_number !== undefined && cashier_number !== null) {
       query = query.eq('number', cashier_number);
     }
 

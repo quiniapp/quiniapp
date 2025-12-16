@@ -50,6 +50,11 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
     return watch('cashier_type') !== CASHIER_TYPE.STREET;
   }, [watch('cashier_type')]);
 
+  const selectedUserType = watch('user_type');
+  const shouldShowNumberField = useMemo(() => {
+    return selectedUserType === USER_TYPE.ADMIN || selectedUserType === USER_TYPE.CASHIER;
+  }, [selectedUserType]);
+
   const onSubmit = (formData:IUpdateUserEntity) => {
 
     
@@ -58,7 +63,7 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
   };
   return (
     <Modal
-      title={`Editar usuario ${user?.name} - ${user?.number}`}
+      title={`Editar usuario ${user?.name}${user?.number !== null ? ` - ${user?.number}` : ''}`}
       isOpen={isOpen}
       onClose={onClose}
       className="flex flex-col items-center !max-w-[95vw] sm:!max-w-[90vw] md:!max-w-[800px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
@@ -66,28 +71,36 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
       <form onSubmit={handleSubmit(onSubmit)} className={'w-full py-2 sm:py-4 space-y-2 sm:space-y-4 px-2 sm:px-4'}>
         <FlexCol className="items-center pt-2 gap-2 sm:gap-4">
           <Flex className="items-center justify-center gap-2 sm:gap-3 flex-col sm:flex-row w-full">
-            <FlexCol className={'w-full space-y-4'}>
-              <Label htmlFor="number">Número de usuario</Label>
-              <Controller
-                name="number"
-                control={control}
-                render={({ field: { onChange, value, ...rest } }) => (
-                  <Input
-                    id="number"
-                    type="number"
-                    value={value ?? ''}
-                    onChange={(e) => {
-                      const parsed = e.target.value === '' ? null : Number(e.target.value);
-                      onChange(parsed);
-                    }}
-                    {...rest}
-                  />
+            {shouldShowNumberField && (
+              <FlexCol className={'w-full space-y-4'}>
+                <Label htmlFor="number">
+                  Número de usuario
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Controller
+                  name="number"
+                  control={control}
+                  rules={{
+                    required: 'El número es requerido para usuarios ADMIN y CASHIER',
+                  }}
+                  render={({ field: { onChange, value, ...rest } }) => (
+                    <Input
+                      id="number"
+                      type="number"
+                      value={value ?? ''}
+                      onChange={(e) => {
+                        const parsed = e.target.value === '' ? null : Number(e.target.value);
+                        onChange(parsed);
+                      }}
+                      {...rest}
+                    />
+                  )}
+                />
+                {errors.number?.message && (
+                  <ErrorMessage>{errors.number.message}</ErrorMessage>
                 )}
-              />
-              {errors.number?.message && (
-                <ErrorMessage>{errors.number.message}</ErrorMessage>
-              )}
-            </FlexCol>
+              </FlexCol>
+            )}
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="user_type">Tipo de usuario</Label>
               <Controller

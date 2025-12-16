@@ -1,19 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IOrganizationEntityFront } from '@helper/types/organization.type.ts';
+import { INewOrganizationEntity } from '@helper/request/organization.request.ts';
+import { INewUserEntity } from '@helper/request/user.request.ts';
 
-interface CreateOrganizationPayload {
-  name: string;
+interface CreateOrganizationWithSuperAdminPayload {
+  organization: INewOrganizationEntity;
+  superAdmin: INewUserEntity;
 }
 
-const createOrganization = async (payload: CreateOrganizationPayload): Promise<IOrganizationEntityFront> => {
+const createOrganization = async (payload: CreateOrganizationWithSuperAdminPayload): Promise<IOrganizationEntityFront> => {
   const response = await fetch(BACKEND_ROUTES.organization.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify({ newOrganization: payload }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
