@@ -36,7 +36,7 @@ export class UserRouter {
       };
       res.status(403).json(response);
       return;
-    } /* 
+    }
     if (newUser?.user_type === USER_TYPE.OWNER) {
       const response: APIResponse<undefined> = {
         error: {
@@ -46,7 +46,7 @@ export class UserRouter {
       };
       res.status(403).json(response);
       return;
-    } */
+    }
     /* const result = UserSchema.safeParse(newUser);
      if (!result.success) {
       console.log('no new user')
