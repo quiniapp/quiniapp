@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2025-12-15
 
+#### Organization Cascade Soft Delete
+- **Organization Repository**: Implemented cascade soft delete for organizations
+  - File: `api/src/organization/repository/organization.repository.ts`
+  - When an organization is deleted, all related data is automatically soft-deleted:
+    1. `ticket_prizes_by_turn` - Prize records
+    2. `bets` - All bets
+    3. `tickets` - All tickets
+    4. `current_accounts` - Account statements
+    5. `results` - Lottery results
+    6. `schedule_lotteries` - Schedule-lottery associations
+    7. `schedules` - Lottery schedules
+    8. `lotteries` - Lottery configurations
+    9. `users` - All users in the organization
+    10. `organizations` - The organization itself
+  - All deletions use the same timestamp for consistency
+  - Only affects non-deleted records (`.is('deleted_at', null)`)
+  - Provides detailed error messages for each step
+  - Use case: Ensures data integrity and prevents orphaned records when deleting an organization
+
 #### User Number Field Made Conditionally Nullable
 - **Database Migration**: Made user number nullable for OWNER and SUPERADMIN users
   - File: `api/supabase/migrations/20251215234045_alter_user_number_nullable.sql`
