@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-16
+
+#### Username Unique Index Scoped by Organization
+- **Database Migration**: Changed username uniqueness from global to per-organization
+  - File: `api/supabase/migrations/20251216125154_alter_user_index_unique.sql`
+  - Dropped global unique index `unique_username_not_deleted`
+  - Created new partial unique index `unique_username_per_org_when_active`
+  - Index: `UNIQUE (organization_id, username) WHERE deleted_at IS NULL`
+  - Allows different organizations to have users with the same username
+  - Example: Organization A can have user "admin" and Organization B can also have user "admin"
+  - Use case: Multi-tenant system where each organization manages its own users independently
+
+#### Schedule Lottery Constraint Scoped by Organization
+- **Database Migration**: Updated schedule_lottery unique constraint to be per organization
+  - File: `api/supabase/migrations/20251216120550_alter_schedule_lottery_constraint.sql`
+  - Dropped global constraint `unique_schedule_lottery_day`
+  - Created new constraint `unique_schedule_lottery_day_per_org`
+  - New constraint includes `organization_id` in the uniqueness check
+  - Constraint: `UNIQUE (organization_id, schedule_id, lottery_id, day)`
+  - Allows each organization to have independent lottery schedule configurations
+  - Use case: Organization A can have the same schedule-lottery-day combination as Organization B without conflicts
+
+#### Organization Name Unique Constraint for Active Organizations Only
+- **Database Migration**: Changed organization name uniqueness to partial index
+  - File: `api/supabase/migrations/20251216115330_alter_org_name_constraint.sql`
+  - Dropped global UNIQUE constraint on `name` column
+  - Created partial unique index: `unique_organization_name_when_active`
+  - Index only applies when `deleted_at IS NULL` (active organizations)
+  - Allows reusing organization names after soft delete
+  - Similar pattern to username and number fields in users table
+  - Use case: Organizations can be recreated with the same name after deletion
+
 ### Changed - 2025-12-15
 
 #### Organization Cascade Soft Delete

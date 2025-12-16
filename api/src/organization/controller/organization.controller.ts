@@ -72,6 +72,7 @@ export class OrganizationController {
 
   delete = async (organization_id: string): Promise<void> => {
     try {
+      console.log('controller');
       await this.repository.delete(organization_id);
     } catch (error) {
       console.error('Organization delete error:', error);
