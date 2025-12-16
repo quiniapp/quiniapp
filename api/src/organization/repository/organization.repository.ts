@@ -51,12 +51,10 @@ export class OrganizationRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const timestamp = dayjs().toISOString();
-    const { error } = await supabase
-      .from('organizations')
-      .update({ deleted_at: timestamp })
-      .eq('organization_id', id);
+    const { error } = await supabase.rpc('hard_delete_organization', {
+      p_org_id: id,
+    });
 
-    if (error) throw new Error(error.details);
+    if (error) throw error;
   }
 }

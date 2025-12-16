@@ -175,7 +175,6 @@ export class OrganizationRouter {
   private deleteHandler: RequestHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = req.user;
-
     if (user?.user.user_type !== USER_TYPE.OWNER) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
@@ -184,8 +183,10 @@ export class OrganizationRouter {
       return;
     }
 
+    console.log({ id, user });
     try {
       await this.controller.delete(id);
+      console.log('route od');
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {
       console.error(error);
