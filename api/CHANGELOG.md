@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-16
+
+#### Lottery Creation Order Handling
+- **Automatic Order Assignment**: Fixed lottery creation to properly handle order field
+  - File: `api/src/lottery/controller/lottery.controller.ts:14-25`
+  - If order is not provided, automatically calculates next available order for organization
+  - Prevents all lotteries from being created with order 0
+  - Use case: Ensures proper lottery ordering when order field is omitted
+
+- **Order Field Support**: Fixed lotteryBase to use provided order value
+  - File: `api/src/lottery/helper/lotteryBase.ts:15`
+  - Changed from hardcoded `order: 0` to `order: lottery.order ?? 0`
+  - Allows manual specification of lottery position
+  - Use case: Supports custom lottery ordering during creation
+
+### Added - 2025-12-16
+
+#### Lottery Order Calculation
+- **getNextOrder Repository Method**: Added method to calculate next available order
+  - File: `api/src/lottery/repository/lottery.repository.ts:61-78`
+  - Queries highest order value for organization
+  - Returns 0 for first lottery, increments for subsequent lotteries
+  - Handles case when no lotteries exist (PGRST116 error)
+  - Use case: Automatic sequential ordering of lotteries per organization
+
+### Added - 2025-12-16
+
+#### Ticket Validation for Active Schedules and Lotteries
+- **RPC Validation Function**: Created `validate_active_schedules_lotteries()` function
+  - File: `api/supabase/migrations/20251216152017_add_active_validation_to_ticket_rpcs.sql`
+  - Parameters: `p_schedule_ids UUID[]`, `p_lottery_ids UUID[]`, `p_organization_id UUID`
+  - Validates that all schedules and lotteries referenced in ticket operations are active
+  - Returns void on success, raises exception with clear error messages on failure
+  - Error codes: `P0001` (RAISE EXCEPTION)
+  - Error messages include entity names for user clarity
+  - Use case: Prevents ticket creation/editing with inactive schedules or lotteries
+
+- **create_ticket_with_bets RPC Enhancement**: Added active status validation before ticket creation
+  - File: `api/supabase/migrations/20251216152017_add_active_validation_to_ticket_rpcs.sql`
+  - Extracts unique schedule_ids and lottery_ids from ticket JSON
+  - Calls `validate_active_schedules_lotteries()` before inserting ticket
+  - Prevents creating tickets with inactive schedules: "Cannot process ticket: Schedule(s) [names] are inactive"
+  - Prevents creating tickets with inactive lotteries: "Cannot process ticket: Lottery(s) [names] are inactive"
+  - Ensures data integrity at database level
+  - Use case: Protects against frontend bugs or stale data when creating new tickets
+
+- **edit_ticket_replace_bets RPC Enhancement**: Added active status validation before ticket editing
+  - File: `api/supabase/migrations/20251216152017_add_active_validation_to_ticket_rpcs.sql`
+  - Extracts unique schedule_ids and lottery_ids from updated bets JSON
+  - Calls `validate_active_schedules_lotteries()` before updating bets
+  - Same error messages as create operation for consistency
+  - Prevents editing tickets with inactive schedules or lotteries
+  - Ensures existing tickets can't be modified with newly deactivated entities
+  - Use case: Protects data integrity when modifying existing tickets
+
 ### Changed - 2025-12-16
 
 #### Username Unique Index Scoped by Organization

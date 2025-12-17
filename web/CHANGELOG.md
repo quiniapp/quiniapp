@@ -7,6 +7,223 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### TODO - Future Improvements
+
+#### Lottery Reordering Optimization
+- **Batch Reorder Endpoint**: Create dedicated endpoint for reordering multiple lotteries
+  - Backend: `PUT /api/lotteries/reorder` endpoint
+  - Accept array of `{ lottery_id, order }` objects
+  - Update all orders in single database transaction
+  - Return updated lotteries array
+- **Frontend Hook**: Create `useReorderLotteries` mutation hook
+  - File: `web/src/hooks/mutations/lottery/useReorderLotteries.ts`
+  - Replace multiple individual updates with single batch update
+  - Improve performance and reduce network requests
+  - Use case: ReorderLotteriesModal currently makes N individual requests, should make 1
+
+### Fixed - 2025-12-16
+
+#### Lottery Position Display
+- **Human-Friendly Position Input**: Fixed position input in both Create and Update modals to use 1-indexed values
+  - Files:
+    - `web/src/components/modals/CreateLotteryModal.tsx:19,36,67-78`
+    - `web/src/components/modals/UpdateLotteryModal.tsx:21,28,53,83-94`
+  - Changed inputs to display human-friendly positions (#1, #2, #3, etc.)
+  - CreateLotteryModal: shows `nextOrder + 1` instead of raw array index
+  - UpdateLotteryModal: shows `lottery.order + 1` instead of raw array index
+  - Automatically converts back to 0-indexed order when saving
+  - Changed label from "Orden" to "Posición" for clarity
+  - Updated help text to reference position numbers (#1, #2, #3, etc.)
+  - Changed minimum value from 0 to 1 for human-friendly range
+  - Example: If you have 3 lotteries, creating a new one shows "4" (not "3")
+  - Use case: Makes position selection intuitive for users who see #1, #2, #3 badges
+
+#### Lottery CRUD UX Issues
+- **Toast Notifications**: Fixed toast messages not appearing after lottery operations
+  - Files:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts:43,51`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts:46,54`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts:45,53`
+  - Centralized success and error toasts in the mutation hooks
+  - Messages: "Lotería creada/actualizada/eliminada exitosamente" on success
+  - Use case: Provides clear feedback to users for all lottery operations
+
+- **Duplicate Toast Messages**: Removed duplicate toast notifications from modals
+  - Files:
+    - `web/src/components/modals/CreateLotteryModal.tsx:20-25`
+    - `web/src/components/modals/UpdateLotteryModal.tsx:31-35`
+    - `web/src/components/modals/DeleteLotteryModal.tsx:16-20`
+  - Removed toast calls from modal components
+  - Toasts now managed centrally by mutation hooks
+  - Modals only handle UI state (close, reset form)
+  - Use case: Eliminates confusing duplicate notifications
+
+- **Mutation Hooks Refetch Issues**: Fixed all mutation hooks not refetching queries correctly
+  - Lottery hooks:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts:31-50`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts:39-57`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts:33-56`
+  - Schedule hooks:
+    - `web/src/hooks/mutations/schedule/useCreateSchedule.ts:34-52`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts:39-62`
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts:32-55`
+  - Schedule-Lottery hooks:
+    - `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts:34-56`
+  - Changed from `refetchType: 'all'` to `exact: false` for proper query invalidation
+  - Added proper destructuring of `onSuccess`, `onError`, and `...rest` from options
+  - Used optional chaining (`onSuccess?.()`) instead of if-checks for callbacks
+  - Ensures queries with different parameters (e.g., `{ all: true }`) are invalidated
+  - Added support for custom callback options in all hooks
+  - Use case: Changes now appear immediately regardless of query parameters
+
+- **Form Submit Handler**: Fixed incorrect onClick handler on submit button
+  - File: `web/src/components/modals/CreateLotteryModal.tsx:88-93`
+  - Removed redundant `onClick={()=>handleSubmit}` from submit button
+  - Form submission handled by `type="submit"` attribute
+  - Use case: Prevents potential double submission issues
+
+### Changed - 2025-12-16
+
+#### Schedule Toast Messages Localization
+- **Spanish Toast Messages**: Translated schedule mutation toast messages to Spanish
+  - Files:
+    - `web/src/hooks/mutations/schedule/useCreateSchedule.ts:45,49`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts:55,59`
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts:48,52`
+  - "Schedule created successfully" → "Turno creado exitosamente"
+  - "Schedule updated successfully" → "Turno actualizado correctamente"
+  - "Schedule deleted successfully" → "Turno eliminado correctamente"
+  - Error messages also translated to Spanish
+  - Use case: Consistent Spanish interface for users
+
+#### Lottery Mutation Hooks Enhancement
+- **Mutation Hooks with suppressToast**: Enhanced all lottery hooks with toast suppression capability
+  - Files:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts:24-56`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts:29-64`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts:23-63`
+  - Added `suppressToast?: boolean` option to prevent duplicate toasts
+  - Toasts shown by default, suppressed only when explicitly requested
+  - Custom callbacks always execute after toast logic
+  - Use case: ReorderModal uses `suppressToast: true` to show single toast instead of multiple
+
+- **ReorderLotteriesModal Improvements**: Fixed modal not closing and multiple toasts
+  - File: `web/src/components/modals/ReorderLotteriesModal.tsx:93,128-172`
+  - Uses `suppressToast: true` to prevent toast per lottery update
+  - Shows single "Orden actualizado correctamente" toast at end
+  - Uses `Promise.all()` to wait for all updates before closing
+  - Compares by `lottery_id` instead of array index for change detection
+  - Closes modal only after all updates complete successfully
+  - Use case: Clean UX when reordering multiple lotteries
+
+### Added - 2025-12-16
+
+#### Lottery Reordering Modal
+- **ReorderLotteriesModal Component**: Created new modal for reordering lotteries
+  - File: `web/src/components/modals/ReorderLotteriesModal.tsx`
+  - Full drag-and-drop functionality with @dnd-kit
+  - Independent state management - changes preview in modal only
+  - Saves all order changes on "Guardar Orden" button click
+  - Auto-closes modal on successful save
+  - Shows numbered badges and lottery status (active/inactive)
+  - Mobile-friendly with touch support
+  - Use case: Prevents sync issues by isolating reorder state in modal
+
+### Changed - 2025-12-16
+
+#### Lotteries Page Architecture
+- **Simplified Lotteries Page**: Removed inline edit mode, moved to modal
+  - File: `web/src/features/lotteries/index.tsx`
+  - Removed: `isEditMode` state, `tempLotteries` state, drag-and-drop context
+  - Removed: `handleEnterEditMode`, `handleCancelEditMode`, `handleSaveOrder`, `handleDragEnd`
+  - Changed: `SortableItem` component replaced with simpler `LotteryCard` component
+  - Page now directly maps `lotteries` data without temporary state
+  - New "Cambiar orden" button opens ReorderLotteriesModal
+  - Use case: Eliminates synchronization issues between temp state and server data
+
+### Added - 2025-12-16
+
+#### Cache Management Improvements
+- **Auth Provider Cache Clearing**: Implemented cache clearing on logout
+  - File: `web/src/providers/AuthProvider.tsx`
+  - Added `queryClient.clear()` call in logout function
+  - Prevents data leakage between user sessions (admin/cashier)
+  - Use case: Ensures fresh data when switching between users
+
+#### Global Schedule Map Hook
+- **useScheduleMap Hook**: Created reusable hook for schedule lookups
+  - File: `web/src/hooks/useScheduleMap.ts`
+  - Provides Map<schedule_id, schedule> for O(1) lookups
+  - Returns schedule with name and time for display
+  - Use case: Consistent schedule display across multiple features
+
+#### Lottery UI Improvements
+- **Numbered Badges**: Added position badges to lottery cards
+  - File: `web/src/features/lotteries/index.tsx`
+  - Display format: "#1", "#2", "#3" based on order field
+  - Visible in both view and edit modes
+  - Use case: Makes lottery order explicit and easy to reference
+
+- **Edit Mode for Reordering**: Implemented toggle-based reordering
+  - File: `web/src/features/lotteries/index.tsx`
+  - "Reorder" button enters edit mode
+  - Drag-and-drop enabled only in edit mode
+  - "Save Order" commits changes, "Cancel" discards
+  - Edit/Delete buttons hidden in edit mode
+  - Mobile-friendly with touch support
+  - Use case: Prevents accidental reordering, clear UX for changing lottery order
+
+- **Schedule Display Fix**: Fixed bug showing schedule IDs instead of names
+  - File: `web/src/features/lotteries/index.tsx`
+  - Corrected variable naming in schedule extraction logic
+  - Now displays: "Schedule Name (HH:MM)" instead of UUIDs
+  - Integrated with global useScheduleMap hook
+  - Use case: Clear display of which schedules each lottery is active in
+
+#### Toast Notifications
+- **Success/Error Toasts**: Added feedback for all CRUD operations
+  - Files:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+    - `web/src/hooks/mutations/schedule/useCreateSchedule.ts`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+    - `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`
+  - Success messages for create/update/delete operations
+  - Error messages with detailed error information
+  - Use case: Immediate user feedback for all operations
+
+### Changed - 2025-12-16
+
+#### TanStack Query Cache Configuration
+- **Query Hook Cache Settings**: Updated cache strategy for all schedule/lottery queries
+  - Files:
+    - `web/src/hooks/fetchs/lottery/useLotteries.ts`
+    - `web/src/hooks/fetchs/schedule/useSchedules.ts`
+    - `web/src/hooks/fetchs/schedule-lottery/useScheduleLottery.ts`
+  - `staleTime`: Changed to 12 hours (from 5 minutes)
+  - `refetchOnMount`: Set to true (ensures fresh data on login)
+  - `refetchOnWindowFocus`: Set to false (no automatic refetch)
+  - Rationale: Changes are infrequent, users can refresh manually or logout/login
+  - Use case: Reduces unnecessary network requests, improves performance
+
+- **Schedule Query Key Fix**: Added missing 'all' parameter
+  - File: `web/src/hooks/fetchs/schedule/useSchedules.ts`
+  - Query key now includes `{ all: !!all }` like lottery hook
+  - Ensures proper cache segregation between admin and cashier views
+  - Use case: Prevents cache collision between different user roles
+
+#### Cache Invalidation Improvements
+- **Mutation Cache Invalidation**: Added schedule-lottery cache invalidation
+  - Files:
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+  - Now invalidates both entity cache AND schedule-lottery cache
+  - Ensures make-plays feature gets updated data immediately
+  - Use case: Keeps all related caches synchronized after CRUD operations
+
 ### Added - 2025-12-15
 
 #### Organization Creation with Super Admin User

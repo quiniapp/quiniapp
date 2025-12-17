@@ -14,12 +14,12 @@ const fetchSchedules = async (all?:boolean) => {
 
 export const useSchedules = (all?:boolean) =>
   useQuery<IScheduleEntityFront[]>({
-    queryKey: ['schedules'],
+    queryKey: ['schedules', { all: !!all }], // Fixed: include 'all' param for proper cache segregation
     queryFn: ()=> fetchSchedules(all),
-    staleTime: 5 * 60 * 1000, // 5 minutos - tiempo razonable para refetch
-    gcTime: 30 * 60 * 1000, // 30 minutos en caché
-    refetchOnWindowFocus: true, // Refetch cuando vuelve al tab
+    staleTime: 12 * 60 * 60 * 1000, // 12 hours - changes are infrequent, users can refresh if needed
+    gcTime: 30 * 60 * 1000, // 30 minutes in cache
+    refetchOnWindowFocus: false, // No automatic refetch, manual reload if needed
     refetchOnReconnect: true,
-    refetchOnMount: true, // IMPORTANTE: refetch después de invalidaciones
+    refetchOnMount: true, // IMPORTANT: refetch after invalidations and on login
     retry: 1,
   });

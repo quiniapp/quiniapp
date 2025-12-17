@@ -3,7 +3,6 @@ import { Flex, FlexCol } from '../flex';
 import { Label } from '../ui/label';
 import { IconButton } from '../button/IconButton';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { toast } from 'react-hot-toast';
 import { useDeleteLottery } from '@/hooks/mutations/lottery/useDeleteLottery';
 
 interface DeleteLotteryModalProps {
@@ -13,13 +12,9 @@ interface DeleteLotteryModalProps {
 }
 
 const DeleteLotteryModal = ({ isOpen, onClose, lottery }: DeleteLotteryModalProps) => {
-  const { mutate: deleteLottery, isPending } = useDeleteLottery({
+  const { mutate: deleteLottery, isPending } = useDeleteLottery(undefined, {
     onSuccess: () => {
-      toast.success('Lotería eliminada exitosamente');
       onClose();
-    },
-    onError: (error) => {
-      toast.error(`Error al eliminar lotería: ${error.message}`);
     },
   });
 
@@ -42,9 +37,7 @@ const DeleteLotteryModal = ({ isOpen, onClose, lottery }: DeleteLotteryModalProp
           ¿Estás seguro de que quieres eliminar esta lotería?
         </Label>
         <Flex className="justify-center">
-          <Label className="text-center font-semibold text-sm sm:text-base">
-            {lottery.name}
-          </Label>
+          <Label className="text-center font-semibold text-sm sm:text-base">{lottery.name}</Label>
         </Flex>
         <Label className="text-center text-xs sm:text-sm text-muted-foreground">
           Esta acción no se puede deshacer.

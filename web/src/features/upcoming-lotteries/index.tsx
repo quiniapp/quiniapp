@@ -23,7 +23,6 @@ import { ScheduleRadioList } from '@/features/upcoming-lotteries/schedules-list.
 import { dayParseToString, dayDictionary } from '@helper/functions/dayDictionary';
 import { useSaveScheduleLottery } from '@/hooks/mutations/schedule-lottery/useSaveScheduleLottery';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
-import toast from 'react-hot-toast';
 import { DayKey } from '@helper/types/schedule-lottery.type';
 
 type DayMap = Partial<Record<DayKey, Record<string, string[]>>>;
@@ -54,14 +53,7 @@ const UpcomingLotteriesContent = () => {
     });
   };
   const handleSave = () => {
-    saveScheduleLottery(savedData, {
-      onSuccess: () => {
-        toast.success('Guardado correctamente');
-      },
-      onError: () => {
-        toast.error('Ocurrió un error, intente de nuevo');
-      },
-    });
+    saveScheduleLottery(savedData);
   };
 
   const handleSchedule = useCallback(

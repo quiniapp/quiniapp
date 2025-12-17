@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from './custom-modal';
 import { Flex, FlexCol } from '../flex';
 import { Label } from '../ui/label';
@@ -15,17 +15,19 @@ interface CreateLotteryModalProps {
 
 const CreateLotteryModal = ({ isOpen, onClose, nextOrder }: CreateLotteryModalProps) => {
   const [name, setName] = useState('');
-  const [order, setOrder] = useState(nextOrder);
+  // Display human-friendly position (1-indexed)
+  const [displayPosition, setDisplayPosition] = useState(nextOrder + 1);
 
-  const { mutate: createLottery, isPending } = useCreateLottery({
+  // Sync displayPosition when nextOrder changes
+  useEffect(() => {
+    setDisplayPosition(nextOrder + 1);
+  }, [nextOrder]);
+
+  const { mutate: createLottery, isPending } = useCreateLottery(undefined, {
     onSuccess: () => {
-      toast.success('Lotería creada exitosamente');
       setName('');
-      setOrder(nextOrder);
+      setDisplayPosition(nextOrder + 1);
       onClose();
-    },
-    onError: (error) => {
-      toast.error(`Error al crear lotería: ${error.message}`);
     },
   });
 
@@ -35,12 +37,13 @@ const CreateLotteryModal = ({ isOpen, onClose, nextOrder }: CreateLotteryModalPr
       toast.error('El nombre es requerido');
       return;
     }
-    createLottery({ name: name.trim(), order });
+    // Convert human-friendly position (1-indexed) to array order (0-indexed)
+    createLottery({ name: name.trim(), order: displayPosition - 1 });
   };
 
   const handleClose = () => {
     setName('');
-    setOrder(nextOrder);
+    setDisplayPosition(nextOrder + 1);
     onClose();
   };
 
@@ -66,17 +69,17 @@ const CreateLotteryModal = ({ isOpen, onClose, nextOrder }: CreateLotteryModalPr
           </FlexCol>
 
           <FlexCol className="gap-2">
-            <Label htmlFor="order">Orden</Label>
+            <Label htmlFor="order">Posición</Label>
             <Input
               id="order"
               type="number"
-              value={order}
-              onChange={(e) => setOrder(Number(e.target.value))}
-              min={0}
+              value={displayPosition}
+              onChange={(e) => setDisplayPosition(Number(e.target.value))}
+              min={1}
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              Define el orden en que aparece la lotería en la lista
+              Define la posición en que aparece la lotería (#1, #2, #3, etc.)
             </p>
           </FlexCol>
 
@@ -92,7 +95,6 @@ const CreateLotteryModal = ({ isOpen, onClose, nextOrder }: CreateLotteryModalPr
             <IconButton
               type="submit"
               label={isPending ? 'Creando...' : 'Crear'}
-              onClick={()=>handleSubmit}
               disabled={isPending}
               className="w-full"
             />
