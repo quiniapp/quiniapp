@@ -12,8 +12,10 @@ export class LotteryController {
   private repository = new LotteryRepository();
 
   create = async (props: INewLotteryEntity, organization_id: string) => {
-    const newLottery = lotteryBase(props, organization_id);
     try {
+      // If order is not provided, get the next available order
+      const order = props.order ?? (await this.repository.getNextOrder(organization_id));
+      const newLottery = lotteryBase({ ...props, order }, organization_id);
       const result = await this.repository.create(newLottery);
       return parseLottery(result);
     } catch (error) {

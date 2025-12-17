@@ -6,11 +6,13 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
+import { invalidateScheduleLotteries } from 'src/schedule-lottery/route/schedule-lottery.route';
+import { invalidateAllLotteries } from 'src/lottery/route/lottery.route';
 
 // ====== Cache Manager para Schedules ======
 const CACHE_KEY = 'schedules:all';
 
-function invalidateSchedules() {
+export function invalidateSchedules() {
   globalCacheManager.invalidate(CACHE_KEY);
   globalCacheManager.invalidate(`${CACHE_KEY}:all=true`);
 }
@@ -64,6 +66,8 @@ export class ScheduleRouter {
 
     try {
       const schedule = await this.controller.create(newSchedule, req.organization_id!);
+      invalidateScheduleLotteries();
+      invalidateAllLotteries();
       invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
@@ -162,6 +166,8 @@ export class ScheduleRouter {
         updateSchedule,
         req.organization_id!
       );
+      invalidateScheduleLotteries();
+      invalidateAllLotteries();
       invalidateSchedules();
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
@@ -196,6 +202,8 @@ export class ScheduleRouter {
 
     try {
       await this.controller.delete({ schedule_id }, req.organization_id!);
+      invalidateScheduleLotteries();
+      invalidateAllLotteries();
       invalidateSchedules();
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {

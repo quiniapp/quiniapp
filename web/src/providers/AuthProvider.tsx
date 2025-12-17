@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
@@ -11,6 +12,7 @@ import {
 } from '@helper/config/session.config';
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<IUserEntityFront | null>(null);
   const [role, setRole] = useState<USER_TYPE | null>(null);
   const [isAuth, setIsAuth] = useState(false);
@@ -98,10 +100,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     } catch {
       // no-op
     } finally {
+      // Clear all TanStack Query cache to prevent data leakage between users
+      queryClient.clear();
       setSession(null);
       setLoading(false);
     }
-  }, [setSession]);
+  }, [setSession, queryClient]);
 
   const armInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);

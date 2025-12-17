@@ -17,24 +17,22 @@ interface UpdateLotteryModalProps {
 
 const UpdateLotteryModal = ({ isOpen, onClose, lottery }: UpdateLotteryModalProps) => {
   const [name, setName] = useState('');
-  const [order, setOrder] = useState(0);
+  // Display human-friendly position (1-indexed)
+  const [displayPosition, setDisplayPosition] = useState(1);
   const [active, setActive] = useState(true);
 
   useEffect(() => {
     if (lottery) {
       setName(lottery.name);
-      setOrder(lottery.order);
+      // Convert from 0-indexed to human-friendly 1-indexed
+      setDisplayPosition(lottery.order + 1);
       setActive(lottery.active);
     }
   }, [lottery]);
 
-  const { mutate: updateLottery, isPending } = useUpdateLottery({
+  const { mutate: updateLottery, isPending } = useUpdateLottery(undefined, {
     onSuccess: () => {
-      toast.success('Lotería actualizada exitosamente');
       onClose();
-    },
-    onError: (error) => {
-      toast.error(`Error al actualizar lotería: ${error.message}`);
     },
   });
 
@@ -51,7 +49,8 @@ const UpdateLotteryModal = ({ isOpen, onClose, lottery }: UpdateLotteryModalProp
       lottery_id: lottery.lottery_id,
       updateLottery: {
         name: name.trim(),
-        order,
+        // Convert from human-friendly 1-indexed to 0-indexed order
+        order: displayPosition - 1,
         active,
       },
     });
@@ -81,17 +80,17 @@ const UpdateLotteryModal = ({ isOpen, onClose, lottery }: UpdateLotteryModalProp
           </FlexCol>
 
           <FlexCol className="gap-2">
-            <Label htmlFor="order">Orden</Label>
+            <Label htmlFor="order">Posición</Label>
             <Input
               id="order"
               type="number"
-              value={order}
-              onChange={(e) => setOrder(Number(e.target.value))}
-              min={0}
+              value={displayPosition}
+              onChange={(e) => setDisplayPosition(Number(e.target.value))}
+              min={1}
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              Define el orden en que aparece la lotería en la lista
+              Define la posición en que aparece la lotería (#1, #2, #3, etc.)
             </p>
           </FlexCol>
 
@@ -102,12 +101,7 @@ const UpdateLotteryModal = ({ isOpen, onClose, lottery }: UpdateLotteryModalProp
                 {active ? 'Lotería activa' : 'Lotería inactiva'}
               </p>
             </FlexCol>
-            <Switch
-              id="active"
-              checked={active}
-              onCheckedChange={setActive}
-              disabled={isPending}
-            />
+            <Switch id="active" checked={active} onCheckedChange={setActive} disabled={isPending} />
           </Flex>
 
           <Flex className="gap-2 pt-4">

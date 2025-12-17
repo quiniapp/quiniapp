@@ -12,7 +12,7 @@ export const lotteryBase = (
     lottery_id: uuidv4(),
     organization_id,
     name: lottery.name,
-    order: 0,
+    order: lottery.order ?? 0,
     deleted_at: null,
     active: false,
     created_at: timestamp,

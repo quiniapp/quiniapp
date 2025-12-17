@@ -1,64 +1,43 @@
-import { useState, useMemo, Suspense, lazy, } from 'react';
+import { useState, useMemo, Suspense, lazy } from 'react';
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button';
-import { Plus, GripVertical, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowUpDown } from 'lucide-react';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
-import { useUpdateLottery } from '@/hooks/mutations/lottery/useUpdateLottery';
+import { useScheduleMap } from '@/hooks/useScheduleMap';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { toast } from 'react-hot-toast';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { LoadingState } from '@/components/molecules/LoadingState';
 import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type';
 
-interface SortableItemProps {
+interface LotteryCardProps {
   lottery: ILotteryEntityFront;
   onEdit: (lottery: ILotteryEntityFront) => void;
   onDelete: (lottery: ILotteryEntityFront) => void;
   scheduleLotteries?: IScheduleLotteryEntityFront;
+  scheduleMap: Map<string, { schedule_id: string; name: string; time: string }>;
 }
 
-function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: SortableItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: lottery.lottery_id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
+function LotteryCard({
+  lottery,
+  onEdit,
+  onDelete,
+  scheduleLotteries,
+  scheduleMap,
+}: LotteryCardProps) {
   // Get schedules for this lottery
-  const schedules = useMemo(() => {
+  const scheduleIds = useMemo(() => {
     if (!scheduleLotteries) return [];
 
     const values = Object.values(scheduleLotteries) as Array<Record<string, string[]>>;
-
     const found = new Set<string>();
 
+    // scheduleLotteries structure: { DAY: { schedule_id: [lottery_id, ...] } }
     for (const dayObj of values) {
-      for (const [lotteryId, scheduleIds] of Object.entries(dayObj)) {
-        // si en el string[] está el lottery_id actual
-        if (scheduleIds.includes(lottery.lottery_id)) {
-          found.add(lotteryId); // guardo el id (key string)
+      for (const [scheduleId, lotteryIds] of Object.entries(dayObj)) {
+        // Check if this lottery is in the lotteries array for this schedule
+        if (lotteryIds.includes(lottery.lottery_id)) {
+          found.add(scheduleId); // Collect schedule_id
         }
       }
     }
@@ -66,25 +45,28 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
     return Array.from(found);
   }, [scheduleLotteries, lottery.lottery_id]);
 
+  // Map schedule IDs to names with times
+  const scheduleNames = useMemo(() => {
+    const ids = new Set(scheduleIds);
+
+    return Array.from(scheduleMap.entries())
+      .filter(([scheduleId]) => ids.has(scheduleId))
+      .map(([, schedule]) => `${schedule.name} (${schedule.time.slice(0, 5)})`);
+  }, [scheduleIds, scheduleMap]);
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="bg-[#10121A] border border-border rounded-lg p-4 mb-2"
-    >
-      <div className="flex lotteries-center gap-4">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-white"
-        >
-          <GripVertical size={20} />
+    <div className="bg-[#10121A] border border-border rounded-lg p-4 mb-2">
+      <div className="flex items-center gap-4">
+        {/* Numbered Badge */}
+        <div className="flex-shrink-0">
+          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-semibold text-sm">
+            #{lottery.order + 1}
+          </span>
         </div>
 
         {/* Lottery Info */}
         <div className="flex-1">
-          <div className="flex lotteries-center gap-2">
+          <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">{lottery.name}</h3>
             <span
               className={`text-xs px-2 py-1 rounded ${
@@ -95,18 +77,13 @@ function SortableItem({ lottery, onEdit, onDelete, scheduleLotteries }: Sortable
             </span>
           </div>
 
-          {schedules?.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Turnos:{' '}
-              {schedules.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-1">Turnos: {schedules.join(', ')}</p>
-              )}
-            </p>
+          {scheduleNames.length > 0 && (
+            <p className="text-sm text-muted-foreground mt-1">Turnos: {scheduleNames.join(', ')}</p>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex lotteries-center gap-2">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -133,46 +110,12 @@ const LotteriesContent = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [reorderModalOpen, setReorderModalOpen] = useState(false);
   const [selectedLottery, setSelectedLottery] = useState<ILotteryEntityFront | null>(null);
 
   const { data: lotteries, isLoading } = useLotteries(true); // Get all lotteries for admin
   const { data: scheduleLotteries } = useScheduleLottery();
-  const { mutate: updateLottery } = useUpdateLottery();
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = lotteries?.findIndex((item) => item.lottery_id === active.id);
-      const newIndex = lotteries?.findIndex((item) => item.lottery_id === over.id);
-
-      const newLotteries = arrayMove(lotteries ?? [], oldIndex ?? 0, newIndex ?? 0);
-
-      // Update order in backend
-      newLotteries.forEach((lottery, index) => {
-        if (lottery.order !== index) {
-          updateLottery(
-            {
-              lottery_id: lottery.lottery_id,
-              updateLottery: { order: index },
-            },
-            {
-              onError: () => {
-                toast.error('Error al actualizar orden');
-              },
-            }
-          );
-        }
-      });
-    }
-  };
+  const scheduleMap = useScheduleMap(); // Get schedule lookup map
 
   const handleEdit = (lottery: ILotteryEntityFront) => {
     setSelectedLottery(lottery);
@@ -193,7 +136,7 @@ const LotteriesContent = () => {
     return (
       <Box className="grid grid-rows-[auto_1fr] h-full">
         <HeaderSection title="Loterías" />
-        <div className="flex lotteries-center justify-center">
+        <div className="flex items-center justify-center">
           <p className="text-muted-foreground">Cargando loterías...</p>
         </div>
       </Box>
@@ -203,15 +146,21 @@ const LotteriesContent = () => {
   return (
     <Box className="grid grid-rows-[auto_1fr] h-full">
       <HeaderSection title="Loterías">
-        <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
-          <Plus size={20} />
-          Nueva Lotería
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setReorderModalOpen(true)} variant="outline" className="gap-2">
+            <ArrowUpDown size={18} />
+            Cambiar orden
+          </Button>
+          <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
+            <Plus size={20} />
+            Nueva Lotería
+          </Button>
+        </div>
       </HeaderSection>
 
       <div className="overflow-y-auto px-6 py-4">
         {lotteries?.length === 0 ? (
-          <div className="flex flex-col lotteries-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground text-center mb-4">No hay loterías creadas</p>
             <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
               <Plus size={20} />
@@ -219,35 +168,25 @@ const LotteriesContent = () => {
             </Button>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={lotteries?.map((item) => item.lottery_id) ?? []}
-              strategy={verticalListSortingStrategy}
-            >
-              {lotteries?.map((lottery) => (
-                <SortableItem
-                  key={lottery.lottery_id}
-                  lottery={lottery}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  scheduleLotteries={scheduleLotteries}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
+          <>
+            {lotteries?.map((lottery) => (
+              <LotteryCard
+                key={lottery.lottery_id}
+                lottery={lottery}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                scheduleLotteries={scheduleLotteries}
+                scheduleMap={scheduleMap}
+              />
+            ))}
+            <div className="mt-4 text-xs text-muted-foreground text-center">
+              Click en "Cambiar orden" para reorganizar las loterías
+            </div>
+          </>
         )}
-
-        <div className="mt-4 text-xs text-muted-foreground text-center">
-          Arrastra las loterías para cambiar el orden
-        </div>
       </div>
 
       {/* Modals */}
-
       <Suspense fallback={<LoadingState />}>
         <CreateLotteryModal
           isOpen={createModalOpen}
@@ -264,6 +203,11 @@ const LotteriesContent = () => {
           onClose={() => setDeleteModalOpen(false)}
           lottery={selectedLottery}
         />
+        <ReorderLotteriesModal
+          isOpen={reorderModalOpen}
+          onClose={() => setReorderModalOpen(false)}
+          lotteries={lotteries || []}
+        />
       </Suspense>
     </Box>
   );
@@ -272,5 +216,6 @@ const LotteriesContent = () => {
 const CreateLotteryModal = lazy(() => import('@/components/modals/CreateLotteryModal'));
 const UpdateLotteryModal = lazy(() => import('@/components/modals/UpdateLotteryModal'));
 const DeleteLotteryModal = lazy(() => import('@/components/modals/DeleteLotteryModal'));
+const ReorderLotteriesModal = lazy(() => import('@/components/modals/ReorderLotteriesModal'));
 
 export default LotteriesContent;

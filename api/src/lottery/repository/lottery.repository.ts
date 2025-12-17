@@ -16,7 +16,11 @@ export class LotteryRepository {
   }
 
   async getAll(organization_id: string, all?: boolean) {
-    let query = supabase.from('lotteries').select('*').eq('organization_id', organization_id);
+    let query = supabase
+      .from('lotteries')
+      .select('*')
+      .eq('organization_id', organization_id)
+      .is('deleted_at', null);
 
     if (!all) {
       query = query.eq('active', true);
@@ -56,5 +60,24 @@ export class LotteryRepository {
       .eq('organization_id', organization_id);
 
     if (error) throw new Error(error.details);
+  }
+
+  async getNextOrder(organization_id: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('order')
+      .eq('organization_id', organization_id)
+      .is('deleted_at', null)
+      .order('order', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      // If no lotteries exist yet, start with 0
+      if (error.code === 'PGRST116') return 0;
+      throw new Error(error.details);
+    }
+
+    return (data?.order ?? -1) + 1;
   }
 }

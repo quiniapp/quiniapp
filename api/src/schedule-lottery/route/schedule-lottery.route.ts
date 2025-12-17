@@ -5,6 +5,8 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
 import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 import { globalCacheManager } from 'src/cache/CacheManager';
+import { invalidateAllLotteries } from 'src/lottery/route/lottery.route';
+import { invalidateSchedules } from 'src/shcedule/route/schedule.route';
 
 export type ScheduleLotteryPayload = {
   scheduleLotteries: IScheduleLotteryEntityFront;
@@ -14,7 +16,7 @@ export type ScheduleLotteryPayload = {
 const CACHE_KEY = 'schedule-lotteries:all';
 const TTL_MS = 24 * 60 * 60 * 1000; // 1 dia
 
-function invalidateScheduleLotteries() {
+export function invalidateScheduleLotteries() {
   globalCacheManager.invalidate(CACHE_KEY);
 }
 
@@ -92,7 +94,8 @@ export class ScheduleLotteryRouter {
 
       // ====== invalidación de cache ======
       invalidateScheduleLotteries();
-
+      invalidateAllLotteries();
+      invalidateSchedules();
       const response: APIResponse<IScheduleLotteryEntityFront> = {
         data: { scheduleLotteries: data! }, // data!: IScheduleLotteryEntityFront
       };

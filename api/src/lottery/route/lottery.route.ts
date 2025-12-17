@@ -7,12 +7,14 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
+import { invalidateScheduleLotteries } from 'src/schedule-lottery/route/schedule-lottery.route';
+import { invalidateSchedules } from 'src/shcedule/route/schedule.route';
 // ====== Cache Manager para Lotteries ======
 function keyFor(allFlag: boolean) {
   return `lotteries:all=${allFlag ? 'true' : 'false'}`;
 }
 
-function invalidateAllLotteries() {
+export function invalidateAllLotteries() {
   globalCacheManager.invalidate(keyFor(true));
   globalCacheManager.invalidate(keyFor(false));
 }
@@ -57,7 +59,9 @@ export class LotteryRouter {
       const lottery = await this.controller.create({ name }, req.organization_id!);
 
       // invalidación (ambas variantes all=true/false)
+      invalidateScheduleLotteries();
       invalidateAllLotteries();
+      invalidateSchedules();
 
       const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
@@ -161,7 +165,9 @@ export class LotteryRouter {
     try {
       const lottery = await this.controller.update(lottery_id, updateLottery, req.organization_id!);
 
+      invalidateScheduleLotteries();
       invalidateAllLotteries();
+      invalidateSchedules();
 
       const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
@@ -198,7 +204,9 @@ export class LotteryRouter {
     try {
       await this.controller.delete({ lottery_id }, req.organization_id!);
 
+      invalidateScheduleLotteries();
       invalidateAllLotteries();
+      invalidateSchedules();
 
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {
