@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-18
+
+#### HTML Language Attribute
+- **Spanish Language Declaration**: Changed HTML `lang` attribute from "en" to "es"
+  - File: `web/index.html:2`
+  - Fixed browser incorrectly offering translation for Spanish content
+  - Use case: Prevents translation prompts when opening app in browsers with Spanish content already present
+
 ### TODO - Future Improvements
 
 #### Lottery Reordering Optimization

@@ -1462,6 +1462,26 @@ Para información detallada sobre la optimización de índices completada, ver:
   - **Pendiente:** Fases 3-5 (otras tablas)
   - **Resultados:** Mejora del 85.7% en performance de queries críticas
 
+### Security & Data Integrity
+Para planes de seguridad y validaciones de integridad de datos, ver:
+- **[PLAN_VALIDACIONES_OWNER.md](./PLAN_VALIDACIONES_OWNER.md)** - Plan de validaciones de OWNER y protección de organización
+  - **Objetivo:** Implementar validaciones para garantizar un único OWNER en el sistema y proteger su organización
+  - **Estado:** Pendiente de implementación ⏳
+  - **Prioridad:** Alta (seguridad y integridad de datos)
+  - **Estimación:** 2-3 días de desarrollo
+  - **Fases:**
+    1. Tipos de error y mensajes (helper)
+    2. Métodos de repositorio para validaciones de OWNER
+    3. Validaciones en controllers (user + organization)
+    4. Manejo de errores en routes
+    5. Database constraints (índice UNIQUE)
+    6. Actualización de CHANGELOGs
+  - **Validaciones implementadas:**
+    - ✅ Solo 1 OWNER en todo el sistema
+    - ✅ OWNER no se puede eliminar (excepto con acceso directo a BD)
+    - ✅ Organización del OWNER no se puede eliminar
+    - ✅ Organización del OWNER no se envía al frontend
+
 ### Features Futuras
 Para planes de implementación de features futuras, ver:
 - **[../group.md](../group.md)** - Plan de implementación del sistema de grupos

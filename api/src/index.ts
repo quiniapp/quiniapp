@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 
 import { isAuthenticated } from '../middlewares/auth.middleware';
+import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
 
 import {
@@ -74,6 +75,19 @@ app.use(cookieParser());
 // ---- Body parsers por ruta ----
 app.use('/api/private', express.json({ limit: '5mb' }), isAuthenticated, router);
 app.use('/api', express.json({ limit: '200kb' }), publicRouter);
+
+// ---- 404 Handler ----
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: `Ruta ${req.path} no encontrada`,
+    },
+  });
+});
+
+// ---- Error Handler (DEBE SER EL ÚLTIMO MIDDLEWARE) ----
+app.use(errorHandler);
 
 // ---- Arranque ----
 app.listen(PORT, () => {

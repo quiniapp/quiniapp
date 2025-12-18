@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { LogInIcon } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'react-hot-toast';
 
 import { Flex } from '@/components/flex';
 import Logo from '@/components/logo';
@@ -44,6 +45,9 @@ const LoginContent = () => {
       await login({ username: data.username, password: data.password });
       navigate(ROUTES.MAKE_PLAYS, { replace: true });
     } catch (err) {
+      // Mostrar mensaje de error al usuario
+      const errorMessage = err instanceof Error ? err.message : 'Error al iniciar sesión';
+      toast.error(errorMessage);
       console.error('Error en el login:', err);
     }
   };
