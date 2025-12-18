@@ -802,7 +802,38 @@ const ticketSchema = z.object({
 
 ## 5. Features Nuevas
 
-### 5.1 Envío de Archivos por WhatsApp Web (Desktop) 📤
+### 5.1 Endpoint Específico para Reorder 🔄
+
+**Objetivo:** Crear un endpoint dedicado en el backend para manejar operaciones de reordenamiento.
+
+#### Contexto
+Actualmente se necesita un endpoint específico para manejar el reorder de elementos (tickets, apuestas, o listas).
+
+#### Tareas
+
+##### Backend (API)
+- [ ] Crear endpoint `POST /api/private/reorder` o similar
+- [ ] Definir estructura de request (IDs, nuevo orden)
+- [ ] Implementar lógica de reordenamiento en base de datos
+- [ ] Validación de permisos y ownership
+- [ ] Testing del endpoint
+
+##### Frontend (Web)
+- [ ] Crear mutation hook para reorder
+- [ ] Integrar con UI de drag-and-drop (si aplica)
+- [ ] Optimistic updates en UI
+- [ ] Error handling y rollback
+- [ ] Loading states durante reorder
+
+#### Estado Actual
+- **Prioridad:** Por definir
+- **Estimación:** 2-3 días
+- **Dependencias:** Definición de scope de reorder
+- **Bloqueantes:** Especificar qué elementos se van a reordenar
+
+---
+
+### 5.2 Envío de Archivos por WhatsApp Web (Desktop) 📤
 
 **Objetivo:** Permitir enviar tickets/reportes por WhatsApp Web desde versión desktop con selector de imprimir-exportar.
 
@@ -1440,5 +1471,87 @@ Los componentes base (Text, Heading, ErrorMessage, Caption, LoadingState, EmptyS
 
 ---
 
-**Fecha de última actualización:** 2025-11-20
-**Próxima revisión:** 2025-12-20
+## 📚 Referencias y Documentación Relacionada
+
+### Multi-Tenancy (Organizaciones)
+- **[org.md](./org.md)** - Plan de implementación frontend de multi-tenancy
+  - **Estado:** Pendiente (Backend ✅ completo, Frontend ❌ no implementado)
+  - **Tiempo estimado:** 30 min (mínimo) a 2.5 horas (con UI)
+  - **Complejidad:** BAJA - El backend ya maneja todo, frontend solo expone `organization_id` del usuario
+  - **Ver sección:** "Fase 9: Frontend - Plan de Implementación"
+
+### Performance & Cache Optimization (CONSOLIDADO)
+**Performance completado en ~60%, ver detalles en CHANGELOG.md**
+
+#### ✅ Completado:
+- Code splitting y lazy loading (17 rutas) ✅
+- React.memo en componentes críticos ✅
+- INP optimizado: 224ms → 24-99ms (mejora del 56-89%) ✅
+- LCP optimizado con logo preload ✅
+
+#### ⚠️ Pendiente - Cache Optimization:
+**TanStack Query Cache:** Configurar staleTime y gcTime según tipo de dato
+
+**Hooks a optimizar por prioridad:**
+
+**ALTA PRIORIDAD (Fase 1)** - Datos estáticos:
+- [ ] `useLotteries` - 10 min staleTime, 30 min gcTime, no refetch
+- [ ] `useSchedules` - 5 min staleTime, 15 min gcTime, no refetch
+- [ ] `useScheduleLottery` - 5 min staleTime, 15 min gcTime, no refetch
+
+**MEDIA PRIORIDAD (Fase 2)** - Datos semi-estáticos:
+- [ ] `useUsers` - 3 min staleTime, 10 min gcTime
+- [ ] `useUsersByNumber` - 3 min staleTime
+- [ ] `useGetCurrentAccount` - 2 min staleTime, refetch on window focus
+
+**BAJA PRIORIDAD (Fase 3)** - Datos históricos:
+- [ ] `useResults` - 30 min staleTime, 1h gcTime
+- [ ] `useTotals` - 5 min staleTime
+- [ ] `useGetGroupedBets*` - 5 min staleTime
+
+**NO CACHEAR** - Datos frescos (ya configurado):
+- Tickets recientes: `staleTime: 0`, `gcTime: 30s`
+- Bets recientes: `staleTime: 0`, `gcTime: 30s`
+
+**Beneficios esperados:**
+- Requests reducidos: 50-60%
+- Mejora INP estimada: 18-30ms
+
+### UX/UI Optimization (CONSOLIDADO)
+**Estado:** ~60% completado según CHANGELOG.md
+
+#### ✅ Completado:
+- LoadingState, EmptyState, Text, Heading, Caption components ✅
+- Delete modales existen (DeleteTicket, DeleteResults, DeleteLottery, DeleteSchedule) ✅
+- Responsive design (modales, botones, forms responsive) ✅
+- Typography migrations (~35+ archivos migrados) ✅
+
+#### 🔴 CRÍTICO - Pendientes:
+1. **Loading states inconsistentes** - Login no usa LoadingModal global
+2. **Delete modales sin countdown** - Falta countdown de 5 segundos antes de habilitar botón
+3. **Aside navigation bug** - Usa `navigate(0)` en vez de limpiar filtros con `setSearchParams`
+4. **SelectDate permite futuro** - Falta validación `maxDate=today`
+
+#### 🟡 IMPORTANTE - Pendientes:
+- Typography migrations restantes (~60 archivos de 100 totales)
+- Uniformización de colores (eliminar text-primary, text-cyan, text-blue-200)
+
+**Quick Wins (2-3 horas):**
+1. Fix Aside navigation (15-30 min)
+2. SelectDate maxDate validation (20-30 min)
+3. Uniformizar colores texto (15 min con script)
+4. Add countdown a delete modales (1 hora)
+
+**Para detalles completos ver:**
+- **[docs/component-audit.md](./docs/component-audit.md)** - Auditoría de componentes
+  - **Componentes sin uso:** 5 para eliminar inmediatamente
+  - **Modales específicos:** 17 → consolidar en 3 componentes genéricos
+  - **Reducción estimada:** ~40% menos componentes, ~37% menos código
+
+### Features Futuras
+- **Grupos:** Ver `../group.md` para implementación de grupos dentro de organizaciones (pendiente)
+
+---
+
+**Fecha de última actualización:** 2025-12-18
+**Próxima revisión:** 2025-01-18
