@@ -1,3 +1,8 @@
+// ⚠️ DEPRECATED - Usar AppError classes de @helper/errors en su lugar
+// Mantener temporalmente para compatibilidad durante migración
+/**
+ * @deprecated Usar AppError classes en vez de ERROR_TYPE
+ */
 export enum ERROR_TYPE {
   NOT_FOUND,
   USER_NOT_FOUND,
@@ -16,6 +21,9 @@ export enum ERROR_TYPE {
   INVALID_ID,
 }
 
+/**
+ * @deprecated Usar AppError classes en vez de ERROR_MESSAGE
+ */
 export const ERROR_MESSAGE = {
   NOT_FOUND: 'No se encontro',
   USER_NOT_FOUND: 'Usuario no entontrado',
@@ -41,3 +49,40 @@ export const ERROR_MESSAGE = {
   TICKET_NOT_WINNER: 'El ticket no es ganador',
   INVALID_USER_ID: 'ID de usuario inválido',
 };
+
+// ✅ NUEVO - Error codes estandarizados
+export const ERROR_CODES = {
+  // 400 - Bad Request
+  BAD_REQUEST: 'BAD_REQUEST',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  INVALID_ID: 'INVALID_ID',
+
+  // 401 - Unauthorized
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  TOKEN_ERROR: 'TOKEN_ERROR',
+
+  // 403 - Forbidden
+  FORBIDDEN: 'FORBIDDEN',
+  TICKET_NOT_OWNED: 'TICKET_NOT_OWNED',
+
+  // 404 - Not Found
+  NOT_FOUND: 'NOT_FOUND',
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
+  TICKET_NOT_FOUND: 'TICKET_NOT_FOUND',
+  LOTTERY_NOT_FOUND: 'LOTTERY_NOT_FOUND',
+
+  // 409 - Conflict
+  CONFLICT: 'CONFLICT',
+  TICKET_ALREADY_PAID: 'TICKET_ALREADY_PAID',
+
+  // 422 - Unprocessable Entity
+  INVALID_DELETE_TIME: 'INVALID_DELETE_TIME',
+  TICKET_NOT_WINNER: 'TICKET_NOT_WINNER',
+
+  // 500 - Internal Server Error
+  INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+  DATABASE_ERROR: 'DATABASE_ERROR',
+} as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

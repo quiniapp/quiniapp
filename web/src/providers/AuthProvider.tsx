@@ -76,7 +76,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err?.message || 'Login failed');
+          // Extraer mensaje del error del backend (formato: { error: { message: "..." } })
+          throw new Error(err?.error?.message || err?.message || 'Error al iniciar sesión');
         }
 
         const { data } = await res.json();

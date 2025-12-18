@@ -1,3 +1,199 @@
+# TODO - API Backend
+
+## Features Nuevas
+
+### Endpoint Específico para Reorder 🔄
+
+**Objetivo:** Crear un endpoint dedicado para manejar operaciones de reordenamiento de elementos.
+
+#### Contexto
+Se necesita un endpoint específico para manejar el reorder de elementos (tickets, apuestas, loterías, turnos, o cualquier entidad que requiera ordenamiento personalizado).
+
+#### Tareas
+
+##### 1. Diseño del Endpoint
+- [ ] Definir qué entidades necesitan reordenamiento (tickets, bets, lotteries, schedules, etc.)
+- [ ] Diseñar estructura de request y response
+- [ ] Definir reglas de negocio para reordenamiento
+- [ ] Documentar casos de uso específicos
+
+**Posible estructura:**
+```typescript
+// Request
+interface ReorderRequest {
+  entity_type: 'tickets' | 'bets' | 'lotteries' | 'schedules' | string;
+  items: {
+    id: string;
+    new_position: number;
+  }[];
+  user_id?: string;  // Para validación de permisos
+}
+
+// Response
+interface ReorderResponse {
+  success: boolean;
+  updated_count: number;
+  items: {
+    id: string;
+    position: number;
+  }[];
+}
+```
+
+##### 2. Implementación Backend
+- [ ] Crear endpoint `POST /api/private/reorder`
+- [ ] Implementar controller en módulo correspondiente
+- [ ] Crear repository method para actualizar posiciones
+- [ ] Validación de permisos (usuario puede reordenar estos items?)
+- [ ] Validación de ownership (items pertenecen al usuario?)
+- [ ] Manejo de errores y transacciones atómicas
+
+**Ubicación sugerida:**
+- Si es genérico: `api/src/shared/controller/reorder.controller.ts`
+- Si es específico: en el módulo correspondiente (ej: `api/src/lottery/controller/lottery.controller.ts`)
+
+##### 3. Base de Datos
+- [ ] Agregar columna `position` o `order` a tablas que lo necesiten
+- [ ] Crear índice en columna de posición
+- [ ] Migración para columna de ordenamiento
+- [ ] Definir valor por defecto (ej: created_at order inicial)
+
+**Ejemplo de migración:**
+```sql
+-- Agregar columna de posición a tabla
+ALTER TABLE lotteries
+ADD COLUMN position INTEGER DEFAULT 0;
+
+-- Inicializar posiciones basado en created_at
+UPDATE lotteries
+SET position = row_number() OVER (ORDER BY created_at);
+
+-- Crear índice
+CREATE INDEX idx_lotteries_position ON lotteries(position);
+```
+
+##### 4. Lógica de Reordenamiento
+- [ ] Implementar algoritmo de reordenamiento eficiente
+- [ ] Manejar colisiones de posición
+- [ ] Actualizar posiciones en batch (transacción)
+- [ ] Logging de cambios de orden
+
+**Consideraciones:**
+- Reordenamiento por drag-and-drop requiere actualizar múltiples registros
+- Usar transacciones para asegurar atomicidad
+- Considerar locks si hay concurrencia
+
+##### 5. Validación y Seguridad
+- [ ] Validar que usuario tiene permisos para reordenar
+- [ ] Validar que IDs existen
+- [ ] Validar que posiciones son válidas (>= 0, sin gaps)
+- [ ] Rate limiting para prevenir abuse
+- [ ] Logging de quien hizo el reorder y cuándo
+
+##### 6. Testing
+- [ ] Tests unitarios para lógica de reordenamiento
+- [ ] Tests de integración para endpoint
+- [ ] Tests de permisos (unauthorized access)
+- [ ] Tests de edge cases (posiciones negativas, duplicadas, etc.)
+- [ ] Tests de performance con múltiples items
+
+##### 7. Documentación
+- [ ] Documentar endpoint en README o Swagger
+- [ ] Ejemplos de uso del endpoint
+- [ ] Documentar reglas de negocio
+- [ ] Actualizar CHANGELOG
+
+#### Consideraciones Técnicas
+
+**Estrategias de Reordenamiento:**
+
+1. **Simple Position Update:**
+   - Cada item tiene un `position: integer`
+   - Reordenar actualiza todos los positions
+   - Pros: Simple, fácil de entender
+   - Contras: Puede requerir actualizar muchos registros
+
+2. **Fractional Indexing:**
+   - Posiciones como strings o decimales entre items
+   - Solo actualiza el item movido
+   - Pros: Menos updates
+   - Contras: Más complejo, puede requerir rebalanceo
+
+3. **Linked List:**
+   - Cada item apunta al siguiente
+   - Pros: Reorden rápido
+   - Contras: Queries más complejas, difícil de mantener
+
+**Recomendación:** Empezar con **Simple Position Update** por simplicidad.
+
+#### Ejemplo de Implementación
+
+```typescript
+// Controller
+export const reorderItems = async (req: Request, res: Response) => {
+  const { entity_type, items } = req.body;
+  const user_id = req.user?.id;
+
+  // Validar permisos
+  if (!canUserReorder(user_id, entity_type)) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  // Reordenar en transacción
+  const result = await supabase.rpc('reorder_items', {
+    p_entity_type: entity_type,
+    p_items: items,
+    p_user_id: user_id,
+  });
+
+  if (result.error) {
+    return res.status(500).json({ error: result.error.message });
+  }
+
+  return res.json({
+    success: true,
+    updated_count: result.data.updated_count,
+    items: result.data.items,
+  });
+};
+
+// RPC en Supabase
+CREATE OR REPLACE FUNCTION reorder_items(
+  p_entity_type TEXT,
+  p_items JSONB,
+  p_user_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_item JSONB;
+  v_updated_count INT := 0;
+BEGIN
+  -- Iterar items y actualizar posiciones
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+  LOOP
+    -- Actualizar posición según entity_type
+    -- (Implementación específica por entidad)
+    v_updated_count := v_updated_count + 1;
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'updated_count', v_updated_count
+  );
+END;
+$$;
+```
+
+#### Estado Actual
+- **Prioridad:** Media (depende del caso de uso específico)
+- **Estimación:** 2-3 días
+- **Dependencias:** Definición de qué entidades necesitan reordenamiento
+- **Bloqueantes:** Especificar scope exacto (qué se va a reordenar)
+
+---
+
 # TODO - Optimización de Base de Datos
 
 ## Contexto
@@ -1253,5 +1449,45 @@ CREATE TABLE daily_summaries (
 - Lifetime value (LTV) por usuario
 - Churn analysis
 - A/B testing framework
+
+---
+
+## 📚 Referencias y Documentación Relacionada
+
+### Database Optimization
+Para información detallada sobre la optimización de índices completada, ver:
+- **[action_plan_database_optimization.md](./action_plan_database_optimization.md)** - Plan completo de optimización de base de datos (Fases 1-2 ✅ completadas)
+  - **Estado:** ~80% completado
+  - **Completado:** Índices optimizados para tickets y bets (Fases 1-2)
+  - **Pendiente:** Fases 3-5 (otras tablas)
+  - **Resultados:** Mejora del 85.7% en performance de queries críticas
+
+### Security & Data Integrity
+Para planes de seguridad y validaciones de integridad de datos, ver:
+- **[PLAN_VALIDACIONES_OWNER.md](./PLAN_VALIDACIONES_OWNER.md)** - Plan de validaciones de OWNER y protección de organización
+  - **Objetivo:** Implementar validaciones para garantizar un único OWNER en el sistema y proteger su organización
+  - **Estado:** Pendiente de implementación ⏳
+  - **Prioridad:** Alta (seguridad y integridad de datos)
+  - **Estimación:** 2-3 días de desarrollo
+  - **Fases:**
+    1. Tipos de error y mensajes (helper)
+    2. Métodos de repositorio para validaciones de OWNER
+    3. Validaciones en controllers (user + organization)
+    4. Manejo de errores en routes
+    5. Database constraints (índice UNIQUE)
+    6. Actualización de CHANGELOGs
+  - **Validaciones implementadas:**
+    - ✅ Solo 1 OWNER en todo el sistema
+    - ✅ OWNER no se puede eliminar (excepto con acceso directo a BD)
+    - ✅ Organización del OWNER no se puede eliminar
+    - ✅ Organización del OWNER no se envía al frontend
+
+### Features Futuras
+Para planes de implementación de features futuras, ver:
+- **[../group.md](../group.md)** - Plan de implementación del sistema de grupos
+  - **Prerequisito:** Implementar DESPUÉS de completar sistema de organizaciones
+  - **Objetivo:** Sistema de grupos dentro de cada organización para mejor organización de usuarios (principalmente cashiers)
+  - **Estado:** Pendiente de implementación
+  - **Estimación:** TBD
 
 ---
