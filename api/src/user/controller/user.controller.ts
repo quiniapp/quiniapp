@@ -9,6 +9,7 @@ import { CASHIER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
 import { buildUserForDB } from '../helper/userBase';
 import { supabase } from 'api/database/db.connection';
+import { InternalServerError } from '@helper/errors';
 // import { generateEmail } from 'helper/generateEmail';
 
 export class UserController {
@@ -16,49 +17,33 @@ export class UserController {
 
   create = async (newUser: INewUserEntity, organization_id: string): Promise<IUserEntityFront> => {
     const user = await buildUserForDB(newUser, organization_id);
-    try {
-      const result = await this.repository.create(user);
-      if (user.cashier_type !== CASHIER_TYPE.STREET) {
-        const { error } = await supabase.auth.signUp({
-          email: user.email!,
-          password: newUser.password,
-        });
+    const result = await this.repository.create(user);
 
-        if (error) {
-          await this.repository.deleteFailedUser(result.user_id);
-          console.error('Supabase creation error:', error);
-          throw new Error(error.message);
-        }
+    if (user.cashier_type !== CASHIER_TYPE.STREET) {
+      const { error } = await supabase.auth.signUp({
+        email: user.email!,
+        password: newUser.password,
+      });
+
+      if (error) {
+        await this.repository.deleteFailedUser(result.user_id);
+        throw new InternalServerError(error.message);
       }
-
-      return parseUser(result);
-    } catch (error) {
-      console.error('Creation error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
     }
+
+    return parseUser(result);
   };
   get = async (props: IGetUserEntity, organization_id: string): Promise<IUserEntityFront> => {
-    try {
-      const result = await this.repository.getById(props.user_id!, organization_id);
-
-      return parseUser(result);
-    } catch (error) {
-      console.error('Get error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
+    const result = await this.repository.getById(props.user_id!, organization_id);
+    return parseUser(result);
   };
 
   getAll = async (
     organization_id: string,
     cashier_number?: number
   ): Promise<IUserEntityFront[]> => {
-    try {
-      const result = await this.repository.getAll(organization_id, cashier_number);
-      return result.map((user) => parseUser(user));
-    } catch (error) {
-      console.error('GetAll error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
+    const result = await this.repository.getAll(organization_id, cashier_number);
+    return result.map((user) => parseUser(user));
   };
 
   update = async (
@@ -66,38 +51,27 @@ export class UserController {
     props: IUpdateUserEntity,
     organization_id: string
   ): Promise<IUserEntityFront> => {
-    try {
-      const result = await this.repository.update(user_id, props, organization_id);
+    const result = await this.repository.update(user_id, props, organization_id);
 
-      // TO DO: validar el password despues
-      // if (user.cashier_type !== CASHIER_TYPE.STREET) {
-      //   const { error } = await supabase.auth.signUp({
-      //     email: user.email!,
-      //     password: newUser.password,
-      //   });
+    // TO DO: validar el password despues
+    // if (user.cashier_type !== CASHIER_TYPE.STREET) {
+    //   const { error } = await supabase.auth.signUp({
+    //     email: user.email!,
+    //     password: newUser.password,
+    //   });
 
-      //   if (error) {
-      //     await this.repository.delete(result.user_id);
-      //     console.error('Supabase creation error:', error);
-      //     throw new Error(error.message);
-      //   }
-      // }
+    //   if (error) {
+    //     await this.repository.delete(result.user_id);
+    //     throw new InternalServerError(error.message);
+    //   }
+    // }
 
-      return parseUser(result);
-    } catch (error) {
-      console.error('pdate error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
+    return parseUser(result);
   };
 
   delete = async (props: IDeleteUserEntity, organization_id: string) => {
-    try {
-      const response = await this.repository.delete(props.user_id, organization_id);
-      return parseUser(response);
-    } catch (error) {
-      console.error('Delete error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
+    const response = await this.repository.delete(props.user_id, organization_id);
+    return parseUser(response);
   };
   // updatePassword = async (user_id: string) => {
   //   try {

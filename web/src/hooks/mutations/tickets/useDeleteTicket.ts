@@ -1,13 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
+import { apiClient } from '@/lib/apiClient';
 
 const doDeleteTicket = async (ticketId: string) => {
-  const res = await fetch(BACKEND_ROUTES.ticket.id(ticketId), {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Error deleting ticket');
+  await apiClient.delete(BACKEND_ROUTES.ticket.id(ticketId));
   return true as const;
 };
 
@@ -19,14 +15,12 @@ export const useDeleteTicket = () => {
       if (!ticketId) throw new Error('ticketId requerido');
       return doDeleteTicket(ticketId);
     },
-    // Invalida TODO lo que empiece con ['tickets'] (activos) para asegurar refetch
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['tickets-infinite'],
         exact: false,
         refetchType: 'active',
       });
-      // await queryClient.refetchQueries({queryKey:['tickets']})
     },
   });
 };

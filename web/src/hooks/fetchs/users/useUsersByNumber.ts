@@ -1,22 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IUserEntityFront } from '@helper/types/user.type';
+import { apiClient } from '@/lib/apiClient';
 
 const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityFront | undefined> => {
   if (!cashier_number) return;
-  const response = await fetch(`${BACKEND_ROUTES.user.base}?cashier_number=${cashier_number}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
+  const users = await apiClient.get<IUserEntityFront[]>(BACKEND_ROUTES.user.base, {
+    params: {
+      cashier_number: cashier_number.toString(),
     },
-    credentials: 'include', // si usás auth por cookie
   });
-
-  if (!response.ok) {
-    throw new Error(`Error: ${response.status}`);
-  }
-  const {data} =  await response.json();
-  return data.users[0] ?? null
+  return users[0] ?? null;
 };
 
 export const useGetUserByNumber = (cashier_number?: number) => {

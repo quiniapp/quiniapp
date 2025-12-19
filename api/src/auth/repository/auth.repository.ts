@@ -1,23 +1,22 @@
 import { IAuthLogin } from '@helper/types/auth.type';
-import { ERROR_MESSAGE } from '@helper/types/errors.type';
+import { UnauthorizedError } from '@helper/errors';
 import { supabase } from '@database/db.connection';
 
 export class AuthRepository {
   async login(props: IAuthLogin) {
-    try {
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', props.username)
-        .is('deleted_at', null)
-        .single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', props.username)
+      .is('deleted_at', null)
+      .single();
 
-      if (!data) throw new Error(ERROR_MESSAGE.USER_NOT_FOUND);
-
-      return data;
-    } catch (error) {
-      console.error(error);
-      throw new Error(ERROR_MESSAGE.INTERNAL_SERVER_ERROR);
+    // Si hay error de Supabase o no hay datos, significa que el usuario no existe
+    // Por seguridad, usar el mismo mensaje que cuando la contraseña es incorrecta
+    if (error || !data) {
+      throw new UnauthorizedError('Usuario o contraseña incorrectos');
     }
+
+    return data;
   }
 }
