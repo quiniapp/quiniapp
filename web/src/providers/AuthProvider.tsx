@@ -10,6 +10,7 @@ import {
   VISIBILITY_MIN_GAP_MS,
   USER_ACTIVITY_EVENTS,
 } from '@helper/config/session.config';
+import { apiClient, ApiError } from '@/lib/apiClient';
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const queryClient = useQueryClient();
@@ -41,23 +42,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     lastValidateRef.current = now;
 
     try {
-      const res = await fetch(BACKEND_ROUTES.auth.validate, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (res.status === 401) {
+      const user = await apiClient.get<IUserEntityFront>(BACKEND_ROUTES.auth.validate);
+      if (!user) throw new Error('Respuesta inválida del servidor');
+      setSession(user);
+    } catch (err) {
+      // Si es un error 401, simplemente limpiar la sesión
+      if (err instanceof ApiError && err.statusCode === 401) {
         setSession(null);
-        return;
+      } else {
+        setSession(null);
       }
-
-      if (!res.ok) throw new Error('No autenticado');
-
-      const { data } = await res.json();
-      if (!data?.user) throw new Error('Respuesta inválida del servidor');
-      setSession(data.user);
-    } catch {
-      setSession(null);
     } finally {
       setLoading(false);
     }
@@ -67,26 +61,22 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     async (payload: LoginPayload) => {
       setLoading(true);
       try {
-        const res = await fetch(BACKEND_ROUTES.auth.login, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          // Extraer mensaje del error del backend (formato: { error: { message: "..." } })
-          throw new Error(err?.error?.message || err?.message || 'Error al iniciar sesión');
-        }
-
-        const { data } = await res.json();
-        if (!data?.user) throw new Error('Respuesta inválida del servidor');
+        const user = await apiClient.post<IUserEntityFront>(
+          BACKEND_ROUTES.auth.login,
+          payload
+        );
+        if (!user) throw new Error('Respuesta inválida del servidor');
 
         // seteo inmediato para actualizar UI
-        setSession(data.user);
+        setSession(user);
         // una sola validación posterior para asegurar cookies/estado del server
         await validate();
+      } catch (err) {
+        // Re-lanzar el error con el mensaje del servidor para que el componente lo capture
+        if (err instanceof ApiError) {
+          throw new Error(err.message);
+        }
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -97,9 +87,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      await fetch(BACKEND_ROUTES.auth.logout, { method: 'POST', credentials: 'include' });
+      await apiClient.post(BACKEND_ROUTES.auth.logout);
     } catch {
-      // no-op
+      // no-op - even if logout fails on server, clear local session
     } finally {
       // Clear all TanStack Query cache to prevent data leakage between users
       queryClient.clear();

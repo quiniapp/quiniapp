@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
+import { IPaginatedResponse } from '@helper/request/pagination.request';
+import { apiClient } from '@/lib/apiClient';
 
 interface UseTicketsParams {
   user_id?: string;
@@ -9,14 +11,14 @@ interface UseTicketsParams {
   winner?: boolean;
   paid?: boolean | null;
   not_paid?: boolean | null;
-  enabled?: boolean; // 👈 parámetro opcional para controlar el query
+  enabled?: boolean;
 }
 
 export const useTickets = ({
   user_id,
   date,
   winner,
-  enabled = true, // por default habilitado
+  enabled = true,
   paid,
   not_paid,
 }: UseTicketsParams) => {
@@ -24,22 +26,20 @@ export const useTickets = ({
 
   return useQuery<ITicketEntityFront[]>({
     queryKey: ['tickets', user_id ?? null, normalizedDate, winner, paid ?? null, not_paid ?? null],
-    enabled, // 👈 se puede deshabilitar desde afuera si querés
+    enabled,
     queryFn: async () => {
-      const params = new URLSearchParams({ date: normalizedDate });
-
-      if (user_id) params.append('cashier_id', user_id);
-      if (winner) params.append('winner', 'true');
-      if (paid) params.append('paid', 'true');
-      if (not_paid) params.append('not_paid', 'true');
-
-      const res = await fetch(`${BACKEND_ROUTES.ticket.base}?${params.toString()}`, {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Error fetching tickets');
-      const { data } = await res.json();
-      return data.ticket?.data;
+      const data = await apiClient.get<IPaginatedResponse<ITicketEntityFront>>(
+        BACKEND_ROUTES.ticket.base,
+        {
+          params: {
+            date: normalizedDate,
+            cashier_id: user_id || undefined,
+            winner: winner ? 'true' : undefined,
+            paid: paid ? 'true' : not_paid ? 'false' : undefined,
+          },
+        }
+      );
+      return data?.data ?? [];
     },
     refetchOnWindowFocus: true,
   });

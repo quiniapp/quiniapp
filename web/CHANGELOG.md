@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-19
+
+#### User Module - API Client Migration
+- **User Mutations**: Migrated to centralized apiClient
+  - Files:
+    - `web/src/hooks/mutations/users/useAddNewUser.ts`
+    - `web/src/hooks/mutations/users/useDeleteUser.ts`
+    - `web/src/hooks/mutations/users/useUpdateUser.ts`
+  - Replaced manual fetch calls with `apiClient.post()`, `apiClient.delete()`, `apiClient.put()`
+  - Automatic error handling with ApiError
+  - Cleaner code with better type safety
+  - Use case: Consistent HTTP client across all user operations
+
+- **User Queries**: Migrated to centralized apiClient
+  - Files:
+    - `web/src/hooks/fetchs/users/useUsers.ts`
+    - `web/src/hooks/fetchs/users/useUsersByNumber.ts`
+  - Replaced manual fetch calls with `apiClient.get()`
+  - Uses query params for filtering (cashier_number)
+  - Automatic data extraction from APIResponse wrapper
+  - Use case: Unified data fetching for user lists and queries
+
+#### Ticket Module - API Client Migration
+- **Ticket Mutations**: Migrated to centralized apiClient (4 hooks)
+  - Files:
+    - `web/src/hooks/mutations/tickets/useTicket.ts`
+    - `web/src/hooks/mutations/tickets/useDeleteTicket.ts`
+    - `web/src/hooks/mutations/tickets/usePayTicket.ts`
+    - `web/src/hooks/mutations/tickets/useEditTicket.ts`
+  - All CRUD operations use apiClient methods
+  - Consistent error handling
+  - Use case: Standardized ticket operations
+
+- **Ticket Queries**: Migrated to centralized apiClient (7 hooks)
+  - Files:
+    - `web/src/hooks/fetchs/tickets/useGetDeletedTickets.ts`
+    - `web/src/hooks/fetchs/tickets/useGetGroupedBetsByTicketId.ts`
+    - `web/src/hooks/fetchs/tickets/useGetTicketById.ts`
+    - `web/src/hooks/fetchs/tickets/useInfiniteTickets.ts`
+    - `web/src/hooks/fetchs/tickets/useTicketByNumber.ts`
+    - `web/src/hooks/fetchs/tickets/useTickets.ts`
+    - `web/src/hooks/fetchs/tickets/useWinnersGroupedByDate.ts`
+  - Supports pagination with query params
+  - Automatic data extraction
+  - Use case: Complete ticket data fetching layer
+
+#### Auth Provider - API Client Migration
+- **Auth Operations**: Migrated login, validate, and logout to apiClient
+  - File: `web/src/providers/AuthProvider.tsx`
+  - Replaced manual fetch with `apiClient.post()` and `apiClient.get()`
+  - Simplified error handling
+  - Better type safety with IUserEntityFront
+  - Use case: Centralized authentication flow
+
+### Fixed - 2025-12-19
+
+#### Ticket Creation Response Handling
+- **MakePlaysProvider**: Fixed undefined error after ticket creation
+  - File: `web/src/features/make-plays/provider/MakePlaysProvider.tsx:109-124`
+  - Changed from `res.data.ticket` to `res` (apiClient auto-extracts data)
+  - Changed from `res.data.ticket.ticket_number` to `res.ticket_number`
+  - Error: `Cannot read properties of undefined (reading 'ticket')`
+  - Use case: Ticket creation now works correctly with PDF generation
+
+#### TypeScript Configuration
+- **Module Resolution**: Fixed TypeScript compilation error
+  - File: `web/tsconfig.json:13`
+  - Changed `moduleResolution` from "node16" to "bundler"
+  - Fixed: "Option 'module' must be set to 'Node16' when option 'moduleResolution' is set to 'Node16'"
+  - Use case: TypeScript compilation works correctly
+
+- **Import Extensions**: Removed .ts extensions from imports
+  - Files:
+    - `web/src/hooks/fetchs/users/useUsers.ts`
+    - `web/src/hooks/fetchs/users/useUsersByNumber.ts`
+    - `web/src/hooks/mutations/users/useAddNewUser.ts`
+  - Fixed: "An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled"
+  - Use case: Follows TypeScript best practices
+
 ### Fixed - 2025-12-18
 
 #### HTML Language Attribute

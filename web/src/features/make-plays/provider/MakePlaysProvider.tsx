@@ -109,7 +109,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
         onSuccess: async (res) => {
           const lastTicket = {
             bets: [...bets].reverse(),
-            ticket: res.data.ticket,
+            ticket: res,
             cashier_number: user?.number,
           };
 
@@ -120,7 +120,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             try {
               if (isMobile) {
                 await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.data.ticket.ticket_number}`,
+                  text: `Ticket ${res.ticket_number}`,
                 });
               } else {
                 printPdfBlob(blob);

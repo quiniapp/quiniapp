@@ -1,18 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
+import { apiClient } from '@/lib/apiClient';
 
 const fetchTicketsByTicketId = async (
   ticket_id?: string | null
 ): Promise<ITicketEntityFront | undefined> => {
-  const res = await fetch(`${BACKEND_ROUTES.ticket.base}/${ticket_id}`, {
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Error fetching tickets');
-  const { data } = await res.json();
-
-  return data.ticket;
+  if (!ticket_id) return undefined;
+  return await apiClient.get<ITicketEntityFront>(`${BACKEND_ROUTES.ticket.base}/${ticket_id}`);
 };
 
 export const useGetGroupedBetsByTicketId = (ticket_id?: string | null) =>

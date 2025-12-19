@@ -4,35 +4,29 @@ import { IAuthLogin, IAuthLogout } from '@helper/types/auth.type';
 import { parseUser } from 'api/src/user/helper/parseUser';
 import { supabase } from 'api/database/db.connection';
 import { generateEmail } from 'api/helper/generateEmail';
+import { UnauthorizedError } from '@helper/errors';
+
 export class AuthController {
   private repository = new AuthRepository();
 
   login = async (
     props: IAuthLogin
   ): Promise<{ user: IUserEntityFront; organization_id: string }> => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: generateEmail(props.username),
-        password: props.password,
-      });
-      if (error) {
-        console.error(error);
-        throw new Error(error.message);
-      }
-      const userData: IUserEntityBack = await this.repository.login({ ...props });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: generateEmail(props.username),
+      password: props.password,
+    });
 
-      return {
-        user: parseUser(userData),
-        organization_id: userData.organization_id,
-      };
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('Login error:', error.message);
-
-        throw error; // o volver a lanzar para que la capa superior lo maneje
-      }
-      throw new Error('Unknown error during login');
+    if (error) {
+      throw new UnauthorizedError('Usuario o contraseña incorrectos');
     }
+
+    const userData: IUserEntityBack = await this.repository.login({ ...props });
+
+    return {
+      user: parseUser(userData),
+      organization_id: userData.organization_id,
+    };
   };
 
   logout = async (props: IAuthLogout) => {
@@ -40,9 +34,9 @@ export class AuthController {
     const { error } = await supabase.auth.admin.signOut(props.token);
 
     if (error) {
-      console.error(error.message);
-      throw new Error(error.message);
+      throw new UnauthorizedError('Error al cerrar sesión');
     }
+
     return true;
   };
 

@@ -1,21 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type.ts';
+import { BACKEND_ROUTES } from '../../../../routes/routes';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { apiClient } from '@/lib/apiClient';
 
-const fetchUsers = async ( ) => {
-  const response = await fetch(BACKEND_ROUTES.user.base, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include', // si usás auth por cookie
-  });
-
-  if (!response.ok) {
-    throw new Error(`Error: ${response.status}`);
-  }
-  const {data} = await response.json();
-  return data.users;
+const fetchUsers = async () => {
+  return await apiClient.get<IUserEntityFront[]>(BACKEND_ROUTES.user.base);
 };
 
 export const useUsers = (role: USER_TYPE | null) => {

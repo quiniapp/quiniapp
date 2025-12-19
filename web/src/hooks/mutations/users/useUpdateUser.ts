@@ -1,22 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IUpdateUserEntity } from '@helper/request/user.request';
+import { IUserEntityFront } from '@helper/types/user.type';
+import { apiClient } from '@/lib/apiClient';
 
 const updateUser = async (payload: IUpdateUserEntity) => {
-
   const { user_id, ...rest } = payload;
-  const response = await fetch(BACKEND_ROUTES.user.id(user_id), {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include', // si usás auth por cookie
-    body: JSON.stringify({ updateUser: rest }),
+  return await apiClient.put<IUserEntityFront>(BACKEND_ROUTES.user.id(user_id), {
+    updateUser: rest,
   });
-
-  if (!response.ok) {
-    throw new Error(`Error: ${response.status}`);
-  }
 };
 
 export const useUpdateUser = () => {

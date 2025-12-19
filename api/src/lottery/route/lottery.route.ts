@@ -7,16 +7,11 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
-import { invalidateScheduleLotteries } from 'src/schedule-lottery/route/schedule-lottery.route';
-import { invalidateSchedules } from 'src/shcedule/route/schedule.route';
-// ====== Cache Manager para Lotteries ======
-function keyFor(allFlag: boolean) {
-  return `lotteries:all=${allFlag ? 'true' : 'false'}`;
-}
+import { getLotteryCacheKey, invalidateLotteryRelated } from 'src/cache/cacheInvalidation';
 
-export function invalidateAllLotteries() {
-  globalCacheManager.invalidate(keyFor(true));
-  globalCacheManager.invalidate(keyFor(false));
+// ====== Cache Manager para Lotteries ======
+function keyFor(organization_id: string, allFlag: boolean) {
+  return getLotteryCacheKey(organization_id, allFlag);
 }
 
 export class LotteryRouter {
@@ -59,9 +54,7 @@ export class LotteryRouter {
       const lottery = await this.controller.create({ name }, req.organization_id!);
 
       // invalidación (ambas variantes all=true/false)
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateLotteryRelated(req.organization_id!);
 
       const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
@@ -96,7 +89,7 @@ export class LotteryRouter {
     }
 
     try {
-      const key = keyFor(allFlag);
+      const key = keyFor(req.organization_id!, allFlag);
       const snap = await globalCacheManager.getOrLoad(
         key,
         () => this.controller.getAll(allFlag, req.organization_id),
@@ -165,9 +158,7 @@ export class LotteryRouter {
     try {
       const lottery = await this.controller.update(lottery_id, updateLottery, req.organization_id!);
 
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateLotteryRelated(req.organization_id!);
 
       const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
@@ -204,9 +195,7 @@ export class LotteryRouter {
     try {
       await this.controller.delete({ lottery_id }, req.organization_id!);
 
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateLotteryRelated(req.organization_id!);
 
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {

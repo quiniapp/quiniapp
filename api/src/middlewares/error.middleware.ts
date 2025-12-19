@@ -8,8 +8,15 @@ import { IS_PRODUCTION } from '../../envs';
 /**
  * Centralized error handling middleware
  * DEBE registrarse DESPUÉS de todas las rutas
+ * IMPORTANTE: Necesita 4 parámetros (err, req, res, next) para que Express lo reconozca como error handler
  */
-export const errorHandler = (err: Error, req: Request, res: Response): void => {
+// eslint-disable-next-line no-unused-vars
+export const errorHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  _next: NextFunction
+): void => {
   // Log completo del error para debugging
   logger.error('Error caught by middleware:', {
     name: err.name,
@@ -40,7 +47,7 @@ export const errorHandler = (err: Error, req: Request, res: Response): void => {
 
   // Manejar errores operacionales (AppError)
   if (err instanceof AppError) {
-    const errorResponse: any = {
+    const errorResponse: Record<string, unknown> = {
       code: err.errorCode,
       message: err.message,
     };
@@ -53,9 +60,10 @@ export const errorHandler = (err: Error, req: Request, res: Response): void => {
   }
 
   // Manejar errores de Supabase/PostgreSQL
-  if (err.name === 'PostgrestError' || (err as any).code?.startsWith('PGRST')) {
+  const errWithCode = err as unknown as { code?: string };
+  if (err.name === 'PostgrestError' || errWithCode.code?.startsWith('PGRST')) {
     logger.error('Database error:', err);
-    const errorResponse: any = {
+    const errorResponse: Record<string, unknown> = {
       code: 'DATABASE_ERROR',
       message: IS_PRODUCTION ? 'Error en la base de datos' : err.message,
     };
@@ -69,7 +77,7 @@ export const errorHandler = (err: Error, req: Request, res: Response): void => {
 
   // Error inesperado (programming error)
   logger.error('Unexpected error:', err);
-  const errorResponse: any = {
+  const errorResponse: Record<string, unknown> = {
     code: 'INTERNAL_SERVER_ERROR',
     message: IS_PRODUCTION ? 'Ocurrió un error inesperado' : err.message,
   };
