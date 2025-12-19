@@ -10,11 +10,11 @@ import { IS_PRODUCTION } from '../../envs';
  * DEBE registrarse DESPUÉS de todas las rutas
  * IMPORTANTE: Necesita 4 parámetros (err, req, res, next) para que Express lo reconozca como error handler
  */
-// eslint-disable-next-line no-unused-vars
 export const errorHandler = (
   err: Error,
   req: Request,
   res: Response,
+  // eslint-disable-next-line no-unused-vars
   _next: NextFunction
 ): void => {
   // Log completo del error para debugging
@@ -47,14 +47,13 @@ export const errorHandler = (
 
   // Manejar errores operacionales (AppError)
   if (err instanceof AppError) {
-    const errorResponse: Record<string, unknown> = {
-      code: err.errorCode,
-      message: err.message,
+    const response: APIResponse<null> = {
+      error: {
+        code: err.errorCode,
+        message: err.message,
+        ...(err.details !== undefined && { details: err.details }),
+      },
     };
-    if (err.details !== undefined) {
-      errorResponse.details = err.details;
-    }
-    const response: APIResponse<null> = { error: errorResponse };
     res.status(err.statusCode).json(response);
     return;
   }
@@ -63,28 +62,26 @@ export const errorHandler = (
   const errWithCode = err as unknown as { code?: string };
   if (err.name === 'PostgrestError' || errWithCode.code?.startsWith('PGRST')) {
     logger.error('Database error:', err);
-    const errorResponse: Record<string, unknown> = {
-      code: 'DATABASE_ERROR',
-      message: IS_PRODUCTION ? 'Error en la base de datos' : err.message,
+    const response: APIResponse<null> = {
+      error: {
+        code: 'DATABASE_ERROR',
+        message: IS_PRODUCTION ? 'Error en la base de datos' : err.message,
+        ...(!IS_PRODUCTION && { details: err }),
+      },
     };
-    if (!IS_PRODUCTION) {
-      errorResponse.details = err;
-    }
-    const response: APIResponse<null> = { error: errorResponse };
     res.status(500).json(response);
     return;
   }
 
   // Error inesperado (programming error)
   logger.error('Unexpected error:', err);
-  const errorResponse: Record<string, unknown> = {
-    code: 'INTERNAL_SERVER_ERROR',
-    message: IS_PRODUCTION ? 'Ocurrió un error inesperado' : err.message,
+  const response: APIResponse<null> = {
+    error: {
+      code: 'INTERNAL_SERVER_ERROR',
+      message: IS_PRODUCTION ? 'Ocurrió un error inesperado' : err.message,
+      ...(!IS_PRODUCTION && { details: { stack: err.stack } }),
+    },
   };
-  if (!IS_PRODUCTION) {
-    errorResponse.details = { stack: err.stack };
-  }
-  const response: APIResponse<null> = { error: errorResponse };
   res.status(500).json(response);
 };
 
