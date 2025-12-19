@@ -270,7 +270,7 @@ const OrganizationsContent = () => {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password">Contraseña</Label>
+                    <Label htmlFor="password">Contraseña (min 6 caracteres)</Label>
                     <Controller
                       name="superAdmin.password"
                       control={control}

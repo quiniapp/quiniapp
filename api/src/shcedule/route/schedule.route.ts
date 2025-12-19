@@ -6,15 +6,11 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
-import { invalidateScheduleLotteries } from 'src/schedule-lottery/route/schedule-lottery.route';
-import { invalidateAllLotteries } from 'src/lottery/route/lottery.route';
+import { getScheduleCacheKey, invalidateScheduleRelated } from 'src/cache/cacheInvalidation';
 
 // ====== Cache Manager para Schedules ======
-const CACHE_KEY = 'schedules:all';
-
-export function invalidateSchedules() {
-  globalCacheManager.invalidate(CACHE_KEY);
-  globalCacheManager.invalidate(`${CACHE_KEY}:all=true`);
+function getCacheKey(organization_id: string, all: boolean) {
+  return getScheduleCacheKey(organization_id, all);
 }
 
 export class ScheduleRouter {
@@ -66,9 +62,7 @@ export class ScheduleRouter {
 
     try {
       const schedule = await this.controller.create(newSchedule, req.organization_id!);
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateScheduleRelated(req.organization_id!);
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
     } catch (error) {
@@ -101,7 +95,7 @@ export class ScheduleRouter {
     }
 
     try {
-      const key = allFlag ? `${CACHE_KEY}:all=true` : CACHE_KEY;
+      const key = getCacheKey(req.organization_id!, allFlag);
       const snap = await globalCacheManager.getOrLoad(
         key,
         () => this.controller.getAll(req.organization_id!, allFlag),
@@ -166,9 +160,7 @@ export class ScheduleRouter {
         updateSchedule,
         req.organization_id!
       );
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateScheduleRelated(req.organization_id!);
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
     } catch (error) {
@@ -202,9 +194,7 @@ export class ScheduleRouter {
 
     try {
       await this.controller.delete({ schedule_id }, req.organization_id!);
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateScheduleRelated(req.organization_id!);
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {
       console.error(error);

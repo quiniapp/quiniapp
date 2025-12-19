@@ -5,19 +5,20 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
 import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 import { globalCacheManager } from 'src/cache/CacheManager';
-import { invalidateAllLotteries } from 'src/lottery/route/lottery.route';
-import { invalidateSchedules } from 'src/shcedule/route/schedule.route';
+import {
+  getScheduleLotteryCacheKey,
+  invalidateScheduleLotteryRelated,
+} from 'src/cache/cacheInvalidation';
 
 export type ScheduleLotteryPayload = {
   scheduleLotteries: IScheduleLotteryEntityFront;
 };
 
 // ====== Cache Manager para Schedule Lotteries ======
-const CACHE_KEY = 'schedule-lotteries:all';
 const TTL_MS = 24 * 60 * 60 * 1000; // 1 dia
 
-export function invalidateScheduleLotteries() {
-  globalCacheManager.invalidate(CACHE_KEY);
+function getCacheKey(organization_id: string) {
+  return getScheduleLotteryCacheKey(organization_id);
 }
 
 export class ScheduleLotteryRouter {
@@ -93,9 +94,7 @@ export class ScheduleLotteryRouter {
       await this.controller.bulkActiveLotteries(lotteries, req.organization_id!);
 
       // ====== invalidación de cache ======
-      invalidateScheduleLotteries();
-      invalidateAllLotteries();
-      invalidateSchedules();
+      invalidateScheduleLotteryRelated(req.organization_id!);
       const response: APIResponse<IScheduleLotteryEntityFront> = {
         data: { scheduleLotteries: data! }, // data!: IScheduleLotteryEntityFront
       };
@@ -122,7 +121,7 @@ export class ScheduleLotteryRouter {
   private getScheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     try {
       const snap = await globalCacheManager.getOrLoad(
-        CACHE_KEY,
+        getCacheKey(req.organization_id!),
         () => this.controller.getAllScheduleLotteries(req.organization_id!),
         { ttl: TTL_MS, etagStrategy: 'hash' }
       );
