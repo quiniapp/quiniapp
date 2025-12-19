@@ -9,18 +9,10 @@ import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/ui/button.tsx';
 //import { Checkbox } from '@/components/ui/checkbox.tsx';
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select.tsx';
-
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { LotteryCheckboxList } from '@/features/upcoming-lotteries/lottery-checkbox-list';
 import { ScheduleRadioList } from '@/features/upcoming-lotteries/schedules-list.tsx';
-import { dayParseToString, dayDictionary } from '@helper/functions/dayDictionary';
+import { DayRadioList } from '@/features/upcoming-lotteries/day-radio-list.tsx';
 import { useSaveScheduleLottery } from '@/hooks/mutations/schedule-lottery/useSaveScheduleLottery';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import { DayKey } from '@helper/types/schedule-lottery.type';
@@ -79,35 +71,15 @@ const UpcomingLotteriesContent = () => {
           <div className="rounded-xl p-4 space-y-4">
             <div className="bg-dark-light rounded-xl space-y-6">
               <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <Flex className={'gap-2 items-center'}>
-                      <Calendar className={'text-primary'} size={'16px'} />
-                      <label className="text-md text-gray-200"> Día</label>
-                    </Flex>
-                    <Flex className={'flex-1 items-center gap-4'}>
-                      <Text size="base">Selecionar día</Text>
-                      <Flex className={'w-[200px]'}>
-                        <Select
-                          value={selectedDay}
-                          onValueChange={(value: DayKey) => {
-                            handleDay(value);
-                          }}
-                        >
-                          <SelectTrigger className="w-full bg-[var(--bg-card)] border-dark-lighter">
-                            <SelectValue placeholder="Seleccionar día" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {dayParseToString.map((dia) => (
-                              <SelectItem key={dia.toLowerCase()} value={dia}>
-                                {dayDictionary[dia as keyof typeof dayDictionary]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Flex>
-                    </Flex>
-                  </div>
+                <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
+                  <HeaderTitleSection
+                    title={'Día'}
+                    icon={<Calendar size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
+                    size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
+                    className={'!mb-[36px]'}
+                  />
+
+                  <DayRadioList selectedDay={selectedDay} handleDay={handleDay} />
                 </div>
 
                 <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
