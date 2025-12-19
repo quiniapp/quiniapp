@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2025-12-19
 
+#### Upcoming Lotteries - UI Improvement
+- **Day Selector Component**: Converted day selector from dropdown to radio buttons
+  - Files:
+    - `web/src/features/upcoming-lotteries/day-radio-list.tsx` (new)
+    - `web/src/features/upcoming-lotteries/index.tsx`
+  - Created new `DayRadioList` component following same pattern as `ScheduleRadioList`
+  - Replaced Select dropdown with radio buttons for better UX consistency
+  - Removed unused Select component imports
+  - Updated layout to use card style with HeaderTitleSection
+  - Use case: Consistent UI pattern for day and schedule selection
+
 #### User Module - API Client Migration
 - **User Mutations**: Migrated to centralized apiClient
   - Files:
