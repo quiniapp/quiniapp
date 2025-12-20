@@ -198,21 +198,6 @@ const UpcomingLotteriesContent = () => {
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full '}>
       <div className="w-full sticky top-0">
         <HeaderSection title={'Quinielas a jugarse'} />
-        {hasChanges && (
-          <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-              <Text className="text-sm text-yellow-500 font-medium">
-                Tienes cambios sin guardar
-              </Text>
-              <Badge variant="outline" className="ml-auto border-yellow-500/50 text-yellow-500">
-                {Object.keys(detectChanges(savedData, serverData)).length}{' '}
-                {Object.keys(detectChanges(savedData, serverData)).length === 1 ? 'día' : 'días'}{' '}
-                modificado{Object.keys(detectChanges(savedData, serverData)).length === 1 ? '' : 's'}
-              </Badge>
-            </div>
-          </div>
-        )}
       </div>
 
       <Flex>
@@ -226,7 +211,7 @@ const UpcomingLotteriesContent = () => {
                     icon={<Calendar size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
                     size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
-                  />
+                    />
 
                   <DayRadioList selectedDay={selectedDay} handleDay={handleDay} />
                 </div>
@@ -237,12 +222,12 @@ const UpcomingLotteriesContent = () => {
                     icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
                     size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
-                  />
+                    />
 
                   <ScheduleRadioList
                     selectedSchedule={selectedSchedule}
                     handleSchedule={handleSchedule}
-                  />
+                    />
                 </div>
 
                 <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
@@ -251,18 +236,18 @@ const UpcomingLotteriesContent = () => {
                     icon={<Ticket size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
                     size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
-                  />
+                    />
 
                   <LotteryCheckboxList
                     selectedDay={selectedDay}
                     selectedSchedule={selectedSchedule}
                     lotteries={
                       selectedDay && selectedSchedule
-                        ? (savedData?.[selectedDay]?.[selectedSchedule] ?? [])
-                        : []
+                      ? (savedData?.[selectedDay]?.[selectedSchedule] ?? [])
+                      : []
                     }
                     onChange={handleLotteries}
-                  />
+                    />
                 </div>
                 <Flex>
                   <Button
@@ -271,11 +256,26 @@ const UpcomingLotteriesContent = () => {
                     className=" w-[200px]   hover:bg-dark text-white"
                     onClick={handleSave}
                     disabled={isPendingSave}
-                  >
+                    >
                     <SaveIcon />
                     {isPendingSave ? 'Guardando...' : 'Guardar'}
                   </Button>
                 </Flex>
+                    {hasChanges && (
+                      <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-500" />
+                          <Text className="text-sm text-yellow-500 font-medium">
+                            Tienes cambios sin guardar
+                          </Text>
+                          <Badge variant="outline" className="ml-auto border-yellow-500/50 text-yellow-500">
+                            {Object.keys(detectChanges(savedData, serverData)).length}{' '}
+                            {Object.keys(detectChanges(savedData, serverData)).length === 1 ? 'día' : 'días'}{' '}
+                            modificado{Object.keys(detectChanges(savedData, serverData)).length === 1 ? '' : 's'}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
               </div>
             </div>
           </div>
