@@ -90,6 +90,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2025-12-20
 
+#### Cookie Logout Fix
+- **Environment-Based Cookie Security**: Fixed logout not clearing cookies correctly in development
+  - File: `api/src/auth/route/auth.route.ts`
+  - Added `IS_PRODUCTION` constant based on `process.env.IS_LOCAL`
+  - Development (HTTP): `secure: false` and `sameSite: 'lax'`
+  - Production (HTTPS): `secure: true` and `sameSite: 'none'`
+  - Fixed both login and logout handlers to use matching cookie parameters
+  - Issue: Cookies with `secure: true` don't work on HTTP (localhost), preventing proper logout
+  - Solution: Cookie parameters now match exactly between set and clear operations
+  - Use case: Logout now correctly clears session cookies in all environments
+
 #### Schedule Lottery Data Consistency
 - **Transaction Handling**: All delete+insert operations now wrapped in database transaction
   - File: `api/supabase/migrations/20251220085729_add_save_schedule_lottery_rpc.sql`

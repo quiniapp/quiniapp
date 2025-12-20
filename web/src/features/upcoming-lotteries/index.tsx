@@ -93,7 +93,8 @@ const UpcomingLotteriesContent = () => {
       setServerData(freshData);
     },
   });
-  const { data: scheduleLottery, isPending } = useScheduleLottery();
+  
+  const { data: scheduleLottery } = useScheduleLottery();
 
   const [selectedDay, setSelectedDay] = useState<DayKey | ''>('');
   const [selectedSchedule, setSelectedSchedule] = useState<string>('');
@@ -133,24 +134,9 @@ const UpcomingLotteriesContent = () => {
   };
 
   const handleSave = () => {
-    // Detect changes and decide whether to send full or partial update
-    const changes = detectChanges(savedData, serverData);
-    const changedDaysCount = Object.keys(changes).length;
-    const totalDaysCount = Math.max(
-      Object.keys(savedData).length,
-      Object.keys(serverData).length
-    );
-
-    // If more than 50% of days changed, send full update
-    // Otherwise send partial update (more efficient)
-    const shouldSendFull = changedDaysCount > totalDaysCount * 0.5;
-
-    if (shouldSendFull || changedDaysCount === 0) {
-      saveScheduleLottery(savedData);
-    } else {
-      // Send only changed days/schedules
-      saveScheduleLottery(changes);
-    }
+    // Always send full configuration
+    // The backend RPC expects complete configuration and deletes/inserts atomically
+    saveScheduleLottery(savedData);
   };
 
   const handleSchedule = useCallback(

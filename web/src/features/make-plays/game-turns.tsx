@@ -13,6 +13,7 @@ import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleL
 import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
 import dayjs from 'dayjs';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 
 const GameTurns = () => {
   const {
@@ -49,20 +50,38 @@ const GameTurns = () => {
   };
   const { now, isLessThanTenMinutes } = useClock();
   const { role } = useAuth();
-  const { data: schedulesData } = useSchedules();
+
+  const todayKey: DayKey = useMemo(() => dayParseToString[today], [today]);
+
+  // Fetch schedules y lotteries filtrados por día desde el backend
+  const { data: schedulesData = [] } = useSchedules({ day: todayKey });
+  const { data: allLotteries = [] } = useLotteries({ day: todayKey });
   const { data: scheduleLotteryPerDate } = useScheduleLottery();
 
-  const schedulesAvailables = useMemo(() => {
-    if (!schedulesData?.length) return [];
+  // Los schedules ya vienen filtrados del backend (solo los que tienen loterías hoy)
+  const schedulesAvailables = schedulesData;
 
-    const todayKey: DayKey = dayParseToString[today];
-    const daySchedules = scheduleLotteryPerDate?.[todayKey]; // Record<string, string[]> | undefined
+  // Filtrar loterías basadas en los turnos seleccionados
+  const availableLotteries = useMemo(() => {
+    // Si no hay turnos seleccionados, no mostrar loterías
+    if (checkedSchedules.size === 0) return [];
+
+    const daySchedules = scheduleLotteryPerDate?.[todayKey];
     if (!daySchedules) return [];
 
-    const ids = new Set(Object.keys(daySchedules)); // schedule_id que tienen loterías hoy
+    // Obtener IDs de loterías de todos los turnos seleccionados
+    const lotteryIds = new Set<string>();
+    checkedSchedules.forEach((schedule) => {
+      const scheduleLotteries = daySchedules[schedule.schedule_id];
+      if (scheduleLotteries) {
+        scheduleLotteries.forEach((id) => lotteryIds.add(id));
+      }
+    });
 
-    return schedulesData.filter((sch) => ids.has(sch.schedule_id));
-  }, [schedulesData, scheduleLotteryPerDate, today]);
+    // Filtrar loterías completas que están en los turnos seleccionados
+    // allLotteries ya viene filtrado por día desde el backend
+    return allLotteries.filter((lottery) => lotteryIds.has(lottery.lottery_id));
+  }, [checkedSchedules, scheduleLotteryPerDate, todayKey, allLotteries]);
 
   useEffect(() => {
     const status = schedulesData?.some((sch: IScheduleEntityFront) =>
@@ -70,6 +89,26 @@ const GameTurns = () => {
     );
     setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
   }, [now, schedulesData]);
+
+  // Limpiar loterías seleccionadas que ya no están disponibles
+  useEffect(() => {
+    const availableIds = new Set(availableLotteries.map((lot) => lot.lottery_id));
+
+    // Remover loterías que ya no están disponibles
+    setLotteries((prev) => {
+      const newMap = new Map(prev);
+      let changed = false;
+
+      prev.forEach((lottery, id) => {
+        if (!availableIds.has(id)) {
+          newMap.delete(id);
+          changed = true;
+        }
+      });
+
+      return changed ? newMap : prev;
+    });
+  }, [availableLotteries, setLotteries]);
 
   return (
     <Flex className="grid grid-cols-2 gap-2 lg:gap-1.5 sm:flex sm:flex-col 1440:space-y-5 sm:flex-1 sm:justify-between">
@@ -79,7 +118,11 @@ const GameTurns = () => {
         checkedSchedules={checkedSchedules}
       />
 
-      <LotteriesCheckboxList checkedLotteries={checkedLotteries} setLotteries={handleLotteries} />
+      <LotteriesCheckboxList
+        lotteries={availableLotteries}
+        checkedLotteries={checkedLotteries}
+        setLotteries={handleLotteries}
+      />
     </Flex>
   );
 };

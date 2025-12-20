@@ -50,6 +50,8 @@ const FillOutATicket = () => {
 
   const isEnabled = isEnabledCreateBet && isEnabledCreateBetByAdmin;
   const today = dayjs().day();
+  const todayKey: DayKey = dayParseToString[today];
+
   const [bet, setBet] = useState<IBetForm>({
     number: '',
     amount: undefined,
@@ -58,8 +60,8 @@ const FillOutATicket = () => {
     position: '',
   });
   const { data: scheduleLotteryPerDate } = useScheduleLottery();
-  const { data: scheduleOrder } = useSchedules();
-  const { data: lotteryOrder } = useLotteries();
+  const { data: scheduleOrder } = useSchedules({ day: todayKey });
+  const { data: lotteryOrder } = useLotteries({ day: todayKey });
   // 1. Refs de cada input
   const numberRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);

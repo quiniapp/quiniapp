@@ -18,7 +18,7 @@ interface LotteryCheckboxListProps {
 }
 
 export function LotteryCheckboxList({ onChange, lotteries = [] }: LotteryCheckboxListProps) {
-  const { data, isLoading } = useLotteries(true);
+  const { data, isLoading } = useLotteries({all:true});
   if (isLoading) return <SkeletonList row={5} />;
 
   return (
