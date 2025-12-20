@@ -73,16 +73,4 @@ export class UserController {
     const response = await this.repository.delete(props.user_id, organization_id);
     return parseUser(response);
   };
-  // updatePassword = async (user_id: string) => {
-  //   try {
-  //     const user = await this.repository.getById(user_id);
-  //     const response = await supabase.auth.resetPasswordForEmail(generateEmail(user.username), {
-  //       redirectTo: 'http://localhost:5173/reset-password',
-  //     });
-  //     console.log(response);
-  //   } catch (error) {
-  //     console.error('Delete error:', error);
-  //     throw error instanceof Error ? error : new Error('Unknown error');
-  //   }
-  // };
 }

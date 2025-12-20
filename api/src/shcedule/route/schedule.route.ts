@@ -7,6 +7,7 @@ import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
 import { getScheduleCacheKey, invalidateScheduleRelated } from 'src/cache/cacheInvalidation';
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
 // ====== Cache Manager para Schedules ======
 function getCacheKey(organization_id: string, all: boolean) {
@@ -85,6 +86,8 @@ export class ScheduleRouter {
   private getAllScheduleHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const allFlag = !!req.query.all;
+    const dayParam = req.query.day as string | undefined;
+    const withLotteries = req.query.with_lotteries === 'true';
 
     if (!user?.user) {
       const response: APIResponse<undefined> = {
@@ -94,7 +97,44 @@ export class ScheduleRouter {
       return;
     }
 
+    // Validate day parameter if provided
+    let day: SCHEDULE_DAY | undefined;
+    if (dayParam) {
+      if (!(dayParam in SCHEDULE_DAY)) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: `Invalid day parameter: ${dayParam}. Must be one of: SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY`,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+      day = SCHEDULE_DAY[dayParam as keyof typeof SCHEDULE_DAY];
+    }
+
     try {
+      // If day filter is provided, fetch filtered schedules
+      // Note: day-filtered queries are not cached as they're typically used in high-frequency contexts
+      if (day !== undefined) {
+        const schedules = await this.controller.getAllByDay(
+          day,
+          allFlag,
+          req.organization_id!,
+          withLotteries
+        );
+
+        const response: APIResponse<IScheduleEntityFront[]> = {
+          data: { schedule: schedules },
+        };
+
+        // Cache-Control for day-filtered queries
+        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        res.status(200).json(response);
+        return;
+      }
+
+      // Original caching logic for non-filtered queries
       const key = getCacheKey(req.organization_id!, allFlag);
       const snap = await globalCacheManager.getOrLoad(
         key,

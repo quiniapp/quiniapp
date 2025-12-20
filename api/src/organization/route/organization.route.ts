@@ -183,10 +183,8 @@ export class OrganizationRouter {
       return;
     }
 
-    console.log({ id, user });
     try {
       await this.controller.delete(id);
-      console.log('route od');
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {
       console.error(error);

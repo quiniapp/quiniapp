@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-20
+
+#### Schedule Lottery Atomic Transactions
+- **PostgreSQL RPC Function**: Created RPC function for atomic schedule lottery saves
+  - File: `api/supabase/migrations/20251220085729_add_save_schedule_lottery_rpc.sql`
+  - Function `save_schedule_lottery(p_schedule_lottery jsonb, p_organization_id uuid)`
+  - Ensures all delete+insert operations happen in a single database transaction
+  - Prevents partial updates if something fails during save
+  - Handles day key to day number conversion (MONDAY → 1, etc.)
+  - Validates day keys and raises exception for invalid values
+  - Use case: Data consistency for schedule lottery configuration
+
+- **Performance Indexes**: Added indexes for schedule_lotteries table
+  - File: `api/supabase/migrations/20251220085730_add_schedule_lottery_indexes.sql`
+  - `idx_schedule_lotteries_org_day_schedule`: Optimizes delete operations in RPC function
+  - `idx_schedule_lotteries_org_day`: Optimizes queries filtering by organization and day
+  - `idx_schedule_lotteries_org_schedule`: Optimizes queries filtering by organization and schedule
+  - Use case: Faster query performance for schedule lottery operations
+
+- **Day Filtering for Lotteries**: Added `?day=MONDAY` query parameter to GET /api/lotteries
+  - Files:
+    - `api/src/lottery/route/lottery.route.ts`
+    - `api/src/lottery/controller/lottery.controller.ts`
+    - `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+    - `api/src/schedule-lottery/repository/schedule-lottery.repositroy.ts`
+  - Returns only lotteries configured for specified day based on schedule_lotteries table
+  - Can combine with `active_only=true` to get active lotteries for a day
+  - Validates day parameter against SCHEDULE_DAY enum
+  - Returns 400 for invalid day values with clear error message
+  - Cache-Control: `public, max-age=60, must-revalidate` for day-filtered queries
+  - Use case: Optimizes make plays page to fetch only relevant lotteries
+
+- **Day Filtering for Schedules**: Added `?day=MONDAY&with_lotteries=true` to GET /api/schedules
+  - Files:
+    - `api/src/shcedule/route/schedule.route.ts`
+    - `api/src/shcedule/controller/schedule.controller.ts`
+  - Returns only schedules that have lotteries configured for specified day
+  - When `with_lotteries=true`, includes lottery_ids array in response for each schedule
+  - Validates day parameter against SCHEDULE_DAY enum
+  - Returns 400 for invalid day values
+  - Cache-Control: `public, max-age=60, must-revalidate` for day-filtered queries
+  - Use case: Single request in make plays to get schedules with their lotteries for a specific day
+
+- **Schedule Lottery Helper Methods**: Added utility methods to ScheduleLotteryController
+  - File: `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+  - `getLotteryIdsForDay(organization_id, day)`: Returns unique lottery IDs for a day
+  - `getScheduleIdsForDay(organization_id, day)`: Returns unique schedule IDs for a day
+  - `getLotteryIdsByScheduleAndDay(organization_id, schedule_id, day)`: Returns lottery IDs for specific schedule and day
+  - Used by lotteries and schedules endpoints for day filtering
+  - Use case: Reusable logic for day-based filtering across multiple endpoints
+
+### Changed - 2025-12-20
+
+#### Schedule Lottery Backend Robustness
+- **Simplified Architecture**: Moved business logic from route handler to controller
+  - Files:
+    - `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+    - `api/src/schedule-lottery/route/schedule-lottery.route.ts`
+  - Added `saveScheduleLottery()` method to controller that orchestrates the save
+  - Route handler now calls controller method instead of manual loops
+  - Better separation of concerns and easier to test
+  - Code reduction: ~60% fewer lines in route handler (80 → 30 lines)
+  - Use case: Cleaner architecture following controller pattern
+
+- **RPC-Based Save**: Repository now uses PostgreSQL RPC function for atomic saves
+  - File: `api/src/schedule-lottery/repository/schedule-lottery.repositroy.ts`
+  - Added `saveScheduleLottery()` method that calls `save_schedule_lottery` RPC function
+  - Keeps existing methods for backwards compatibility
+  - Proper error handling for RPC calls
+  - Use case: Atomic transactions prevent data corruption
+
+### Added - 2025-12-20
+
+#### Database Integrity Improvements
+- **Organization Foreign Key**: Added foreign key constraint for organization_id in schedule_lotteries
+  - File: `api/supabase/migrations/20251220133625_add_schedule_lotteries_org_fk.sql`
+  - Ensures referential integrity with organizations table
+  - ON DELETE CASCADE: Automatically cleans up schedule_lotteries when organization is deleted
+  - Prevents orphaned records
+  - Use case: Maintains data consistency when organizations are removed
+
+### Fixed - 2025-12-20
+
+#### Schedule Lottery Data Consistency
+- **Transaction Handling**: All delete+insert operations now wrapped in database transaction
+  - File: `api/supabase/migrations/20251220085729_add_save_schedule_lottery_rpc.sql`
+  - RPC function ensures atomicity - either all changes succeed or none do
+  - Prevents partial updates if operation fails midway
+  - Use case: Data integrity for schedule lottery configuration
+
+- **Request Validation**: Added comprehensive validation layer for schedule lottery save requests
+  - File: `api/src/schedule-lottery/route/schedule-lottery.route.ts`
+  - Validates scheduleLottery is an object
+  - Validates day keys are valid SCHEDULE_DAY enum values (SUNDAY, MONDAY, etc.)
+  - Validates schedule_id and lottery_id are valid UUIDs using regex pattern
+  - Validates lotteries arrays are actually arrays
+  - Returns 400 with clear error messages for invalid data
+  - Use case: Prevents invalid data from reaching database
+
 ### Added - 2025-12-19
 
 #### Standardized Error Handling System

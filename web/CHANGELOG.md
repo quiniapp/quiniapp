@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-20
+
+#### Schedule Lottery Save Bug
+- **State Synchronization**: Fixed critical bug where incremental saves (Modo 1) only persisted first save to database
+  - Root cause: useEffect dependency on `isPending` instead of query data
+  - Solution: Mutation now uses server response via setQueryData, syncs savedData in onSuccess
+  - Files:
+    - `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`
+    - `web/src/features/upcoming-lotteries/index.tsx`
+  - Changed mutation return type from `void` to `IScheduleLotteryEntityFront`
+  - Parse and return server response data
+  - Use `queryClient.setQueryData()` instead of just invalidating queries
+  - Add onSuccess callback to mutation that syncs `setSavedData(freshData)`
+  - Fix useEffect dependency from `[isPending]` to `[scheduleLottery]`
+  - Use case: Ensures multiple incremental saves persist correctly without page reload
+
+- **Save Button Disabled State**: Added disabled state during save operation to prevent multiple submissions
+  - File: `web/src/features/upcoming-lotteries/index.tsx:129`
+  - Button disabled when `isPendingSave` is true
+  - Button text changes to "Guardando..." during save
+  - Use case: Prevents race conditions from double-clicking save button
+
+### Added - 2025-12-20
+
+#### Schedule Lottery - Advanced Features
+
+- **Change Tracking System**: Implemented intelligent change detection for schedule lottery configurations
+  - File: `web/src/features/upcoming-lotteries/index.tsx`
+  - Added `detectChanges()` function that compares current state with server state
+  - Detects modifications, additions, and deletions across days and schedules
+  - Automatically determines whether to send full or partial updates (50% threshold)
+  - Use case: Optimizes network payload by sending only changed data when efficient
+
+- **Partial Updates**: Only sends modified day/schedule combinations instead of full payload
+  - File: `web/src/features/upcoming-lotteries/index.tsx:135-154`
+  - Sends full update when >50% of days changed
+  - Sends partial update (only changed days) when <50% changed
+  - Reduces network bandwidth for incremental edits
+  - Use case: Single day modification now sends ~14% of data vs full payload
+
+- **Unsaved Changes Indicator**: Visual feedback for pending changes
+  - File: `web/src/features/upcoming-lotteries/index.tsx:199-216`
+  - Yellow banner appears when local state differs from server state
+  - Shows count of modified days
+  - AlertCircle icon for visual emphasis
+  - Badge displays: "X día(s) modificado(s)"
+  - Use case: Users always know when they have unsaved work
+
+- **Navigation Blocker**: Prevents accidental data loss when navigating away
+  - File: `web/src/features/upcoming-lotteries/index.tsx:105-114,285-306`
+  - Uses React Router's `useBlocker` hook to intercept navigation
+  - Only blocks when unsaved changes exist
+  - Shows confirmation dialog with 3 options:
+    - **Cancelar**: Stay on current page
+    - **Descartar cambios**: Revert to server state and navigate
+    - **Guardar y continuar**: Save changes then navigate
+  - Use case: Prevents users from losing 10+ minutes of configuration work
+
 ### Changed - 2025-12-19
 
 #### Upcoming Lotteries - UI Improvement

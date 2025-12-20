@@ -10,17 +10,12 @@ export class WinnerRepository {
     date: string;
     organization_id: string;
   }) {
-    console.log('asdf', {
-      schedule_id,
-      date,
-      organization_id,
-    });
     const { data, error } = await supabase.rpc('generate_winners_and_calculate_accounts', {
       p_schedule_id: schedule_id,
       p_date: date,
       p_organization_id: organization_id,
     });
-    console.log(data, error);
+
     if (error) throw error;
 
     return data;
