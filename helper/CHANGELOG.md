@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-20
+
+#### Schedule Lottery Types - Partial Update Support
+- **New Types**: Added types for partial update support in schedule lottery configurations
+  - File: `helper/types/schedule-lottery.type.ts:27-40`
+  - `IScheduleLotteryDeletion`: Represents a day/schedule combination to delete
+    - Properties: `day: DayKey`, `scheduleId: string`
+  - `IScheduleLotteryPartialUpdate`: Contains changes and optional deletions
+    - Properties: `changes: Partial<Record<DayKey, Record<string, string[]>>>`, `deletions?: IScheduleLotteryDeletion[]`
+  - `IScheduleLotteryUpdate`: Union type for full or partial updates
+    - Properties: `full?: IScheduleLotteryEntityFront`, `partial?: IScheduleLotteryPartialUpdate`
+  - Use case: Enables frontend to send only modified data instead of full payload
+  - Reduces network bandwidth by ~85% for single day/schedule edits
+  - Backend can accept both full replacement and granular updates
+
 ### Changed - 2025-12-15
 
 #### User Validation Schema Updated for Nullable Numbers

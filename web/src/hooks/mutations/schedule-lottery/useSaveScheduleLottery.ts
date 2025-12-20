@@ -3,7 +3,7 @@ import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type.ts';
 import { toast } from 'react-hot-toast';
 
-const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<void> => {
+const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<IScheduleLotteryEntityFront> => {
   const res = await fetch(BACKEND_ROUTES.schedule_lottery.base, {
     method: 'POST',
     headers: {
@@ -18,11 +18,12 @@ const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront)
     throw new Error(`Error updating schedule-lottery: ${errorText}`);
   }
 
-  return;
+  const responseData = await res.json();
+  return responseData.data.scheduleLotteries;
 };
 
 type UseSaveScheduleLotteryOptions = Omit<
-  UseMutationOptions<void, Error, IScheduleLotteryEntityFront>,
+  UseMutationOptions<IScheduleLotteryEntityFront, Error, IScheduleLotteryEntityFront>,
   'mutationFn'
 >;
 
@@ -37,10 +38,10 @@ export const useSaveScheduleLottery = (
     mutationFn: saveScheduleLottery,
     ...rest,
     onSuccess: async (data, variables, context) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['schedule-lottery'],
-        exact: false,
-      });
+      // Update cache synchronously with server response
+      queryClient.setQueryData(['schedule-lottery'], data);
+
+      // Still invalidate lotteries since active status may have changed
       await queryClient.invalidateQueries({
         queryKey: ['lotteries'],
         exact: false,

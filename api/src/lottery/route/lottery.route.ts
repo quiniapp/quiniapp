@@ -8,6 +8,7 @@ import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
 import { getLotteryCacheKey, invalidateLotteryRelated } from 'src/cache/cacheInvalidation';
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
 // ====== Cache Manager para Lotteries ======
 function keyFor(organization_id: string, allFlag: boolean) {
@@ -79,6 +80,7 @@ export class LotteryRouter {
   private getAllLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const allFlag = !!req.query.all;
+    const dayParam = req.query.day as string | undefined;
 
     if (!user?.user) {
       const response: APIResponse<null> = {
@@ -88,7 +90,39 @@ export class LotteryRouter {
       return;
     }
 
+    // Validate day parameter if provided
+    let day: SCHEDULE_DAY | undefined;
+    if (dayParam) {
+      if (!(dayParam in SCHEDULE_DAY)) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: `Invalid day parameter: ${dayParam}. Must be one of: SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY`,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+      day = SCHEDULE_DAY[dayParam as keyof typeof SCHEDULE_DAY];
+    }
+
     try {
+      // If day filter is provided, fetch filtered lotteries
+      // Note: day-filtered queries are not cached as they're typically used in high-frequency contexts
+      if (day !== undefined) {
+        const lotteries = await this.controller.getAllByDay(day, allFlag, req.organization_id!);
+
+        const response: APIResponse<ILotteryEntityFront[]> = {
+          data: { lottery: lotteries },
+        };
+
+        // Cache-Control for day-filtered queries
+        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        res.status(200).json(response);
+        return;
+      }
+
+      // Original caching logic for non-filtered queries
       const key = keyFor(req.organization_id!, allFlag);
       const snap = await globalCacheManager.getOrLoad(
         key,

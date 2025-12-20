@@ -27,13 +27,13 @@ export const isAuthenticated = asyncHandler(
       throw new UnauthorizedError('Token de usuario inválido');
     }
 
-    const user = userDecoded as IUserEntityFront;
+    const user = userDecoded as unknown as IUserEntityFront;
     req.user = {
       user,
       token: authToken,
-      organization_id: userDecoded.organization_id,
+      organization_id: (userDecoded as any).organization_id,
     };
-    req.organization_id = userDecoded.organization_id;
+    req.organization_id = (userDecoded as any).organization_id;
 
     next();
   }

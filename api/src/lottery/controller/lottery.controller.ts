@@ -8,8 +8,12 @@ import {
 import { lotteryBase } from '../helper/lotteryBase';
 import { parseLottery } from '../helper/parseLottery';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
+import { ScheduleLotteryController } from '../../schedule-lottery/controller/schedule-lottery.controller';
+
 export class LotteryController {
   private repository = new LotteryRepository();
+  private scheduleLotteryController = new ScheduleLotteryController();
 
   create = async (props: INewLotteryEntity, organization_id: string) => {
     try {
@@ -42,6 +46,33 @@ export class LotteryController {
       });
     } catch (error) {
       console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  getAllByDay = async (
+    day: SCHEDULE_DAY,
+    all: boolean,
+    organization_id: string
+  ): Promise<ILotteryEntityFront[]> => {
+    try {
+      // Get lottery IDs that are configured for this day
+      const lotteryIds = await this.scheduleLotteryController.getLotteryIdsForDay(
+        organization_id,
+        day
+      );
+
+      // Get all lotteries
+      const allLotteries = await this.repository.getAll(organization_id, all);
+
+      // Filter lotteries by IDs that are configured for this day
+      const filteredLotteries = allLotteries.filter((lottery) =>
+        lotteryIds.includes(lottery.lottery_id)
+      );
+
+      return filteredLotteries.map((lottery) => parseLottery(lottery));
+    } catch (error) {
+      console.error('getAllByDay error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

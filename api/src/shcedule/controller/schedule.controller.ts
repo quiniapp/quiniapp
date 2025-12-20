@@ -8,15 +8,17 @@ import {
 } from '@helper/request/schedule.request';
 import { scheduleBase } from '../helper/scheduleBase';
 import { parseSchedule } from '../helper/parseSchedule';
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
+import { ScheduleLotteryController } from '../../schedule-lottery/controller/schedule-lottery.controller';
 
 export class ScheduleController {
   private repository = new ScheduleRepository();
+  private scheduleLotteryController = new ScheduleLotteryController();
 
   create = async (
     props: INewScheduleEntity,
     organization_id: string
   ): Promise<IScheduleEntityFront> => {
-    console.log('controller', props);
     try {
       const newSchedule = scheduleBase(props, organization_id);
       const schedule = await this.repository.create(newSchedule);
@@ -49,6 +51,55 @@ export class ScheduleController {
       });
     } catch (error) {
       console.error('GetAll error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  getAllByDay = async (
+    day: SCHEDULE_DAY,
+    all: boolean,
+    organization_id: string,
+    withLotteries: boolean = false
+  ): Promise<IScheduleEntityFront[]> => {
+    try {
+      // Get schedule IDs that have lotteries configured for this day
+      const scheduleIds = await this.scheduleLotteryController.getScheduleIdsForDay(
+        organization_id,
+        day
+      );
+
+      // Get all schedules
+      const allSchedules = await this.repository.getAll(organization_id, all);
+
+      // Filter schedules by IDs that have lotteries configured for this day
+      const filteredSchedules = allSchedules.filter((schedule) =>
+        scheduleIds.includes(schedule.schedule_id)
+      );
+
+      // Parse schedules
+      const parsedSchedules = filteredSchedules.map((schedule) => parseSchedule(schedule));
+
+      // If withLotteries is true, include lottery_ids for each schedule
+      if (withLotteries) {
+        const schedulesWithLotteries = await Promise.all(
+          parsedSchedules.map(async (schedule) => {
+            const lotteryIds = await this.scheduleLotteryController.getLotteryIdsByScheduleAndDay(
+              organization_id,
+              schedule.schedule_id,
+              day
+            );
+            return {
+              ...schedule,
+              lottery_ids: lotteryIds,
+            };
+          })
+        );
+        return schedulesWithLotteries;
+      }
+
+      return parsedSchedules;
+    } catch (error) {
+      console.error('getAllByDay error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
