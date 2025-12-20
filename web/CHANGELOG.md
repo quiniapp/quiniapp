@@ -29,7 +29,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Button text changes to "Guardando..." during save
   - Use case: Prevents race conditions from double-clicking save button
 
+### Fixed - 2025-12-20
+
+#### Upcoming Lotteries - Data Loss Bug
+- **Partial Update Bug**: Fixed bug where modifying a single day would delete other days' configurations
+  - File: `web/src/features/upcoming-lotteries/index.tsx:136-140`
+  - Root cause: Partial updates sent only changed days, but backend RPC deletes all and inserts only what it receives
+  - Solution: Removed partial update logic, always send full configuration
+  - Previous behavior: Modifying T4 would send only `{THURSDAY: {...}}` and lose T1, T2, T3
+  - New behavior: Always sends complete configuration for all 7 days
+  - Use case: Ensures data consistency when modifying schedule lottery configurations
+  - Note: Payload size is negligible (~7 days × 5 schedules × 10 lotteries = ~350 IDs max)
+
 ### Added - 2025-12-20
+
+#### Make Plays - Day Filtering & Dynamic Lottery Display
+
+- **Day-filtered API calls**: Optimized Make Plays to fetch only today's data
+  - Files:
+    - `web/src/hooks/fetchs/lottery/useLotteries.ts`
+    - `web/src/hooks/fetchs/schedule/useSchedules.ts`
+    - `web/src/features/make-plays/game-turns.tsx`
+    - `web/src/features/make-plays/fill-out-a-ticket.tsx`
+  - Added `day` parameter to useLotteries hook (e.g., `useLotteries({ day: 'MONDAY' })`)
+  - Added `day` and `withLotteries` parameters to useSchedules hook
+  - Make Plays now uses `?day=TODAY` query param to fetch only relevant data
+  - Reduces payload size by ~85% (only 1/7 days fetched)
+  - Faster page load in Make Plays (less data to parse)
+  - Use case: High-frequency page (cashiers use it all day) now loads instantly
+
+- **Dynamic lottery filtering by schedule**: Lotteries now appear only when schedules are selected
+  - Files:
+    - `web/src/features/make-plays/game-turns.tsx`
+    - `web/src/features/make-plays/lotteries-checkbox-list.tsx`
+    - `web/src/features/make-plays/lotteries-checkbox-list-desktop.tsx`
+    - `web/src/features/make-plays/lotteries-checkbox-list-mobile.tsx`
+  - No schedules selected → No lotteries shown (empty list)
+  - One schedule selected → Shows only lotteries from that schedule
+  - Multiple schedules selected → Shows union of all lotteries (no duplicates)
+  - Auto-cleanup: Deselecting a schedule removes its exclusive lotteries from selection
+  - Use case: Prevents cashiers from selecting invalid lottery/schedule combinations
 
 #### Schedule Lottery - Advanced Features
 
@@ -37,15 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - File: `web/src/features/upcoming-lotteries/index.tsx`
   - Added `detectChanges()` function that compares current state with server state
   - Detects modifications, additions, and deletions across days and schedules
-  - Automatically determines whether to send full or partial updates (50% threshold)
-  - Use case: Optimizes network payload by sending only changed data when efficient
-
-- **Partial Updates**: Only sends modified day/schedule combinations instead of full payload
-  - File: `web/src/features/upcoming-lotteries/index.tsx:135-154`
-  - Sends full update when >50% of days changed
-  - Sends partial update (only changed days) when <50% changed
-  - Reduces network bandwidth for incremental edits
-  - Use case: Single day modification now sends ~14% of data vs full payload
+  - Used for unsaved changes indicator and auto-cleanup
+  - Use case: Provides real-time feedback on pending changes
 
 - **Unsaved Changes Indicator**: Visual feedback for pending changes
   - File: `web/src/features/upcoming-lotteries/index.tsx:199-216`

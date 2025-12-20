@@ -1,10 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { DayKey } from '@helper/types/schedule-lottery.type';
 
+interface UseSchedulesOptions {
+  all?: boolean;
+  day?: DayKey;
+  withLotteries?: boolean;
+}
 
-const fetchSchedules = async (all?:boolean) => {
-  const res = await fetch(`${BACKEND_ROUTES.schedule.base}${all?'?all=true':''}`, {
+const fetchSchedules = async (options?: UseSchedulesOptions) => {
+  const params = new URLSearchParams();
+
+  if (options?.all) params.append('all', 'true');
+  if (options?.day) params.append('day', options.day);
+  if (options?.withLotteries) params.append('with_lotteries', 'true');
+
+  const queryString = params.toString();
+  const url = `${BACKEND_ROUTES.schedule.base}${queryString ? `?${queryString}` : ''}`;
+
+  const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });
@@ -12,11 +27,15 @@ const fetchSchedules = async (all?:boolean) => {
   return await res.json().then((res) => res.data.schedule);
 };
 
-export const useSchedules = (all?:boolean) =>
+export const useSchedules = (options?: UseSchedulesOptions) =>
   useQuery<IScheduleEntityFront[]>({
-    queryKey: ['schedules', { all: !!all }], // Fixed: include 'all' param for proper cache segregation
-    queryFn: ()=> fetchSchedules(all),
-    staleTime: 12 * 60 * 60 * 1000, // 12 hours - changes are infrequent, users can refresh if needed
+    queryKey: ['schedules', {
+      all: !!options?.all,
+      day: options?.day,
+      withLotteries: !!options?.withLotteries
+    }],
+    queryFn: () => fetchSchedules(options),
+    staleTime: options?.day ? 5 * 60 * 1000 : 12 * 60 * 60 * 1000, // 5 min for day filter, 12h for all
     gcTime: 30 * 60 * 1000, // 30 minutes in cache
     refetchOnWindowFocus: false, // No automatic refetch, manual reload if needed
     refetchOnReconnect: true,

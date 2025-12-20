@@ -9,6 +9,9 @@ import { asyncHandler } from '../../middlewares/error.middleware';
 import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
 
+// Use secure cookies only in production (HTTPS)
+const IS_PRODUCTION = process.env.IS_LOCAL !== 'true';
+
 export class AuthRouter {
   public publicRouter: Router;
   public privateRouter: Router;
@@ -51,8 +54,8 @@ export class AuthRouter {
     // El timeout de 3 horas se maneja en el frontend (AuthProvider)
     res.cookie('access_token', data.session.access_token, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: IS_PRODUCTION,
+      sameSite: IS_PRODUCTION ? 'none' : 'lax',
       path: '/',
     });
 
@@ -64,8 +67,8 @@ export class AuthRouter {
 
     res.cookie('user_token', signUserToken(loginResponse.user, loginResponse.organization_id), {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: IS_PRODUCTION,
+      sameSite: IS_PRODUCTION ? 'none' : 'lax',
       path: '/',
     });
 
@@ -90,14 +93,14 @@ export class AuthRouter {
 
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: IS_PRODUCTION,
+      sameSite: IS_PRODUCTION ? 'none' : 'lax',
       path: '/',
     });
     res.clearCookie('user_token', {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: IS_PRODUCTION,
+      sameSite: IS_PRODUCTION ? 'none' : 'lax',
       path: '/',
     });
 

@@ -113,7 +113,7 @@ const LotteriesContent = () => {
   const [reorderModalOpen, setReorderModalOpen] = useState(false);
   const [selectedLottery, setSelectedLottery] = useState<ILotteryEntityFront | null>(null);
 
-  const { data: lotteries, isLoading } = useLotteries(true); // Get all lotteries for admin
+  const { data: lotteries, isLoading } = useLotteries({all:true}); // Get all lotteries for admin
   const { data: scheduleLotteries } = useScheduleLottery();
   const scheduleMap = useScheduleMap(); // Get schedule lookup map
 

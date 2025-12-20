@@ -1,6 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Flex } from '@/components/flex';
-import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandList, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -8,17 +7,18 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface ILotteriesCheckboxListMobileProps {
+  lotteries: ILotteryEntityFront[];
   setLotteries: (lottery: ILotteryEntityFront) => void;
   checkedLotteries: Map<string, ILotteryEntityFront>;
 }
 
 const LotteriesCheckboxListMobile = ({
+  lotteries,
   setLotteries,
   checkedLotteries,
 }: ILotteriesCheckboxListMobileProps) => {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [triggerW, setTriggerW] = useState(0);
-  const { data: lotteries = [] } = useLotteries();
   const [open, setOpen] = useState(false);
 
   useLayoutEffect(() => {
