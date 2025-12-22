@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-22
+
+#### Repeat Ticket Modal - UX/UI Redesign
+**Enhancement:** Comprehensive responsive redesign of repeat ticket modal for improved mobile and desktop experience
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Improvements:**
+1. **Responsive Input Section**
+   - Changed from complex grid layout to flex-based responsive design
+   - Better mobile layout with stacked label and input
+   - Added placeholder text for better UX
+   - Constrained input width on desktop (sm:w-64)
+
+2. **Quiniela Fieldsets Grid**
+   - Replaced horizontal flex with responsive grid layout
+   - Grid adapts: 1 col (mobile) → 2 cols (sm) → 3 cols (lg) → 4 cols (xl)
+   - Better space utilization on all screen sizes
+   - Improved visual organization of schedules
+
+3. **Total and Selection Section**
+   - Added visual container with background (bg-slate-800/30)
+   - Improved hierarchy with larger total display
+   - Total amount highlighted in green (text-green-400)
+   - Responsive button layout (stacked mobile, horizontal desktop)
+   - Better visual separation with rounded corners
+
+4. **Dual View for Bets Display**
+   - **Desktop (md+)**: Table view with sticky header, improved styling
+   - **Mobile (<md)**: Card-based layout for better readability
+   - Cards show organized information with clear labels
+   - Better typography hierarchy in mobile cards
+   - Improved scrolling with max-height constraints
+
+5. **Action Buttons**
+   - Reversed button order on mobile for better UX (Cancel first)
+   - Full-width buttons on mobile, auto-width on desktop
+   - Minimum width on desktop for consistency (min-w-[140px])
+   - Better visual separation with border-top
+
+6. **Visual Polish**
+   - Consistent spacing with mb-6 between sections
+   - Improved color contrast for better readability
+   - Better border styling (border-slate-700)
+   - Removed unnecessary Box/Flex wrappers for cleaner code
+   - Added helpful comments for each section
+   - Increased modal padding (p-3 sm:p-6)
+
+**Benefits:**
+- ✅ Fully responsive from mobile to 4K displays
+- ✅ Intuitive card layout on mobile devices
+- ✅ Better visual hierarchy and information organization
+- ✅ Improved readability with consistent spacing
+- ✅ Maintained all original functionality
+- ✅ Cleaner, more maintainable code structure
+
 ### Fixed - 2025-12-20
 
 #### Schedule Lottery Save Bug
