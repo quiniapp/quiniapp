@@ -1,6 +1,7 @@
 import Box from '@/components/box';
 import { FlexCol } from '@/components/flex';
-import { Typography } from '@/components/typography';
+import { Text } from '@/components/atoms/Text';
+import { Caption } from '@/components/atoms/Caption';
 import {
   Table,
   TableBody,
@@ -83,10 +84,10 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
           <SkeletonList />
         ) : data.length === 0 ? (
           <div className="text-center py-8 rounded-md border border-dashed">
-            <Typography variant="large">No se encontraron Datos</Typography>
-            <Typography variant="small" className="font-light text-muted-foreground">
+            <Text size="lg" weight="semibold">No se encontraron Datos</Text>
+            <Caption size="sm" color="muted" className="font-light">
               Por favor realice una nueva búsqueda
-            </Typography>
+            </Caption>
           </div>
         ) : (
           paginated.map((account) => (
@@ -244,10 +245,10 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
                 <TableRow>
                   <TableCell colSpan={14} className="text-center">
                     <FlexCol className="w-full items-center justify-center gap-3 py-8">
-                      <Typography variant="large">No se encontraron Datos</Typography>
-                      <Typography variant="small" className="font-light text-muted-foreground">
+                      <Text size="lg" weight="semibold">No se encontraron Datos</Text>
+                      <Caption size="sm" color="muted" className="font-light">
                         Por favor realice una nueva búsqueda
-                      </Typography>
+                      </Caption>
                     </FlexCol>
                   </TableCell>
                 </TableRow>

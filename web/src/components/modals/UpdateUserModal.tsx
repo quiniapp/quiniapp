@@ -1,7 +1,7 @@
 import Modal from './custom-modal';
 import { Flex, FlexCol } from '../flex';
 import { Label } from '../ui/label';
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 import { CASHIER_TYPE, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { IUpdateUserEntity } from '@helper/request/user.response';
 import { Controller, useForm } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useUpdateUser } from '@/hooks/mutations/users/useUpdateUser';
+import { ErrorMessage } from '@/components/atoms/ErrorMessage';
 
 interface UpdateUsersModalProps {
   isOpen: boolean;
@@ -60,11 +61,11 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
       title={`Editar usuario ${user?.name} - ${user?.number}`}
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[95vw] sm:!max-w-[90vw] md:!max-w-[800px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className={'w-full   py-4 space-y-4 '}>
-        <FlexCol className="items-center pt-2 gap-2">
-          <Flex className="items-center justify-center gap-2">
+      <form onSubmit={handleSubmit(onSubmit)} className={'w-full py-2 sm:py-4 space-y-2 sm:space-y-4 px-2 sm:px-4'}>
+        <FlexCol className="items-center pt-2 gap-2 sm:gap-4">
+          <Flex className="items-center justify-center gap-2 sm:gap-3 flex-col sm:flex-row w-full">
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="number">Número de usuario</Label>
               <Controller
@@ -83,7 +84,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   />
                 )}
               />
-              {errors.number && <p className="text-red-600">{errors.number.message}</p>}
+              {errors.number?.message && (
+                <ErrorMessage>{errors.number.message}</ErrorMessage>
+              )}
             </FlexCol>
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="user_type">Tipo de usuario</Label>
@@ -102,7 +105,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   </Select>
                 )}
               />
-              {errors.user_type && <p className="text-red-600">{errors.user_type.message}</p>}
+              {errors.user_type?.message && (
+                <ErrorMessage>{errors.user_type.message}</ErrorMessage>
+              )}
             </FlexCol>
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="cashier_type">Tipo de pasador</Label>
@@ -121,7 +126,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   </Select>
                 )}
               />
-              {errors.cashier_type && <p className="text-red-600">{errors.cashier_type.message}</p>}
+              {errors.cashier_type?.message && (
+                <ErrorMessage>{errors.cashier_type.message}</ErrorMessage>
+              )}
             </FlexCol>
           </Flex>
           <Flex>
@@ -168,7 +175,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   <Input id={'username'} {...field} value={field.value ?? ''} />
                 )}
               />
-              {errors.name && <p className="text-red-600">{errors.name.message}</p>}
+              {errors.name?.message && (
+                <ErrorMessage>{errors.name.message}</ErrorMessage>
+              )}
             </FlexCol>
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="last_name">Apellido</Label>
@@ -179,7 +188,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   <Input id={'last_name'} {...field} value={field.value ?? ''} />
                 )}
               />
-              {errors.last_name && <p className="text-red-600">{errors.last_name.message}</p>}
+              {errors.last_name?.message && (
+                <ErrorMessage>{errors.last_name.message}</ErrorMessage>
+              )}
             </FlexCol>
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="address">Dirección</Label>
@@ -190,7 +201,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   <Input id={'address'} {...field} value={field.value ?? ''} />
                 )}
               />
-              {errors.address && <p className="text-red-600">{errors.address.message}</p>}
+              {errors.address?.message && (
+                <ErrorMessage>{errors.address.message}</ErrorMessage>
+              )}
             </FlexCol>
           </Flex>
 
@@ -204,7 +217,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   <Input id={'phone'} type={'tel'} {...field} value={field.value ?? ''} />
                 )}
               />
-              {errors.phone && <p className="text-red-600">{errors.phone.message}</p>}
+              {errors.phone?.message && (
+                <ErrorMessage>{errors.phone.message}</ErrorMessage>
+              )}
             </FlexCol>
             <FlexCol className={'w-full space-y-4'}>
               <Label htmlFor="email">Email</Label>
@@ -215,7 +230,9 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                   <Input id={'email'} type={'email'} {...field} value={field.value ?? ''} />
                 )}
               />
-              {errors.email && <p className="text-red-600">{errors.email.message}</p>}
+              {errors.email?.message && (
+                <ErrorMessage>{errors.email.message}</ErrorMessage>
+              )}
             </FlexCol>
           </Flex>
 
@@ -230,13 +247,19 @@ const UpdateUsersModal = ({ isOpen, onClose, user }: UpdateUsersModalProps) => {
                     <Input id={'username'} {...field} value={field.value ?? ''} />
                   )}
                 />
-                {errors.username && <p className="text-red-600">{errors.username.message}</p>}
+                {errors.username?.message && (
+                  <ErrorMessage>{errors.username.message}</ErrorMessage>
+                )}
               </FlexCol>
             </Flex>
           )}
-          <Button variant={'success'} className="  hover:bg-green-700 text-white" type="submit">
-            {isPendingUpdate ? 'Editando...' : 'Editar'}
-          </Button>
+          <IconButton
+            label={isPendingUpdate ? 'Editando...' : 'Editar'}
+            variant="success"
+            type="submit"
+            disabled={isPendingUpdate}
+            className="w-full"
+          />
         </FlexCol>
       </form>
     </Modal>

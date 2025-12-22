@@ -3,7 +3,7 @@ import {
   IBetTable,
   IDeleteTicketEntity,
   IEditTicketEntity,
-  IGetAllTicketByUserEntity,
+  // IGetAllTicketByUserEntity,
   IGetAllTicketEntity,
   IGetTicketEntity,
   INewTicketEntity,
@@ -15,6 +15,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
 import { betBase } from 'src/bet/helper/betBase';
+import { IPaginatedResponse } from '@helper/request/pagination.response';
 
 export class TicketController {
   private repository = new TicketRepository();
@@ -49,26 +50,49 @@ export class TicketController {
     }
   };
 
-  getAll = async (props: IGetAllTicketEntity): Promise<ITicketEntityFront[]> => {
-    let tickets;
+  getAll = async (
+    props: IGetAllTicketEntity & { page?: number; limit?: number }
+  ): Promise<IPaginatedResponse<ITicketEntityFront>> => {
+    const page = props.page ?? 1;
+    const limit = props.limit ?? 100;
+
     try {
+      let result;
       if (props.user_type === USER_TYPE.CASHIER) {
-        tickets = await this.repository.getAll({
+        result = await this.repository.getAll({
           user_id: props.user_id,
           date: props.date ?? '',
-          winner: !!props.winner,
+          winner: props?.winner,
+          paid: props?.paid,
+          page,
+          limit,
         });
       } else {
-        tickets = await this.repository.getAll({
+        result = await this.repository.getAll({
           date: props.date ?? '',
           user_id: props?.cashier_id,
-          winner: !!props.winner,
+          winner: props?.winner,
+          paid: props?.paid,
+          page,
+          limit,
         });
       }
 
-      return tickets.map((ticket) => {
-        return parseTicket(ticket);
-      });
+      const { data: tickets, count } = result;
+      const parsedTickets = tickets.map((ticket) => parseTicket(ticket));
+
+      const totalPages = Math.ceil(count / limit);
+
+      return {
+        data: parsedTickets,
+        pagination: {
+          currentPage: page,
+          pageSize: limit,
+          totalCount: count,
+          totalPages,
+          hasMore: page < totalPages,
+        },
+      };
     } catch (error) {
       console.error('GetAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -115,22 +139,22 @@ export class TicketController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  getAllByUser = async (props: IGetAllTicketByUserEntity): Promise<ITicketEntityFront[]> => {
-    try {
-      const tickets = await this.repository.getAll({
-        user_id: props.user_id!,
-        date: props.date,
-        winner: props?.winner ?? false,
-      });
-
-      return tickets.map((ticket) => {
-        return parseTicket(ticket);
-      });
-    } catch (error) {
-      console.error('GetAll error:', error);
-      throw error instanceof Error ? error : new Error('Unknown error');
-    }
-  };
+  // getAllByUser = async (props: IGetAllTicketByUserEntity): Promise<ITicketEntityFront[]> => {
+  //   try {
+  //     const tickets = await this.repository.getAll({
+  //       user_id: props.user_id!,
+  //       date: props.date,
+  //       winner: props?.winner ?? false,
+  //     });
+  //     console.log('asdf', tickets)
+  //     return tickets.map((ticket) => {
+  //       return parseTicket(ticket);
+  //     });
+  //   } catch (error) {
+  //     console.error('GetAll error:', error);
+  //     throw error instanceof Error ? error : new Error('Unknown error');
+  //   }
+  // };
   getAllDeletedTickets = async ({ user_id, date }: { user_id?: string; date: string }) => {
     try {
       const tickets = await this.repository.getAllDeletedTickets({
@@ -152,6 +176,16 @@ export class TicketController {
       return parseTicket(ticket);
     } catch (error) {
       console.error('update error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  paid = async ({ ticket_number, user_id }: { ticket_number: string; user_id: string }) => {
+    try {
+      const result = await this.repository.payTicket({ ticket_number, user_id });
+      return result;
+    } catch (error) {
+      console.error('Paid error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

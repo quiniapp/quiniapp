@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/make-plays/game-turns';
 import { PLACE_TYPE } from '@helper/types/bet.type';
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { placeTypeParse } from '@helper/functions/placeTypeParse';
@@ -17,6 +17,7 @@ import { dayParseToString } from '@helper/functions/dayDictionary';
 import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { usePlayDetails } from './context/MakePlaysContext';
 
 const getScheduleId = (s: IScheduleEntityFront) => s.schedule_id;
 const getLotteryId = (l: ILotteryEntityFront) => l.lottery_id;
@@ -35,29 +36,20 @@ export interface IBetForm {
   position?: string;
 }
 
-const FillOutATicket = ({
-  setTotalAmount,
-  setPartialAmount,
-  setBets,
-  lotteries,
-  setLotteries,
-  schedules,
-  setSchedules,
-  isEnabled,
-  setIsEnabledCreateBet,
-}: {
-  setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
-  setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
-  setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
-  lotteries: Map<string, ILotteryEntityFront>;
-  setLotteries: React.Dispatch<React.SetStateAction<Map<string, ILotteryEntityFront>>>;
-  schedules: Map<string, IScheduleEntityFront>;
-  setSchedules: React.Dispatch<React.SetStateAction<Map<string, IScheduleEntityFront>>>;
-  isEnabled: boolean;
-  setIsEnabledCreateBet: React.Dispatch<React.SetStateAction<boolean>>;
-}) => {
+const FillOutATicket = () => {
+  const {
+    lotteries,
+    schedules,
+    setBets,
+    setTotalAmount,
+    setPartialAmount,
+    isEnabledCreateBet,
+    isEnabledCreateBetByAdmin,
+    setOpenDeleteModal,
+  } = usePlayDetails();
+
+  const isEnabled = isEnabledCreateBet && isEnabledCreateBetByAdmin;
   const today = dayjs().day();
-  const [openModal, setOpenModal] = useState<boolean>(false);
   const [bet, setBet] = useState<IBetForm>({
     number: '',
     amount: undefined,
@@ -98,88 +90,71 @@ const FillOutATicket = ({
     }
   };
 
-  // Índices de orden según tus arrays "order"
-
-  const handleSchedules = (schedule: IScheduleEntityFront) => {
-    setSchedules((prev) => {
-      const newMap = new Map(prev); // Clonás el Map
-
-      if (newMap.has(schedule.schedule_id)) {
-        newMap.delete(schedule.schedule_id);
-      } else {
-        newMap.set(schedule.schedule_id, schedule);
-      }
-
-      return newMap; // Retornás un nuevo objeto
-    });
-  };
-  const handleLotteries = (lottery: ILotteryEntityFront) => {
-    setLotteries((prev) => {
-      const newMap = new Map(prev); // Clonás el Map
-
-      if (newMap.has(lottery.lottery_id)) {
-        newMap.delete(lottery.lottery_id);
-      } else {
-        newMap.set(lottery.lottery_id, lottery);
-      }
-
-      return newMap; // Retornás un nuevo objeto
-    });
-  };
-
   const handleBet = (key: string, value: string | number) => {
     setBet((prev) => {
+      // Si es amount, parseamos a número
+      if (key === 'amount') {
+        const numValue = value === '' ? undefined : Number(value);
+        return { ...prev, [key]: numValue };
+      }
       return { ...prev, [key]: value };
     });
   };
 
+  // Validación para inputs numéricos (solo permite dígitos 0-9)
+  const handleNumericInput = (key: string, value: string) => {
+    // Solo permite dígitos, elimina cualquier otro carácter
+    const numericValue = value.replace(/[^0-9]/g, '');
+    handleBet(key, numericValue);
+  };
+
   const handleCreateBet = () => {
     if (!isAddButtonEnabled || !scheduleOrder || !lotteryOrder) return;
-
+    
     const todayKey: DayKey = dayParseToString[today];
     const schLotPerDate = scheduleLotteryPerDate?.[todayKey] as
-      | Record<string, string[] | undefined>
-      | undefined;
-
+    | Record<string, string[] | undefined>
+    | undefined;
+    
     // 1) Tomo SOLO los schedules seleccionados (presentes en el Map `schedules`)
     //    pero ordenados según `scheduleOrder`
     const orderedSchedules = scheduleOrder
-      .filter((s) => schedules.has(getScheduleId(s)))
-      .map((s) => schedules.get(getScheduleId(s))!); // ya sabemos que existe
-
+    .filter((s) => schedules.has(getScheduleId(s)))
+    .map((s) => schedules.get(getScheduleId(s))!); // ya sabemos que existe
+    
     // 2) Para cada schedule, tomo SOLO las loterías seleccionadas (presentes en el Map `lotteries`)
     //    y las ordeno según `lotteryOrder`
     const lotteryOrderIndex = makeOrderIndex(getLotteryId, lotteryOrder);
-
+    
     const lotterySchedule: ILotterySchedule[] = orderedSchedules.reduce<ILotterySchedule[]>(
       (acc, sch) => {
         const ids = schLotPerDate?.[getScheduleId(sch)];
         if (!ids || ids.length === 0) return acc;
-
+        
         // Solo las IDs que están seleccionadas en el Map `lotteries`
         const selectedIds = ids.filter((id) => lotteries.has(id));
         if (selectedIds.length === 0) return acc;
-
+        
         const valid = selectedIds
-          .map((id) => lotteries.get(id)!) // existe seguro
-          .sort((a, b) => {
-            const ai = lotteryOrderIndex?.get(getLotteryId(a)) ?? Number.POSITIVE_INFINITY;
-            const bi = lotteryOrderIndex?.get(getLotteryId(b)) ?? Number.POSITIVE_INFINITY;
-            return ai - bi;
-          });
-
+        .map((id) => lotteries.get(id)!) // existe seguro
+        .sort((a, b) => {
+          const ai = lotteryOrderIndex?.get(getLotteryId(a)) ?? Number.POSITIVE_INFINITY;
+          const bi = lotteryOrderIndex?.get(getLotteryId(b)) ?? Number.POSITIVE_INFINITY;
+          return ai - bi;
+        });
+        
         if (valid.length === 0) return acc;
-
+        
         acc.push({ schedule: sch, lotteries: valid });
         return acc;
       },
       []
     );
-
+    
     // 3) Contar combinaciones reales (pares schedule-lottery)
     const combosCount = lotterySchedule.reduce((sum, item) => sum + item.lotteries.length, 0);
     if (combosCount === 0) return;
-
+    
     setBets((prev) => {
       const newBet: IBetTable = {
         number: bet?.number ?? '',
@@ -200,10 +175,6 @@ const FillOutATicket = ({
     });
   };
 
-  const handleResetPartial = () => {
-    setPartialAmount(0);
-    setOpenModal(false);
-  };
   const handleDeleteForm = () => {
     setBet({
       number: '',
@@ -216,12 +187,12 @@ const FillOutATicket = ({
   useEffect(() => {
     const handleWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key === '*') {
-        setOpenModal(true);
+        setOpenDeleteModal(true);
       }
     };
     window.addEventListener('keydown', handleWindowKeyDown);
     return () => window.removeEventListener('keydown', handleWindowKeyDown);
-  }, []);
+  }, [setOpenDeleteModal]);
 
   // const isEnabled = useIsButtonEnabled();
   const isAddButtonEnabled = Boolean(
@@ -244,123 +215,110 @@ const FillOutATicket = ({
   );
 
   return (
-    <FlexCol className={' h-fit'}>
-      <Flex className={'flex-col-reverse sm:flex-row py-1 1440:py-2 gap-1'}>
-        <Flex className={'flex-1  sm:max-w-[300px] '}>
-          <form className={''}>
-            <FlexCol className={'space-y-2 h-auto border p-2 bg-card rounded-[--rounded-form]'}>
-              <Box className={'grid grid-cols-2 items-center justify-end  '}>
-                <Label htmlFor={'number'}> Numero </Label>
+    <FlexCol className={'h-fit w-full max-w-full'}>
+      <Flex className={'flex-col-reverse sm:flex-row gap-1 sm:gap-2 lg:gap-3 sm:items-stretch w-full'}>
+        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[260px] lg:max-w-[320px] w-full'}>
+          <form className={'w-full'}>
+            <FlexCol className={'space-y-1 sm:space-y-3 lg:space-y-1 h-full border p-2 sm:p-3 lg:p-1.5 bg-card rounded-[--rounded-form] justify-between'}>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'number'} className="text-sm sm:text-base 2xl:text-lg truncate"> Numero </Label>
                 <Input
                   ref={numberRef}
                   id="number"
                   name={'ticket-number'}
                   inputMode="numeric"
-                  type={'string'}
+                  type="text"
                   maxLength={10}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
-                  value={bet.number ?? undefined}
-                  onChange={(e) => handleBet('number', e.target.value)}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
+                  value={bet.number ?? ''}
+                  onChange={(e) => handleNumericInput('number', e.target.value)}
                   onKeyDown={handleInputKeyDown(0)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'amount'}> Monto </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'amount'} className="text-sm sm:text-base 2xl:text-lg truncate"> Monto </Label>
                 <Input
                   ref={amountRef}
                   id="amount"
                   name={'ticket-amount'}
                   type={'number'}
                   inputMode="numeric"
-                  value={bet?.amount ?? ''}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  value={bet?.amount?.toString() ?? ''}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleBet('amount', e.target.value)}
                   onKeyDown={handleInputKeyDown(1)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'place'}> Ubicación </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'place'} className="text-sm sm:text-base 2xl:text-lg truncate"> Ubicación </Label>
                 <Input
                   ref={placeRef}
                   id="place"
                   name={'ticket-place'}
                   type={'number'}
                   inputMode="numeric"
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
-                  value={bet.place ?? undefined}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
+                  value={bet.place ?? ''}
                   onChange={(e) => handleBet('place', e.target.value)}
                   onKeyDown={handleInputKeyDown(2)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'with'}> Con </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'with'} className="text-sm sm:text-base 2xl:text-lg truncate"> Con </Label>
                 <Input
                   ref={withRef}
                   id="with"
                   name={'ticket-with'}
                   inputMode="numeric"
-                  type={'string'}
+                  type="text"
                   maxLength={2}
-                  value={bet.with}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
-                  onChange={(e) => handleBet('with', e.target.value)}
+                  value={bet.with ?? ''}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
+                  onChange={(e) => handleNumericInput('with', e.target.value)}
                   onKeyDown={handleInputKeyDown(3)}
                 />
               </Box>
-              <Box className={'grid grid-cols-2 items-center  '}>
-                <Label htmlFor={'position'}> Posición </Label>
+              <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
+                <Label htmlFor={'position'} className="text-sm sm:text-base 2xl:text-lg truncate"> Posición </Label>
                 <Input
                   ref={positionRef}
                   id="position"
                   name={'ticket-position'}
                   type={'number'}
                   inputMode="numeric"
-                  value={bet.position}
-                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold '}
+                  value={bet.position ?? ''}
+                  className={'bg-[var(--bg-card)] text-slate-200 font-semibold text-sm sm:text-base 2xl:text-lg h-9 sm:h-10 lg:h-8'}
                   onChange={(e) => handleBet('position', e.target.value)}
                   onKeyDown={handleInputKeyDown(4)}
                 />
               </Box>
-              <Flex className={' gap-2 py-2'}>
+              <Flex className={'gap-1 sm:gap-2 lg:gap-0.5 pt-2 lg:pt-0.5'}>
                 <Button
                   type={'button'}
-                  className={'flex-1 disabled:bg-pink-50'}
+                  size="sm"
+                  className={'flex-1 lg:h-7 lg:text-xs'}
                   disabled={!isAddButtonEnabled || !isEnabled}
                   onClick={() => handleCreateBet()}
                 >
-                  <PlusIcon /> Agregar
+                  <PlusIcon className="hidden sm:inline sm:mr-1 lg:mr-0.5" /> <span>Agregar</span>
                 </Button>
                 <Button
                   type={'reset'}
                   variant={'outline'}
-                  className={'flex-1 max-w-[120px]  '}
+                  size="sm"
+                  className={'flex-1 max-w-[100px] sm:max-w-[120px] lg:max-w-[90px] lg:h-7 lg:text-xs'}
                   onClick={() => handleDeleteForm()}
                 >
-                  <TrashIcon /> Borrar
+                  <TrashIcon className="hidden sm:inline sm:mr-1 lg:mr-0.5" /> <span>Borrar</span>
                 </Button>
               </Flex>
             </FlexCol>
           </form>
         </Flex>
-        <GameTurns
-          checkedLotteries={lotteries}
-          checkedSchedules={schedules}
-          setLotteries={handleLotteries}
-          setSchedules={handleSchedules}
-          setIsEnabledCreateBet={setIsEnabledCreateBet}
-        />
+        <GameTurns />
       </Flex>
-      <Suspense fallback={<div>Cargando...</div>}>
-        <ResetPartialModal
-          isOpen={openModal}
-          onClose={() => setOpenModal(false)}
-          onClick={handleResetPartial}
-        />
-      </Suspense>
     </FlexCol>
   );
 };
 
 export default FillOutATicket;
-
-const ResetPartialModal = React.lazy(() => import('../../components/modals/ResetPartialModal'));

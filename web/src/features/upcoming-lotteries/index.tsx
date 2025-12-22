@@ -5,7 +5,7 @@ import Box from '@/components/box';
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
 import HeaderTitleSection from '@/components/header-title-section';
-import { Typography } from '@/components/typography';
+import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/ui/button.tsx';
 //import { Checkbox } from '@/components/ui/checkbox.tsx';
 
@@ -94,7 +94,7 @@ const UpcomingLotteriesContent = () => {
                       <label className="text-md text-gray-200"> Día</label>
                     </Flex>
                     <Flex className={'flex-1 items-center gap-4'}>
-                      <Typography variant={'p'}>Selecionar día</Typography>
+                      <Text size="base">Selecionar día</Text>
                       <Flex className={'w-[200px]'}>
                         <Select
                           value={selectedDay}
@@ -122,7 +122,7 @@ const UpcomingLotteriesContent = () => {
                   <HeaderTitleSection
                     title={'Turno Seleccionado'}
                     icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-                    variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
+                    size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
                   />
 
@@ -136,7 +136,7 @@ const UpcomingLotteriesContent = () => {
                   <HeaderTitleSection
                     title={'Quinielas'}
                     icon={<Ticket size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-                    variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
+                    size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
                   />
 

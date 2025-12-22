@@ -26,7 +26,7 @@ export const isAuthenticated = async (
         message: ERROR_MESSAGE.TOKEN_ERROR,
       },
     };
-    res.status(400).json(response);
+    res.status(401).json(response);
     return;
   }
 

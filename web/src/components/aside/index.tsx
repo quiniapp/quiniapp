@@ -1,6 +1,6 @@
 // src/components/layout/Aside.tsx (o donde esté)
 import { ChevronRight, Power } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 
 import { Flex } from '@/components/flex';
@@ -22,23 +22,25 @@ import MENU_ITEMS from '@/constants/SidebarMenu';
 import { cn } from '@/lib/utils';
 import { filterMenuItemsByRole } from '@/utils/menu-access';
 import { MENU_ITEM } from '@/types/menu-item';
-import { useAuth } from '@/contexts/AuthContext'; // ⬅️ nuevo
+import { useAuth } from '@/contexts/AuthContext';
+import { usePrefetchRoute } from '@/hooks/usePrefetchRoute';
 
 interface AsideProps {
   isOpen?: boolean;
 }
 
-const Aside = ({ isOpen }: AsideProps) => {
+const Aside = memo(function Aside({ isOpen }: AsideProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { role, logout, loading } = useAuth(); // ⬅️ role + logout del provider
+  const { role, logout, loading } = useAuth();
+  const prefetch = usePrefetchRoute();
 
   // Menú visible según rol (memo para evitar recalcular cada render)
   const visibleMenu = useMemo(() => filterMenuItemsByRole(role, MENU_ITEMS), [role]);
 
-  const goTo = (route: string, id: string) => {
+  const goTo = useCallback((route: string, id: string) => {
     setOpenId(null);
     setActiveId(id);
 
@@ -50,7 +52,7 @@ const Aside = ({ isOpen }: AsideProps) => {
     } else {
       navigate(route);
     }
-  };
+  }, [location.pathname, navigate]);
 
   // Marcar activo por URL (opcional, mejora UX si se recarga la página)
   // Si cada item tiene route único podés sincronizar activeId así:
@@ -61,10 +63,10 @@ const Aside = ({ isOpen }: AsideProps) => {
     setActiveId(current?.id ?? null);
   }, [location.pathname, visibleMenu]);
 
-  const handleLogoutClick = async () => {
+  const handleLogoutClick = useCallback(async () => {
     await logout();
     navigate('/login', { replace: true }); // 👈 mover la navegación acá
-  };
+  }, [logout, navigate]);
 
   return (
     <Sidebar
@@ -72,10 +74,10 @@ const Aside = ({ isOpen }: AsideProps) => {
       className={cn(
         `flex transition-transform duration-300
          ${isOpen ? ' md:static translate-x-0  ' : '-translate-x-full'}
-         w-64 bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed z-40`
+          bg-[--background] text-sidebar-foreground shadow-lg h-screen fixed z-40`
       )}
     >
-      <SidebarHeader className="p-3">
+      <SidebarHeader className="p-2 lg:p-3">
         <Link to="/">
           <Logo />
         </Link>
@@ -103,15 +105,15 @@ const Aside = ({ isOpen }: AsideProps) => {
                   <CollapsibleTrigger asChild>
                     <SidebarGroupLabel
                       className={cn(
-                        'cursor-pointer !text-[14px] flex items-center gap-2 h-[36px] px-3 !rounded-none transition-colors',
+                        'cursor-pointer flex items-center gap-2 h-[36px] px-2 lg:px-3 !rounded-none transition-colors text-xs lg:text-base',
                         isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                       )}
                     >
-                      <div className="flex items-center gap-2 !h-[36px]">
-                        <span className="text-gray-200">{item.icon}</span>
+                      <span className="flex items-center gap-2 !h-[36px]">
+                        <span className="text-gray-200 [&>svg]:w-3.5 [&>svg]:h-3.5 lg:[&>svg]:w-5 lg:[&>svg]:h-5">{item.icon}</span>
                         <span>{item.name}</span>
-                      </div>
-                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                      </span>
+                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 w-3.5 h-3.5 lg:w-4 lg:h-4" />
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
 
@@ -125,14 +127,15 @@ const Aside = ({ isOpen }: AsideProps) => {
                               onClick={() => {
                                 goTo(child.route, child.id);
                               }}
+                              onMouseEnter={() => prefetch(child.route)}
                               className={cn(
-                                'text-neutral-300 !text-[14px] !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors',
+                                'text-neutral-300 !rounded-none h-[36px] bg-[--card-foreground] cursor-pointer transition-colors text-xs lg:text-base',
                                 active && '!bg-primary'
                               )}
                               asChild
                             >
-                              <a className="flex !text-[14px] items-center gap-2 h-[36px] px-3 w-full">
-                                <span>{child.icon}</span>
+                              <a className="flex items-center gap-2 h-[36px] px-2 lg:px-3 w-full">
+                                <span className="[&>svg]:w-3.5 [&>svg]:h-3.5 lg:[&>svg]:w-5 lg:[&>svg]:h-5">{child.icon}</span>
                                 <span>{child.name}</span>
                               </a>
                             </SidebarMenuButton>
@@ -156,14 +159,15 @@ const Aside = ({ isOpen }: AsideProps) => {
                     onClick={() => {
                       setOpenId(null);goTo(item.route, item.id)
                     }}
+                    onMouseEnter={() => prefetch(item.route)}
                     className={cn(
-                      'h-[36px] !text-[14px] px-3 !rounded-none transition-colors cursor-pointer',
+                      'h-[36px] px-3 !rounded-none transition-colors cursor-pointer text-xs lg:text-base',
                       isActive ? 'bg-primary text-white' : 'hover:bg-muted/10 text-white'
                     )}
                     asChild
                   >
-                    <a className="flex items-center gap-2 h-[36px] !text-[14px] w-full">
-                      <span>{item.icon}</span>
+                    <a className="flex items-center gap-2 h-[36px] w-full">
+                      <span className="[&>svg]:w-3.5 [&>svg]:h-3.5 lg:[&>svg]:w-5 lg:[&>svg]:h-5">{item.icon}</span>
                       <span>{item.name}</span>
                     </a>
                   </SidebarMenuButton>
@@ -176,14 +180,14 @@ const Aside = ({ isOpen }: AsideProps) => {
 
       <SidebarFooter className="border-t-2 1440:h-[100px] h-[70px] flex justify-center items-center">
         <Button variant="ghost" onClick={handleLogoutClick} disabled={loading}>
-          <Flex className="items-center gap-2 h-[48px]">
+          <Flex className="items-center gap-2 h-[48px] text-xs lg:text-base">
             {loading ? 'Cerrando Sesión…' : 'Cerrar Sesión'}
-            <Power />
+            <Power className="w-3.5 h-3.5 lg:w-5 lg:h-5" />
           </Flex>
         </Button>
       </SidebarFooter>
     </Sidebar>
   );
-};
+});
 
 export default Aside;

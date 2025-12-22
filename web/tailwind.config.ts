@@ -47,6 +47,22 @@ const config: Config = {
           foreground: 'var(--card-foreground)',
           bg: 'var(--bg-card)',
         },
+        success: {
+          DEFAULT: 'hsl(142 76% 36%)',
+          foreground: 'hsl(142 76% 96%)',
+        },
+        warning: {
+          DEFAULT: 'hsl(38 92% 50%)',
+          foreground: 'hsl(38 92% 10%)',
+        },
+        cyan: {
+          DEFAULT: 'hsl(180 100% 50%)',
+          foreground: 'hsl(180 100% 10%)',
+        },
+        'blue-light': {
+          DEFAULT: 'hsl(220 70% 80%)',
+          '80': 'hsl(220 70% 80% / 0.8)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -55,6 +71,32 @@ const config: Config = {
       },
       screens: {
         '1440': '1440px',
+      },
+      fontSize: {
+        'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em' }],
+        'sm': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.01em' }],
+        'base': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0' }],
+        'lg': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '0' }],
+        'xl': ['1.25rem', { lineHeight: '1.875rem', letterSpacing: '-0.01em' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.01em' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.02em' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.02em' }],
+        '5xl': ['3rem', { lineHeight: '1', letterSpacing: '-0.02em' }],
+      },
+      fontWeight: {
+        light: '300',
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
+        extrabold: '800',
+      },
+      lineHeight: {
+        tight: '1.25',
+        snug: '1.375',
+        normal: '1.5',
+        relaxed: '1.625',
+        loose: '2',
       },
     },
   },

@@ -28,13 +28,13 @@ const PlayAndHitsToggleSelect = () => {
     setSearchParams(newParams);
   };
   return (
-    <Flex className={'flex-col sm:flex-row sm:space-x-5'}>
-      <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3 gap-3'}>
+    <Flex className={' sm:space-x-5'}>
+      <Flex className={'flex-1 border bg-card rounded-sm  p-1 lg:p-2 xl:p-3  gap-3'}>
         <HeaderTitleSection
           title={'Ver'}
           icon={<EyeIcon size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
           variant={useMediaQuery('(min-width: 1440px)') ? 'large' : 'small'}
-          className={'!mb-[8px]'}
+          className={'!mb-[8px] hidden sm:flex'}
         />
 
         <ToggleGroup
@@ -47,25 +47,25 @@ const PlayAndHitsToggleSelect = () => {
         >
           <ToggleGroupItem
             value="plays"
-            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
+            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm text-xs sm:text-base"
           >
             Jugadas
           </ToggleGroupItem>
           <ToggleGroupItem
             value="hits"
-            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
+            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm text-xs sm:text-base"
           >
             Aciertos
           </ToggleGroupItem>
         </ToggleGroup>
       </Flex>
 
-      <Flex className={'flex-1 border bg-card rounded-sm p1 sm:p-3  gap-3'}>
+      <Flex className={'flex-1 border bg-card rounded-sm  p-1 lg:p-2 xl:p-3  gap-3'}>
         <HeaderTitleSection
           title={'Agrupado'}
           icon={<UsersIcon size="16px" />}
           variant={'small'}
-          className={'!mb-[8px]'}
+          className={'!mb-[8px] hidden sm:flex'}
         />
         <ToggleGroup
           type="single"
@@ -77,13 +77,13 @@ const PlayAndHitsToggleSelect = () => {
         >
           <ToggleGroupItem
             value="individual"
-            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
+            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm text-xs sm:text-base"
           >
             Individual
           </ToggleGroupItem>
           <ToggleGroupItem
             value="grouped"
-            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm"
+            className="data-[state=on]:bg-primary rounded-sm hover:cursor-pointer data-[state=on]:shadow-sm text-xs sm:text-base"
           >
             Agrupados
           </ToggleGroupItem>

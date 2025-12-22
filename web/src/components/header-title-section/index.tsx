@@ -1,14 +1,17 @@
 import React from 'react';
 
 import { Flex } from '@/components/flex';
-import { Typography } from '@/components/typography';
+import { Text } from '@/components/atoms/Text';
 import { cn } from '@/lib/utils.ts';
-import { TypographyVariant } from '@/types/typography.type.ts';
+
+type TextSize = 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl';
+type TextWeight = 'light' | 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold';
 
 interface HeaderTitleSectionProps {
   title?: string;
   icon?: React.ReactNode;
-  variant?: TypographyVariant;
+  size?: TextSize;
+  weight?: TextWeight;
   className?: string;
   iconClassName?: string;
   titleClassName?: string;
@@ -17,17 +20,18 @@ interface HeaderTitleSectionProps {
 const HeaderTitleSection = ({
   title,
   icon,
-  variant,
+  size = 'sm',
+  weight = 'medium',
   className,
   iconClassName = '',
   titleClassName,
 }: HeaderTitleSectionProps) => {
   return (
-    <Flex className={`${cn(className)} gap-2  items-center mb-1 sm:mb-4`}>
+    <Flex className={`${cn(className)} gap-2  items-center mb-1  xl:mb-2`}>
       {icon && <span className={`${iconClassName} text-[--text-secondary]`}>{icon}</span>}
-      <Typography variant={variant || 'small'} className={titleClassName}>
+      <Text size={size} weight={weight} className={titleClassName}>
         {title}
-      </Typography>
+      </Text>
     </Flex>
   );
 };

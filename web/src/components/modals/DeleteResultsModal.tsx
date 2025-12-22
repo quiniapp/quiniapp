@@ -2,7 +2,7 @@ import Modal from './custom-modal';
 import { FlexCol } from '../flex';
 import { Label } from '../ui/label';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 
 interface GenerateWinnersModalProps {
@@ -29,19 +29,19 @@ const DeleteResultsModal = ({
       title="Borrar resultados"
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center w-fit !max-w-[980px]  m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[90vw] sm:!max-w-[500px] md:!max-w-[600px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
-      <FlexCol className='gap-3 w-fit'>
-        <Label>Borrar resultados para el dia {date}</Label>
-        <Label>Turno {schedule?.name} </Label>
-        <Label>Loteria {lottery?.name} </Label>
-        <Button
-          variant={'success'}
-          className="  hover:bg-green-700 text-white"
+      <FlexCol className="gap-3 sm:gap-4 w-full px-2 sm:px-4">
+        <Label className="text-sm sm:text-base">Borrar resultados para el dia {date}</Label>
+        <Label className="text-sm sm:text-base">Turno {schedule?.name} </Label>
+        <Label className="text-sm sm:text-base">Loteria {lottery?.name} </Label>
+        <IconButton
+          label={isPendingDelete ? 'Borrando...' : 'Borrar resultados'}
+          variant="destructive"
           onClick={() => onClick()}
-        >
-          {isPendingDelete ? 'Borrando...' : 'Borrar resultados'}
-        </Button>
+          disabled={isPendingDelete}
+          className="w-full"
+        />
       </FlexCol>
     </Modal>
   );

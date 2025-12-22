@@ -3,6 +3,7 @@ import {
   IDeleteTicketEntity,
   IEditTicketBaseEntity,
   INewTicketBaseEntity,
+  IPayTicketEntity,
 } from '@helper/request/ticket.response';
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
@@ -42,13 +43,32 @@ export class TicketRepository {
     if (error) throw error;
     return data;
   }
-  async getAll({ user_id, date, winner }: { user_id?: string; date: string; winner: boolean }) {
+
+  async getAll({
+    user_id,
+    date,
+    winner,
+    paid,
+    page = 1,
+    limit = 100,
+  }: {
+    user_id?: string;
+    date: string;
+    winner?: boolean;
+    paid?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     let query = supabase
       .from('tickets')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('date', date)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (user_id !== undefined) {
       query = query.eq('user_id', user_id);
@@ -56,9 +76,17 @@ export class TicketRepository {
     if (winner) {
       query = query.is('winner', true);
     }
-    const { data, error } = await query;
+
+    if (typeof paid === 'boolean') {
+      query = query.is('paid', paid);
+      if (!paid) {
+        query = query.is('winner', true);
+      }
+    }
+
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data;
+    return { data, count: count ?? 0 };
   }
 
   async delete(props: IDeleteTicketEntity) {
@@ -156,6 +184,24 @@ export class TicketRepository {
     }
     const { data, error } = await query;
     if (error) throw error;
+    return data;
+  }
+
+  async payTicket({ ticket_number, user_id }: IPayTicketEntity): Promise<{
+    success: boolean;
+    ticket_id: string;
+    bets_updated: number;
+  }> {
+    const { data, error } = await supabase.rpc('pay_ticket', {
+      p_ticket_number: ticket_number,
+      p_user_id: user_id,
+    });
+
+    if (error) {
+      // El RPC lanza excepciones específicas que debemos propagar
+      throw error;
+    }
+
     return data;
   }
 }

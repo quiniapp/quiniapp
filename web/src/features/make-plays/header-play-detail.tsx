@@ -3,11 +3,10 @@ import React, { Suspense, useEffect, useState } from 'react';
 
 import { Flex } from '@/components/flex';
 import HeaderSection from '@/components/header-section';
-import { Typography } from '@/components/typography';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/button/IconButton';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
-import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { USER_TYPE } from '@helper/types/user.type';
 
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -20,30 +19,14 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
-import { IBetTable } from '@helper/request/ticket.response';
 import { useGetTicketsNumber } from '@/hooks/fetchs/tickets/useGetTicketNumber';
+import { usePlayDetails } from './context/MakePlaysContext';
 
 // 👇 Lazy import del modal (se carga sólo cuando se renderiza)
 const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));
 
-interface HeaderPlayDetailProps {
-  cashier?: IUserEntityFront;
-  userNumber?: number;
-  setUserNumber: React.Dispatch<React.SetStateAction<number | undefined>>;
-  handleRecreateBet: (values: IBetTable[]) => void;
-  handleEditTicket: (ticket_id: string) => void;
-
-  setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
-  setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
-}
-
-const HeaderPlayDetail = ({
-  cashier,
-  userNumber,
-  setUserNumber,
-  handleRecreateBet,
-  handleEditTicket,
-}: HeaderPlayDetailProps) => {
+const HeaderPlayDetail = () => {
+  const { cashier, userNumber, setUserNumber, handleRecreateBet, handleEditTicket } = usePlayDetails();
   const [selectedValue, setSelectedValue] = useState<string>('');
   const { role } = useAuth();
 
@@ -103,30 +86,32 @@ const HeaderPlayDetail = ({
   }, [userNumber]);
 
   return (
-    <HeaderSection title={' Realizar Jugadas'}>
+    <HeaderSection title={' Realizar Jugadas'} className='gap-2'>
       {role !== USER_TYPE.CASHIER && (
-        <Flex className="flex-row w-full flex-wrap justify-start  sm:justify-end gap-3">
-          <Flex className={'flex-row items-center justify-center gap-4 sm:px-3'}>
-            <Label htmlFor={'user'}> Usuario</Label>
+        <Flex className=" w-full  justify-start sm:justify-end gap-1 sm:gap-2 xl:gap-3 ">
+          <Flex className={'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
+            <Label htmlFor={'user'} className="hidden sm:inline text-xs sm:text-sm lg:text-base whitespace-nowrap"> Usuario</Label>
             <Input
               type={'number'}
               inputMode="numeric"
               id={'user'}
               name={'user'}
-              className={'max-w-[100px]'}
+              placeholder='Usuario'
+              className={'w-20 sm:max-w-[100px] text-xs sm:text-sm lg:text-base h-8 sm:h-9 lg:h-7'}
               value={userNumber?.toString() ?? ''}
               onChange={(e) => {
                 handleSearch(e.target.value);
               }}
             />
-            <div className="w-40">
-              <Label htmlFor={'user'}> {cashier?.name}</Label>
+            <div className="flex-1 truncate">
+              <Label htmlFor={'user'} className="text-xs w-20 sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
             </div>
           </Flex>
-          <Flex className={'flex-row items-center justify-center gap-4 sm:px-3'}>
-            <Label htmlFor={'user'}> Ticket</Label>
+          
+          <Flex className={'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
+            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">Ticket</Label>
             <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
-              <SelectTrigger className="min-w-48 border-dark-lighter">
+              <SelectTrigger className="border-dark-lighter h-8 sm:h-9 lg:h-7">
                 <SelectValue placeholder="Seleccione uno" />
               </SelectTrigger>
               <SelectContent>
@@ -143,39 +128,30 @@ const HeaderPlayDetail = ({
       )}
 
       {role === USER_TYPE.CASHIER && (
-        <Flex className="flex-row w-full flex-wrap justify-center  sm:justify-end gap-3">
-          <Button
+        <Flex className="flex-row w-full flex-wrap justify-center sm:justify-end gap-2 lg:gap-1.5">
+          <IconButton
             type="button"
+            label="Repetir Ticket"
+            icon={<Repeat2Icon className="w-4 h-4" />}
             onClick={openRepeatModal}
-            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
-          >
-            <Repeat2Icon className="hidden sm:flex w-3 h-3" />
-            <Typography className="text-[10px] sm:text-xs" variant="small">
-              Repetir Ticket
-            </Typography>
-          </Button>
+            className="flex-1 sm:flex-none"
+          />
 
-          <Button
+          <IconButton
             type="button"
+            label="Reimprimir"
+            icon={<PrinterIcon className="w-4 h-4" />}
             variant="outline"
             onClick={handleRePrimtLast}
-            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
-          >
-            <PrinterIcon className="hidden sm:flex w-3 h-3" />
-            <Typography className="text-[10px] sm:text-xs" variant="small">
-              Reimprimir Anterior
-            </Typography>
-          </Button>
+            className="flex-1 sm:flex-none "
+          />
 
-          <Button
+          <IconButton
             type="button"
+            label="Cancelar"
             variant="destructive"
-            className="h-7 px-2 text-[10px] gap-1 sm:h-8 sm:px-3 sm:text-xs sm:w-fit"
-          >
-            <Typography className="text-[10px] sm:text-xs" variant="small">
-              Cancelar Ticket
-            </Typography>
-          </Button>
+            className="flex-1 sm:flex-none"
+          />
         </Flex>
       )}
 

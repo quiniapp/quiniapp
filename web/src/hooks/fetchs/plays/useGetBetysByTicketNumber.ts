@@ -63,7 +63,8 @@ export async function fetchBetsByTicketNumber({
 
   // ajustá a tu shape real
   const json = await res.json();
-  return json?.data?.bets ?? [];
+  // Con paginación, la estructura es: json.data.bets.data
+  return json?.data?.bets?.data ?? [];
 }
 
 export const useGetBetysByTicketNumber = (p: FetchBetsProps) => {

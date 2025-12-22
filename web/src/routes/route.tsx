@@ -1,28 +1,39 @@
-import Layout from '@/components/layout';
+import { lazy, Suspense } from 'react';
+import { LoadingFallback } from '@/components/molecules/LoadingFallback';
+
+// Eager imports (necesarios inmediatamente)
 import LoginPage from '@/features/login';
-import { Index } from '@/pages';
-import ClientPage from '@/pages/clients';
-import CurrentAccountPage from '@/pages/current-account.tsx';
-import GroupsPage from '@/pages/groups';
-import NotFound from '@/pages/NotFound';
-
-// @Page
-import UserListPage from '@/pages/user-list';
-import PlayDetailsPage from '@/pages/MakePlays';
-import PlaysAndHitsPage from '@/pages/plays-and-hits';
-import { TerminalTicketPage } from '@/pages/terminal-ticket';
-
-// @Types
 import ProtectedRoute from '@/protected/protected-routes.tsx';
 import { ROUTES } from '@/types/routes.type';
-import ReportsPage from '@/pages/reports';
-import ResultsPage from '@/pages/results';
-import SettingsPage from '@/pages/settings';
-import ShiftsPage from '@/pages/shifts';
-import UpcomingLotteriesPage from '@/pages/upcoming-lotteries.tsx';
-import UsersPage from '@/pages/users';
-import NewUserPage from '@/pages/new-user.tsx';
-import ResetPassword from '@/pages/ResetPassword';
+
+// Lazy imports (cargados bajo demanda)
+const Layout = lazy(() => import('@/components/layout'));
+const Index = lazy(() => import('@/pages').then(module => ({ default: module.Index })));
+const ClientPage = lazy(() => import('@/pages/clients'));
+const CurrentAccountPage = lazy(() => import('@/pages/current-account.tsx'));
+const GroupsPage = lazy(() => import('@/pages/groups'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
+const UserListPage = lazy(() => import('@/pages/user-list'));
+const PlayDetailsPage = lazy(() => import('@/pages/MakePlays'));
+const PlaysAndHitsPage = lazy(() => import('@/pages/plays-and-hits'));
+const TerminalTicketPage = lazy(() => import('@/pages/terminal-ticket').then(module => ({ default: module.TerminalTicketPage })));
+const ReportsPage = lazy(() => import('@/pages/reports'));
+const ResultsPage = lazy(() => import('@/pages/results'));
+const SettingsPage = lazy(() => import('@/pages/settings'));
+const ShiftsPage = lazy(() => import('@/pages/shifts'));
+const UpcomingLotteriesPage = lazy(() => import('@/pages/upcoming-lotteries.tsx'));
+const UsersPage = lazy(() => import('@/pages/users'));
+const NewUserPage = lazy(() => import('@/pages/new-user.tsx'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+
+// Helper para envolver componentes lazy con Suspense
+function withSuspense(Component: React.LazyExoticComponent<any>) {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Component />
+    </Suspense>
+  );
+}
 
 export const RoutesContent = [
   {
@@ -35,95 +46,97 @@ export const RoutesContent = [
     id: 'MainLayout',
     element: (
       <ProtectedRoute>
-        <Layout />
+        <Suspense fallback={<LoadingFallback fullScreen />}>
+          <Layout />
+        </Suspense>
       </ProtectedRoute>
     ),
     children: [
       {
         path: ROUTES.HOME,
         id: 'Home',
-        element: <Index />,
+        element: withSuspense(Index),
       },
       {
         path: ROUTES.MAKE_PLAYS,
         id: 'MakePlays',
-        element: <PlayDetailsPage />,
+        element: withSuspense(PlayDetailsPage),
       },
       {
         path: ROUTES.PLAYS_AND_HITS,
         id: 'PlaysAndHits',
-        element: <PlaysAndHitsPage />,
+        element: withSuspense(PlaysAndHitsPage),
       },
       {
         path: ROUTES.TERMINAL_TICKET,
         id: 'TerminalTicket',
-        element: <TerminalTicketPage />,
+        element: withSuspense(TerminalTicketPage),
       },
       {
         path: ROUTES.RESULTS,
         id: 'Results',
-        element: <ResultsPage />,
+        element: withSuspense(ResultsPage),
       },
       {
         path: ROUTES.CLIENTS,
         id: 'Clients',
-        element: <ClientPage />,
+        element: withSuspense(ClientPage),
       },
       {
         path: ROUTES.CURRENT_ACCOUNT,
         id: 'CurrentAccount',
-        element: <CurrentAccountPage />,
+        element: withSuspense(CurrentAccountPage),
       },
       {
         path: ROUTES.SHIFTS,
         id: 'Shifts',
-        element: <ShiftsPage />,
+        element: withSuspense(ShiftsPage),
       },
       {
         path: ROUTES.USERS,
         id: 'Users',
-        element: <UsersPage />,
+        element: withSuspense(UsersPage),
       },
       {
         path: ROUTES.USERS_List,
         id: 'UsersList',
-        element: <UserListPage />,
+        element: withSuspense(UserListPage),
       },
       {
         path: ROUTES.REPORTS,
         id: 'Reports',
-        element: <ReportsPage />,
+        element: withSuspense(ReportsPage),
       },
       {
         path: ROUTES.SETTINGS,
         id: 'Settings',
-        element: <SettingsPage />,
+        element: withSuspense(SettingsPage),
       },
       {
         path: ROUTES.LOTTERIES,
         id: 'Lotteries',
-        element: <UpcomingLotteriesPage />,
+        element: withSuspense(UpcomingLotteriesPage),
       },
       {
         path: ROUTES.GROUPS,
         id: 'Groups',
-        element: <GroupsPage />,
+        element: withSuspense(GroupsPage),
       },
       {
         path: ROUTES.NEW_USER,
         id: 'New_User',
-        element: <NewUserPage />,
+        element: withSuspense(NewUserPage),
       },
       {
         path: ROUTES.RESET_PASSWORD,
         id: 'Reset_Password',
-        element: <ResetPassword />,
+        element: withSuspense(ResetPassword),
       }
     ],
   },
   {
     path: '*',
     id: 'NotFound',
-    element: <NotFound />,
+    element: withSuspense(NotFound),
   },
 ];

@@ -1,13 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
-
-const VALIDATE_INTERVAL_MS = 4 * 60 * 1000;
-const VALIDATE_ON_VISIBILITY = true;
-
-const VISIBILITY_MIN_GAP_MS = 10 * 60 * 1000; // 10 min
-const INACTIVITY_LOGOUT_MS = 10 * 60 * 1000; // 10 min
+import {
+  SESSION_DURATION_MS,
+  VALIDATE_INTERVAL_MS,
+  VALIDATE_ON_VISIBILITY,
+  VISIBILITY_MIN_GAP_MS,
+  USER_ACTIVITY_EVENTS,
+} from '@helper/config/session.config';
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<IUserEntityFront | null>(null);
@@ -107,7 +108,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     inactivityTimerRef.current = window.setTimeout(() => {
       // si sigue autenticado y se cumplió el tiempo, cerrar sesión
       if (isAuth) void logout();
-    }, INACTIVITY_LOGOUT_MS) as unknown as number;
+    }, SESSION_DURATION_MS) as unknown as number;
   }, [isAuth, logout]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
@@ -139,8 +140,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
       const now = Date.now();
 
-      // 1) Si hubo más de INACTIVITY_LOGOUT_MS sin actividad, cerrar sesión
-      if (now - lastActivityRef.current >= INACTIVITY_LOGOUT_MS) {
+      // 1) Si hubo más de SESSION_DURATION_MS sin actividad, cerrar sesión
+      if (now - lastActivityRef.current >= SESSION_DURATION_MS) {
         void logout();
         return;
       }
@@ -170,15 +171,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       armInactivityTimer();
     };
 
-    // eventos que consideramos como “actividad”
-    const events: (keyof WindowEventMap)[] = [
-      'mousemove',
-      'mousedown',
-      'keydown',
-      'scroll',
-      'touchstart',
-      'click',
-    ];
+    // usar eventos definidos en la configuración compartida
+    const events = [...USER_ACTIVITY_EVENTS];
 
     events.forEach((ev) => window.addEventListener(ev, onUserActivity, { passive: true }));
     // armar timer al montar
@@ -190,16 +184,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [armInactivityTimer]);
 
-  const value: AuthContextValue = {
-    isAuth,
-    loading,
-    user,
-    role,
-    login,
-    logout,
-    validate,
-    hasRole,
-  };
+  const value: AuthContextValue = useMemo(
+    () => ({
+      isAuth,
+      loading,
+      user,
+      role,
+      login,
+      logout,
+      validate,
+      hasRole,
+    }),
+    [isAuth, loading, user, role, login, logout, validate, hasRole]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

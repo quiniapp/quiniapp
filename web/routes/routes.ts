@@ -16,7 +16,8 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/bet`,
     id: (id: string) => `${PRIVATE}/bet/${id}`,
     totalAmount: `${PRIVATE}/bet/total`,
-    totalPrize: `${PRIVATE}/bet/prize`
+    totalPrize: `${PRIVATE}/bet/prize`,
+    amounts: `${PRIVATE}/bet/amounts`,
   },
   lottery: {
     base: `${PRIVATE}/lottery`,
@@ -29,7 +30,8 @@ export const BACKEND_ROUTES = {
   ticket: {
     base: `${PRIVATE}/ticket`,
     id: (id: string) => `${PRIVATE}/ticket/${id}`,
-    number:`${PRIVATE}/ticket/number`,
+    number: `${PRIVATE}/ticket/number`,
+    paid: (ticket_number: string) => `${PRIVATE}/ticket/paid/${ticket_number}`,
   },
   winners: {
     base: `${PRIVATE}/winners`,
@@ -39,6 +41,8 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/current_account`,
     id: (id: string) => `${PRIVATE}/current_account/${id}`,
     bulk: `${PRIVATE}/current_account/bulk`,
+    calculate: `${PRIVATE}/current_account/calculate`,
+    liquidate: `${PRIVATE}/current_account/liquidate`,
   },
   results: {
     base: `${PRIVATE}/results`,
@@ -47,7 +51,7 @@ export const BACKEND_ROUTES = {
   schedule_lottery: {
     base: `${PRIVATE}/schedule_lottery`,
   },
-  settings:{
-    storage:  `${PRIVATE}/settings/storage`
-  }
+  settings: {
+    storage: `${PRIVATE}/settings/storage`,
+  },
 };

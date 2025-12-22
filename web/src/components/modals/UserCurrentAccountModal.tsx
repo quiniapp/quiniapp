@@ -8,10 +8,10 @@ import LabelInputForm from '../molecules/LabelInputForm';
 import { useBets } from '@/hooks/fetchs/plays/useBets';
 import { useTickets } from '@/hooks/fetchs/tickets/useTickets';
 
-import { Button } from '../ui/button';
+import { IconButton } from '../button/IconButton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import SkeletonList from '../skeletons/skeleton-list';
-import { Typography } from '../typography';
+import { Text } from '../atoms/Text';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -98,7 +98,7 @@ const UserCurrentAccountModal = ({
       title={`Liquidar ${currentAccount?.user_name}-${currentAccount?.user_number} del día ${dayjs(currentAccount?.date).format('DD-MM-YYYY')}`}
       isOpen={isOpen}
       onClose={onClose}
-      className="flex flex-col items-center !max-w-[980px] w-full m-auto bg-[#060813] pt-[36px]"
+      className="flex flex-col items-center !max-w-[95vw] sm:!max-w-[90vw] md:!max-w-[980px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="w-full">
@@ -190,7 +190,7 @@ const UserCurrentAccountModal = ({
                     <TableRow>
                       <TableCell colSpan={14} className="text-center">
                         <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">No se encontraron tickets</Typography>
+                          <Text size="lg" weight="semibold">No se encontraron tickets</Text>
                         </FlexCol>
                       </TableCell>
                     </TableRow>
@@ -232,9 +232,9 @@ const UserCurrentAccountModal = ({
                     <TableRow>
                       <TableCell colSpan={14} className="text-center">
                         <FlexCol className="items-center justify-center gap-1">
-                          <Typography variant="large">
+                          <Text size="lg" weight="semibold">
                             No se encontraron jugadas ganadoras
-                          </Typography>
+                          </Text>
                         </FlexCol>
                       </TableCell>
                     </TableRow>
@@ -255,22 +255,20 @@ const UserCurrentAccountModal = ({
               </Table>
             </FlexCol>
           </Flex>
-          <Flex className="justify-center gap-2 mt-6">
-            <Button
+          <Flex className="justify-center gap-2 mt-6 flex-col sm:flex-row w-full px-2 sm:px-4">
+            <IconButton
+              label="Generar Liquidación"
               type="submit"
-              className="p-1 sm:p-3 uppercase  text-xs sm:text-base"
-              variant={'success'}
-            >
-              Generar Liquidación
-            </Button>
-            <Button
+              variant="success"
+              className="w-full uppercase"
+            />
+            <IconButton
+              label="Cancelar"
               type="button"
               onClick={onClose}
-              className="p-1 sm:p-3 text-xs sm:text-base"
-              variant={'destructive'}
-            >
-              Cancelar
-            </Button>
+              variant="destructive"
+              className="w-full"
+            />
           </Flex>
         </form>
       </FormProvider>

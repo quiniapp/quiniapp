@@ -23,7 +23,7 @@ export type IDeleteTicketEntity = Pick<ITicketEntityBase, 'ticket_number'> &
 export type IGetTicketEntity = Partial<Pick<ITicketEntityBase, 'ticket_id' | 'ticket_number'>>;
 
 export type IGetAllTicketEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
-  Partial<Pick<ITicketEntityBase, 'date' | 'winner'>> & { cashier_id?: string };
+  Partial<Pick<ITicketEntityBase, 'date' | 'winner' | 'paid'>> & { cashier_id?: string };
 
 export type IGetAllTicketByUserEntity = Pick<ITicketEntityBase, 'date' | 'user_id'> &
   Partial<Pick<ITicketEntityBase, 'winner'>>;
@@ -57,3 +57,5 @@ export type ITicketEntityFrontCompact = Omit<
 
 export type IGetAllTicketNumberEntity = Pick<IUserEntityBack, 'user_id' | 'user_type'> &
   Partial<Pick<ITicketEntityBase, 'date' | 'winner'>> & { cashier_id?: string };
+
+export type IPayTicketEntity = Pick<ITicketEntityBase, 'ticket_number' | 'user_id'>;

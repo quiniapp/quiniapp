@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { useClock } from '@/providers/ClockProvider';
 
-const Footer = () => {
+const Footer = memo(function Footer() {
   const { time, date } = useClock();
 
   return (
@@ -11,6 +12,6 @@ const Footer = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Footer;

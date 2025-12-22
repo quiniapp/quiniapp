@@ -1,40 +1,21 @@
 import { Request, RequestHandler, Response, Router } from 'express';
-import crypto from 'crypto';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
 import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
+import { globalCacheManager } from 'src/cache/CacheManager';
+
 export type ScheduleLotteryPayload = {
   scheduleLotteries: IScheduleLotteryEntityFront;
 };
-// ====== Cache simple en memoria ======
-type SchedCache = {
-  payload: IScheduleLotteryEntityFront; // el mapa por día
-  etag: string;
-  expiresAt: number;
-};
 
-const TTL_MS = 24 * 60 * 60 * 1000; // 1 dia (ajustable)
-let cache: SchedCache | null = null;
+// ====== Cache Manager para Schedule Lotteries ======
+const CACHE_KEY = 'schedule-lotteries:all';
+const TTL_MS = 24 * 60 * 60 * 1000; // 1 dia
 
-// Recalcula y guarda en cache
-async function refreshCache(controller: ScheduleLotteryController): Promise<SchedCache> {
-  const data = await controller.getAllScheduleLotteries(); // devuelve IScheduleLotteryEntityFront
-  const bodyString = JSON.stringify(data ?? {});
-  const etag = `W/"${crypto.createHash('sha1').update(bodyString).digest('hex')}"`;
-  cache = {
-    payload: data!, // << ya es IScheduleLotteryEntityFront
-    etag,
-    expiresAt: Date.now() + TTL_MS,
-  };
-  return cache;
-}
-
-// Obtiene cache; si está vencido, vuelve a consultar sincronamente
-async function getOrRefresh(controller: ScheduleLotteryController): Promise<SchedCache> {
-  if (cache && cache.expiresAt > Date.now()) return cache;
-  return await refreshCache(controller);
+function invalidateScheduleLotteries() {
+  globalCacheManager.invalidate(CACHE_KEY);
 }
 
 export class ScheduleLotteryRouter {
@@ -94,7 +75,7 @@ export class ScheduleLotteryRouter {
       await this.controller.bulkActiveLotteries(lotteries);
 
       // ====== invalidación de cache ======
-      cache = null; // aseguramos que el próximo GET refresque desde DB
+      invalidateScheduleLotteries();
 
       const response: APIResponse<IScheduleLotteryEntityFront> = {
         data: { scheduleLotteries: data! }, // data!: IScheduleLotteryEntityFront
@@ -121,7 +102,11 @@ export class ScheduleLotteryRouter {
   // ====== GET: sirve desde cache + ETag/304 ======
   private getScheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     try {
-      const snap = await getOrRefresh(this.controller);
+      const snap = await globalCacheManager.getOrLoad(
+        CACHE_KEY,
+        () => this.controller.getAllScheduleLotteries(),
+        { ttl: TTL_MS, etagStrategy: 'hash' }
+      );
 
       // Soporta If-None-Match para 304 (ahorra ancho de banda y CPU)
       const inm = req.headers['if-none-match'];

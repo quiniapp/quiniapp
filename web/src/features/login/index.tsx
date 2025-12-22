@@ -15,8 +15,8 @@ import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePlatform } from '@/hooks/use-platform';
 import { ROUTES } from '@/types/routes.type';
-import { useClock } from '@/providers/ClockProvider';
-import { useAuth } from '@/contexts/AuthContext'; // ⬅️ nuevo
+import { useAuth } from '@/contexts/AuthContext';
+import { ErrorMessage } from '@/components/atoms/ErrorMessage';
 
 interface FormData {
   username: string;
@@ -29,10 +29,9 @@ const validationSchemaLogin = z.object({
 });
 
 const LoginContent = () => {
-  const { login, isAuth, loading } = useAuth(); // ⬅️ usamos el provider
+  const { login, isAuth, loading } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { refresh } = useClock();
   const platform = usePlatform();
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -49,12 +48,12 @@ const LoginContent = () => {
     }
   };
 
+  // Redirigir si el usuario ya está autenticado
   useEffect(() => {
     if (isAuth) {
-      void refresh();
       navigate(ROUTES.MAKE_PLAYS, { replace: true });
     }
-  }, [isAuth, navigate, refresh]);
+  }, [isAuth, navigate]);
 
   return (
     <Flex className="h-screen flex-col md:flex-row">
@@ -79,9 +78,11 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label className="text-white">Nombre</Label>
+                      <Label>Nombre</Label>
                       <Input {...field} type="text" placeholder="Nombre de usuario" autoComplete="username" />
-                      {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
+                      {errors.username?.message && (
+                        <ErrorMessage>{errors.username.message}</ErrorMessage>
+                      )}
                     </Flex>
                   )}
                 />
@@ -90,9 +91,11 @@ const LoginContent = () => {
                   control={control}
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
-                      <Label className="text-white">Contraseña</Label>
+                      <Label>Contraseña</Label>
                       <Input {...field} type="password" placeholder="******" autoComplete="current-password" />
-                      {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+                      {errors.password?.message && (
+                        <ErrorMessage>{errors.password.message}</ErrorMessage>
+                      )}
                     </Flex>
                   )}
                 />
