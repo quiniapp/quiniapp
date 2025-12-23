@@ -1,5 +1,3 @@
-import Box from '@/components/box';
-import { Flex, FlexCol } from '@/components/flex';
 import Modal from '@/components/modals/custom-modal.tsx';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/ui/button.tsx';
@@ -8,7 +6,6 @@ import { QuinielaFieldset } from '@/features/make-plays/quiniela-fieldset';
 import { useEffect, useMemo, useState } from 'react';
 import { getTicketByNumber } from '@/hooks/fetchs/tickets/useGetTicketByNumber';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { cn } from '@/lib/utils';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
@@ -221,196 +218,199 @@ useEffect(() => {
       title={title}
       isOpen={isOpen}
       onClose={onClose}
-      className="!max-w-[1024px] w-full m-auto bg-[#060813] p-3 sm:p-6"
+      className="!max-w-[1024px] w-full m-auto bg-[#060813] p-2 sm:p-4 md:p-6 !max-h-[95vh] flex flex-col !gap-0 overflow-y-scroll"
     >
-      {/* Input de Ticket - Layout Responsive */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-          <Text size="sm" weight="medium" className="text-slate-200 whitespace-nowrap">
-            Ticket N°:
-          </Text>
-          <Input
-            type="number"
-            value={ticketNumber}
-            onChange={(e) => setTicketNumber(e.target.value)}
-            className="w-full sm:w-64"
-            placeholder="Ingrese el número de ticket"
-          />
-        </div>
-      </div>
-
-      {/* Grid de Quiniela Fieldsets - Responsive */}
-      <div className="mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {(schedules ?? []).map((sch) => {
-            const isDisabled = disabledSchedules.has(sch.schedule_id);
-            const availableRaw = scheduleLottery?.[todayKey]?.[sch.schedule_id] ?? [];
-            const available = isDisabled ? [] : availableRaw;
-
-            const nearClose =
-              isCashier && !isDisabled && isLessThanTenMinutes(toHHMMSS(sch.time), 10);
-
-            return (
-              <QuinielaFieldset
-                key={sch.schedule_id}
-                legend={`${sch.name}-${sch.time.slice(0, 5)}${
-                  isDisabled ? ' (cerrado)' : nearClose ? ' (cierra pronto)' : ''
-                }`}
-                namePrefix="tone"
-                schedule={sch}
-                availableLotteryIds={available}
-                selectedLotteryIds={scheduleLotteriesToPlay.get(sch.schedule_id) ?? new Set<string>()}
-                onToggleLottery={(lotId) => handleToggleLottery(sch.schedule_id, lotId)}
-                onToggleAll={(checked) =>
-                  handleToggleAllForSchedule(sch.schedule_id, availableRaw, checked)
-                }
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Sección de Total y Botones de Selección */}
-      <div className="mb-6 bg-slate-800/30 rounded-lg p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center">
-            <Text size="lg" weight="semibold" className="text-slate-100">
-              Total: <span className="text-green-400">${selectedTotal.toFixed(2)}</span>
+      {/* Contenedor con scroll - Todo excepto los botones */}
+      <div className="overflow-y-auto flex-1 pr-1 -mr-1 min-h-0">
+        {/* Input de Ticket - Layout Responsive */}
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <Text size="sm" weight="medium" className="text-slate-200 whitespace-nowrap">
+              Ticket N°:
             </Text>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={handleSelectAllAllSchedules}
-            >
-              Seleccionar todas
-            </Button>
-            <Button
-              variant="outline"
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={handleClearAllAllSchedules}
-            >
-              Quitar todas
-            </Button>
+            <Input
+              type="number"
+              value={ticketNumber}
+              onChange={(e) => setTicketNumber(e.target.value)}
+              className="w-full sm:w-64"
+              placeholder="Ingrese el número de ticket"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Tabla Desktop / Cards Mobile */}
-      <div className="mb-6">
-        {/* Vista de Tabla - Solo Desktop */}
-        <div className="hidden md:block overflow-y-auto max-h-96 rounded-lg border border-slate-700">
-          <Table>
-            <TableHeader className="sticky top-0 bg-slate-800/95 z-10">
-              <TableRow>
-                <TableHead className="text-slate-200">Jugada</TableHead>
-                <TableHead className="text-slate-200">Con</TableHead>
-                <TableHead className="text-slate-200">Monto</TableHead>
-                <TableHead className="text-slate-200">Tipo</TableHead>
-                <TableHead className="text-slate-200">Horario/Lotería</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from(repeatBets.values()).map((bet, index) => (
-                <TableRow key={index} className="text-slate-300 hover:bg-slate-800/50">
-                  <TableCell className="font-medium">{bet.number}</TableCell>
-                  <TableCell>{bet.with || '-'}</TableCell>
-                  <TableCell>${bet.amount}</TableCell>
-                  <TableCell>
-                    {betPlaceDictionary[bet.place]}
-                    {bet?.position ? ` ${betPlaceDictionary[bet.position]}` : ''}
-                  </TableCell>
-                  <TableCell className="whitespace-normal break-words text-sm">
-                    {bet.scheduleLottery.map((lotSched, idx) => (
-                      <span key={idx} className="block mb-1">
-                        {lotSched.schedule.name} - [{lotSched.lotteries.map((lot) => lot.name).join(', ')}]
-                      </span>
-                    ))}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        {/* Grid de Quiniela Fieldsets - Responsive */}
+        <div className="mb-4 sm:mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
+            {(schedules ?? []).map((sch) => {
+              const isDisabled = disabledSchedules.has(sch.schedule_id);
+              const availableRaw = scheduleLottery?.[todayKey]?.[sch.schedule_id] ?? [];
+              const available = isDisabled ? [] : availableRaw;
+
+              const nearClose =
+                isCashier && !isDisabled && isLessThanTenMinutes(toHHMMSS(sch.time), 10);
+
+              return (
+                <QuinielaFieldset
+                  key={sch.schedule_id}
+                  legend={`${sch.name}-${sch.time.slice(0, 5)}${
+                    isDisabled ? ' (cerrado)' : nearClose ? ' (cierra pronto)' : ''
+                  }`}
+                  namePrefix="tone"
+                  schedule={sch}
+                  availableLotteryIds={available}
+                  selectedLotteryIds={scheduleLotteriesToPlay.get(sch.schedule_id) ?? new Set<string>()}
+                  onToggleLottery={(lotId) => handleToggleLottery(sch.schedule_id, lotId)}
+                  onToggleAll={(checked) =>
+                    handleToggleAllForSchedule(sch.schedule_id, availableRaw, checked)
+                  }
+                />
+              );
+            })}
+          </div>
         </div>
 
-        {/* Vista de Cards - Solo Mobile */}
-        <div className="md:hidden space-y-3 max-h-96 overflow-y-auto">
-          {Array.from(repeatBets.values()).map((bet, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/40 rounded-lg p-4 border border-slate-700 space-y-2"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <Text size="xs" className="text-slate-400 uppercase tracking-wide">
-                    Jugada
-                  </Text>
-                  <Text size="lg" weight="bold" className="text-slate-100">
-                    {bet.number}
-                  </Text>
-                </div>
-                <div className="text-right">
-                  <Text size="xs" className="text-slate-400 uppercase tracking-wide">
-                    Monto
-                  </Text>
-                  <Text size="lg" weight="semibold" className="text-green-400">
-                    ${bet.amount}
-                  </Text>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700">
-                <div>
-                  <Text size="xs" className="text-slate-400">
-                    Con:
-                  </Text>
-                  <Text size="sm" className="text-slate-200">
-                    {bet.with || '-'}
-                  </Text>
-                </div>
-                <div>
-                  <Text size="xs" className="text-slate-400">
-                    Tipo:
-                  </Text>
-                  <Text size="sm" className="text-slate-200">
-                    {betPlaceDictionary[bet.place]}
-                    {bet?.position ? ` ${betPlaceDictionary[bet.position]}` : ''}
-                  </Text>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-700">
-                <Text size="xs" className="text-slate-400 mb-1">
-                  Horario/Lotería:
-                </Text>
-                <div className="space-y-1">
-                  {bet.scheduleLottery.map((lotSched, idx) => (
-                    <Text key={idx} size="xs" className="text-slate-300 block">
-                      {lotSched.schedule.name} - [{lotSched.lotteries.map((lot) => lot.name).join(', ')}]
-                    </Text>
-                  ))}
-                </div>
-              </div>
+        {/* Sección de Total y Botones de Selección */}
+        <div className="mb-4 sm:mb-6 bg-slate-800/30 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center">
+              <Text size="lg" weight="semibold" className="text-slate-100">
+                Total: <span className="text-green-400">${selectedTotal.toFixed(2)}</span>
+              </Text>
             </div>
-          ))}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                type="button"
+                className="w-full sm:w-auto text-xs sm:text-sm py-2"
+                onClick={handleSelectAllAllSchedules}
+              >
+                Seleccionar todas
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                className="w-full sm:w-auto text-xs sm:text-sm py-2"
+                onClick={handleClearAllAllSchedules}
+              >
+                Quitar todas
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla Desktop / Cards Mobile */}
+        <div className="mb-4 sm:mb-6">
+          {/* Vista de Tabla - Solo Desktop */}
+          <div className="hidden md:block rounded-lg border border-slate-700">
+            <Table>
+              <TableHeader className="sticky top-0 bg-slate-800/95 z-10">
+                <TableRow>
+                  <TableHead className="text-slate-200">Jugada</TableHead>
+                  <TableHead className="text-slate-200">Con</TableHead>
+                  <TableHead className="text-slate-200">Monto</TableHead>
+                  <TableHead className="text-slate-200">Tipo</TableHead>
+                  <TableHead className="text-slate-200">Horario/Lotería</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from(repeatBets.values()).map((bet, index) => (
+                  <TableRow key={index} className="text-slate-300 hover:bg-slate-800/50">
+                    <TableCell className="font-medium">{bet.number}</TableCell>
+                    <TableCell>{bet.with || '-'}</TableCell>
+                    <TableCell>${bet.amount}</TableCell>
+                    <TableCell>
+                      {betPlaceDictionary[bet.place]}
+                      {bet?.position ? ` ${betPlaceDictionary[bet.position]}` : ''}
+                    </TableCell>
+                    <TableCell className="whitespace-normal break-words text-sm">
+                      {bet.scheduleLottery.map((lotSched, idx) => (
+                        <span key={idx} className="block mb-1">
+                          {lotSched.schedule.name} - [{lotSched.lotteries.map((lot) => lot.name).join(', ')}]
+                        </span>
+                      ))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Vista de Cards - Solo Mobile */}
+          <div className="md:hidden space-y-2 sm:space-y-3">
+            {Array.from(repeatBets.values()).map((bet, index) => (
+              <div
+                key={index}
+                className="bg-slate-800/40 rounded-lg p-3 border border-slate-700 space-y-2"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <Text size="xs" className="text-slate-400 uppercase tracking-wide">
+                      Jugada
+                    </Text>
+                    <Text size="lg" weight="bold" className="text-slate-100">
+                      {bet.number}
+                    </Text>
+                  </div>
+                  <div className="text-right">
+                    <Text size="xs" className="text-slate-400 uppercase tracking-wide">
+                      Monto
+                    </Text>
+                    <Text size="lg" weight="semibold" className="text-green-400">
+                      ${bet.amount}
+                    </Text>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700">
+                  <div>
+                    <Text size="xs" className="text-slate-400">
+                      Con:
+                    </Text>
+                    <Text size="sm" className="text-slate-200">
+                      {bet.with || '-'}
+                    </Text>
+                  </div>
+                  <div>
+                    <Text size="xs" className="text-slate-400">
+                      Tipo:
+                    </Text>
+                    <Text size="sm" className="text-slate-200">
+                      {betPlaceDictionary[bet.place]}
+                      {bet?.position ? ` ${betPlaceDictionary[bet.position]}` : ''}
+                    </Text>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-700">
+                  <Text size="xs" className="text-slate-400 mb-1">
+                    Horario/Lotería:
+                  </Text>
+                  <div className="space-y-0.5">
+                    {bet.scheduleLottery.map((lotSched, idx) => (
+                      <Text key={idx} size="xs" className="text-slate-300 block">
+                        {lotSched.schedule.name} - [{lotSched.lotteries.map((lot) => lot.name).join(', ')}]
+                      </Text>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Botones de Acción */}
-      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-4 border-t border-slate-700">
+      {/* Botones de Acción - Siempre visibles */}
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end pt-3 sm:pt-4 border-t border-slate-700 mt-3 sm:mt-4 flex-shrink-0">
         <Button
           variant="outline"
-          className="w-full sm:w-auto sm:min-w-[140px]"
+          className="w-full sm:w-auto sm:min-w-[140px] text-sm py-2"
           onClick={onClose}
         >
           Cancelar
         </Button>
         <Button
           variant="default"
-          className="w-full sm:w-auto sm:min-w-[140px]"
+          className="w-full sm:w-auto sm:min-w-[140px] text-sm py-2"
           onClick={handleSetBets}
         >
           Agregar Jugadas

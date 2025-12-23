@@ -69,7 +69,7 @@ export const QuinielaFieldset = ({
         <Label htmlFor={`${namePrefix}-${schedule.schedule_id}-all`}>Todas</Label>
       </Flex>
 
-      <FlexCol className="gap-3 overflow-y-scroll py-[20px]">
+      <FlexCol className="gap-3 ">
         {orderedAvailableIds.map((lotId) => {
           const inputId = `${namePrefix}-${lotId}`;
           const checked = selectedLotteryIds.has(lotId);
@@ -86,7 +86,7 @@ export const QuinielaFieldset = ({
               />
               <Label
                 htmlFor={inputId}
-                className="w-full hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out"
+                className="w-fit hover:cursor-pointer hover:bg-[#ffffff11] py-1 transition-all ease-in-out"
               >
                 {label}
               </Label>
