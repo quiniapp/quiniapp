@@ -20,11 +20,11 @@ export const useScheduleLottery = () => {
   return useQuery<IScheduleLotteryEntityFront>({
     queryKey: ['schedule-lottery'],
     queryFn: () => fetchScheduleLottery(),
-    staleTime: 12 * 60 * 60 * 1000, // 12 horas sin refetch por foco/mount
-    gcTime: 60 * 60 * 1000, // 60 minutos en caché aunque no haya subscriptores
+    staleTime: 12 * 60 * 60 * 1000, // 12 hours - changes are infrequent, users can refresh if needed
+    gcTime: 60 * 60 * 1000, // 60 minutes in cache even without subscribers
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    refetchOnMount: false,
+    refetchOnMount: true, // Changed to true: refetch after invalidations and on login
     retry: 1,
   });
 };

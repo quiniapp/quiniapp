@@ -14,7 +14,7 @@ import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { usePlayDetails } from './context/MakePlaysContext';
-import { IBetTable } from '@helper/request/ticket.response';
+import { IBetTable } from '@helper/request/ticket.request';
 
 const PlayDetailGameTable = () => {
   const { bets, selectedIndexes, setSelectedIndexes } = usePlayDetails();

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { TicketSums } from '@helper/request/bet.response.ts';
+import { TicketSums } from '@helper/request/bet.request';
 
 
 

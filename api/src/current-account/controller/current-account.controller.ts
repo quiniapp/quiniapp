@@ -3,7 +3,7 @@ import {
   IGetAllCurrentAccountEntity,
   IGetCurrentAccountEntity,
   IUpdateCurrentAccountEntity,
-} from '@helper/request/current_account.response';
+} from '@helper/request/current_account.request';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
 
 import { parseCurrentAccount } from '../helper/parseCurrentAccount';
@@ -25,9 +25,19 @@ type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys
 export class CurrentAccountController {
   private repository = new CurrentAccountRepository();
 
-  calculateCurrentAccountHandler = async (date?: string, leave?: boolean, liquidated?: boolean) => {
+  calculateCurrentAccountHandler = async (
+    organization_id: string,
+    date?: string,
+    leave?: boolean,
+    liquidated?: boolean
+  ) => {
     try {
-      const results = await this.repository.calculateCurrentAccountHandler(date, leave, liquidated);
+      const results = await this.repository.calculateCurrentAccountHandler(
+        organization_id,
+        date,
+        leave,
+        liquidated
+      );
 
       return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
     } catch (error) {
@@ -44,11 +54,15 @@ export class CurrentAccountController {
     try {
       if (props.user_type === USER_TYPE.CASHIER) {
         currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          organization_id: props.organization_id,
           user_id: props.user_id,
           date: props.date,
         });
       } else {
-        currentaccounts = await this.repository.getAllCurrentAccountHandler({ date: props.date });
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          organization_id: props.organization_id,
+          date: props.date,
+        });
       }
 
       return currentaccounts.map((currentaccount) => {
@@ -62,6 +76,7 @@ export class CurrentAccountController {
   updateCurrentAccountHandler = async (
     current_account_id: string,
     props: IUpdateCurrentAccountEntity,
+    organization_id: string,
     leave?: boolean
   ): Promise<ICurrentAccountEntityFront> => {
     try {
@@ -79,6 +94,7 @@ export class CurrentAccountController {
 
       const currentAccount = await this.repository.updateCurrentAccountHandler(
         current_account_id,
+        organization_id,
         payload,
         leave
       );
@@ -96,6 +112,7 @@ export class CurrentAccountController {
     try {
       const currentaccounts = await this.repository.getCurrentAccountByUserHandler(
         props.user_id,
+        props.organization_id,
         props.date
       );
 
@@ -112,7 +129,8 @@ export class CurrentAccountController {
 
   updateCurrentAccountByUserHandler = async (
     current_account_id: string,
-    props: IUpdateCurrentAccountEntity
+    props: IUpdateCurrentAccountEntity,
+    organization_id: string
   ): Promise<ICurrentAccountEntityFront> => {
     try {
       const payload: UpdatePayload = {};
@@ -126,7 +144,11 @@ export class CurrentAccountController {
         payload.previous_balance = Number(props.previous_balance);
 
       // IMPORTANTE: devolvemos la fila actualizada
-      return await this.repository.updateCurrentAccountByUserHandler(current_account_id, payload);
+      return await this.repository.updateCurrentAccountByUserHandler(
+        current_account_id,
+        organization_id,
+        payload
+      );
     } catch (error) {
       console.error('updateCurrentAccountByUserHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

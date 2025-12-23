@@ -3,6 +3,8 @@ import { toast } from 'react-hot-toast';
 
 import HeaderSection from '@/components/header-section';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
+import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
 
 import {
   Card,
@@ -31,6 +33,7 @@ type RetentionKey = 'last-month' | 'two-months' | 'three-months';
 
 const SettingsContent = () => {
   const [retention, setRetention] = useState<RetentionKey>('last-month');
+  const { role } = useAuth();
 
   const {data:usedStorage} = useGetUsedStorage()
 
@@ -98,7 +101,8 @@ const SettingsContent = () => {
           </Card>
         ))}
 
-        {/* Card de mantenimiento */}
+        {/* Card de mantenimiento - Solo visible para OWNER */}
+        {role === USER_TYPE.OWNER && (
         <Card className="xl:col-span-1 md:col-span-2 bg-[#10121A] text-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-base sm:text-lg text-white">Borrar datos (mock)</CardTitle>
@@ -148,6 +152,7 @@ const SettingsContent = () => {
             <span className="text-xs text-white/60">* Acción simulada solo para maquetado.</span>
           </CardFooter>
         </Card>
+        )}
       </div>
     </PageWrapper>
   );

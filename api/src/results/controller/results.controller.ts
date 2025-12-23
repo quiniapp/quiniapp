@@ -5,15 +5,18 @@ import {
   IGetResultsEntity,
   INewResultsEntity,
   IUpdateResultsEntity,
-} from '@helper/request/results.response';
+} from '@helper/request/results.request';
 import { resultsBase } from '../helper/resultsBase';
 
 export class ResultsController {
   private repository = new ResultsRepository();
 
-  create = async (props: INewResultsEntity): Promise<IResultsEntityFront> => {
+  create = async (
+    props: INewResultsEntity,
+    organization_id: string
+  ): Promise<IResultsEntityFront> => {
     try {
-      const newResults = resultsBase(props);
+      const newResults = resultsBase(props, organization_id);
       const results = await this.repository.create(newResults);
 
       return parseResults(results);
@@ -23,12 +26,15 @@ export class ResultsController {
     }
   };
 
-  get = async (props: IGetResultsEntity): Promise<IResultsEntityFront | []> => {
+  get = async (
+    props: IGetResultsEntity,
+    organization_id: string
+  ): Promise<IResultsEntityFront | []> => {
     let results;
     try {
       if (props?.results_id) {
-        results = await this.repository.getById(props.results_id);
-      } else results = await this.repository.get(props);
+        results = await this.repository.getById(props.results_id, organization_id);
+      } else results = await this.repository.get({ ...props, organization_id });
       if (!results.length) return [];
       return parseResults(results[0]);
     } catch (error) {
@@ -36,9 +42,9 @@ export class ResultsController {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
-  getAll = async (): Promise<IResultsEntityFront[]> => {
+  getAll = async (organization_id: string): Promise<IResultsEntityFront[]> => {
     try {
-      const resultss: IResultsEntityBack[] = await this.repository.getAll();
+      const resultss: IResultsEntityBack[] = await this.repository.getAll(organization_id);
 
       return resultss.map((results) => {
         return parseResults(results);
@@ -49,9 +55,13 @@ export class ResultsController {
     }
   };
 
-  update = async (id: string, props: IUpdateResultsEntity): Promise<IResultsEntityFront> => {
+  update = async (
+    id: string,
+    props: IUpdateResultsEntity,
+    organization_id: string
+  ): Promise<IResultsEntityFront> => {
     try {
-      const results = await this.repository.update(id, props);
+      const results = await this.repository.update(id, props, organization_id);
       return parseResults(results);
     } catch (error) {
       console.error('Update error:', error);
@@ -59,9 +69,9 @@ export class ResultsController {
     }
   };
 
-  delete = async (id: string): Promise<IResultsEntityFront> => {
+  delete = async (id: string, organization_id: string): Promise<IResultsEntityFront> => {
     try {
-      const results = await this.repository.delete(id);
+      const results = await this.repository.delete(id, organization_id);
 
       return parseResults(results);
     } catch (error) {

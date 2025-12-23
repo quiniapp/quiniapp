@@ -4,6 +4,7 @@ import { IScheduleEntityBack, IScheduleEntityFront } from './schedule.type';
 // Base sin relaciones
 export interface IResultsBase {
   results_id: string;
+  organization_id: string;
   date: string;
   results: string[];
   lottery_id: string;
@@ -22,7 +23,7 @@ export interface IResultsEntityBack extends IResultsBase {
 // Versión front
 export type IResultsEntityFront = Omit<
   IResultsBase,
-  'deleted_at' | 'edited_at' | 'created_at' | 'lottery_id' | 'schedule_id'
+  'deleted_at' | 'edited_at' | 'created_at' | 'lottery_id' | 'schedule_id' | 'organization_id'
 > & {
   lottery: ILotteryEntityFront;
   schedule: IScheduleEntityFront;

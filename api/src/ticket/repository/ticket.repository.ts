@@ -4,47 +4,50 @@ import {
   IEditTicketBaseEntity,
   INewTicketBaseEntity,
   IPayTicketEntity,
-} from '@helper/request/ticket.response';
+} from '@helper/request/ticket.request';
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
 
 export class TicketRepository {
-  async create(ticket: INewTicketBaseEntity) {
+  async create(ticket: INewTicketBaseEntity & { organization_id: string }) {
     const { data, error } = await supabase.rpc('create_ticket_with_bets', {
       ticket: ticket,
-      bets: ticket.bets,
+      p_organization_id: ticket.organization_id,
     });
     if (error) throw error;
     return data;
   }
 
-  async getById(id: string) {
+  async getById(id: string, organization_id: string) {
     const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
       p_ticket_id: id,
+      p_organization_id: organization_id,
     });
 
     if (error) throw error;
-    // data es jsonb -> castealo a tu tipo si querés
     return data;
   }
 
-  async getByNumber(ticket_number: string) {
+  async getByNumber(ticket_number: string, organization_id: string) {
     const { data: ticket, error: error_ticket_number } = await supabase
       .from('tickets')
       .select('ticket_id')
       .eq('ticket_number', ticket_number)
+      .eq('organization_id', organization_id)
       .maybeSingle();
     if (!ticket || error_ticket_number) {
       console.error({ ticket, error_ticket_number });
     }
     const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
       p_ticket_id: ticket?.ticket_id,
+      p_organization_id: organization_id,
     });
     if (error) throw error;
     return data;
   }
 
   async getAll({
+    organization_id,
     user_id,
     date,
     winner,
@@ -52,6 +55,7 @@ export class TicketRepository {
     page = 1,
     limit = 100,
   }: {
+    organization_id: string;
     user_id?: string;
     date: string;
     winner?: boolean;
@@ -65,6 +69,7 @@ export class TicketRepository {
     let query = supabase
       .from('tickets')
       .select('*', { count: 'exact' })
+      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -89,20 +94,21 @@ export class TicketRepository {
     return { data, count: count ?? 0 };
   }
 
-  async delete(props: IDeleteTicketEntity) {
+  async delete(props: IDeleteTicketEntity & { organization_id: string }) {
     const today = dayjs().toISOString();
-    // 1) Actualizo el ticket y me traigo sus IDs para actualizar las bets
     const { data: ticket, error: ticketErr } = await supabase
       .from('tickets')
       .update({ deleted_at: today })
       .eq('ticket_number', props.ticket_number)
-      .select('ticket_id'); // importante para actualizar bets
+      .eq('organization_id', props.organization_id)
+      .select('ticket_id');
 
     if (ticketErr) {
       await supabase
         .from('tickets')
         .update({ deleted_at: null })
-        .eq('ticket_number', props.ticket_number);
+        .eq('ticket_number', props.ticket_number)
+        .eq('organization_id', props.organization_id);
 
       throw new Error(ticketErr.message);
     }
@@ -117,7 +123,8 @@ export class TicketRepository {
       await supabase
         .from('tickets')
         .update({ deleted_at: null })
-        .eq('ticket_number', props.ticket_number);
+        .eq('ticket_number', props.ticket_number)
+        .eq('organization_id', props.organization_id);
       await supabase
         .from('bets')
         .update({ deleted_at: null, edited_at: today })
@@ -130,17 +137,20 @@ export class TicketRepository {
   }
 
   async getAllDeletedTickets({
+    organization_id,
     user_id,
     date,
   }: {
+    organization_id: string;
     user_id?: string;
     date: string;
   }): Promise<number> {
     let query = supabase
       .from('tickets')
       .select('ticket_id', { count: 'exact', head: true })
+      .eq('organization_id', organization_id)
       .eq('date', date)
-      .not('deleted_at', 'is', null); // deleted_at IS NOT NULLF
+      .not('deleted_at', 'is', null);
 
     if (user_id) query.eq('user_id', user_id);
 
@@ -150,10 +160,13 @@ export class TicketRepository {
     return count ?? 0;
   }
 
-  async update(props: IEditTicketBaseEntity): Promise<ITicketEntityBack> {
+  async update(
+    props: IEditTicketBaseEntity & { organization_id: string }
+  ): Promise<ITicketEntityBack> {
     const { data, error } = await supabase.rpc('edit_ticket_replace_bets', {
       p_ticket_id: props.ticket_id,
       p_bets: props.bets,
+      p_organization_id: props.organization_id,
     });
 
     if (error) throw error;
@@ -161,10 +174,12 @@ export class TicketRepository {
   }
 
   async getAllTicketNumber({
+    organization_id,
     user_id,
     date,
     winner,
   }: {
+    organization_id: string;
     user_id?: string;
     date: string;
     winner: boolean;
@@ -172,6 +187,7 @@ export class TicketRepository {
     let query = supabase
       .from('tickets')
       .select('ticket_id,ticket_number')
+      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -187,7 +203,11 @@ export class TicketRepository {
     return data;
   }
 
-  async payTicket({ ticket_number, user_id }: IPayTicketEntity): Promise<{
+  async payTicket({
+    ticket_number,
+    user_id,
+    organization_id,
+  }: IPayTicketEntity & { organization_id: string }): Promise<{
     success: boolean;
     ticket_id: string;
     bets_updated: number;
@@ -195,10 +215,10 @@ export class TicketRepository {
     const { data, error } = await supabase.rpc('pay_ticket', {
       p_ticket_number: ticket_number,
       p_user_id: user_id,
+      p_organization_id: organization_id,
     });
 
     if (error) {
-      // El RPC lanza excepciones específicas que debemos propagar
       throw error;
     }
 

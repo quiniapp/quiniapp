@@ -1,17 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
-import { INewUserEntity } from '@helper/request/user.response';
+import { INewUserEntity } from '@helper/request/user.request';
 import { CASHIER_TYPE, IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { generateEmail } from 'api/helper/generateEmail';
 
-const getBaseUserFields = (user: INewUserEntity) => {
+const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
   const timestamp = dayjs().toISOString();
+
+  // Determinar si el número debe ser null basado en el tipo de usuario
+  const shouldNumberBeNull =
+    user.user_type === USER_TYPE.OWNER || user.user_type === USER_TYPE.SUPERADMIN;
 
   return {
     user_id: uuidv4(),
-    number: user.number,
+    number: shouldNumberBeNull ? null : (user.number ?? null),
     user_type: user.user_type,
     name: user.name,
+    organization_id,
     last_name: user.last_name ?? null,
     address: user.address ?? null,
     phone: user.phone ?? null,
@@ -23,8 +28,19 @@ const getBaseUserFields = (user: INewUserEntity) => {
   };
 };
 
-export const buildUserForDB = async (user: INewUserEntity): Promise<IUserEntityBack> => {
-  const baseUser = getBaseUserFields(user);
+export const buildUserForDB = async (
+  user: INewUserEntity,
+  organization_id: string
+): Promise<IUserEntityBack> => {
+  const baseUser = getBaseUserFields(user, organization_id);
+
+  // Validar que ADMIN y CASHIER tengan número
+  if (
+    (user.user_type === USER_TYPE.ADMIN || user.user_type === USER_TYPE.CASHIER) &&
+    baseUser.number === null
+  ) {
+    throw new Error(`Number is required for ${user.user_type} users`);
+  }
 
   return {
     ...baseUser,

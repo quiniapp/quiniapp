@@ -47,19 +47,26 @@ const UsersTable = () => {
       <Table>
         <TableHeader className="bg-dark-light">
           <TableRow>
-            <TableHead className="text-cyan">Numero</TableHead>
-            <TableHead className="text-cyan">Nombre</TableHead>
-            <TableHead className="text-cyan">Grupo</TableHead>
-            <TableHead className="text-cyan">Comision</TableHead>
-            <TableHead className="text-cyan">Deje</TableHead>
-            <TableHead className="text-cyan">Conexion</TableHead>
-            <TableHead className="text-cyan">Cuenta</TableHead>
-            <TableHead className="text-cyan">Editar</TableHead>
-            <TableHead className="">Eliminar</TableHead>
+            <TableHead className="text-white">Numero</TableHead>
+            <TableHead className="text-white">Nombre</TableHead>
+            <TableHead className="text-white">Grupo</TableHead>
+            <TableHead className="text-white">Comision</TableHead>
+            <TableHead className="text-white">Deje</TableHead>
+            <TableHead className="text-white">Conexion</TableHead>
+            <TableHead className="text-white">Cuenta</TableHead>
+            <TableHead className="text-white">Editar</TableHead>
+            <TableHead className="text-white">Eliminar</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.map((user: IUserEntityFront) => (
+          {data && data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                No hay usuarios disponibles
+              </TableCell>
+            </TableRow>
+          ) : (
+            data?.map((user: IUserEntityFront) => (
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
               <TableCell>{user.name}</TableCell>
@@ -95,7 +102,7 @@ const UsersTable = () => {
                 </Button>
               </TableCell>
             </TableRow>
-          ))}
+          )))}
         </TableBody>
       </Table>
       <Suspense fallback={<div>Cargando...</div>}>

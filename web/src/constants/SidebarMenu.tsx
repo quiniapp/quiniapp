@@ -5,12 +5,14 @@ import {
   FileTextIcon,
   UserIcon,
   UsersIcon,
+  Building2,
+  Clock,
 } from 'lucide-react';
 
 import { MENU_ITEM } from '@/types/menu-item.tsx';
 import { ROUTES } from '@/types/routes.type';
 
-const MENU_ITEMS: MENU_ITEM[] = [
+export const MENU_ITEMS: MENU_ITEM[] = [
   {
     id: 'Home',
     name: 'Jugadas',
@@ -46,22 +48,28 @@ const MENU_ITEMS: MENU_ITEM[] = [
   },
   // Admin ve Qunielas
   {
-    id: 'Quinielas',
-    name: 'Qunielas',
-    route: ROUTES.CLIENTS,
+    id: 'LoteriesAndSchedules',
+    name: 'Qunielas y Turnos',
+    route: ROUTES.UPCOMING_LOTTERIES,
     icon: <UserIcon size={20} />,
     children: [
       {
-        id: 'AgentCommission',
+        id: 'UpcomingLotteries',
         name: 'Qunielas a jugarse',
-        route: ROUTES.LOTTERIES,
+        route: ROUTES.UPCOMING_LOTTERIES,
         icon: <FileTextIcon size={20} />,
       },
       {
-        id: 'Shifts',
+        id: 'Schedules',
         name: 'Turnos',
-        route: ROUTES.SHIFTS,
-        icon: <FileTextIcon size={20} />,
+        route: ROUTES.SCHEDULES,
+        icon: <Clock size={20} />,
+      },
+      {
+        id: 'Loteries',
+        name: 'Loterias',
+        route: ROUTES.LOTTERIES,
+        icon: <TicketIcon size={20} />,
       },
     ],
   },
@@ -75,7 +83,7 @@ const MENU_ITEMS: MENU_ITEM[] = [
       {
         id: 'UsersLIst',
         name: 'Listado de Usuarios',
-        route: ROUTES.USERS_List,
+        route: ROUTES.USERS_LIST,
         icon: <UsersIcon size={20} />,
       },
       {
@@ -91,6 +99,12 @@ const MENU_ITEMS: MENU_ITEM[] = [
     name: 'Cuenta Corriente',
     route: ROUTES.CURRENT_ACCOUNT,
     icon: <FileTextIcon size={20} />,
+  },
+  {
+    id: 'Organizations',
+    name: 'Organizaciones',
+    route: ROUTES.ORGANIZATIONS,
+    icon: <Building2 size={20} />,
   },
 
   {

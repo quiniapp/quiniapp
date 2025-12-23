@@ -3,7 +3,7 @@ import { BetController } from '../controller/bet.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
-import { TicketSums } from '@helper/request/bet.response';
+import { TicketSums } from '@helper/request/bet.request';
 
 export class BetRouter {
   public router: Router;
@@ -72,6 +72,7 @@ export class BetRouter {
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
         page: typeof page === 'string' ? parseInt(page, 10) : 1,
         limit: typeof limit === 'string' ? parseInt(limit, 10) : 100,
+        organization_id: req.organization_id!,
       });
       const response: APIResponse<typeof result> = {
         data: {
@@ -128,6 +129,7 @@ export class BetRouter {
               ? cashier_id
               : undefined,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
+        organization_id: req.organization_id!,
       });
       const response: APIResponse<number> = {
         data: {
@@ -184,6 +186,7 @@ export class BetRouter {
               ? cashier_id
               : undefined,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
+        organization_id: req.organization_id!,
       });
       const response: APIResponse<number> = {
         data: {
@@ -233,6 +236,7 @@ export class BetRouter {
     try {
       const total = await this.controller.getAmountsByTicket({
         ticket_number,
+        organization_id: req.organization_id!,
       });
       const response: APIResponse<TicketSums> = {
         data: {

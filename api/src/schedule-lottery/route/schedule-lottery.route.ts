@@ -5,17 +5,20 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ScheduleLotteryController } from '../controller/schedule-lottery.controller';
 import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 import { globalCacheManager } from 'src/cache/CacheManager';
+import {
+  getScheduleLotteryCacheKey,
+  invalidateScheduleLotteryRelated,
+} from 'src/cache/cacheInvalidation';
 
 export type ScheduleLotteryPayload = {
   scheduleLotteries: IScheduleLotteryEntityFront;
 };
 
 // ====== Cache Manager para Schedule Lotteries ======
-const CACHE_KEY = 'schedule-lotteries:all';
 const TTL_MS = 24 * 60 * 60 * 1000; // 1 dia
 
-function invalidateScheduleLotteries() {
-  globalCacheManager.invalidate(CACHE_KEY);
+function getCacheKey(organization_id: string) {
+  return getScheduleLotteryCacheKey(organization_id);
 }
 
 export class ScheduleLotteryRouter {
@@ -46,39 +49,88 @@ export class ScheduleLotteryRouter {
       return;
     }
 
-    const deletePromises: Promise<void>[] = [];
-    const insertData: Array<{ day: SCHEDULE_DAY; schedule_id: string; lottery_id: string }> = [];
-    const lotteries: string[] = [];
+    // Validate request payload
+    if (!scheduleLottery || typeof scheduleLottery !== 'object') {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: 'scheduleLottery is required and must be an object',
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
 
-    try {
-      for (const dayStr of Object.keys(scheduleLottery ?? {})) {
-        const day = SCHEDULE_DAY[dayStr as keyof typeof SCHEDULE_DAY];
-        const schedules = scheduleLottery[dayStr] ?? {};
-        for (const schedule_id of Object.keys(schedules)) {
-          // 1) borro combinación
-          deletePromises.push(this.controller.deleteAllForScheduleAndDay({ day, schedule_id }));
-          // 2) preparo inserts
-          for (const lottery_id of schedules[schedule_id] ?? []) {
-            if (!lotteries.includes(lottery_id)) lotteries.push(lottery_id);
-            insertData.push({ day, schedule_id, lottery_id });
+    // UUID regex pattern
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Validate day keys, schedule_ids, and lottery_ids
+    for (const dayKey of Object.keys(scheduleLottery)) {
+      // Validate day key is a valid SCHEDULE_DAY enum value
+      if (!(dayKey in SCHEDULE_DAY)) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: `Invalid day key: ${dayKey}. Must be one of: SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY`,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      const schedules = scheduleLottery[dayKey];
+      if (!schedules || typeof schedules !== 'object') continue;
+
+      for (const scheduleId of Object.keys(schedules)) {
+        // Validate schedule_id is a valid UUID
+        if (!uuidPattern.test(scheduleId)) {
+          const response: APIResponse<null> = {
+            error: {
+              error: ERROR_TYPE.BAD_REQUEST,
+              message: `Invalid schedule_id format: ${scheduleId}. Must be a valid UUID`,
+            },
+          };
+          res.status(400).json(response);
+          return;
+        }
+
+        const lotteries = schedules[scheduleId];
+        if (!Array.isArray(lotteries)) {
+          const response: APIResponse<null> = {
+            error: {
+              error: ERROR_TYPE.BAD_REQUEST,
+              message: `Lotteries for schedule ${scheduleId} must be an array`,
+            },
+          };
+          res.status(400).json(response);
+          return;
+        }
+
+        // Validate each lottery_id is a valid UUID
+        for (const lotteryId of lotteries) {
+          if (!uuidPattern.test(lotteryId)) {
+            const response: APIResponse<null> = {
+              error: {
+                error: ERROR_TYPE.BAD_REQUEST,
+                message: `Invalid lottery_id format: ${lotteryId}. Must be a valid UUID`,
+              },
+            };
+            res.status(400).json(response);
+            return;
           }
         }
       }
+    }
 
-      await Promise.all(deletePromises);
+    try {
+      // Use controller's saveScheduleLottery method for atomic save
+      const data = await this.controller.saveScheduleLottery(scheduleLottery, req.organization_id!);
 
-      let data: IScheduleLotteryEntityFront | undefined;
-      if (insertData.length) {
-        data = await this.controller.bulkInsert(insertData);
-      }
-
-      await this.controller.bulkActiveLotteries(lotteries);
-
-      // ====== invalidación de cache ======
-      invalidateScheduleLotteries();
+      // Invalidate cache after successful save
+      invalidateScheduleLotteryRelated(req.organization_id!);
 
       const response: APIResponse<IScheduleLotteryEntityFront> = {
-        data: { scheduleLotteries: data! }, // data!: IScheduleLotteryEntityFront
+        data: { scheduleLotteries: data },
       };
       res.status(200).json(response);
     } catch (error) {
@@ -103,8 +155,8 @@ export class ScheduleLotteryRouter {
   private getScheduleLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     try {
       const snap = await globalCacheManager.getOrLoad(
-        CACHE_KEY,
-        () => this.controller.getAllScheduleLotteries(),
+        getCacheKey(req.organization_id!),
+        () => this.controller.getAllScheduleLotteries(req.organization_id!),
         { ttl: TTL_MS, etagStrategy: 'hash' }
       );
 

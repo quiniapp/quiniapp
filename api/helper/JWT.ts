@@ -13,8 +13,12 @@ export const verifyAccessToken = (token: string): JwtPayload => {
   return decoded;
 };
 
-export const signUserToken = (payload: IUserEntityFront, options?: SignOptions): string => {
-  return jwt.sign(payload, JWT_SECRET_USER, options);
+export const signUserToken = (
+  payload: IUserEntityFront,
+  organization_id: string,
+  options?: SignOptions
+): string => {
+  return jwt.sign({ ...payload, organization_id }, JWT_SECRET_USER, options);
 };
 
 export const verifyUserToken = (token: string): JwtPayload => {

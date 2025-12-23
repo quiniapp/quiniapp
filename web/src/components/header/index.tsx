@@ -4,6 +4,7 @@ import { LayoutIcon, UserIcon } from 'lucide-react';
 import { FlexCol } from '@/components/flex';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { userTypeDictionary } from '@helper/functions/userTypeDictionary';
 
 interface HeaderProps {
   setIsOpen: (isOpen: (prev: boolean) => boolean) => void;
@@ -34,7 +35,9 @@ const Header = memo(function Header({ setIsOpen }: HeaderProps) {
           </div>
           <FlexCol className="pr-4">
             <div className="text-sm text-white font-semibold uppercase">{`${user?.username}`}</div>
-            <div className="hidden sm:block text-xs text-white">({`${user?.user_type}`})</div>
+            <div className="hidden sm:block text-xs text-white">
+              {user?.user_type && userTypeDictionary[user?.user_type]}
+            </div>
           </FlexCol>
         </div>
       </div>

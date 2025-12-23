@@ -12,9 +12,10 @@ export enum CASHIER_TYPE {
 
 interface BaseUserEntityBack {
   user_id: string;
-  number: number;
+  number: number | null;
   user_type: USER_TYPE;
   name: string;
+  organization_id: string;
   username?: string | null;
   group_id?: string | null;
   last_name?: string | null;
@@ -48,7 +49,7 @@ export type IUserEntityBack = OwnerOrAdminUserEntityBack | CashierUserEntityBack
 
 export type IBaseUserEntityFront = Omit<
   BaseUserEntityBack,
-  'created_at' | 'deleted_at' | 'edited_at'
+  'created_at' | 'deleted_at' | 'edited_at' | 'organization_id'
 >;
 
 // Usuario tipo OWNER o ADMIN

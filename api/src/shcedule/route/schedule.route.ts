@@ -6,12 +6,12 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
+import { getScheduleCacheKey, invalidateScheduleRelated } from 'src/cache/cacheInvalidation';
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
 // ====== Cache Manager para Schedules ======
-const CACHE_KEY = 'schedules:all';
-
-function invalidateSchedules() {
-  globalCacheManager.invalidate(CACHE_KEY);
+function getCacheKey(organization_id: string, all: boolean) {
+  return getScheduleCacheKey(organization_id, all);
 }
 
 export class ScheduleRouter {
@@ -34,12 +34,19 @@ export class ScheduleRouter {
   }
 
   private newSchedulehandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user } = req;
+    const { user, organization_id } = req;
     const { newSchedule } = req.body;
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+    if (!organization_id) {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.BAD_REQUEST, message: ERROR_MESSAGE.BAD_REQUEST },
       };
       res.status(403).json(response);
       return;
@@ -55,8 +62,8 @@ export class ScheduleRouter {
     }
 
     try {
-      const schedule = await this.controller.create(newSchedule);
-      invalidateSchedules();
+      const schedule = await this.controller.create(newSchedule, req.organization_id!);
+      invalidateScheduleRelated(req.organization_id!);
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
     } catch (error) {
@@ -78,6 +85,10 @@ export class ScheduleRouter {
 
   private getAllScheduleHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
+    const allFlag = !!req.query.all;
+    const dayParam = req.query.day as string | undefined;
+    const withLotteries = req.query.with_lotteries === 'true';
+
     if (!user?.user) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.BAD_REQUEST, message: ERROR_MESSAGE.BAD_REQUEST },
@@ -86,10 +97,52 @@ export class ScheduleRouter {
       return;
     }
 
+    // Validate day parameter if provided
+    let day: SCHEDULE_DAY | undefined;
+    if (dayParam) {
+      if (!(dayParam in SCHEDULE_DAY)) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: `Invalid day parameter: ${dayParam}. Must be one of: SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY`,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+      day = SCHEDULE_DAY[dayParam as keyof typeof SCHEDULE_DAY];
+    }
+
     try {
-      const snap = await globalCacheManager.getOrLoad(CACHE_KEY, () => this.controller.getAll(), {
-        etagStrategy: 'counter',
-      });
+      // If day filter is provided, fetch filtered schedules
+      // Note: day-filtered queries are not cached as they're typically used in high-frequency contexts
+      if (day !== undefined) {
+        const schedules = await this.controller.getAllByDay(
+          day,
+          allFlag,
+          req.organization_id!,
+          withLotteries
+        );
+
+        const response: APIResponse<IScheduleEntityFront[]> = {
+          data: { schedule: schedules },
+        };
+
+        // Cache-Control for day-filtered queries
+        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        res.status(200).json(response);
+        return;
+      }
+
+      // Original caching logic for non-filtered queries
+      const key = getCacheKey(req.organization_id!, allFlag);
+      const snap = await globalCacheManager.getOrLoad(
+        key,
+        () => this.controller.getAll(req.organization_id!, allFlag),
+        {
+          etagStrategy: 'counter',
+        }
+      );
 
       // ETag/304: si el cliente tiene la versión actual, no enviamos payload
       const inm = req.headers['if-none-match'];
@@ -142,8 +195,12 @@ export class ScheduleRouter {
     }
 
     try {
-      const schedule = await this.controller.update(schedule_id, updateSchedule);
-      invalidateSchedules();
+      const schedule = await this.controller.update(
+        schedule_id,
+        updateSchedule,
+        req.organization_id!
+      );
+      invalidateScheduleRelated(req.organization_id!);
       const response: APIResponse<IScheduleEntityFront> = { data: { schedule } };
       res.status(200).json(response);
     } catch (error) {
@@ -176,8 +233,8 @@ export class ScheduleRouter {
     }
 
     try {
-      await this.controller.delete({ schedule_id });
-      invalidateSchedules();
+      await this.controller.delete({ schedule_id }, req.organization_id!);
+      invalidateScheduleRelated(req.organization_id!);
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {
       console.error(error);
