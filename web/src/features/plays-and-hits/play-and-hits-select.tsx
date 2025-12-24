@@ -42,7 +42,7 @@ const PlayAndHitsSelect = () => {
       {role !== USER_TYPE.CASHIER && (
         <Fragment>
           <Flex className={'flex-1 gap-3 items-center'}>
-            <Text size="sm">Pasador</Text>
+            <Text className='text-base font-bold'>Pasador</Text>
             <Select
               value={selectedCashier ?? ''}
               onValueChange={(value) => {
@@ -50,7 +50,7 @@ const PlayAndHitsSelect = () => {
               }}
             >
               <SelectTrigger className={'border w-full bg-[var(--bg-card)]'}>
-                <SelectValue placeholder={ALL} />
+                <SelectValue placeholder={ALL} className='text-white'/>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}> {ALL}</SelectItem>
@@ -65,10 +65,10 @@ const PlayAndHitsSelect = () => {
             </Select>
           </Flex>
           <Flex className={'flex-1 gap-3 items-center'}>
-            <Text size="sm">Grupo</Text>
+            <Text className='text-base font-bold'>Grupo</Text>
             <Select>
               <SelectTrigger className={'border   w-full  bg-[var(--bg-card)]'}>
-                <SelectValue placeholder={ALL} />
+                <SelectValue placeholder={ALL}  className='text-white'/>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}> {ALL}</SelectItem>
@@ -82,7 +82,7 @@ const PlayAndHitsSelect = () => {
         </Fragment>
       )}
       <Flex className={'flex-1 gap-3 items-center'}>
-        <Text size="sm">Turno</Text>
+        <Text className='text-base font-bold'>Turno</Text>
         <Select
           value={selectedSchedule ?? ''}
           onValueChange={(value) => {
@@ -90,12 +90,12 @@ const PlayAndHitsSelect = () => {
           }}
         >
           <SelectTrigger className={'border   w-full  bg-[var(--bg-card)]'}>
-            <SelectValue placeholder={ALL} />
+            <SelectValue placeholder={ALL}  className='text-white '/>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}> {ALL}</SelectItem>
+            <SelectItem value={ALL}  className='text-white font-bold' > {ALL}</SelectItem>
             {schedules?.map((item: IScheduleEntityFront) => (
-              <SelectItem key={item.schedule_id} value={item.schedule_id}>
+              <SelectItem key={item.schedule_id} value={item.schedule_id}  className='text-white font-bold' >
                 {item.name} - {item.time}
               </SelectItem>
             ))}
@@ -103,20 +103,21 @@ const PlayAndHitsSelect = () => {
         </Select>
       </Flex>
       <Flex className={'flex-1 gap-3 items-center'}>
-        <Text size="sm">Quniela</Text>
+        <Text className='text-base font-bold'>Quniela</Text>
         <Select
+        
           value={selectedLottery ?? ''}
           onValueChange={(value) => {
             handleChange(value, 'lottery_id');
           }}
         >
-          <SelectTrigger className={'border  w-full bg-[var(--bg-card)]'}>
-            <SelectValue placeholder={ALL} />
+          <SelectTrigger className={'border  w-full bg-[var(--bg-card)] '}>
+            <SelectValue placeholder={ALL}  />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}> {ALL}</SelectItem>
+            <SelectItem value={ALL}   className='text-white font-bold'  > {ALL}</SelectItem>
             {lotteries?.map((item: ILotteryEntityFront) => (
-              <SelectItem key={item.lottery_id} value={item.lottery_id}>
+              <SelectItem  className='text-white font-bold'  key={item.lottery_id} value={item.lottery_id}>
                 {item.name}
               </SelectItem>
             ))}
