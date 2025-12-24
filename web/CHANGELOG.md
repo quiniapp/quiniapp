@@ -7,6 +7,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-24
+
+#### Repeat Ticket Modal - Multiple Bets with Same Number But Different Place Ignored
+**Fix:** Changed bet grouping to use unique key combining number, place, position, and with
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** When a ticket had multiple bets with the same number but different `place` values (e.g., 4444 place head, 4444 place 5, 4444 place 20), only the last bet was being captured. This happened because bets were being grouped solely by `number`, causing subsequent bets with the same number to overwrite previous ones.
+
+**Example of lost bets:**
+- Original ticket: 4444 place head, 4444 place 5, 5555 place 10, 4444 place 20
+- What was shown: Only 4444 place 20 (other bets were lost)
+
+**Solution:**
+- Changed Map key from `number` (line 188-189) to `betKey` combining all identifying fields
+- Bet key format: `${number}-${place}-${position ?? 'null'}-${with ?? 'null'}`
+- Renamed variable from `betsByNumber` to `betsByKey` for clarity
+- Each unique combination of number/place/position/with is now treated as a separate bet
+
+**Impact:** All bets are now correctly captured and displayed, even when they share the same number but differ in place, position, or with values.
+
+#### Repeat Ticket Modal - Label Click Toggling Wrong Checkbox
+**Fix:** Made checkbox IDs unique per schedule to prevent ID collisions
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** When clicking a lottery label, the first checkbox with that lottery name would toggle instead of the clicked one. This happened because all `QuinielaFieldset` components used the same `namePrefix="tone"`, causing duplicate IDs when the same lottery appeared in multiple schedules.
+
+**Example of duplicate IDs:**
+- Schedule "Matutina", Lottery "Primera" → `id="tone-lottery-id-1"`
+- Schedule "Vespertina", Lottery "Primera" → `id="tone-lottery-id-1"` (DUPLICATE!)
+
+**Solution:**
+- Changed `namePrefix` from static `"tone"` to dynamic `repeat-${sch.schedule_id}`
+- Each schedule now has unique checkbox IDs: `repeat-{scheduleId}-{lotteryId}`
+- Labels correctly associate with their corresponding checkboxes via `htmlFor`
+
+**Impact:** Clicking lottery labels now correctly toggles the intended checkbox, not the first one with that lottery name.
+
+#### Repeat Ticket Modal - Selections Reset After User Interaction
+**Fix:** Prevented useEffect from overwriting user selections
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** When user selected/deselected lotteries or schedules, the selections would immediately reset to pre-selected state. This happened because the main useEffect had too many dependencies and re-executed on every state change, overwriting user selections with automatic pre-selection.
+
+**Solution:**
+- Changed useEffect dependencies from `[data, scheduleLottery, schedules, todayKey, disabledSchedules, lotteriesById]` to only `[data, ticketNumber]`
+- Added eslint-disable comment to acknowledge intentional dependency list
+- useEffect now only executes when ticket data changes, not when supporting data or user selections change
+- Added cleanup logic to reset state when no ticket is entered
+
+**Impact:** User selections are now preserved and persist until they manually change them or enter a different ticket number.
+
+#### Repeat Ticket Modal - TypeScript Type Error with Lottery Objects
+**Fix:** Complete lottery object construction using useLotteries hook
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** TypeScript error when creating lottery objects - partial objects missing required properties `active` and `order` from `ILotteryEntityFront` interface.
+
+**Solution:**
+- Added `useLotteries({ all: true })` hook to fetch complete lottery data
+- Created `lotteriesById` memoized map for quick lottery lookup
+- Replaced partial object creation with complete lottery objects from hook
+- Added type-safe filter for lottery mapping: `.filter((lot): lot is ILotteryEntityFront => lot !== undefined)`
+- Removed old `lotteryById` useMemo that created incomplete objects
+
+**Impact:** Proper type safety and complete lottery data with all required properties throughout the component.
+
+#### Delete Ticket - Invalid Response Format Error
+**Fix:** Changed backend response from plain text to JSON format
+**Files:**
+- `api/src/ticket/route/ticket.route.ts:181-187` (Backend)
+- `web/src/hooks/mutations/tickets/useDeleteTicket.ts:18-24` (Frontend - preventive fix)
+- `web/src/hooks/mutations/tickets/usePayTicket.ts:18-24` (Frontend - preventive fix)
+
+**Problem:** When deleting a ticket, users received error toast "Formato de respuesta inválido: text/plain; charset=utf-8" even though the ticket was successfully deleted. This occurred because:
+1. Backend was using `res.sendStatus(200)` which sends only HTTP status code with plain text "OK"
+2. Frontend `apiClient` expects all responses to be JSON with `APIResponse<T>` structure
+3. The format mismatch caused the frontend to throw an error despite successful deletion
+
+**Solution:**
+- **Backend:** Changed `res.sendStatus(200)` to `res.status(200).json(response)` with proper `APIResponse` structure containing `{ data: { success: true } }`
+- **Frontend (preventive):** Removed `async`/`await` from `onSuccess` callback in mutation hooks to prevent future issues where refetch failures could incorrectly mark successful operations as failed
+
+**Impact:** Users now see success toast when tickets are deleted successfully. Error toasts only appear when the actual delete operation fails.
+
+### Changed - 2025-12-24
+
+#### Repeat Ticket Modal - Cross-Schedule Bet Replication
+**Enhancement:** Allow repeating bets from previous schedules/shifts with dynamic lottery regeneration
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Changes:**
+1. **Basic Field Extraction**
+   - Modified bet processing to extract only basic fields: `number`, `amount`, `place`, `position`, `with`
+   - Removed dependency on original `scheduleLottery` from ticket
+   - Allows replicating bets regardless of original schedule/shift
+
+2. **Smart Schedule/Lottery Regeneration**
+   - Regenerates `scheduleLottery` using only schedules/lotteries from original ticket
+   - Filters to show only those that are currently available
+   - Table displays only original ticket's schedules/lotteries (if available)
+   - User can still modify selection using QuinielaFieldset checkboxes
+   - Enables cross-shift bet replication (e.g., morning bets can be repeated in afternoon)
+
+3. **Precise Pre-selection**
+   - Pre-selects ONLY lotteries that were in original ticket AND are currently available
+   - Groups original lotteries by schedule for accurate matching
+   - Skips disabled/closed schedules from pre-selection
+   - Maintains lottery information (names) from original ticket when available
+
+4. **Enhanced Dependencies**
+   - Added `scheduleLottery`, `schedules`, `todayKey`, `disabledSchedules` to useEffect dependencies
+   - Ensures proper reactivity when schedule availability changes
+   - Prevents race conditions during data loading
+
+**Use Case:** Users can now repeat bets from past shifts (e.g., repeat morning bets in the afternoon) by selecting currently available schedules and lotteries, while maintaining the core bet information (number, amount, type).
+
 ### Changed - 2025-12-22
 
 #### Repeat Ticket Modal - UX/UI Redesign

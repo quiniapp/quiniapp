@@ -15,8 +15,8 @@ export const useDeleteTicket = () => {
       if (!ticketId) throw new Error('ticketId requerido');
       return doDeleteTicket(ticketId);
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
         queryKey: ['tickets-infinite'],
         exact: false,
         refetchType: 'active',
