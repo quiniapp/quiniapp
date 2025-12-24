@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-24
+
+#### Delete Ticket Endpoint - Response Format
+**Fix:** Changed response from plain text to JSON format
+**File:** `api/src/ticket/route/ticket.route.ts:181-187`
+
+**Problem:** DELETE `/api/private/ticket/:id` endpoint was using `res.sendStatus(200)` which sends HTTP status code with plain text "OK". Frontend expects all responses to be JSON with `APIResponse<T>` structure, causing "Invalid response format: text/plain" error.
+
+**Solution:** Replaced `res.sendStatus(200)` with `res.status(200).json(response)` including proper `APIResponse` structure:
+```typescript
+const response: APIResponse<{ success: boolean }> = {
+  data: { success: true }
+};
+res.status(200).json(response);
+```
+
+**Impact:** Consistent JSON responses across all endpoints. Frontend can properly handle delete ticket success/error states.
+
 ### Added - 2025-12-20
 
 #### Schedule Lottery Atomic Transactions

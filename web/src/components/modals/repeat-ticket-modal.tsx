@@ -10,10 +10,12 @@ import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import dayjs from 'dayjs';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
+import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { dayParseToString } from '@helper/functions/dayDictionary';
 import { DayKey } from '@helper/types/schedule-lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { USER_TYPE } from '@helper/types/user.type';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useClock } from '@/providers/ClockProvider';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +47,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const [ticketNumber, setTicketNumber] = useState<string>('');
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
+  const { data: lotteries } = useLotteries({ all: true });
   const { data } = getTicketByNumber(ticketNumber);
 
   const handleSetBets = () => {
@@ -59,18 +62,12 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
     return map;
   }, [schedules]);
 
-  const lotteryById = useMemo(() => {
-    // recolecta cualquier lottery conocida de las bets existentes
-    const map = new Map<string, { lottery_id: string; name?: string }>();
-    repeatBets.forEach((b) => {
-      b.scheduleLottery.forEach((sl) => {
-        sl.lotteries.forEach((lot) => {
-          map.set(lot.lottery_id, lot);
-        });
-      });
-    });
+  const lotteriesById = useMemo(() => {
+    const map = new Map<string, ILotteryEntityFront>();
+    (lotteries ?? []).forEach((l) => map.set(l.lottery_id, l));
     return map;
-  }, [repeatBets]);
+  }, [lotteries]);
+
 
   const disabledSchedules = useMemo(() => {
     if (!isCashier) return new Set<string>();
@@ -95,16 +92,16 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
           const schedule = schedulesById.get(schId);
           if (!schedule) return;
 
-          const lotteries = Array.from(lotIds).map(
-            (id) => lotteryById.get(id) ?? ({ lottery_id: id } as any)
-          );
+          const lotteries = Array.from(lotIds)
+            .map((id) => lotteriesById.get(id))
+            .filter((lot): lot is ILotteryEntityFront => lot !== undefined);
           if (lotteries.length > 0) newSL.push({ schedule, lotteries });
         });
 
         return { ...b, scheduleLottery: newSL };
       })
       .filter((b) => b.scheduleLottery.length > 0);
-  }, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteryById, disabledSchedules]); // ⬅️ agregar dependencia
+  }, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteriesById, disabledSchedules]);
 
   const selectedTotal = useMemo(() => {
     return selectedBets.reduce((acc, b) => {
@@ -152,55 +149,114 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   };
 
 useEffect(() => {
-  if (!data) return;
+  // Solo ejecutar cuando cambia el ticket o cuando se cargan por primera vez los datos necesarios
+  if (!data || !scheduleLottery || !schedules || !lotteriesById || lotteriesById.size === 0) {
+    // Limpiar cuando no hay ticket
+    if (!data) {
+      setRepeatBets(new Map());
+      setScheduleLotteriesToPlay(new Map());
+    }
+    return;
+  }
 
-  const betsByNumber = new Map<string, IBetTable>();
+  const betsByKey = new Map<string, IBetTable>();
   const selectedBySchedule = new Map<string, Set<string>>();
 
-  for (const bet of data.bets) {
-    const num = bet.number;
+  // 1. Crear índice de schedules por ID para búsqueda rápida
+  const schedulesMap = new Map<string, IScheduleEntityFront>();
+  schedules.forEach((sch) => schedulesMap.set(sch.schedule_id, sch));
 
-    // recorro los schedules anidados
+  // 2. Recolectar las lotteries originales del ticket por schedule
+  const originalLotteriesBySchedule = new Map<string, Set<string>>();
+
+  for (const bet of data.bets) {
     for (const sl of bet.scheduleLottery) {
       const schId = sl.schedule.schedule_id;
-      if (disabledSchedules.has(schId)) continue;
 
-      // preselección: todas las lotteries de ese schedule
-      if (!selectedBySchedule.has(schId)) selectedBySchedule.set(schId, new Set());
-      for (const lot of sl.lotteries) {
-        selectedBySchedule.get(schId)!.add(lot.lottery_id);
+      if (!originalLotteriesBySchedule.has(schId)) {
+        originalLotteriesBySchedule.set(schId, new Set());
       }
 
-      // agrupar jugadas por número y mergear schedule/lotteries
-      const existing = betsByNumber.get(num);
-      if (existing) {
-        let entry = existing.scheduleLottery.find((s) => s.schedule.schedule_id === schId);
-        if (!entry) {
-          entry = { schedule: sl.schedule, lotteries: [] };
-          existing.scheduleLottery.push(entry);
-        }
-        // merge sin duplicados
-        const existingIds = new Set(entry.lotteries.map((l) => l.lottery_id));
-        for (const lot of sl.lotteries) {
-          if (!existingIds.has(lot.lottery_id)) entry.lotteries.push(lot);
-        }
-      } else {
-        // primer vez: clono la estructura de scheduleLottery del bet
-        betsByNumber.set(num, {
-          number: bet.number,
-          amount: bet.amount,
-          place: bet.place,
-          with: bet.with ?? null,
-          position: bet.position ?? null,
-          scheduleLottery: [{ schedule: sl.schedule, lotteries: [...sl.lotteries] }],
-        });
+      for (const lot of sl.lotteries) {
+        originalLotteriesBySchedule.get(schId)!.add(lot.lottery_id);
       }
     }
   }
 
-  setRepeatBets(betsByNumber);
+  // 3. Procesar cada bet, extrayendo SOLO los campos básicos (number, amount, place, position, with)
+  for (const bet of data.bets) {
+    // Crear clave única que combine number, place, position y with para diferenciar jugadas
+    const betKey = `${bet.number}-${bet.place}-${bet.position ?? 'null'}-${bet.with ?? 'null'}`;
+
+    // Si ya procesamos esta jugada exacta, saltearla (evitar duplicados)
+    if (betsByKey.has(betKey)) continue;
+
+    // 4. Regenerar scheduleLottery basándose en las lotteries del ticket original que ESTÁN DISPONIBLES ahora
+    const newScheduleLottery: IBetTable['scheduleLottery'] = [];
+
+    // Iterar sobre los schedules que estaban en el ticket original
+    for (const [originalSchId, originalLotteryIds] of originalLotteriesBySchedule.entries()) {
+      // Obtener las lotteries disponibles AHORA para este schedule
+      const availableLotteryIds = scheduleLottery[todayKey]?.[originalSchId] ?? [];
+
+      // Intersección: lotteries del ticket original que están disponibles AHORA
+      const matchingLotteryIds = availableLotteryIds.filter((id) => originalLotteryIds.has(id));
+
+      // Si no hay coincidencias, saltar este schedule
+      if (matchingLotteryIds.length === 0) continue;
+
+      // Obtener el schedule actual (puede haber cambiado de horario)
+      const currentSchedule = schedulesMap.get(originalSchId);
+      if (!currentSchedule) continue;
+
+      // Mapear IDs a objetos completos usando lotteriesById
+      const lotteries = matchingLotteryIds
+        .map((lotId) => lotteriesById.get(lotId))
+        .filter((lot): lot is ILotteryEntityFront => lot !== undefined);
+
+      if (lotteries.length === 0) continue;
+
+      newScheduleLottery.push({
+        schedule: currentSchedule,
+        lotteries: lotteries,
+      });
+    }
+
+    // 5. Crear la apuesta con campos básicos y scheduleLottery regenerado
+    const basicBet: IBetTable = {
+      number: bet.number,
+      amount: bet.amount,
+      place: bet.place,
+      with: bet.with ?? null,
+      position: bet.position ?? null,
+      scheduleLottery: newScheduleLottery,
+    };
+
+    betsByKey.set(betKey, basicBet);
+  }
+
+  // 6. Pre-seleccionar solo las lotteries que están en newScheduleLottery (ya filtradas)
+  for (const bet of betsByKey.values()) {
+    for (const sl of bet.scheduleLottery) {
+      const schId = sl.schedule.schedule_id;
+
+      // Saltar schedules deshabilitados
+      if (disabledSchedules.has(schId)) continue;
+
+      if (!selectedBySchedule.has(schId)) {
+        selectedBySchedule.set(schId, new Set());
+      }
+
+      for (const lot of sl.lotteries) {
+        selectedBySchedule.get(schId)!.add(lot.lottery_id);
+      }
+    }
+  }
+
+  setRepeatBets(betsByKey);
   setScheduleLotteriesToPlay(selectedBySchedule);
-}, [data]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [data, ticketNumber]);
 
 
   useEffect(() => {
@@ -255,7 +311,7 @@ useEffect(() => {
                   legend={`${sch.name}-${sch.time.slice(0, 5)}${
                     isDisabled ? ' (cerrado)' : nearClose ? ' (cierra pronto)' : ''
                   }`}
-                  namePrefix="tone"
+                  namePrefix={`repeat-${sch.schedule_id}`}
                   schedule={sch}
                   availableLotteryIds={available}
                   selectedLotteryIds={scheduleLotteriesToPlay.get(sch.schedule_id) ?? new Set<string>()}

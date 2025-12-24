@@ -178,7 +178,13 @@ export class TicketRouter {
       },
       req.organization_id!
     );
-    res.sendStatus(200);
+
+    const response: APIResponse<{ success: boolean }> = {
+      data: {
+        success: true,
+      },
+    };
+    res.status(200).json(response);
   });
 
   private payTicketHandler = asyncHandler(async (req: Request, res: Response) => {
