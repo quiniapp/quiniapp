@@ -15,8 +15,8 @@ export const usePaidTicket = () => {
       if (!ticket_number) throw new Error('ticket_number requerido');
       return doPaidTicket(ticket_number);
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
         queryKey: ['tickets-infinite'],
         exact: false,
         refetchType: 'active',

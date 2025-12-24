@@ -121,6 +121,7 @@ export class TicketController {
     await this.repository.delete({ ...props, organization_id: organization_id });
     return;
   };
+
   getAllDeletedTickets = async ({
     user_id,
     date,
