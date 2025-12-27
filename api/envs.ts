@@ -70,3 +70,6 @@ function must<T extends string | undefined>(val: T, name: string): string {
   if (!val) throw new Error(`Missing required env: ${name}`);
   return String(val);
 }
+
+// Organization
+export const DEFAULT_ORG_ID = must(process.env.DEFAULT_ORG_ID, 'DEFAULT_ORG_ID');
