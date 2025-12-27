@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-26
+
+#### Current Account - User Type Access Control
+**Added:** Access restrictions for CASHIER and ADMIN users on current account modification endpoints
+**File:** `api/src/current-account/route/current-account.route.ts`
+
+**Implementation:** Added validation checks in POST and PUT handlers to prevent CASHIER and ADMIN users from:
+- POST `/api/private/current-account/calculate` - Calculating current accounts
+- POST `/api/private/current-account/liquidate` - Liquidating current accounts
+- POST `/api/private/current-account/` - Legacy calculate endpoint
+- PUT `/api/private/current-account/:id` - Updating individual current accounts
+- PUT `/api/private/current-account/bulk` - Bulk updating current accounts
+
+**Access Control:**
+- Allowed: `USER_TYPE.OWNER` and `USER_TYPE.SUPERADMIN`
+- Denied: `USER_TYPE.CASHIER` and `USER_TYPE.ADMIN` (returns 403 Forbidden)
+
+**Response:** Returns HTTP 403 with error message: "Access denied: CASHIER and ADMIN users cannot perform this action"
+
+**Use case:** Prevents unauthorized users from modifying financial calculations and liquidations that should only be performed by owners or superadmins.
+
+### Fixed - 2025-12-26
+
+#### REDOUBLE Bet Calculation - Same Number Payout Adjustment
+**Fix:** Adjusted payout calculation when `number` and `with` are the same in REDOUBLE bets
+**File:** `api/supabase/migrations/20251226143157_sp_calc_redouble_fix_payout_equal_number_with.sql`
+
+**Problem:** When `number` equals `with` and the number appears multiple times, the payout was calculated incorrectly. Since both "slots" of the bet are used for the same number, we need 2 occurrences as minimum and should only pay for additional occurrences beyond those 2.
+
+**Example:**
+- Bet: number="05", with="05" (same number)
+- Results: "05" appears 3 times
+- Old logic: pays for 3 hits
+- New logic: pays for 3-1 = 2 hits (because you need the first 2 to meet the minimum)
+
+**Solution:** Modified hits calculation in section 6:
+- If `number = with`: `hits = GREATEST(number_hits, with_hits) - 1`
+- If `number ≠ with`: `hits = GREATEST(number_hits, with_hits)` (original logic)
+
+**Impact:** Correct payout calculation for REDOUBLE bets when the same number is used for both positions.
+
+#### REDOUBLE Bet Calculation - Same Number Validation
+**Fix:** Added validation for when `number` and `with` are the same in REDOUBLE bets
+**File:** `api/supabase/migrations/20251226140710_sp_calc_redouble_fix.sql`
+
+**Problem:** The `calculate_redouble_payout` function was incorrectly paying out when `number` and `with` were the same and only appeared once in the results. When betting on the same number twice (number = with), the number must appear at least 2 times to win.
+
+**Solution:** Added conditional logic to check if `number` equals `with`:
+- If they're equal: requires at least 2 occurrences of the number
+- If they're different: each number must appear at least once (original logic)
+
+**Impact:** Correct validation for REDOUBLE bets minimum requirements.
+
 ### Fixed - 2025-12-24
 
 #### Delete Ticket Endpoint - Response Format
