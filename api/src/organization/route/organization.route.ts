@@ -5,6 +5,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { IOrganizationEntityFront } from '@helper/types/organization.type';
+import { DEFAULT_ORG_ID } from 'envs';
 
 export class OrganizationRouter {
   public router: Router;
@@ -112,6 +113,18 @@ export class OrganizationRouter {
     const { id } = req.params;
     const user = req.user;
 
+    // No se puede consultar la organización por defecto
+    if (id === DEFAULT_ORG_ID) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: 'No se puede consultar la organización por defecto',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
     // Si no es OWNER, solo puede ver su propia organización
     if (user?.user.user_type !== USER_TYPE.OWNER && user?.organization_id !== id) {
       const response: APIResponse<undefined> = {
@@ -153,6 +166,18 @@ export class OrganizationRouter {
       return;
     }
 
+    // No se puede actualizar la organización por defecto
+    if (id === DEFAULT_ORG_ID) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: 'No se puede actualizar la organización por defecto',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
     try {
       const organization = await this.controller.update(id, { name });
       const response: APIResponse<IOrganizationEntityFront> = {
@@ -178,6 +203,18 @@ export class OrganizationRouter {
     if (user?.user.user_type !== USER_TYPE.OWNER) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    // No se puede eliminar la organización por defecto
+    if (id === DEFAULT_ORG_ID) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: 'No se puede eliminar la organización por defecto',
+        },
       };
       res.status(403).json(response);
       return;

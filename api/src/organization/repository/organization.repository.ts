@@ -1,9 +1,14 @@
 import { IOrganizationEntityBack } from '@helper/types/organization.type';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
+import { DEFAULT_ORG_ID } from 'envs';
 
 export class OrganizationRepository {
   async getById(id: string): Promise<IOrganizationEntityBack> {
+    if (id === DEFAULT_ORG_ID) {
+      throw new Error('No se puede consultar la organización por defecto');
+    }
+
     const { data, error } = await supabase
       .from('organizations')
       .select('*')
@@ -20,6 +25,7 @@ export class OrganizationRepository {
       .from('organizations')
       .select('*')
       .is('deleted_at', null)
+      .neq('organization_id', DEFAULT_ORG_ID)
       .order('created_at', { ascending: true });
 
     if (error) throw new Error(error.details);
@@ -38,6 +44,10 @@ export class OrganizationRepository {
   }
 
   async update(id: string, payload: Partial<{ name: string }>): Promise<IOrganizationEntityBack> {
+    if (id === DEFAULT_ORG_ID) {
+      throw new Error('No se puede actualizar la organización por defecto');
+    }
+
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('organizations')
@@ -51,6 +61,10 @@ export class OrganizationRepository {
   }
 
   async delete(id: string): Promise<void> {
+    if (id === DEFAULT_ORG_ID) {
+      throw new Error('No se puede eliminar la organización por defecto');
+    }
+
     const { error } = await supabase.rpc('hard_delete_organization', {
       p_org_id: id,
     });

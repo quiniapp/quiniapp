@@ -3,6 +3,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import { USER_TYPE } from '@helper/types/user.type';
 // import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
 // Helper opcional para parsear booleanos
@@ -97,6 +98,18 @@ export class CurrentAccountRouter {
       return;
     }
 
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
     try {
       // Calculate solo recalcula, no liquida (leave = false)
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
@@ -146,6 +159,18 @@ export class CurrentAccountRouter {
         },
       };
       res.status(500).json(response);
+      return;
+    }
+
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
       return;
     }
 
@@ -200,7 +225,19 @@ export class CurrentAccountRouter {
       };
       res.status(500).json(response);
       return;
-    } /* 
+    }
+
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    } /*
     const result = updateCurrentAccountSchema.safeParse(updateCurrentAccount);
     if (!result.success) {
       const response: APIResponse<undefined> = {
@@ -324,6 +361,18 @@ export class CurrentAccountRouter {
         error: { error: ERROR_TYPE.AUTH_ERROR, message: ERROR_MESSAGE.INVALID_CREDENTIALS },
       };
       res.status(401).json(response);
+      return;
+    }
+
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
       return;
     }
 
