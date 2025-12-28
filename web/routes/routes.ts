@@ -15,6 +15,8 @@ export const BACKEND_ROUTES = {
     id: (id: string) => `${PRIVATE}/user/${id}`,
     resetPassword: (id: string) => `${PRIVATE}/user/reset-password/${id}`,
     changePassword: `${PRIVATE}/user/change-password`,
+    validateSuperAdmin: (username: string, organizationId: string) =>
+      `${PRIVATE}/user/validate-superadmin?username=${encodeURIComponent(username)}&organization_id=${encodeURIComponent(organizationId)}`,
   },
   bet: {
     base: `${PRIVATE}/bet`,

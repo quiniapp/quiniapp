@@ -18,15 +18,20 @@ export class UserRouter {
   }
 
   private setupRoutes() {
+    // IMPORTANT: Specific routes must come BEFORE parameterized routes
+    // Validate SUPERADMIN for cross-org password reset
+    this.router.get('/validate-superadmin', this.validateSuperAdminHandler);
+
+    // Password Management (Phase 3)
+    this.router.post('/change-password', this.changePasswordHandler);
+    this.router.post('/reset-password/:id', this.resetPasswordHandler);
+
+    // Standard CRUD routes
     this.router.get('/:id', this.getUserHandler);
     this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
     this.router.put('/:id', this.updateUserHandler);
     this.router.delete('/:id', this.deleteUserHandler);
-
-    // Password Management (Phase 3)
-    this.router.post('/reset-password/:id', this.resetPasswordHandler);
-    this.router.post('/change-password', this.changePasswordHandler);
   }
 
   private newUserhandler = asyncHandler(async (req: Request, res: Response) => {
@@ -217,6 +222,47 @@ export class UserRouter {
     const response: APIResponse<{ success: boolean }> = {
       data: {
         success: true,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * GET /api/private/user/validate-superadmin?username=XXX&organization_id=YYY
+   * Validate that a user exists and is SUPERADMIN of the specified organization
+   * Only accessible by OWNER
+   */
+  private validateSuperAdminHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { username, organization_id } = req.query;
+    const { user } = req;
+
+    if (!username || typeof username !== 'string') {
+      throw new BadRequestError('Username requerido');
+    }
+
+    if (!organization_id || typeof organization_id !== 'string') {
+      throw new BadRequestError('ID de organización requerido');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    // Only OWNER can validate SUPERADMIN from other organizations
+    if (user.user.user_type !== USER_TYPE.OWNER) {
+      throw new ForbiddenError('Solo el OWNER puede validar SUPERADMIN de otras organizaciones');
+    }
+
+    const result = await this.controller.validateSuperAdmin(
+      username,
+      organization_id,
+      user.user.user_type
+    );
+
+    const response: APIResponse<{ user_id: string }> = {
+      data: {
+        user_id: result.user_id,
       },
     };
 

@@ -14,7 +14,6 @@ import { IOrganizationEntityFront } from '@helper/types/organization.type';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '@/lib/apiClient';
 import { BACKEND_ROUTES } from '../../../routes/routes';
-import { IUserEntityFront } from '@helper/types/user.type';
 
 interface ResetSuperAdminPasswordModalProps {
   isOpen: boolean;
@@ -66,26 +65,16 @@ const ResetSuperAdminPasswordModal = ({
 
     try {
       setIsSearching(true);
-      // Obtener usuarios para encontrar el SUPERADMIN por username
-      const users = await apiClient.get<IUserEntityFront[]>(BACKEND_ROUTES.user.base);
-      const superAdmin = users.find(
-        (u) => u.username === username && u.organization_id === organization.organization_id
+      // Validate SUPERADMIN exists in the specified organization
+      // apiClient returns the first value of data object (user_id as string)
+      const userId = await apiClient.get<string>(
+        BACKEND_ROUTES.user.validateSuperAdmin(username, organization.organization_id)
       );
 
-      if (!superAdmin) {
-        toast.error(`No se encontró un usuario con username "${username}" en esta organización`);
-        return;
-      }
-
-      if (!superAdmin.user_id) {
-        toast.error('Usuario encontrado pero sin ID válido');
-        return;
-      }
-
-      await onConfirm(superAdmin.user_id, newPassword);
+      await onConfirm(userId, newPassword);
       handleClose();
     } catch (error: any) {
-      // Error ya manejado por el mutation hook
+      // Error already handled by apiClient
       console.error('Error al resetear contraseña:', error);
     } finally {
       setIsSearching(false);
