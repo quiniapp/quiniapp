@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
@@ -8,7 +8,8 @@ import { useOrganizations } from '@/hooks/fetchs/organization/useOrganizations';
 import { useCreateOrganization } from '@/hooks/mutations/organization/useCreateOrganization';
 import { useUpdateOrganization } from '@/hooks/mutations/organization/useUpdateOrganization';
 import { useDeleteOrganization } from '@/hooks/mutations/organization/useDeleteOrganization';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useResetPassword } from '@/hooks/mutations/users/useResetPassword';
+import { Plus, Pencil, Trash2, KeyRound } from 'lucide-react';
 import { IOrganizationEntityFront } from '@helper/types/organization.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { INewUserEntity } from '@helper/request/user.request';
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import React from 'react';
 
 type CreateOrganizationWithSuperAdminForm = {
   organization: INewOrganizationEntity;
@@ -35,10 +37,12 @@ const OrganizationsContent = () => {
   const createMutation = useCreateOrganization();
   const updateMutation = useUpdateOrganization();
   const deleteMutation = useDeleteOrganization();
+  const { mutateAsync: resetPassword, isPending: isResettingPassword } = useResetPassword();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<IOrganizationEntityFront | null>(null);
   const [formName, setFormName] = useState('');
 
@@ -86,6 +90,15 @@ const OrganizationsContent = () => {
   const handleDelete = (org: IOrganizationEntityFront) => {
     setSelectedOrg(org);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleResetPassword = (org: IOrganizationEntityFront) => {
+    setSelectedOrg(org);
+    setIsResetPasswordOpen(true);
+  };
+
+  const handleResetPasswordConfirm = async (userId: string, newPassword: string) => {
+    await resetPassword({ userId, newPassword });
   };
 
   const handleSubmitCreate = async (data: CreateOrganizationWithSuperAdminForm) => {
@@ -195,6 +208,15 @@ const OrganizationsContent = () => {
                         >
                           <Pencil className="h-4 w-4" />
                           Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleResetPassword(org)}
+                          className="gap-2 text-yellow-600 hover:text-yellow-500"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Resetear Contraseña
                         </Button>
                         <Button
                           variant="ghost"
@@ -429,8 +451,23 @@ const OrganizationsContent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Resetear Contraseña */}
+      <Suspense fallback={<div>Cargando...</div>}>
+        <ResetSuperAdminPasswordModal
+          isOpen={isResetPasswordOpen}
+          onClose={() => setIsResetPasswordOpen(false)}
+          organization={selectedOrg}
+          onConfirm={handleResetPasswordConfirm}
+          isPending={isResettingPassword}
+        />
+      </Suspense>
     </Box>
   );
 };
 
 export default OrganizationsContent;
+
+const ResetSuperAdminPasswordModal = React.lazy(
+  () => import('../../components/modals/ResetSuperAdminPasswordModal')
+);

@@ -38,13 +38,20 @@ class ApiClient {
    */
   private async refreshAccessToken(): Promise<boolean> {
     try {
-      await fetch('/api/auth/refresh', {
+      const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
+
+      // If no refresh token is available (old session), return false
+      // This will trigger logout in the handler
+      if (!response.ok) {
+        return false;
+      }
+
       return true;
     } catch {
       return false;

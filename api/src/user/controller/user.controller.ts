@@ -91,24 +91,90 @@ export class UserController {
   // ============= PASSWORD MANAGEMENT (Phase 3) =============
 
   /**
-   * Admin password reset (OWNER, SUPERADMIN, ADMIN can reset passwords)
+   * Admin password reset with hierarchical permissions
    * @param targetUserId - User ID whose password will be reset
    * @param adminUserId - Admin user ID performing the reset
    * @param adminUserType - Admin user type (for permission check)
-   * @param organization_id - Organization ID
+   * @param adminOrgId - Admin's organization ID
    * @param newPassword - Optional new password (if not provided, generates random)
    * @returns Object with the new password
+   *
+   * Permission Rules:
+   * - OWNER: Can reset SUPERADMIN (any org), ADMIN/CASHIER (own org only)
+   * - SUPERADMIN: Can reset ADMIN/CASHIER (own org only)
+   * - ADMIN: Can reset CASHIER (own org only)
+   * - CASHIER: Cannot reset passwords (use changePassword instead)
    */
   resetPassword = async (
     targetUserId: string,
     adminUserId: string,
     adminUserType: USER_TYPE,
-    organization_id: string,
+    adminOrgId: string,
     newPassword?: string
   ): Promise<{ password: string }> => {
-    // Check permissions
+    // Check base permissions - only OWNER, SUPERADMIN, ADMIN can reset passwords
     if (![USER_TYPE.OWNER, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(adminUserType)) {
       throw new ForbiddenError('No tienes permisos para resetear contraseñas');
+    }
+
+    // Get target user to check their type and organization
+    // For OWNER, fetch without org restriction to allow resetting SUPERADMIN from other orgs
+    let targetUser;
+    if (adminUserType === USER_TYPE.OWNER) {
+      targetUser = await this.repository.getByIdWithoutOrgRestriction(targetUserId);
+    } else {
+      targetUser = await this.repository.getById(targetUserId, adminOrgId);
+    }
+
+    // Hierarchical permission validation
+    switch (adminUserType) {
+      case USER_TYPE.OWNER:
+        // OWNER can reset:
+        // - SUPERADMIN from any organization
+        // - ADMIN/CASHIER from their own organization only
+        if (targetUser.user_type === USER_TYPE.OWNER) {
+          throw new ForbiddenError('No puedes resetear la contraseña de otro OWNER');
+        }
+        if (targetUser.user_type === USER_TYPE.SUPERADMIN) {
+          // OWNER can reset SUPERADMIN from any organization - allow it
+          break;
+        }
+        if ([USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(targetUser.user_type)) {
+          // Must be from same organization
+          if (targetUser.organization_id !== adminOrgId) {
+            throw new ForbiddenError(
+              'Solo puedes resetear contraseñas de usuarios de tu organización'
+            );
+          }
+        }
+        break;
+
+      case USER_TYPE.SUPERADMIN:
+        // SUPERADMIN can reset ADMIN/CASHIER from their own organization only
+        if ([USER_TYPE.OWNER, USER_TYPE.SUPERADMIN].includes(targetUser.user_type)) {
+          throw new ForbiddenError('No puedes resetear la contraseña de un OWNER o SUPERADMIN');
+        }
+        if (targetUser.organization_id !== adminOrgId) {
+          throw new ForbiddenError(
+            'Solo puedes resetear contraseñas de usuarios de tu organización'
+          );
+        }
+        break;
+
+      case USER_TYPE.ADMIN:
+        // ADMIN can reset CASHIER from their own organization only
+        if (targetUser.user_type !== USER_TYPE.CASHIER) {
+          throw new ForbiddenError('Solo puedes resetear contraseñas de cajeros');
+        }
+        if (targetUser.organization_id !== adminOrgId) {
+          throw new ForbiddenError(
+            'Solo puedes resetear contraseñas de cajeros de tu organización'
+          );
+        }
+        break;
+
+      default:
+        throw new ForbiddenError('No tienes permisos para resetear contraseñas');
     }
 
     // Generate password if not provided
@@ -125,7 +191,7 @@ export class UserController {
 
     // Update user password
     const authRepository = new AuthRepository();
-    await authRepository.updatePassword(targetUserId, passwordHash, true); // true = require password change on next login
+    await authRepository.updatePassword(targetUserId, passwordHash, false); // false = no password change required
 
     // Revoke all user sessions (security measure)
     const sessionRepository = new SessionRepository();
@@ -135,12 +201,13 @@ export class UserController {
     const auditRepository = new AuditRepository();
     await auditRepository.log({
       user_id: targetUserId,
-      organization_id,
+      organization_id: targetUser.organization_id,
       event_type: 'password_reset_by_admin',
       success: true,
       metadata: {
         admin_user_id: adminUserId,
         admin_user_type: adminUserType,
+        target_user_type: targetUser.user_type,
       },
     });
 

@@ -1,9 +1,7 @@
 import { IUserEntityBack, IUserEntityFront } from '@helper/types/user.type';
 import { AuthRepository } from '../repository/auth.repository';
-import { IAuthLogin, IAuthLogout } from '@helper/types/auth.type';
+import { IAuthLogin } from '@helper/types/auth.type';
 import { parseUser } from 'api/src/user/helper/parseUser';
-import { supabase } from 'api/database/db.connection';
-import { generateEmail } from 'api/helper/generateEmail';
 import { UnauthorizedError } from '@helper/errors';
 import { hashPassword, comparePassword } from 'api/helper/password';
 import { SessionRepository } from 'api/src/session/repository/session.repository';
@@ -341,48 +339,6 @@ export class AuthController {
     return true;
   };
 
-  // ============= LEGACY METHODS (keep for backwards compatibility - Phase 4 will remove Supabase calls) =============
-
-  /**
-   * @deprecated Use loginWithSession instead. This will be updated in Phase 4.
-   */
-  login = async (
-    props: IAuthLogin
-  ): Promise<{ user: IUserEntityFront; organization_id: string }> => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: generateEmail(props.username),
-      password: props.password,
-    });
-
-    if (error) {
-      throw new UnauthorizedError('Usuario o contraseña incorrectos');
-    }
-
-    const userData: IUserEntityBack = await this.repository.login({ ...props });
-
-    return {
-      user: parseUser(userData),
-      organization_id: userData.organization_id,
-    };
-  };
-
-  /**
-   * @deprecated Use logoutSession instead. This will be updated in Phase 4.
-   */
-  logout = async (props: IAuthLogout) => {
-    const { error } = await supabase.auth.admin.signOut(props.token);
-
-    if (error) {
-      throw new UnauthorizedError('Error al cerrar sesión');
-    }
-
-    return true;
-  };
-
-  /**
-   * @deprecated Not implemented in old system. Use refreshToken instead.
-   */
-  refresh = async () => {
-    return;
-  };
+  // Legacy methods removed in Phase 5
+  // Migration to custom JWT session system completed
 }

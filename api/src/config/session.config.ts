@@ -55,7 +55,7 @@ export const SESSION_CONFIG = {
   // Token Names
   ACCESS_TOKEN_COOKIE_NAME: 'access_token',
   REFRESH_TOKEN_COOKIE_NAME: 'refresh_token',
-} as const;
+};
 
 // Validation
 if (SESSION_CONFIG.INACTIVITY_TIMEOUT > SESSION_CONFIG.ABSOLUTE_TIMEOUT) {
