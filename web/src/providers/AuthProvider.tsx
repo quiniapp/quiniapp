@@ -4,13 +4,14 @@ import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
 import {
-  SESSION_DURATION_MS,
   VALIDATE_INTERVAL_MS,
   VALIDATE_ON_VISIBILITY,
   VISIBILITY_MIN_GAP_MS,
-  USER_ACTIVITY_EVENTS,
 } from '@helper/config/session.config';
 import { apiClient, ApiError } from '@/lib/apiClient';
+
+// Auto-refresh access token every 13-14 minutes (random to avoid thundering herd)
+const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const queryClient = useQueryClient();
@@ -19,10 +20,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const intervalRef = useRef<number | null>(null);
+  const validateIntervalRef = useRef<number | null>(null);
+  const refreshIntervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
-  const lastActivityRef = useRef<number>(Date.now());
-  const inactivityTimerRef = useRef<number | null>(null);
 
   const setSession = useCallback((u: IUserEntityFront | null) => {
     if (u) {
@@ -84,27 +84,35 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     [setSession, validate]
   );
 
-  const logout = useCallback(async () => {
-    setLoading(true);
-    try {
-      await apiClient.post(BACKEND_ROUTES.auth.logout);
-    } catch {
-      // no-op - even if logout fails on server, clear local session
-    } finally {
-      // Clear all TanStack Query cache to prevent data leakage between users
-      queryClient.clear();
-      setSession(null);
-      setLoading(false);
-    }
-  }, [setSession, queryClient]);
+  const logout = useCallback(
+    async (logoutAll: boolean = false) => {
+      setLoading(true);
+      try {
+        const endpoint = logoutAll
+          ? BACKEND_ROUTES.auth.logoutAll
+          : BACKEND_ROUTES.auth.logout;
+        await apiClient.post(endpoint);
+      } catch {
+        // no-op - even if logout fails on server, clear local session
+      } finally {
+        // Clear all TanStack Query cache to prevent data leakage between users
+        queryClient.clear();
+        setSession(null);
+        setLoading(false);
+      }
+    },
+    [setSession, queryClient]
+  );
 
-  const armInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
-    inactivityTimerRef.current = window.setTimeout(() => {
-      // si sigue autenticado y se cumplió el tiempo, cerrar sesión
-      if (isAuth) void logout();
-    }, SESSION_DURATION_MS) as unknown as number;
-  }, [isAuth, logout]);
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      await apiClient.post(BACKEND_ROUTES.auth.refresh);
+    } catch (error) {
+      // Refresh failed - session likely expired or no refresh token (old session)
+      console.warn('[Auth] Refresh token failed, logging out:', error);
+      void logout();
+    }
+  }, [logout]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
 
@@ -114,19 +122,40 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Revalidate periódico
+  // Validación periódica (cada 4 minutos)
+  // Backend maneja expiración de sesión con sliding window
   useEffect(() => {
-    if (intervalRef.current) window.clearInterval(intervalRef.current);
-    intervalRef.current = window.setInterval(() => {
-      if (isAuth) void validate();
-    }, VALIDATE_INTERVAL_MS) as unknown as number;
+    if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
+
+    if (isAuth) {
+      validateIntervalRef.current = window.setInterval(() => {
+        void validate();
+      }, VALIDATE_INTERVAL_MS) as unknown as number;
+    }
 
     return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
     };
   }, [isAuth, validate]);
 
-  // Revalidate al volver a la pestaña/ventana, con throttle + cierre por inactividad
+  // Auto-refresh de access token (cada 13-14 minutos)
+  // Access token expira a los 15 minutos, refrescamos antes
+  useEffect(() => {
+    if (refreshIntervalRef.current) window.clearInterval(refreshIntervalRef.current);
+
+    if (isAuth) {
+      refreshIntervalRef.current = window.setInterval(() => {
+        void refreshAccessToken();
+      }, AUTO_REFRESH_INTERVAL_MS) as unknown as number;
+    }
+
+    return () => {
+      if (refreshIntervalRef.current) window.clearInterval(refreshIntervalRef.current);
+    };
+  }, [isAuth, refreshAccessToken]);
+
+  // Revalidate al volver a la pestaña/ventana con throttle
+  // Backend maneja el sliding window, solo validamos para actualizar UI
   useEffect(() => {
     if (!VALIDATE_ON_VISIBILITY) return;
 
@@ -135,13 +164,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
       const now = Date.now();
 
-      // 1) Si hubo más de SESSION_DURATION_MS sin actividad, cerrar sesión
-      if (now - lastActivityRef.current >= SESSION_DURATION_MS) {
-        void logout();
-        return;
-      }
-
-      // 2) Si la pestaña está visible, validar como máximo cada VISIBILITY_MIN_GAP_MS
+      // Validar como máximo cada VISIBILITY_MIN_GAP_MS
       if (
         document.visibilityState === 'visible' &&
         now - lastValidateRef.current >= VISIBILITY_MIN_GAP_MS
@@ -157,27 +180,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       document.removeEventListener('visibilitychange', onVisibilityOrFocus);
       window.removeEventListener('focus', onVisibilityOrFocus);
     };
-  }, [isAuth, validate, logout]);
-
-  useEffect(() => {
-    // función que marca actividad y reinicia watchdog
-    const onUserActivity = () => {
-      lastActivityRef.current = Date.now();
-      armInactivityTimer();
-    };
-
-    // usar eventos definidos en la configuración compartida
-    const events = [...USER_ACTIVITY_EVENTS];
-
-    events.forEach((ev) => window.addEventListener(ev, onUserActivity, { passive: true }));
-    // armar timer al montar
-    armInactivityTimer();
-
-    return () => {
-      events.forEach((ev) => window.removeEventListener(ev, onUserActivity));
-      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
-    };
-  }, [armInactivityTimer]);
+  }, [isAuth, validate]);
 
   const value: AuthContextValue = useMemo(
     () => ({

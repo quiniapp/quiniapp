@@ -7,6 +7,542 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-28
+
+#### Hierarchical Password Reset Permissions
+**Feature:** Implemented granular permission controls for password reset functionality
+
+**User Repository Enhancement:**
+- `api/src/user/repository/user.repository.ts`
+  - Added `getByIdWithoutOrgRestriction()` method
+  - Used for OWNER to reset SUPERADMIN passwords across organizations
+  - Returns user without organization constraint
+
+**Permission Rules Implemented:**
+1. **OWNER:**
+   - Can reset SUPERADMIN passwords from ANY organization
+   - Can reset ADMIN/CASHIER passwords from OWN organization only
+   - Cannot reset other OWNER passwords
+
+2. **SUPERADMIN:**
+   - Can reset ADMIN/CASHIER passwords from OWN organization only
+   - Cannot reset OWNER or other SUPERADMIN passwords
+
+3. **ADMIN:**
+   - Can reset CASHIER passwords from OWN organization only
+   - Cannot reset OWNER, SUPERADMIN, or other ADMIN passwords
+
+4. **CASHIER:**
+   - Cannot reset any passwords (use `changePassword` endpoint instead)
+
+**Controller Changes:**
+- `api/src/user/controller/user.controller.ts:resetPassword()`
+  - Added hierarchical permission validation with detailed error messages
+  - Uses `getByIdWithoutOrgRestriction()` for OWNER to allow cross-org SUPERADMIN resets
+  - Validates target user type against admin user type
+  - Enhanced audit logging with target user type metadata
+  - Changed `password_reset_required` to `false` (users can login immediately)
+
+**Error Messages:**
+- "No puedes resetear la contraseña de otro OWNER"
+- "Solo puedes resetear contraseñas de usuarios de tu organización"
+- "No puedes resetear la contraseña de un OWNER o SUPERADMIN" (for SUPERADMIN)
+- "Solo puedes resetear contraseñas de cajeros" (for ADMIN)
+
+**Security:**
+- Organization isolation enforced (except OWNER → SUPERADMIN cross-org)
+- All sessions revoked on password reset
+- Audit trail includes admin user ID, type, and target user type
+
+**Use Case:** Prevents unauthorized password resets while allowing proper administrative hierarchy
+
+---
+
+### Added - 2025-12-28
+
+#### 🚨 Emergency Owner Password Reset Script
+**Purpose:** Emergency script to reset OWNER password when locked out after migration
+
+**Script Created:**
+- `api/scripts/reset-owner-password.ts` - Emergency password reset for OWNER users
+  - Requires `OWNER_ID` and `OWNER_PASSWORD` environment variables
+  - Only works for OWNER user type (security)
+  - Validates password strength (non-empty)
+  - Hashes password with bcrypt
+  - Updates password in database
+  - Resets failed login attempts and unlocks account
+  - Revokes all existing sessions for security
+  - Creates audit log entry
+  - Run with: `OWNER_ID=<uuid> OWNER_PASSWORD=<password> npx tsx scripts/reset-owner-password.ts`
+
+**Documentation Created:**
+- `api/scripts/README.md` - Comprehensive guide for emergency scripts
+  - Step-by-step instructions to get OWNER_ID from database
+  - Multiple execution methods (PowerShell, Git Bash, CMD)
+  - Examples for different deployment scenarios
+  - Security best practices
+  - Troubleshooting guide
+  - Post-reset verification queries
+
+**Environment Variables:**
+- `api/.env.example` - Added emergency owner access section
+  - `OWNER_ID` - Owner user ID from database
+  - `OWNER_PASSWORD` - Temporary password for reset (comment out after use)
+
+**Use Case:** After migration to custom auth, all users need password reset. Only admins can reset passwords. If OWNER is locked out, no one can reset anyone's password. This script solves that chicken-egg problem.
+
+**Security:**
+- Only works for OWNER user type
+- Requires direct database access
+- Creates audit trail
+- Should only be used in emergencies
+- Password should not be committed to version control
+
+---
+
+### Changed - 2025-12-28
+
+#### Password Validation Simplification
+**Change:** Simplified password strength requirements to only check for non-empty passwords
+
+**Files Modified:**
+- `api/helper/password.ts` - `validatePasswordStrength()` function
+  - **Old:** Required 8+ characters, uppercase, lowercase, number
+  - **New:** Only requires non-empty password
+  - **Validation:** `password.trim().length > 0`
+  - **Error:** "La contraseña no puede estar vacía"
+
+- `api/scripts/reset-owner-password.ts` - Updated error messages
+  - Removed complexity requirements from console output
+  - Only mentions "Password cannot be empty"
+
+- `api/scripts/README.md` - Updated documentation
+  - Step 2: Any non-empty text is valid (admin, 123456, etc.)
+  - Troubleshooting: Removed complexity requirements section
+  - Support: Changed "cumpla los requisitos" to "no esté vacía"
+
+**Reason:** Application does not require password complexity rules per user feedback
+
+**Impact:** Users can set simple passwords like "admin" or "123456" if desired
+
+---
+
+### Fixed - 2025-12-28
+
+#### Login Handler Legacy Code Removal
+**Fix:** Removed remaining Supabase Auth code from login handler
+
+**File:** `api/src/auth/route/auth.route.ts`
+
+**Problem:** After Phase 5 cutover, login handler still had imports and code referencing deleted legacy functions:
+- Importing `signUserToken` (deleted in Phase 5)
+- Importing `supabase` (no longer using Supabase Auth)
+- Importing `generateEmail` (no longer needed)
+- Error: "SyntaxError: The requested module 'api/helper/JWT' does not provide an export named 'signUserToken'"
+
+**Solution:** Completely rewrote `loginHandler` to use new session system:
+1. Removed legacy imports (`signUserToken`, `supabase`, `generateEmail`)
+2. Changed to use `loginWithSession()` controller method
+3. Set `access_token` cookie (15 minutes, httpOnly, secure)
+4. Set `refresh_token` cookie (30 days, httpOnly, secure)
+5. Return user data in `APIResponse` format
+
+**Impact:** Login endpoint now fully uses custom JWT session management
+
+---
+
+#### TypeScript Type Error in Session Cleanup Job
+**Fix:** Fixed `NodeJS.Timeout` type error in session cleanup job
+
+**File:** `api/src/utils/session-cleanup.job.ts`
+
+**Problem:** TypeScript error "'NodeJS' is not defined" for interval ID type
+- Using `NodeJS.Timeout` requires @types/node to be available
+- Not portable across different TypeScript configurations
+
+**Solution:** Changed type to `ReturnType<typeof setInterval>`
+```typescript
+// Before (ERROR):
+let cleanupIntervalId: NodeJS.Timeout | null = null;
+
+// After (FIXED):
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+```
+
+**Impact:** More portable TypeScript code, no external type dependencies
+
+---
+
+#### Module Resolution Error in Reset Script
+**Fix:** Fixed import path resolution in emergency reset script
+
+**File:** `api/scripts/reset-owner-password.ts`
+
+**Problem:** Import using alias `@helper/types/user.type` failed
+- TypeScript path aliases don't work from `scripts/` folder
+- Error: "Cannot find module '@helper/types/user.type'"
+
+**Solution:** Changed to relative path
+```typescript
+// Before (ERROR):
+import { USER_TYPE } from '@helper/types/user.type';
+
+// After (FIXED):
+import { USER_TYPE } from '../../helper/types/user.type';
+```
+
+**Impact:** Script can be executed with `npx tsx` without additional TypeScript configuration
+
+---
+
+### Added - 2025-12-28
+
+#### 🔐 Custom JWT Session Management System (Migration Complete)
+**Major Feature:** Migrated from Supabase Auth to custom JWT-based session management with database tracking
+
+**Migration Phases Completed:** All 5 phases (Database, Auth Endpoints, Password Management, Frontend Integration, Cutover)
+
+---
+
+##### Phase 1: Database & Infrastructure
+
+**SQL Migrations Created:**
+- `20260101000001_create_sessions_table.sql` - Session tracking with refresh tokens
+- `20260101000002_alter_users_for_custom_auth.sql` - Password management fields
+- `20260101000003_create_auth_audit_log.sql` - Security audit logging
+- `20260101000004_initial_data_migration.sql` - Mark users for password reset
+
+**Configuration Files:**
+- `api/src/config/session.config.ts` - Centralized session configuration
+  - Access token: 15 minutes
+  - Refresh token: 30 days
+  - Inactivity timeout: 4 hours (sliding window)
+  - Absolute timeout: 30 days
+  - Max failed attempts: 5
+  - Account lockout: 15 minutes
+  - BCrypt rounds: 12
+
+**Helper Functions:**
+- `api/helper/password.ts` - BCrypt password hashing utilities
+  - `hashPassword()` - Hash password with 12 rounds
+  - `comparePassword()` - Verify password securely
+  - `generateRandomPassword()` - Generate random passwords
+  - `validatePasswordStrength()` - Validate password is non-empty
+
+**JWT Helpers Updated:**
+- `api/helper/JWT.ts` - Access and refresh token functions
+  - `signAccessToken()` - Generate 15-min access tokens
+  - `verifyAccessToken()` - Validate access tokens
+  - `signRefreshToken()` - Generate 30-day refresh tokens
+  - `verifyRefreshToken()` - Validate refresh tokens
+
+**Repositories Created:**
+- `api/src/session/repository/session.repository.ts` - Session CRUD and lifecycle
+  - `create()` - Create new session with refresh token hash
+  - `getById()` - Get active session by ID
+  - `updateActivity()` - Implement sliding window (extends expiration)
+  - `revoke()` - Mark session inactive
+  - `revokeAllUserSessions()` - Security measure for password changes
+  - `rotateRefreshToken()` - Update token and increment version
+  - `cleanupExpiredSessions()` - Periodic cleanup job
+  - `countActiveSessions()` - Check concurrent sessions
+  - `revokeOldestSession()` - Enforce session limit
+
+- `api/src/audit/repository/audit.repository.ts` - Security event logging
+  - `log()` - Create audit entries
+  - `getRecentFailedAttempts()` - Brute force detection
+  - `getUserLogs()` - User activity history
+  - `getSessionLogs()` - Session activity history
+
+**Dependencies Added:**
+```bash
+npm install bcrypt @types/bcrypt
+```
+
+---
+
+##### Phase 2: Authentication Endpoints
+
+**Auth Repository Enhanced:**
+- `api/src/auth/repository/auth.repository.ts`
+  - `getUserByUsername()` - Login lookup
+  - `getUserById()` - Session validation
+  - `incrementFailedAttempts()` - Brute force tracking
+  - `resetFailedAttempts()` - Clear counter on success
+  - `lockAccount()` - Temporary lockout
+  - `updateLoginMetadata()` - Track last login
+  - `updatePassword()` - Update password hash
+
+**Auth Controller Rewritten:**
+- `api/src/auth/controller/auth.controller.ts`
+
+**New Method:** `loginWithSession()`
+1. Fetch user from database by username
+2. Check if account is locked
+3. Verify password hash exists
+4. Verify password with bcrypt
+5. Check concurrent sessions limit
+6. Create session with refresh_token_hash
+7. Generate access + refresh tokens
+8. Update user login metadata
+9. Reset failed attempts
+10. Log successful login
+
+**New Method:** `refreshToken()`
+1. Verify refresh token JWT
+2. Get session from database
+3. Check if session expired
+4. Verify refresh token hash (detect token reuse)
+5. Get user data
+6. Generate new tokens (rotate refresh token)
+7. Update session with new refresh token hash
+8. Update activity (sliding window)
+9. Log successful refresh
+
+**New Method:** `logoutSession()`
+- Revoke single session or all user sessions
+- Create audit log entry
+
+**Auth Routes Updated:**
+- `api/src/auth/route/auth.route.ts`
+  - `POST /api/auth/login` - Login with username/password
+  - `POST /api/auth/refresh` - Refresh access token (NEW)
+  - `POST /api/private/auth/logout` - Logout current session
+  - `POST /api/private/auth/logout-all` - Logout all sessions (NEW)
+  - `GET /api/private/auth/validate` - Validate session
+
+**Cookie Configuration:**
+- Access token: httpOnly, secure, sameSite=none, 15 min
+- Refresh token: httpOnly, secure, sameSite=none, 30 days
+
+---
+
+##### Phase 3: Password Management
+
+**User Controller Enhanced:**
+- `api/src/user/controller/user.controller.ts`
+
+**New Method:** `resetPassword()` (Admin-only)
+- OWNER, SUPERADMIN, ADMIN can reset any user's password
+- Generates random password if not provided
+- Validates password strength
+- Hashes password with bcrypt
+- Revokes all user sessions (security)
+- Creates audit log entry
+- Returns plaintext password for admin to share
+
+**New Method:** `changePassword()` (Self-service)
+- Any authenticated user can change own password
+- Verifies current password
+- Validates new password strength
+- Checks new password is different
+- Hashes new password
+- Revokes all user sessions (security)
+- Creates audit log entry
+
+**User Routes Updated:**
+- `api/src/user/route/user.route.ts`
+  - `POST /api/private/user/reset-password/:id` - Admin reset password
+  - `POST /api/private/user/change-password` - User change password
+
+**Migration Script Created:**
+- `api/scripts/migrate-users-to-custom-auth.ts`
+  - Marks all users without password_hash as requiring password reset
+  - Creates audit log entry
+  - Run with: `npx tsx scripts/migrate-users-to-custom-auth.ts`
+
+---
+
+##### Phase 4: Middleware & Cleanup Job
+
+**Auth Middleware Replaced:**
+- `api/middlewares/auth.middleware.ts` (COMPLETELY REWRITTEN)
+
+**Old Behavior (Removed):**
+- Only validated `user_token` cookie (custom JWT)
+- Ignored `access_token` (Supabase JWT never validated) ⚠️ Security issue
+- No session tracking in database
+- No expiration checking in backend
+- No sliding window
+
+**New Behavior:**
+1. Validates `access_token` cookie (15-min JWT)
+2. Verifies session in database (is_active, expires_at)
+3. Updates last_activity_at (sliding window → +4h)
+4. Gets fresh user data from database
+5. Attaches user and session info to request
+
+**Request Object Updated:**
+```typescript
+req.user = {
+  user: IUserEntityFront,
+  session_id: string,
+  organization_id: string
+}
+```
+
+**Session Cleanup Job Created:**
+- `api/src/utils/session-cleanup.job.ts`
+  - Runs every 1 hour
+  - Calls `cleanup_expired_sessions()` PostgreSQL function
+  - Marks expired sessions as inactive
+  - Logs cleanup results
+  - Started automatically in `api/src/index.ts`
+
+**Server Initialization Updated:**
+- `api/src/index.ts`
+  - Starts session cleanup job on server start
+  - Logs session configuration on startup
+
+---
+
+##### Phase 5: Legacy Code Removal
+
+**Removed from JWT Helper:**
+- `api/helper/JWT.ts`
+  - ❌ `signUserToken()` (deprecated, replaced by `signAccessToken()`)
+  - ❌ `verifyUserToken()` (deprecated, replaced by `verifyAccessToken()`)
+
+**Removed from Auth Controller:**
+- `api/src/auth/controller/auth.controller.ts`
+  - ❌ `login()` (deprecated, replaced by `loginWithSession()`)
+  - ❌ `logout()` (deprecated, replaced by `logoutSession()`)
+  - ❌ `refresh()` (deprecated, replaced by `refreshToken()`)
+
+**Removed Imports:**
+- ❌ `supabase` (no longer using Supabase Auth)
+- ❌ `generateEmail()` (no longer needed)
+- ❌ `IAuthLogout` (replaced by session-based logout)
+
+**Removed File:**
+- ❌ `api/middlewares/auth.middleware.new.ts` (merged into main middleware)
+
+---
+
+##### Security Features Implemented
+
+**Password Security:**
+- BCrypt hashing with 12 rounds
+- Password strength validation (non-empty only)
+- Secure comparison with timing attack protection
+- Password change requires current password verification
+- All sessions revoked on password change
+
+**Brute Force Protection:**
+- Failed login attempts tracking
+- Account lockout after 5 failed attempts
+- Lockout duration: 15 minutes
+- Audit logging of failed attempts
+
+**Token Security:**
+- Refresh token rotation (each use generates new token)
+- Token reuse detection → revokes ALL user sessions
+- Access token: 15 minutes (short-lived)
+- Refresh token: 30 days (long-lived, stored as bcrypt hash)
+- Tokens include type validation ('access' vs 'refresh')
+
+**Session Security:**
+- Sliding window: Session extends with activity (4h inactivity timeout)
+- Absolute timeout: Maximum 30 days regardless of activity
+- Session tracking in database (IP, user agent)
+- Session revocation on security events (password change, token reuse)
+- Concurrent session limit (configurable, default: unlimited)
+
+**Audit Logging:**
+- All auth events logged (login, logout, refresh, failures)
+- Failed login attempts with username and IP
+- Account lockouts
+- Password changes/resets
+- Token reuse detections
+- System migrations
+
+---
+
+##### Environment Variables Required
+
+Add to `.env`:
+```bash
+# JWT Secrets (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+JWT_SECRET_ACCESS=<256_BIT_SECRET_HERE>
+JWT_SECRET_REFRESH=<DIFFERENT_256_BIT_SECRET_HERE>
+```
+
+See `api/.env.example` for full configuration.
+
+---
+
+##### Breaking Changes
+
+**⚠️ All existing sessions will be invalidated**
+- Users must re-login after deployment
+- Supabase Auth sessions no longer work
+- Old `user_token` cookie replaced with `access_token` and `refresh_token`
+
+**Migration Steps:**
+1. Deploy database migrations
+2. Deploy backend code
+3. Run migration script: `npx tsx scripts/migrate-users-to-custom-auth.ts`
+4. Admins reset user passwords via API or frontend
+5. Users login with new passwords
+
+---
+
+##### Performance Improvements
+
+**Database Queries:**
+- Indexed session lookups by `session_id`, `user_id`, `expires_at`
+- PostgreSQL function for efficient session cleanup
+- Single query to update session activity
+
+**Caching:**
+- User data cached in session (refreshed on each request)
+- No need for repeated user lookups within same session
+
+**Token Validation:**
+- JWT validation is fast (cryptographic signature check)
+- Session lookup by ID is O(1) with index
+
+---
+
+##### Monitoring & Observability
+
+**Logs:**
+- Session cleanup results (every hour)
+- Failed login attempts
+- Account lockouts
+- Token reuse detections
+- Session creation/revocation
+
+**Audit Table:**
+- Query for security events
+- Track user activity
+- Detect suspicious patterns
+- Generate security reports
+
+---
+
+**Files Modified:**
+- Database: 4 SQL migrations
+- Config: `session.config.ts`, `envs.ts`, `.env.example`
+- Helpers: `password.ts`, `JWT.ts`
+- Repositories: `session.repository.ts`, `audit.repository.ts`, `auth.repository.ts`
+- Controllers: `auth.controller.ts`, `user.controller.ts`
+- Routes: `auth.route.ts`, `user.route.ts`
+- Middleware: `auth.middleware.ts`
+- Utils: `session-cleanup.job.ts`
+- Server: `index.ts`
+- Scripts: `migrate-users-to-custom-auth.ts`
+
+**Lines of Code:**
+- Added: ~2,500 lines
+- Modified: ~500 lines
+- Removed: ~200 lines
+
+**Dependencies:**
+- Added: `bcrypt`, `@types/bcrypt`
+
+---
+
 ### Added - 2025-12-26
 
 #### Current Account - User Type Access Control

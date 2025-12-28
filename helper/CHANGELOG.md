@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2025-12-28
+
+#### Session Config - Updated Session Duration
+**Change:** Actualizado timeout de sesión de 3 horas a 4 horas
+**File:** `helper/config/session.config.ts`
+
+- Cambiado `SESSION_DURATION_MS` de `3 * 60 * 60 * 1000` (3h) a `4 * 60 * 60 * 1000` (4h)
+- Backend implementa sliding window: sesión se extiende con cada actividad del usuario
+- Frontend eliminó timer de inactividad local (ahora manejado por backend)
+- Timeout absoluto: 30 días (configurable en backend)
+
+**Comentarios actualizados:**
+- "Duración de la sesión en milisegundos (4 horas)"
+- "La sesión se extiende automáticamente con cada actividad del usuario"
+- "ACTUALIZADO: Cambió de 3 horas a 4 horas según requerimientos"
+
+**Por qué:** Alineado con requerimientos del nuevo sistema de sesiones JWT. Backend maneja expiración con sliding window (4h inactividad) y absolute timeout (30 días).
+
 ### Added - 2025-12-20
 
 #### Schedule Lottery Types - Partial Update Support

@@ -18,10 +18,18 @@ export class UserRouter {
   }
 
   private setupRoutes() {
+    // IMPORTANT: Specific routes must come BEFORE parameterized routes
+    // Validate SUPERADMIN for cross-org password reset
+    this.router.get('/validate-superadmin', this.validateSuperAdminHandler);
+
+    // Password Management (Phase 3)
+    this.router.post('/change-password', this.changePasswordHandler);
+    this.router.post('/reset-password/:id', this.resetPasswordHandler);
+
+    // Standard CRUD routes
     this.router.get('/:id', this.getUserHandler);
     this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
-    // this.router.put('/reset/:id', this.updatePasswordHandler);
     this.router.put('/:id', this.updateUserHandler);
     this.router.delete('/:id', this.deleteUserHandler);
   }
@@ -71,7 +79,7 @@ export class UserRouter {
   });
   private getAllUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { cashier_number } = req.query;
+    const { cashier_number, filter_user_type } = req.query;
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       throw new ForbiddenError('Los cajeros no pueden listar usuarios');
@@ -82,7 +90,18 @@ export class UserRouter {
       parsedCashierNumber = parseInt(cashier_number, 10);
     }
 
-    const users = await this.controller.getAll(req.organization_id!, parsedCashierNumber);
+    // Parse filter_user_type from query parameter
+    let filterUserType: USER_TYPE | undefined = undefined;
+    if (typeof filter_user_type === 'string' && filter_user_type in USER_TYPE) {
+      filterUserType = filter_user_type as USER_TYPE;
+    }
+
+    const users = await this.controller.getAll(
+      req.organization_id!,
+      user!.user.user_type,
+      parsedCashierNumber,
+      filterUserType
+    );
     const response: APIResponse<IUserEntityFront[]> = {
       data: {
         users,
@@ -131,6 +150,122 @@ export class UserRouter {
         user: deletedUser,
       },
     };
+    res.status(200).json(response);
+  });
+
+  // ============= PASSWORD MANAGEMENT (Phase 3) =============
+
+  /**
+   * POST /api/private/user/reset-password/:id
+   * Admin endpoint to reset user password
+   * Only OWNER, SUPERADMIN, and ADMIN can reset passwords
+   */
+  private resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { id: targetUserId } = req.params;
+    const { newPassword } = req.body; // Optional - if not provided, generates random password
+    const { user } = req;
+
+    if (!targetUserId) {
+      throw new BadRequestError('ID de usuario requerido');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    // Check permissions - only OWNER, SUPERADMIN, ADMIN can reset passwords
+    if (![USER_TYPE.OWNER, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(user.user.user_type)) {
+      throw new ForbiddenError('No tienes permisos para resetear contraseñas');
+    }
+
+    const result = await this.controller.resetPassword(
+      targetUserId,
+      user.user.user_id!,
+      user.user.user_type,
+      req.organization_id!,
+      newPassword
+    );
+
+    const response: APIResponse<{ password: string }> = {
+      data: {
+        password: result.password,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/user/change-password
+   * User self-service password change
+   * Any authenticated user can change their own password
+   */
+  private changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    const { user } = req;
+
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestError('Contraseña actual y nueva requeridas');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    await this.controller.changePassword(
+      user.user.user_id!,
+      currentPassword,
+      newPassword,
+      req.organization_id!
+    );
+
+    const response: APIResponse<{ success: boolean }> = {
+      data: {
+        success: true,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * GET /api/private/user/validate-superadmin?username=XXX&organization_id=YYY
+   * Validate that a user exists and is SUPERADMIN of the specified organization
+   * Only accessible by OWNER
+   */
+  private validateSuperAdminHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { username, organization_id } = req.query;
+    const { user } = req;
+
+    if (!username || typeof username !== 'string') {
+      throw new BadRequestError('Username requerido');
+    }
+
+    if (!organization_id || typeof organization_id !== 'string') {
+      throw new BadRequestError('ID de organización requerido');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    // Only OWNER can validate SUPERADMIN from other organizations
+    if (user.user.user_type !== USER_TYPE.OWNER) {
+      throw new ForbiddenError('Solo el OWNER puede validar SUPERADMIN de otras organizaciones');
+    }
+
+    const result = await this.controller.validateSuperAdmin(
+      username,
+      organization_id,
+      user.user.user_type
+    );
+
+    const response: APIResponse<{ user_id: string }> = {
+      data: {
+        user_id: result.user_id,
+      },
+    };
+
     res.status(200).json(response);
   });
 }
