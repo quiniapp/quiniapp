@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-28
+
+#### Session Management - Auto-Refresh de Access Token
+**Feature:** Auto-refresh automático de access tokens cada 13-14 minutos
+**File:** `web/src/providers/AuthProvider.tsx`
+
+- Agregado timer de auto-refresh que renueva el access token antes de que expire (15 min)
+- Intervalo aleatorio de 13-14 minutos para evitar "thundering herd"
+- Refresh automático falla silenciosamente y hace logout si la sesión expiró
+- Backend maneja el sliding window (4 horas de inactividad)
+- Eliminado timer de inactividad del cliente (redundante con backend)
+
+**Cambios:**
+- Agregado `AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000`
+- Agregado `refreshAccessToken()` callback que llama a `/api/auth/refresh`
+- Agregado useEffect para auto-refresh periódico
+- Eliminado `lastActivityRef`, `inactivityTimerRef`, `armInactivityTimer()`
+- Eliminado listeners de eventos de actividad del usuario
+- Eliminado check de inactividad en `onVisibilityOrFocus`
+
+**Por qué:** El backend ahora maneja completamente la expiración de sesión con sliding window. El cliente solo necesita refrescar el access token periódicamente.
+
+#### API Client - Interceptor 401 con Auto-Refresh
+**Feature:** Manejo automático de 401 con refresh de tokens y retry de requests
+**File:** `web/src/lib/apiClient.ts`
+
+- Interceptor de respuestas que detecta errores 401 Unauthorized
+- Auto-refresh de access token cuando detecta 401
+- Cola de requests fallidos que se reintentan después del refresh exitoso
+- Previene múltiples refresh simultáneos con flag `isRefreshing`
+- Previene loops infinitos con flag `_skipRefreshRetry`
+
+**Cambios:**
+- Agregado `private isRefreshing = false`
+- Agregado `private refreshQueue: PendingRequest[]`
+- Agregado `refreshAccessToken()` que llama a `/api/auth/refresh`
+- Agregado `handleUnauthorized()` que maneja la lógica de refresh y retry
+- Agregado `processPendingRequests()` para ejecutar requests en cola
+- Modificado `request()` para capturar 401 y llamar a `handleUnauthorized()`
+- Agregado `_skipRefreshRetry` a `RequestConfig` para prevenir loops
+
+**Por qué:** Mejora la UX evitando que el usuario vea errores 401 cuando el access token expira. El sistema automáticamente refresca el token y reintenta la operación.
+
+#### Auth Routes - Rutas de Refresh y Logout All
+**Feature:** Agregadas rutas de frontend para refresh y logout de todos los dispositivos
+**File:** `web/routes/routes.ts`
+
+- Agregado `refresh: '/api/auth/refresh'` - Ruta pública para refrescar access token
+- Agregado `logoutAll: '/api/private/auth/logout-all'` - Ruta privada para cerrar todas las sesiones
+
+**Por qué:** Soporte para el nuevo sistema de sesiones JWT con refresh tokens y gestión multi-dispositivo.
+
+### Changed - 2025-12-28
+
+#### Auth Context - Logout con Opción Multi-Dispositivo
+**Change:** Función logout ahora acepta parámetro opcional para cerrar todas las sesiones
+**File:** `web/src/contexts/AuthContext.tsx`
+
+- Cambiado tipo de `logout: () => Promise<void>` a `logout: (logoutAll?: boolean) => Promise<void>`
+- Permite cerrar sesión solo en dispositivo actual o en todos los dispositivos
+- Compatible con backend que maneja sesiones multi-dispositivo
+
+**Por qué:** Preparación para feature de "Cerrar sesión en todos los dispositivos" en UI de configuración.
+
+#### Auth Provider - Logout Multi-Dispositivo
+**Change:** Implementado soporte para logout de todas las sesiones
+**File:** `web/src/providers/AuthProvider.tsx`
+
+- Modificado `logout()` para aceptar parámetro `logoutAll?: boolean`
+- Llama a `/api/private/auth/logout-all` si `logoutAll === true`
+- Llama a `/api/private/auth/logout` si `logoutAll === false` (default)
+
+**Por qué:** Permite al usuario cerrar sesión en todos sus dispositivos desde la UI.
+
 ### Fixed - 2025-12-24
 
 #### Repeat Ticket Modal - Multiple Bets with Same Number But Different Place Ignored

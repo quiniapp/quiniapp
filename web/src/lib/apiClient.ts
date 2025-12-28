@@ -16,13 +16,53 @@ export class ApiError extends Error {
 
 export interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
+  _skipRefreshRetry?: boolean; // Internal flag to prevent infinite refresh loops
 }
+
+type PendingRequest = {
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
+};
 
 class ApiClient {
   private baseURL: string;
+  private isRefreshing = false;
+  private refreshQueue: PendingRequest[] = [];
 
   constructor(baseURL: string = '') {
     this.baseURL = baseURL;
+  }
+
+  /**
+   * Refresh the access token using the refresh token cookie
+   */
+  private async refreshAccessToken(): Promise<boolean> {
+    try {
+      await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Process all pending requests after token refresh
+   */
+  private processPendingRequests(error: unknown | null): void {
+    this.refreshQueue.forEach((pending) => {
+      if (error) {
+        pending.reject(error);
+      } else {
+        pending.resolve(null);
+      }
+    });
+    this.refreshQueue = [];
   }
 
   private buildURL(endpoint: string, params?: Record<string, any>): string {
@@ -40,7 +80,7 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
-    const { params, ...fetchConfig } = config;
+    const { params, _skipRefreshRetry, ...fetchConfig } = config;
 
     const url = this.buildURL(endpoint, params);
 
@@ -69,13 +109,20 @@ class ApiClient {
 
       // Check for error response
       if (!response.ok || data.error) {
-        throw new ApiError(
+        const apiError = new ApiError(
           response.status,
           data.error || {
             code: 'UNKNOWN_ERROR',
             message: `La solicitud falló con estado ${response.status}`,
           }
         );
+
+        // Handle 401 Unauthorized - attempt token refresh
+        if (response.status === 401 && !_skipRefreshRetry) {
+          return this.handleUnauthorized(endpoint, config);
+        }
+
+        throw apiError;
       }
 
       // Extract data from APIResponse wrapper
@@ -90,6 +137,11 @@ class ApiClient {
       // Return the actual data (first value from the data object)
       return Object.values(responseData)[0] as T;
     } catch (err) {
+      // Handle 401 in catch block as well (for thrown ApiErrors)
+      if (err instanceof ApiError && err.statusCode === 401 && !_skipRefreshRetry) {
+        return this.handleUnauthorized(endpoint, config);
+      }
+
       // Network errors (no response from server)
       if (err instanceof TypeError && err.message.includes('fetch')) {
         throw new ApiError(0, {
@@ -98,6 +150,51 @@ class ApiClient {
         });
       }
       throw err;
+    }
+  }
+
+  /**
+   * Handle 401 Unauthorized by refreshing token and retrying request
+   */
+  private async handleUnauthorized<T>(endpoint: string, config: RequestConfig): Promise<T> {
+    // If already refreshing, queue this request
+    if (this.isRefreshing) {
+      return new Promise<T>((resolve, reject) => {
+        this.refreshQueue.push({
+          resolve: () => {
+            // Retry the original request after refresh completes
+            this.request<T>(endpoint, { ...config, _skipRefreshRetry: true })
+              .then(resolve)
+              .catch(reject);
+          },
+          reject,
+        });
+      });
+    }
+
+    // Start refresh process
+    this.isRefreshing = true;
+
+    try {
+      const refreshSuccess = await this.refreshAccessToken();
+
+      if (refreshSuccess) {
+        // Process queued requests
+        this.processPendingRequests(null);
+
+        // Retry the original request with new token
+        return await this.request<T>(endpoint, { ...config, _skipRefreshRetry: true });
+      } else {
+        // Refresh failed - reject all pending requests
+        const refreshError = new ApiError(401, {
+          code: 'REFRESH_FAILED',
+          message: 'Sesión expirada. Por favor, inicie sesión nuevamente.',
+        });
+        this.processPendingRequests(refreshError);
+        throw refreshError;
+      }
+    } finally {
+      this.isRefreshing = false;
     }
   }
 
