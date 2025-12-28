@@ -4,13 +4,17 @@
  * IMPORTANTE: No modificar estos valores sin revisar:
  * - web/src/providers/AuthProvider.tsx
  * - api/src/auth/route/auth.route.ts
+ * - api/src/config/session.config.ts
+ *
+ * ACTUALIZADO: Migración a sistema de sesiones JWT personalizado
  */
 
 /**
- * Duración de la sesión en milisegundos (3 horas)
+ * Duración de la sesión en milisegundos (4 horas)
  * La sesión se extiende automáticamente con cada actividad del usuario
+ * ACTUALIZADO: Cambió de 3 horas a 4 horas según requerimientos
  */
-export const SESSION_DURATION_MS = 3 * 60 * 60 * 1000; // 3 horas
+export const SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 4 horas
 
 /**
  * Intervalo de validación periódica con el servidor (4 minutos)
@@ -41,3 +45,9 @@ export const USER_ACTIVITY_EVENTS = [
   'touchstart',
   'click',
 ] as const;
+
+/**
+ * Duración del refresh token en milisegundos (30 días)
+ * Este token se usa para obtener nuevos access tokens
+ */
+export const REFRESH_TOKEN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 días

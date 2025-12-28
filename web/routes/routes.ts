@@ -5,12 +5,16 @@ const PRIVATE = `${BASE}/private`;
 export const BACKEND_ROUTES = {
   auth: {
     login: `${BASE}/auth/login`,
+    refresh: `${BASE}/auth/refresh`,
     logout: `${PRIVATE}/auth/logout`,
+    logoutAll: `${PRIVATE}/auth/logout-all`,
     validate: `${PRIVATE}/auth/validate`,
   },
   user: {
     base: `${PRIVATE}/user`,
     id: (id: string) => `${PRIVATE}/user/${id}`,
+    resetPassword: (id: string) => `${PRIVATE}/user/reset-password/${id}`,
+    changePassword: `${PRIVATE}/user/change-password`,
   },
   bet: {
     base: `${PRIVATE}/bet`,

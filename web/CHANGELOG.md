@@ -7,6 +7,174 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-28
+
+#### Password Reset UI - Admin Features
+**Feature:** Complete UI for admins to reset user passwords with hierarchical permissions
+
+**Components Created:**
+1. **`web/src/components/modals/ResetPasswordModal.tsx`** (NEW)
+   - Generic password reset modal for user list
+   - Input fields for new password and confirmation
+   - Client-side validation (non-empty, passwords match)
+   - Shows user name/username in dialog description
+   - Disabled state during async operations
+
+2. **`web/src/components/modals/ResetSuperAdminPasswordModal.tsx`** (NEW)
+   - Specialized modal for resetting SUPERADMIN password from organization page
+   - Input fields: username, new password, confirmation
+   - Searches for user by username within organization
+   - Error handling for user not found
+   - Loading states for user search and password reset
+
+**Mutation Hook:**
+- **`web/src/hooks/mutations/users/useResetPassword.ts`** (NEW)
+  - POST to `/api/private/user/reset-password/:id`
+  - Payload: `{ newPassword: string }`
+  - Success toast: "Contraseña reseteada exitosamente"
+  - Error toast with server error message
+  - Invalidates `users` query on success
+
+**Routes Added:**
+- `web/routes/routes.ts`
+  - `BACKEND_ROUTES.user.resetPassword(id)` → `/api/private/user/reset-password/:id`
+  - `BACKEND_ROUTES.user.changePassword` → `/api/private/user/change-password`
+
+**User List Table Enhancement:**
+- **`web/src/features/user-list/user-table.tsx`**
+  - Added "Contraseña" column with KeyRound icon button
+  - Hover color: yellow-500
+  - Opens `ResetPasswordModal` on click
+  - Lazy-loaded modal with Suspense
+  - Updated `colSpan` from 9 to 10 for empty state
+
+**Organizations Page Enhancement:**
+- **`web/src/features/organizations/index.tsx`**
+  - Added "Resetear Contraseña" button next to Edit/Delete
+  - Icon: KeyRound (yellow-600 / hover yellow-500)
+  - Opens `ResetSuperAdminPasswordModal` on click
+  - Modal asks for username + new password
+  - Fetches users to find SUPERADMIN by username
+  - Lazy-loaded modal with Suspense
+
+**User Experience:**
+- Admins can reset passwords directly from user list or organization page
+- Clear visual feedback with icons and loading states
+- Password confirmation prevents typos
+- Error messages guide users when something goes wrong
+
+**Use Case:** Enables admins to reset user passwords according to their permission level (OWNER → all, SUPERADMIN → ADMIN/CASHIER, ADMIN → CASHIER)
+
+---
+
+### Added - 2025-12-28
+
+#### Session Management - Auto-Refresh de Access Token
+**Feature:** Auto-refresh automático de access tokens cada 13-14 minutos
+**File:** `web/src/providers/AuthProvider.tsx`
+
+- Agregado timer de auto-refresh que renueva el access token antes de que expire (15 min)
+- Intervalo aleatorio de 13-14 minutos para evitar "thundering herd"
+- Refresh automático falla silenciosamente y hace logout si la sesión expiró
+- Backend maneja el sliding window (4 horas de inactividad)
+- Eliminado timer de inactividad del cliente (redundante con backend)
+
+**Cambios:**
+- Agregado `AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000`
+- Agregado `refreshAccessToken()` callback que llama a `/api/auth/refresh`
+- Agregado useEffect para auto-refresh periódico
+- Eliminado `lastActivityRef`, `inactivityTimerRef`, `armInactivityTimer()`
+- Eliminado listeners de eventos de actividad del usuario
+- Eliminado check de inactividad en `onVisibilityOrFocus`
+
+**Por qué:** El backend ahora maneja completamente la expiración de sesión con sliding window. El cliente solo necesita refrescar el access token periódicamente.
+
+#### API Client - Interceptor 401 con Auto-Refresh
+**Feature:** Manejo automático de 401 con refresh de tokens y retry de requests
+**File:** `web/src/lib/apiClient.ts`
+
+- Interceptor de respuestas que detecta errores 401 Unauthorized
+- Auto-refresh de access token cuando detecta 401
+- Cola de requests fallidos que se reintentan después del refresh exitoso
+- Previene múltiples refresh simultáneos con flag `isRefreshing`
+- Previene loops infinitos con flag `_skipRefreshRetry`
+
+**Cambios:**
+- Agregado `private isRefreshing = false`
+- Agregado `private refreshQueue: PendingRequest[]`
+- Agregado `refreshAccessToken()` que llama a `/api/auth/refresh`
+- Agregado `handleUnauthorized()` que maneja la lógica de refresh y retry
+- Agregado `processPendingRequests()` para ejecutar requests en cola
+- Modificado `request()` para capturar 401 y llamar a `handleUnauthorized()`
+- Agregado `_skipRefreshRetry` a `RequestConfig` para prevenir loops
+
+**Por qué:** Mejora la UX evitando que el usuario vea errores 401 cuando el access token expira. El sistema automáticamente refresca el token y reintenta la operación.
+
+#### Auth Routes - Rutas de Refresh y Logout All
+**Feature:** Agregadas rutas de frontend para refresh y logout de todos los dispositivos
+**File:** `web/routes/routes.ts`
+
+- Agregado `refresh: '/api/auth/refresh'` - Ruta pública para refrescar access token
+- Agregado `logoutAll: '/api/private/auth/logout-all'` - Ruta privada para cerrar todas las sesiones
+
+**Por qué:** Soporte para el nuevo sistema de sesiones JWT con refresh tokens y gestión multi-dispositivo.
+
+### Changed - 2025-12-28
+
+#### Auth Context - Logout con Opción Multi-Dispositivo
+**Change:** Función logout ahora acepta parámetro opcional para cerrar todas las sesiones
+**File:** `web/src/contexts/AuthContext.tsx`
+
+- Cambiado tipo de `logout: () => Promise<void>` a `logout: (logoutAll?: boolean) => Promise<void>`
+- Permite cerrar sesión solo en dispositivo actual o en todos los dispositivos
+- Compatible con backend que maneja sesiones multi-dispositivo
+
+**Por qué:** Preparación para feature de "Cerrar sesión en todos los dispositivos" en UI de configuración.
+
+#### Auth Provider - Logout Multi-Dispositivo
+**Change:** Implementado soporte para logout de todas las sesiones
+**File:** `web/src/providers/AuthProvider.tsx`
+
+- Modificado `logout()` para aceptar parámetro `logoutAll?: boolean`
+- Llama a `/api/private/auth/logout-all` si `logoutAll === true`
+- Llama a `/api/private/auth/logout` si `logoutAll === false` (default)
+
+**Por qué:** Permite al usuario cerrar sesión en todos sus dispositivos desde la UI.
+
+---
+
+### Fixed - 2025-12-28
+
+#### API Client - Enhanced Refresh Token Error Handling
+**Fix:** Improved error handling for refresh token failures on old sessions
+**File:** `web/src/lib/apiClient.ts`
+
+**Problem:** When refresh token fails (e.g., old session without refresh token), the error response wasn't being checked properly. This could cause unexpected behavior during migration.
+
+**Solution:** Updated `refreshAccessToken()` to check response status:
+- Returns `false` if refresh fails (triggers logout)
+- Returns `true` if refresh succeeds (retries original request)
+- Handles old sessions gracefully by logging out user
+
+**Impact:** Smoother migration experience - users with old sessions get logged out cleanly
+
+---
+
+#### Auth Provider - Refresh Failure Logging
+**Fix:** Added warning log when refresh token fails before logout
+**File:** `web/src/providers/AuthProvider.tsx`
+
+**Problem:** When refresh fails, user was logged out without any indication why. This made debugging migration issues difficult.
+
+**Solution:** Added console warning before logout:
+```typescript
+console.warn('[Auth] Refresh token failed, logging out:', error);
+```
+
+**Impact:** Better debugging and visibility into why users are being logged out
+
+---
+
 ### Fixed - 2025-12-24
 
 #### Repeat Ticket Modal - Multiple Bets with Same Number But Different Place Ignored

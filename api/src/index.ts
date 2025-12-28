@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { isAuthenticated } from '../middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
+import { startSessionCleanupJob } from './utils/session-cleanup.job';
 
 import {
   PORT,
@@ -94,4 +95,7 @@ app.listen(PORT, () => {
   console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
   console.log('[CORS] allowed origins:', baseAllowedOrigins);
   if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
+
+  // Start session cleanup job (runs every hour)
+  startSessionCleanupJob();
 });
