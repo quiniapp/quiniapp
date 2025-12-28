@@ -74,7 +74,7 @@ export class UserRouter {
   });
   private getAllUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { cashier_number } = req.query;
+    const { cashier_number, filter_user_type } = req.query;
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       throw new ForbiddenError('Los cajeros no pueden listar usuarios');
@@ -85,7 +85,18 @@ export class UserRouter {
       parsedCashierNumber = parseInt(cashier_number, 10);
     }
 
-    const users = await this.controller.getAll(req.organization_id!, parsedCashierNumber);
+    // Parse filter_user_type from query parameter
+    let filterUserType: USER_TYPE | undefined = undefined;
+    if (typeof filter_user_type === 'string' && filter_user_type in USER_TYPE) {
+      filterUserType = filter_user_type as USER_TYPE;
+    }
+
+    const users = await this.controller.getAll(
+      req.organization_id!,
+      user!.user.user_type,
+      parsedCashierNumber,
+      filterUserType
+    );
     const response: APIResponse<IUserEntityFront[]> = {
       data: {
         users,
