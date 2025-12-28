@@ -22,6 +22,10 @@ export const IS_PRODUCTION = NODE_ENV === 'production' || ENVIROMENT === 'PRODUC
 
 export const JWT_SECRET_USER = must(process.env.JWT_SECRET_USER, 'JWT_SECRET_USER');
 
+// JWT Secrets for custom authentication (Phase 1)
+export const JWT_SECRET_ACCESS = must(process.env.JWT_SECRET_ACCESS, 'JWT_SECRET_ACCESS');
+export const JWT_SECRET_REFRESH = must(process.env.JWT_SECRET_REFRESH, 'JWT_SECRET_REFRESH');
+
 // API
 export const PORT = Number(IS_LOCAL ? 3000 : (process.env.PORT ?? 3000));
 export const BACKEND_URL = IS_LOCAL ? 'http://localhost' : must(process.env.URL, 'URL'); // hostname/base URL (sin puerto si usás reverse proxy)

@@ -21,9 +21,12 @@ export class UserRouter {
     this.router.get('/:id', this.getUserHandler);
     this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
-    // this.router.put('/reset/:id', this.updatePasswordHandler);
     this.router.put('/:id', this.updateUserHandler);
     this.router.delete('/:id', this.deleteUserHandler);
+
+    // Password Management (Phase 3)
+    this.router.post('/reset-password/:id', this.resetPasswordHandler);
+    this.router.post('/change-password', this.changePasswordHandler);
   }
 
   private newUserhandler = asyncHandler(async (req: Request, res: Response) => {
@@ -131,6 +134,81 @@ export class UserRouter {
         user: deletedUser,
       },
     };
+    res.status(200).json(response);
+  });
+
+  // ============= PASSWORD MANAGEMENT (Phase 3) =============
+
+  /**
+   * POST /api/private/user/reset-password/:id
+   * Admin endpoint to reset user password
+   * Only OWNER, SUPERADMIN, and ADMIN can reset passwords
+   */
+  private resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { id: targetUserId } = req.params;
+    const { newPassword } = req.body; // Optional - if not provided, generates random password
+    const { user } = req;
+
+    if (!targetUserId) {
+      throw new BadRequestError('ID de usuario requerido');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    // Check permissions - only OWNER, SUPERADMIN, ADMIN can reset passwords
+    if (![USER_TYPE.OWNER, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(user.user.user_type)) {
+      throw new ForbiddenError('No tienes permisos para resetear contraseñas');
+    }
+
+    const result = await this.controller.resetPassword(
+      targetUserId,
+      user.user.user_id!,
+      user.user.user_type,
+      req.organization_id!,
+      newPassword
+    );
+
+    const response: APIResponse<{ password: string }> = {
+      data: {
+        password: result.password,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/user/change-password
+   * User self-service password change
+   * Any authenticated user can change their own password
+   */
+  private changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    const { user } = req;
+
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestError('Contraseña actual y nueva requeridas');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    await this.controller.changePassword(
+      user.user.user_id!,
+      currentPassword,
+      newPassword,
+      req.organization_id!
+    );
+
+    const response: APIResponse<{ success: boolean }> = {
+      data: {
+        success: true,
+      },
+    };
+
     res.status(200).json(response);
   });
 
