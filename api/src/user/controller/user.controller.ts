@@ -54,9 +54,18 @@ export class UserController {
 
   getAll = async (
     organization_id: string,
-    cashier_number?: number
+    user_type: USER_TYPE,
+    cashier_number?: number,
+    filter_user_type?: USER_TYPE
   ): Promise<IUserEntityFront[]> => {
-    const result = await this.repository.getAll(organization_id, cashier_number);
+    // OWNER can see all users from all organizations (for password reset)
+    // Others only see users from their own organization
+    const result = await this.repository.getAll(
+      organization_id,
+      user_type,
+      cashier_number,
+      filter_user_type
+    );
     return result.map((user) => parseUser(user));
   };
 

@@ -20,13 +20,15 @@ import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { cashierTypeDictionary } from '@helper/functions/cashierTypeDictionary';
 import { userTypeDictionary } from '@helper/functions/userTypeDictionary';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserListContext } from './UserListContext';
 
 const UsersTable = () => {
   const {role} = useAuth()
+  const { filterUserType } = useUserListContext();
   const [open, setOpen] = useState<boolean>(false);
   const [update, setUpdate] = useState<boolean>(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState<boolean>(false);
-  const { data, isLoading, error } = useUsers(role);
+  const { data, isLoading, error } = useUsers(role, filterUserType);
   const [user, setUser] = useState<IUserEntityFront | undefined>(undefined);
   const { mutate: deleteUser, isPending } = useDeleteUsers();
   const { mutateAsync: resetPassword, isPending: isResettingPassword } = useResetPassword();
