@@ -1,8 +1,7 @@
-import { IUserEntityFront } from '@helper/types/user.type';
-import { JwtPayload } from '@supabase/supabase-js';
-import { JWT_SECRET_USER, JWT_SECRET_ACCESS, JWT_SECRET_REFRESH } from 'api/envs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import { JWT_SECRET_ACCESS, JWT_SECRET_REFRESH } from 'api/envs';
+import jwt from 'jsonwebtoken';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { StringValue } from 'ms';
 
 // ============= ACCESS TOKEN (NEW) =============
 
@@ -36,8 +35,8 @@ export const signAccessToken = (
     type: 'access',
   };
 
-  return jwt.sign(payload, JWT_SECRET_ACCESS, {
-    expiresIn: SESSION_CONFIG.JWT_ACCESS_EXPIRATION,
+  return jwt.sign(payload, String(JWT_SECRET_ACCESS), {
+    expiresIn: String(SESSION_CONFIG.JWT_ACCESS_EXPIRATION) as StringValue,
   });
 };
 
@@ -46,7 +45,7 @@ export const signAccessToken = (
  */
 export const verifyAccessToken = (token: string): IAccessTokenPayload => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET_ACCESS) as IAccessTokenPayload;
+    const decoded = jwt.verify(token, String(JWT_SECRET_ACCESS)) as IAccessTokenPayload;
     if (decoded.type !== 'access') {
       throw new Error('Invalid token type');
     }
@@ -82,8 +81,8 @@ export const signRefreshToken = (
     type: 'refresh',
   };
 
-  return jwt.sign(payload, JWT_SECRET_REFRESH, {
-    expiresIn: SESSION_CONFIG.JWT_REFRESH_EXPIRATION,
+  return jwt.sign(payload, String(JWT_SECRET_REFRESH), {
+    expiresIn: String(SESSION_CONFIG.JWT_REFRESH_EXPIRATION) as StringValue,
   });
 };
 
@@ -92,7 +91,7 @@ export const signRefreshToken = (
  */
 export const verifyRefreshToken = (token: string): IRefreshTokenPayload => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET_REFRESH) as IRefreshTokenPayload;
+    const decoded = jwt.verify(token, String(JWT_SECRET_REFRESH)) as IRefreshTokenPayload;
     if (decoded.type !== 'refresh') {
       throw new Error('Invalid token type');
     }
@@ -102,22 +101,5 @@ export const verifyRefreshToken = (token: string): IRefreshTokenPayload => {
   }
 };
 
-// ============= LEGACY (keep for backwards compatibility during migration) =============
-
-/**
- * @deprecated Use signAccessToken instead. This will be removed in Phase 5.
- */
-export const signUserToken = (
-  payload: IUserEntityFront,
-  organization_id: string,
-  options?: SignOptions
-): string => {
-  return jwt.sign({ ...payload, organization_id }, JWT_SECRET_USER, options);
-};
-
-/**
- * @deprecated Use verifyAccessToken instead. This will be removed in Phase 5.
- */
-export const verifyUserToken = (token: string): JwtPayload => {
-  return jwt.verify(token, JWT_SECRET_USER) as JwtPayload;
-};
+// Legacy functions removed in Phase 5
+// Migration to custom JWT session system completed

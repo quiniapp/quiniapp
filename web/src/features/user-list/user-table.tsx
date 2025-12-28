@@ -1,4 +1,4 @@
-import { EditIcon, TrashIcon } from 'lucide-react';
+import { EditIcon, TrashIcon, KeyRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,7 @@ import {
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { useDeleteUsers } from '@/hooks/mutations/users/useDeleteUser';
+import { useResetPassword } from '@/hooks/mutations/users/useResetPassword';
 import { toast } from 'react-hot-toast';
 import React, { Suspense, useState } from 'react';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
@@ -24,9 +25,11 @@ const UsersTable = () => {
   const {role} = useAuth()
   const [open, setOpen] = useState<boolean>(false);
   const [update, setUpdate] = useState<boolean>(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState<boolean>(false);
   const { data, isLoading, error } = useUsers(role);
   const [user, setUser] = useState<IUserEntityFront | undefined>(undefined);
   const { mutate: deleteUser, isPending } = useDeleteUsers();
+  const { mutateAsync: resetPassword, isPending: isResettingPassword } = useResetPassword();
   const handleDeleteUser = (id: string) => {
     deleteUser(id, {
       onSuccess: () => {
@@ -37,6 +40,10 @@ const UsersTable = () => {
         toast.error('Hubo un problema al eliminar al usuario');
       },
     });
+  };
+
+  const handleResetPassword = async (userId: string, newPassword: string) => {
+    await resetPassword({ userId, newPassword });
   };
 
   if (isLoading) return <SkeletonList />;
@@ -55,13 +62,14 @@ const UsersTable = () => {
             <TableHead className="text-white">Conexion</TableHead>
             <TableHead className="text-white">Cuenta</TableHead>
             <TableHead className="text-white">Editar</TableHead>
+            <TableHead className="text-white">Contraseña</TableHead>
             <TableHead className="text-white">Eliminar</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data && data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                 No hay usuarios disponibles
               </TableCell>
             </TableRow>
@@ -86,6 +94,19 @@ const UsersTable = () => {
                   }}
                 >
                   <EditIcon />
+                </Button>
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  className="hover:text-yellow-500"
+                  size={'icon'}
+                  onClick={() => {
+                    setUser(user);
+                    setResetPasswordOpen(true);
+                  }}
+                >
+                  <KeyRound />
                 </Button>
               </TableCell>
               <TableCell className={'flex justify-center items-center'}>
@@ -117,6 +138,15 @@ const UsersTable = () => {
       <Suspense fallback={<div>Cargando...</div>}>
         <UpdateUserModal isOpen={update} onClose={() => setUpdate(false)} user={user} />
       </Suspense>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <ResetPasswordModal
+          isOpen={resetPasswordOpen}
+          onClose={() => setResetPasswordOpen(false)}
+          user={user}
+          onConfirm={handleResetPassword}
+          isPending={isResettingPassword}
+        />
+      </Suspense>
     </div>
   );
 };
@@ -126,3 +156,4 @@ const DeleteUsersModal = React.lazy(
   () => import('../../../src/components/modals/DeleteUsersModal')
 );
 const UpdateUserModal = React.lazy(() => import('../../../src/components/modals/UpdateUserModal'));
+const ResetPasswordModal = React.lazy(() => import('../../../src/components/modals/ResetPasswordModal'));

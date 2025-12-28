@@ -15,6 +15,22 @@ export class UserRepository {
     return data;
   }
 
+  /**
+   * Get user by ID without organization restriction
+   * Used for special cases like OWNER resetting SUPERADMIN password from another org
+   */
+  async getByIdWithoutOrgRestriction(id: string) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('user_id', id)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) throw new Error(error.details);
+    return data;
+  }
+
   async getAll(organization_id: string, cashier_number?: number) {
     let query = supabase
       .from('users')

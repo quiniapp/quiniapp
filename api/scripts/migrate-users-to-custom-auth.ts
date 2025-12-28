@@ -70,8 +70,7 @@ async function migrateUsers() {
       success: true,
       username: 'system',
       metadata: {
-        migration: 'supabase_to_custom_auth',
-        timestamp: new Date().toISOString(),
+        migration_type: 'supabase_to_custom_auth',
         users_affected: users.length,
         description: 'Migrated to custom JWT authentication system',
       },

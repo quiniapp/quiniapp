@@ -2,9 +2,6 @@ import { Request, Response, Router } from 'express';
 import { AuthController } from '../controller/auth.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { IUserEntityFront } from '@helper/types/user.type';
-import { supabase } from 'api/database/db.connection';
-import { generateEmail } from 'api/helper/generateEmail';
-import { signUserToken } from 'api/helper/JWT';
 import { asyncHandler } from '../../middlewares/error.middleware';
 import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
@@ -48,8 +45,7 @@ export class AuthRouter {
 
   /**
    * POST /api/auth/login
-   * Maintains backward compatibility but keeps legacy Supabase auth for now
-   * Phase 4 will switch to using loginWithSession exclusively
+   * Login with username and password using custom JWT session system
    */
   private loginHandler = asyncHandler(async (req: Request, res: Response) => {
     const { username, password } = req.body;
@@ -57,36 +53,29 @@ export class AuthRouter {
     // Validación automática - Zod lanza error si falla
     const validated = loginSchema.parse({ username, password });
 
-    // Autenticación con Supabase (LEGACY - will be removed in Phase 4)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: generateEmail(validated.username),
-      password: validated.password,
+    const ipAddress = (req.ip || req.socket.remoteAddress) as string;
+    const userAgent = req.headers['user-agent'];
+
+    // Login with session system
+    const loginResponse = await this.controller.loginWithSession(
+      {
+        username: validated.username,
+        password: validated.password,
+      },
+      ipAddress,
+      userAgent
+    );
+
+    // Set access token cookie (15 minutes)
+    res.cookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, loginResponse.access_token, {
+      ...COOKIE_OPTIONS,
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
-    if (error) {
-      throw new UnauthorizedError('Usuario o contraseña incorrectos');
-    }
-
-    // Cookies de sesión (sin maxAge) - se borran al cerrar el navegador
-    // El timeout de 3 horas se maneja en el frontend (AuthProvider)
-    res.cookie('access_token', data.session.access_token, {
-      httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: IS_PRODUCTION ? 'none' : 'lax',
-      path: '/',
-    });
-
-    // Obtener datos del usuario
-    const loginResponse = await this.controller.login({
-      username: validated.username,
-      password: validated.password,
-    });
-
-    res.cookie('user_token', signUserToken(loginResponse.user, loginResponse.organization_id), {
-      httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: IS_PRODUCTION ? 'none' : 'lax',
-      path: '/',
+    // Set refresh token cookie (30 days)
+    res.cookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, loginResponse.refresh_token, {
+      ...COOKIE_OPTIONS,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
     // Respuesta exitosa

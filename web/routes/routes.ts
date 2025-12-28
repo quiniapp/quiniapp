@@ -13,6 +13,8 @@ export const BACKEND_ROUTES = {
   user: {
     base: `${PRIVATE}/user`,
     id: (id: string) => `${PRIVATE}/user/${id}`,
+    resetPassword: (id: string) => `${PRIVATE}/user/reset-password/${id}`,
+    changePassword: `${PRIVATE}/user/change-password`,
   },
   bet: {
     base: `${PRIVATE}/bet`,

@@ -107,8 +107,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const refreshAccessToken = useCallback(async () => {
     try {
       await apiClient.post(BACKEND_ROUTES.auth.refresh);
-    } catch {
-      // Refresh failed - session likely expired, logout
+    } catch (error) {
+      // Refresh failed - session likely expired or no refresh token (old session)
+      console.warn('[Auth] Refresh token failed, logging out:', error);
       void logout();
     }
   }, [logout]);
