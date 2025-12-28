@@ -5,7 +5,9 @@ const PRIVATE = `${BASE}/private`;
 export const BACKEND_ROUTES = {
   auth: {
     login: `${BASE}/auth/login`,
+    refresh: `${BASE}/auth/refresh`,
     logout: `${PRIVATE}/auth/logout`,
+    logoutAll: `${PRIVATE}/auth/logout-all`,
     validate: `${PRIVATE}/auth/validate`,
   },
   user: {

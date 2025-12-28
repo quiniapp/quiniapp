@@ -9,7 +9,7 @@ export type AuthContextValue = {
   user: IUserEntityFront | null;
   role: USER_TYPE | null;
   login: (data: LoginPayload) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (logoutAll?: boolean) => Promise<void>;
   validate: () => Promise<void>;
   hasRole: (...roles: USER_TYPE[]) => boolean;
 };
