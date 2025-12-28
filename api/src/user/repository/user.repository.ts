@@ -31,16 +31,61 @@ export class UserRepository {
     return data;
   }
 
-  async getAll(organization_id: string, cashier_number?: number) {
-    let query = supabase
-      .from('users')
-      .select('*')
-      .eq('organization_id', organization_id)
-      .eq('user_type', USER_TYPE.CASHIER)
-      .is('deleted_at', null)
-      .order('number', { ascending: true });
+  async getAll(
+    organization_id: string,
+    user_type: USER_TYPE,
+    cashier_number?: number,
+    filter_user_type?: USER_TYPE
+  ) {
+    let query = supabase.from('users').select('*').is('deleted_at', null);
 
-    // Solo filtrar por número si se proporciona un valor válido
+    // Hierarchical permission filtering
+    if (user_type === USER_TYPE.OWNER) {
+      // OWNER can see SUPERADMIN (any org), ADMIN/CASHIER (own org)
+      query = query.eq('organization_id', organization_id);
+
+      // If filter is provided, apply it
+      if (filter_user_type) {
+        query = query.eq('user_type', filter_user_type);
+      } else {
+        // Default: show all except OWNER
+        query = query.in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
+      }
+
+      query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
+    } else if (user_type === USER_TYPE.SUPERADMIN) {
+      // SUPERADMIN can see ADMIN/CASHIER from own organization
+      query = query.eq('organization_id', organization_id);
+
+      if (filter_user_type) {
+        // Validate filter is allowed (ADMIN or CASHIER only)
+        if ([USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(filter_user_type)) {
+          query = query.eq('user_type', filter_user_type);
+        } else {
+          // Default to CASHIER if invalid filter
+          query = query.eq('user_type', USER_TYPE.CASHIER);
+        }
+      } else {
+        // Default: show ADMIN and CASHIER
+        query = query.in('user_type', [USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
+      }
+
+      query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
+    } else if (user_type === USER_TYPE.ADMIN) {
+      // ADMIN can only see CASHIER from own organization
+      query = query
+        .eq('organization_id', organization_id)
+        .eq('user_type', USER_TYPE.CASHIER)
+        .order('number', { ascending: true });
+    } else {
+      // CASHIER or others - no access (handled in route)
+      query = query
+        .eq('organization_id', organization_id)
+        .eq('user_type', USER_TYPE.CASHIER)
+        .order('number', { ascending: true });
+    }
+
+    // Filter by number if provided
     if (cashier_number !== undefined && cashier_number !== null) {
       query = query.eq('number', cashier_number);
     }
