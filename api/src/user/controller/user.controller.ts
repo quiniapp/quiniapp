@@ -97,6 +97,32 @@ export class UserController {
     return parseUser(response);
   };
 
+  /**
+   * Validate that a user exists and is SUPERADMIN of the specified organization
+   * Used by OWNER when resetting SUPERADMIN passwords from organizations page
+   */
+  validateSuperAdmin = async (
+    username: string,
+    organization_id: string,
+    adminUserType: USER_TYPE
+  ): Promise<{ user_id: string; username: string }> => {
+    // Only OWNER can use this endpoint
+    if (adminUserType !== USER_TYPE.OWNER) {
+      throw new ForbiddenError('Solo el OWNER puede validar SUPERADMIN de otras organizaciones');
+    }
+
+    const user = await this.repository.getByUsernameAndOrganization(username, organization_id);
+
+    if (user.user_type !== USER_TYPE.SUPERADMIN) {
+      throw new BadRequestError('El usuario no es SUPERADMIN de esta organización');
+    }
+
+    return {
+      user_id: user.user_id,
+      username: user.username!,
+    };
+  };
+
   // ============= PASSWORD MANAGEMENT (Phase 3) =============
 
   /**

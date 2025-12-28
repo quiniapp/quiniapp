@@ -31,6 +31,19 @@ export class UserRepository {
     return data;
   }
 
+  async getByUsernameAndOrganization(username: string, organization_id: string) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('organization_id', organization_id)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) throw new Error(error.details);
+    return data;
+  }
+
   async getAll(
     organization_id: string,
     user_type: USER_TYPE,
