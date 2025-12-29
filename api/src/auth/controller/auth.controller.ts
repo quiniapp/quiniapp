@@ -92,7 +92,7 @@ export class AuthController {
       // Increment failed attempts
       await this.repository.incrementFailedAttempts(userData.user_id);
 
-      const newFailedAttempts = userData.failed_login_attempts + 1;
+      const newFailedAttempts = (userData?.failed_login_attempts ?? 0) + 1;
 
       // Lock account if max attempts reached
       if (newFailedAttempts >= SESSION_CONFIG.MAX_FAILED_ATTEMPTS) {

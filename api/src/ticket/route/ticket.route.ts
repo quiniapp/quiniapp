@@ -179,7 +179,7 @@ export class TicketRouter {
       req.organization_id!
     );
 
-    const response: APIResponse<{ success: boolean }> = {
+    const response: APIResponse<boolean> = {
       data: {
         success: true,
       },

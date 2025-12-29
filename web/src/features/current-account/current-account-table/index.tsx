@@ -18,6 +18,17 @@ import React, { Suspense, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { USER_TYPE } from '@helper/types/user.type';
 
+// TODO: Mejoras en liquidación de cuenta corriente
+// 1. Agregar botón "Descargar" junto al botón "Liquidar" individual
+//    - Ubicación: Al lado de cada botón "Liquidar" en la tabla (líneas 268-270 desktop, 143-150 mobile)
+//    - Funcionalidad: Permitir descargar PDF individual sin liquidar
+//    - Icon sugerido: Download de lucide-react
+//
+// 2. Orden de columnas en vista de impresión
+//    - La vista de impresión debe mostrar las columnas en el mismo orden que la vista del cajero
+//    - Verificar orden actual en CurrentAcoountByUserTable.tsx (vista cajero)
+//    - Asegurar consistencia entre: vista admin, vista cajero, y PDF exportado
+
 interface CurrentAccountTableProps {
   data: ICurrentAccountEntityFront[];
   isLoading: boolean;

@@ -5,16 +5,10 @@ import {
   INewUserEntity,
   IUpdateUserEntity,
 } from '@helper/request/user.request';
-import { CASHIER_TYPE, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
 import { buildUserForDB } from '../helper/userBase';
-import { supabase } from 'api/database/db.connection';
-import {
-  InternalServerError,
-  UnauthorizedError,
-  BadRequestError,
-  ForbiddenError,
-} from '@helper/errors';
+import { UnauthorizedError, BadRequestError, ForbiddenError } from '@helper/errors';
 import {
   hashPassword,
   generateRandomPassword,
@@ -32,18 +26,6 @@ export class UserController {
   create = async (newUser: INewUserEntity, organization_id: string): Promise<IUserEntityFront> => {
     const user = await buildUserForDB(newUser, organization_id);
     const result = await this.repository.create(user);
-
-    if (user.cashier_type !== CASHIER_TYPE.STREET) {
-      const { error } = await supabase.auth.signUp({
-        email: user.email!,
-        password: newUser.password,
-      });
-
-      if (error) {
-        await this.repository.deleteFailedUser(result.user_id);
-        throw new InternalServerError(error.message);
-      }
-    }
 
     return parseUser(result);
   };
@@ -75,19 +57,6 @@ export class UserController {
     organization_id: string
   ): Promise<IUserEntityFront> => {
     const result = await this.repository.update(user_id, props, organization_id);
-
-    // TO DO: validar el password despues
-    // if (user.cashier_type !== CASHIER_TYPE.STREET) {
-    //   const { error } = await supabase.auth.signUp({
-    //     email: user.email!,
-    //     password: newUser.password,
-    //   });
-
-    //   if (error) {
-    //     await this.repository.delete(result.user_id);
-    //     throw new InternalServerError(error.message);
-    //   }
-    // }
 
     return parseUser(result);
   };

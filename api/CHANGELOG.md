@@ -7,6 +7,196 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-29
+
+#### TypeScript Compilation Errors Resolution
+**Fix:** Fixed all TypeScript compilation errors in API routes and auth modules
+
+**Files Modified:**
+
+1. **`src/user/route/user.route.ts`** (3 errors fixed)
+   - Line 189-193: `resetPasswordHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ password: string }>` → `APIResponse<string>`
+     - Fixed data structure to match `{ [key: string]: T }` format
+   - Line 222-226: `changePasswordHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ success: boolean }>` → `APIResponse<boolean>`
+   - Line 263-267: `validateSuperAdminHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ user_id: string }>` → `APIResponse<string>`
+
+2. **`src/auth/route/auth.route.ts`** (1 error fixed)
+   - Line 115-119: `refreshHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ success: boolean }>` → `APIResponse<boolean>`
+
+3. **`src/ticket/route/ticket.route.ts`** (1 error fixed)
+   - Line 182-186: Handler - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ success: boolean }>` → `APIResponse<boolean>`
+
+4. **`src/auth/controller/auth.controller.ts`** (1 error fixed)
+   - Line 95: Fixed possibly undefined `failed_login_attempts`
+     - Changed: `userData?.failed_login_attempts + 1`
+     - Fixed: `(userData.failed_login_attempts ?? 0) + 1`
+     - Prevents `undefined + 1 = NaN`
+
+5. **`src/auth/repository/auth.repository.ts`** (1 error fixed)
+   - Lines 64-84: `incrementFailedAttempts()` fallback
+     - Removed invalid `supabase.sql` usage (doesn't exist in JS client)
+     - Implemented fetch-then-update pattern:
+       1. Fetch current `failed_login_attempts`
+       2. Increment locally: `(value ?? 0) + 1`
+       3. Update in database
+     - Maintains robust fallback if RPC function unavailable
+
+6. **`src/session/repository/session.repository.ts`** (16 errors fixed)
+   - Lines 243-260: `mapToSession()` method
+     - Added type assertions for all `unknown` values from database:
+       - `data.session_id as string`
+       - `data.user_id as string`
+       - `data.organization_id as string`
+       - `data.refresh_token_hash as string`
+       - `data.refresh_token_version as number`
+       - `data.ip_address as string || null`
+       - `data.user_agent as string || null`
+       - `data.device_fingerprint as string || null`
+       - `data.created_at as string` → `new Date(...)`
+       - `data.last_activity_at as string` → `new Date(...)`
+       - `data.expires_at as string` → `new Date(...)`
+       - `data.is_active as boolean`
+       - `data.revoked_at as string || null` → `new Date(...) || null`
+       - `data.revoked_reason as string || null`
+
+**Root Cause Analysis:**
+
+**APIResponse Type Structure:**
+```typescript
+type APIResponse<T> = {
+  data: {
+    [key: string]: T;  // ← Data must be object with string keys
+  };
+};
+```
+
+**Incorrect Usage:**
+```typescript
+const response: APIResponse<{ success: boolean }> = {
+  data: { success: true },  // Type: { success: boolean }
+  // Expected: { [key: string]: { success: boolean } }
+};
+```
+
+**Correct Usage:**
+```typescript
+const response: APIResponse<boolean> = {
+  data: { success: true },  // Type: { success: boolean }
+  // Matches: { [key: string]: boolean }
+};
+```
+
+**Impact:**
+- ✅ All TypeScript compilation errors resolved (0 errors)
+- ✅ Type safety improved across authentication and user management
+- ✅ Proper handling of nullable/undefined values
+- ✅ Consistent API response format
+- ✅ Ready for production deployment
+
+**Testing:**
+- `npx tsc --noEmit` passes with 0 errors
+- `npx eslint "src/**/*.ts" --max-warnings=0` passes
+
+---
+
+#### ESLint Type Safety Improvements
+**Fix:** Replaced all `any` types with proper TypeScript types to pass ESLint checks
+
+**Files Modified:**
+
+1. **`src/auth/route/auth.route.ts`**
+   - Removed unused variable `IS_PRODUCTION` (no-unused-vars)
+   - Now uses `SESSION_CONFIG.COOKIE_SECURE` directly
+
+2. **`src/cache/CacheManager.ts`**
+   - Changed `CacheManager<T = any>` → `CacheManager<T = unknown>`
+   - Changed `Promise<CacheEntry<any>>` → `Promise<CacheEntry<unknown>>`
+   - Changed `CacheEntry<any>` → `CacheEntry<unknown>>`
+   - Changed `estimateSize(data: any)` → `estimateSize(data: unknown)`
+   - **Why:** `unknown` is type-safe (requires type checking before use), `any` bypasses type safety
+
+3. **`src/user/repository/user.repository.ts`**
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: IUpdateUserEntity, ...)`
+   - **Benefit:** Prevents updating auth fields through general update endpoint
+
+4. **`src/lottery/repository/lottery.repository.ts`**
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: IUpdateLotteryEntity, ...)`
+   - **Benefit:** Type-safe lottery updates
+
+5. **`src/results/repository/results.repository.ts`**
+   - Added import: `IResultsBase` type
+   - Changed `create(payload: any)` → `create(payload: Omit<IResultsBase, 'results_id' | 'created_at' | 'edited_at' | 'deleted_at'>)`
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: Partial<IResultsBase>, ...)`
+   - **Benefit:** Type-safe results CRUD operations
+
+6. **`src/shcedule/repository/schedule.repository.ts`**
+   - Added import: `IScheduleEntityBack` and `IUpdateScheduleEntity` types
+   - Changed `create(payload: any)` → `create(payload: Omit<IScheduleEntityBack, 'schedule_id' | 'created_at' | 'edited_at' | 'schedule_lotteries'>)`
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: IUpdateScheduleEntity, ...)`
+   - **Benefit:** Type-safe schedule CRUD operations
+
+**Impact:**
+- ✅ All ESLint warnings and errors resolved
+- ✅ Passes `npm run lint` with `--max-warnings=0`
+- ✅ Ready for commit and GitHub Actions CI/CD
+- ✅ Improved type safety across all repositories
+- ✅ Better IDE autocomplete and error detection
+
+**Testing:** `npx eslint "src/**/*.ts" --max-warnings=0` passes with no errors
+
+---
+
+### Changed - 2025-12-29
+
+#### User CRUD Migration to Custom Authentication System
+**Change:** Fully migrated user creation to custom authentication system, removing dependency on Supabase Auth
+
+**Files Modified:**
+- `api/src/user/helper/userBase.ts` - `buildUserForDB()` function
+  - **Added:** Password hashing for all users except STREET cashiers
+  - **Added:** Custom authentication fields initialization:
+    - `password_hash`: bcrypt hashed password (12 rounds)
+    - `password_changed_at`: timestamp of password creation
+    - `password_reset_required`: false (users can login immediately)
+    - `failed_login_attempts`: 0 (initial value)
+    - `locked_until`: null
+    - `last_login_at`: null
+    - `last_login_ip`: null
+  - **Validation:** Throws error if password not provided for users that need it
+  - **Logic:** STREET cashiers don't need password (no username/email)
+
+**Type Definitions Updated:**
+- `helper/request/user.request.ts`
+  - **`INewUserEntity`**: Excluded auto-generated auth fields from creation payload
+    - Removed: `password_hash`, `password_changed_at`, `password_reset_required`
+    - Removed: `failed_login_attempts`, `locked_until`, `last_login_at`, `last_login_ip`
+    - Added: `password` field (plain text - hashed by backend)
+  - **`IUpdateUserEntity`**: Excluded auth fields from update payload
+    - Prevents updating auth fields through general update endpoint
+    - Auth fields only updated through dedicated password/auth endpoints
+
+**User Flow:**
+1. Frontend sends `INewUserEntity` with plain text password
+2. Backend `buildUserForDB()` hashes password with bcrypt
+3. Backend initializes all auth fields with secure defaults
+4. User is created in database with full custom auth support
+5. User can login immediately (no password reset required)
+
+**Security:**
+- ✅ All passwords hashed with bcrypt (12 rounds)
+- ✅ Auth fields cannot be set/updated through general CRUD endpoints
+- ✅ STREET cashiers don't have passwords (consistent with no username/email)
+- ✅ Type safety ensures auth fields are not accidentally exposed
+
+**Impact:** User creation now fully independent of Supabase Auth - Phase 5 cutover complete for user CRUD
+
+---
+
 ### Added - 2025-12-28
 
 #### Hierarchical Password Reset Permissions
