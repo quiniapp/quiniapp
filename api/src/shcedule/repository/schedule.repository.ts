@@ -1,5 +1,7 @@
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
+import { IScheduleEntityBack } from '@helper/types/schedule.type';
+import { IUpdateScheduleEntity } from '@helper/request/schedule.request';
 
 export class ScheduleRepository {
   async getById(id: string, organization_id: string) {
@@ -57,14 +59,19 @@ export class ScheduleRepository {
     return data;
   }
 
-  async create(payload: any) {
+  async create(
+    payload: Omit<
+      IScheduleEntityBack,
+      'schedule_id' | 'created_at' | 'edited_at' | 'schedule_lotteries'
+    >
+  ) {
     const { data, error } = await supabase.from('schedules').insert(payload).select().single();
 
     if (error) throw new Error(error.details);
     return data;
   }
 
-  async update(id: string, payload: any, organization_id: string) {
+  async update(id: string, payload: IUpdateScheduleEntity, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('schedules')

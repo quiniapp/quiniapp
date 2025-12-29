@@ -62,15 +62,24 @@ export class AuthRepository {
 
     // Fallback if RPC doesn't exist or fails
     if (rpcError) {
-      const { error } = await supabase
+      // Fetch current value, increment, and update
+      const { data: user } = await supabase
         .from('users')
-        .update({
-          failed_login_attempts: supabase.sql`failed_login_attempts + 1`,
-        })
-        .eq('user_id', userId);
+        .select('failed_login_attempts')
+        .eq('user_id', userId)
+        .single();
 
-      if (error) {
-        console.error('[AuthRepository] Failed to increment failed attempts:', error);
+      if (user) {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            failed_login_attempts: (user.failed_login_attempts ?? 0) + 1,
+          })
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('[AuthRepository] Failed to increment failed attempts:', error);
+        }
       }
     }
   }

@@ -1,6 +1,7 @@
 import { ILotteryEntityBack } from '@helper/types/lottery.type';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
+import { IUpdateLotteryEntity } from '@helper/request/lottery.request';
 
 export class LotteryRepository {
   async getById(id: string, organization_id: string) {
@@ -37,7 +38,7 @@ export class LotteryRepository {
     return data;
   }
 
-  async update(id: string, payload: any, organization_id: string) {
+  async update(id: string, payload: IUpdateLotteryEntity, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('lotteries')
