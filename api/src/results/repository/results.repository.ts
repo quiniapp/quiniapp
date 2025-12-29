@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { supabase } from '@database/db.connection';
 import { IGetResultsEntity } from '@helper/request/results.request';
+import { IResultsBase } from '@helper/types/results.type';
 const RESULTS_VIEW = `
   *,
   lottery:lottery_id (*),
@@ -15,7 +16,9 @@ export class ResultsRepository {
       .is('deleted_at', null);
   }
 
-  async create(payload: any) {
+  async create(
+    payload: Omit<IResultsBase, 'results_id' | 'created_at' | 'edited_at' | 'deleted_at'>
+  ) {
     const { data, error } = await supabase
       .from('results')
       .insert(payload)
@@ -62,7 +65,7 @@ export class ResultsRepository {
     return data;
   }
 
-  async update(id: string, payload: any, organization_id: string) {
+  async update(id: string, payload: Partial<IResultsBase>, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('results')

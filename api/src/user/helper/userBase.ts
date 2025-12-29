@@ -3,6 +3,7 @@ import { INewUserEntity } from '@helper/request/user.request';
 import { CASHIER_TYPE, IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { generateEmail } from 'api/helper/generateEmail';
+import { hashPassword } from 'api/helper/password';
 
 const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
   const timestamp = dayjs().toISOString();
@@ -42,10 +43,31 @@ export const buildUserForDB = async (
     throw new Error(`Number is required for ${user.user_type} users`);
   }
 
+  // Determinar si el usuario necesita password (todos excepto STREET cashiers)
+  const isStreetCashier = user?.cashier_type === CASHIER_TYPE.STREET;
+  const needsPassword = !isStreetCashier;
+
+  // Hash password para usuarios que lo necesitan
+  let passwordHash: string | null = null;
+  if (needsPassword) {
+    if (!user.password) {
+      throw new Error('Password is required for this user type');
+    }
+    passwordHash = await hashPassword(user.password);
+  }
+
   return {
     ...baseUser,
-    username: user?.cashier_type === CASHIER_TYPE.STREET ? null : user.username!,
-    email: user?.cashier_type === CASHIER_TYPE.STREET ? null : generateEmail(user.username!),
+    username: isStreetCashier ? null : user.username!,
+    email: isStreetCashier ? null : generateEmail(user.username!),
+    // Custom authentication fields
+    password_hash: passwordHash,
+    password_changed_at: needsPassword ? dayjs().toISOString() : null,
+    password_reset_required: false, // Usuario puede hacer login inmediatamente
+    failed_login_attempts: 0,
+    locked_until: null,
+    last_login_at: null,
+    last_login_ip: null,
     ...(user?.user_type === USER_TYPE.CASHIER
       ? {
           user_type: USER_TYPE.CASHIER,

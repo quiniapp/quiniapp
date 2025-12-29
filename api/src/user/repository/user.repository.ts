@@ -1,6 +1,7 @@
 import { IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
+import { IUpdateUserEntity } from '@helper/request/user.request';
 
 export class UserRepository {
   async getById(id: string, organization_id: string) {
@@ -116,7 +117,7 @@ export class UserRepository {
     return data;
   }
 
-  async update(id: string, payload: any, organization_id: string) {
+  async update(id: string, payload: IUpdateUserEntity, organization_id: string) {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')

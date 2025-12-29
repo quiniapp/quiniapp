@@ -7,9 +7,6 @@ import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
 
-// Use secure cookies only in production (HTTPS)
-const IS_PRODUCTION = process.env.IS_LOCAL !== 'true';
-
 // Cookie configuration based on SESSION_CONFIG
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -115,7 +112,7 @@ export class AuthRouter {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
-    const response: APIResponse<{ success: boolean }> = {
+    const response: APIResponse<boolean> = {
       data: {
         success: true,
       },
@@ -129,35 +126,16 @@ export class AuthRouter {
    * Maintains backward compatibility
    */
   private logoutHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { user, token } = req.user!;
+    const { user, session_id } = req.user!;
 
-    if (!token) {
-      throw new UnauthorizedError('Token no encontrado');
-    }
-
-    const result = await this.controller.logout({ token: token, user_id: user.user_id! });
-
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: IS_PRODUCTION ? 'none' : 'lax',
-      path: '/',
-    });
-    res.clearCookie('user_token', {
-      httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: IS_PRODUCTION ? 'none' : 'lax',
-      path: '/',
-    });
+    await this.controller.logoutSession(session_id, user.user_id!, false);
 
     // Also clear new session cookies if they exist (Phase 2+)
     res.clearCookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
     res.clearCookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
 
     const response: APIResponse<boolean> = {
-      data: {
-        data: result,
-      },
+      data: { data: true },
     };
 
     res.status(200).json(response);
@@ -167,30 +145,12 @@ export class AuthRouter {
    * POST /api/private/auth/logout-all (NEW - Phase 2)
    * Logout from all devices (revoke all user sessions)
    */
+
   private logoutAllHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { user } = req.user!;
+    const { user, session_id } = req.user!;
 
-    if (!user) {
-      throw new UnauthorizedError('No active session');
-    }
+    await this.controller.logoutSession(session_id, user.user_id!, true); // logoutAll = true
 
-    // For now, this will only work with new session system
-    // In Phase 4, we'll fully migrate to new system
-    // await this.controller.logoutSession(sessionId, user.user_id!, true);
-
-    // Clear cookies
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: IS_PRODUCTION ? 'none' : 'lax',
-      path: '/',
-    });
-    res.clearCookie('user_token', {
-      httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: IS_PRODUCTION ? 'none' : 'lax',
-      path: '/',
-    });
     res.clearCookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
     res.clearCookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 export enum USER_TYPE {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',
@@ -9,7 +10,7 @@ export enum CASHIER_TYPE {
   PC = 'PC',
   STREET = 'STREET',
 }
-
+/* eslint-enable no-unused-vars */
 interface BaseUserEntityBack {
   user_id: string;
   number: number | null;
@@ -26,6 +27,15 @@ interface BaseUserEntityBack {
   created_at: string | Date;
   edited_at: string | Date;
   deleted_at: string | null | Date;
+
+  // Custom authentication fields (Phase 5)
+  password_hash?: string | null;
+  password_changed_at?: string | Date | null;
+  password_reset_required?: boolean;
+  failed_login_attempts?: number;
+  locked_until?: string | Date | null;
+  last_login_at?: string | Date | null;
+  last_login_ip?: string | null;
 }
 
 // Usuario tipo OWNER o ADMIN

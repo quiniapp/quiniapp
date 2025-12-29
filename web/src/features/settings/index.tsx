@@ -16,11 +16,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
 import { useGetUsedStorage } from '@/hooks/fetchs/settings/useGetUsedStorage';
-import { useChangePassword } from '@/hooks/mutations/users/useChangePassword';
-import { KeyRound } from 'lucide-react';
 
 type UsageCard = {
   id: string;
@@ -37,13 +34,10 @@ type RetentionKey = 'last-month' | 'two-months' | 'three-months';
 
 const SettingsContent = () => {
   const [retention, setRetention] = useState<RetentionKey>('last-month');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
   const { role } = useAuth();
 
   const {data:usedStorage} = useGetUsedStorage()
-  const { mutateAsync: changePassword, isPending: isChangingPassword } = useChangePassword();
 
   const handleCleanup = () => {
     const label =
@@ -59,31 +53,6 @@ const SettingsContent = () => {
     }, 900);
   };
 
-  const handleChangePassword = async () => {
-    if (!currentPassword.trim()) {
-      toast.error('La contraseña actual es requerida');
-      return;
-    }
-    if (!newPassword.trim()) {
-      toast.error('La nueva contraseña es requerida');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
-      return;
-    }
-    if (newPassword === currentPassword) {
-      toast.error('La nueva contraseña debe ser diferente a la actual');
-      return;
-    }
-
-    await changePassword({ currentPassword, newPassword });
-
-    // Clear form on success
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-  };
 
   const usedPercentage = useMemo(()=>{
     if(usedStorage)
@@ -135,72 +104,6 @@ const SettingsContent = () => {
           </Card>
         ))}
 
-        {/* Card de cambiar contraseña - Visible para todos */}
-        <Card className="xl:col-span-1 md:col-span-2 bg-[#10121A] text-white">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              <CardTitle className="text-base sm:text-lg text-white">Cambiar Contraseña</CardTitle>
-            </div>
-            <CardDescription className="text-xs sm:text-sm text-white/80">
-              Actualiza tu contraseña de acceso.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4 text-white">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword" className="text-white">
-                Contraseña Actual
-              </Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Ingresa tu contraseña actual"
-                className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="newPassword" className="text-white">
-                Nueva Contraseña
-              </Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Ingresa tu nueva contraseña"
-                className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-white">
-                Confirmar Nueva Contraseña
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirma tu nueva contraseña"
-                className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
-              />
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex items-center gap-3">
-            <Button
-              onClick={handleChangePassword}
-              disabled={isChangingPassword}
-              className="w-full sm:w-auto bg-primary text-white"
-            >
-              {isChangingPassword ? 'Cambiando...' : 'Cambiar Contraseña'}
-            </Button>
-          </CardFooter>
-        </Card>
 
         {/* Card de mantenimiento - Solo visible para OWNER */}
         {role === USER_TYPE.OWNER && (

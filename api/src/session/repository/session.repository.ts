@@ -242,20 +242,20 @@ export class SessionRepository {
    */
   private mapToSession(data: Record<string, unknown>): ISession {
     return {
-      session_id: data.session_id,
-      user_id: data.user_id,
-      organization_id: data.organization_id,
-      refresh_token_hash: data.refresh_token_hash,
-      refresh_token_version: data.refresh_token_version,
-      ip_address: data.ip_address,
-      user_agent: data.user_agent,
-      device_fingerprint: data.device_fingerprint,
-      created_at: new Date(data.created_at),
-      last_activity_at: new Date(data.last_activity_at),
-      expires_at: new Date(data.expires_at),
-      is_active: data.is_active,
-      revoked_at: data.revoked_at ? new Date(data.revoked_at) : null,
-      revoked_reason: data.revoked_reason,
+      session_id: data.session_id as string,
+      user_id: data.user_id as string,
+      organization_id: data.organization_id as string,
+      refresh_token_hash: data.refresh_token_hash as string,
+      refresh_token_version: data.refresh_token_version as number,
+      ip_address: (data.ip_address as string) || null,
+      user_agent: (data.user_agent as string) || null,
+      device_fingerprint: (data.device_fingerprint as string) || null,
+      created_at: new Date(data.created_at as string),
+      last_activity_at: new Date(data.last_activity_at as string),
+      expires_at: new Date(data.expires_at as string),
+      is_active: data.is_active as boolean,
+      revoked_at: data.revoked_at ? new Date(data.revoked_at as string) : null,
+      revoked_reason: (data.revoked_reason as string) || null,
     };
   }
 }

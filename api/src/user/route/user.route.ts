@@ -186,7 +186,7 @@ export class UserRouter {
       newPassword
     );
 
-    const response: APIResponse<{ password: string }> = {
+    const response: APIResponse<string> = {
       data: {
         password: result.password,
       },
@@ -219,7 +219,7 @@ export class UserRouter {
       req.organization_id!
     );
 
-    const response: APIResponse<{ success: boolean }> = {
+    const response: APIResponse<boolean> = {
       data: {
         success: true,
       },
@@ -260,7 +260,7 @@ export class UserRouter {
       user.user.user_type
     );
 
-    const response: APIResponse<{ user_id: string }> = {
+    const response: APIResponse<string> = {
       data: {
         user_id: result.user_id,
       },
