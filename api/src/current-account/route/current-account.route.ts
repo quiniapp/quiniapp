@@ -237,19 +237,7 @@ export class CurrentAccountRouter {
       };
       res.status(403).json(response);
       return;
-    } /*
-    const result = updateCurrentAccountSchema.safeParse(updateCurrentAccount);
-    if (!result.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: String(result.error.message),
-        },
-      };
-      res.status(400).json(response); // <-- SIN return
-
-      return;
-    } */
+    }
     try {
       const currentaccount = await this.controller.updateCurrentAccountHandler(
         current_account_id,
@@ -408,7 +396,6 @@ export class CurrentAccountRouter {
     try {
       let updated: ICurrentAccountEntityFront[] = [];
       let failed: Array<{ id: string; error: string }> = [];
-
       // 1) Si hay updates, los aplico (si no, lo salto sin error)
       if (entries.length > 0) {
         const results = await Promise.allSettled(
