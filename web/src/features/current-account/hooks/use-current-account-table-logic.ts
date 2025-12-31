@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { useCurrentAccounts } from '@/hooks/useCurrentAccount';
 import type {
-  ICurrentAccountEntityFront,
   Totals,
   FilterParams,
 } from '@/types/current-account.type';
+import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 
 export function useCurrentAccountTableLogic(filters: FilterParams = {}) {
   const { data, isPending, isLoading } = useCurrentAccounts();
