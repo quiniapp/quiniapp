@@ -45,6 +45,7 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
     new Map()
   );
   const [ticketNumber, setTicketNumber] = useState<string>('');
+  const [customAmount, setCustomAmount] = useState<number | null>(null);
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
   const { data: lotteries } = useLotteries({ all: true });
@@ -98,10 +99,11 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
           if (lotteries.length > 0) newSL.push({ schedule, lotteries });
         });
 
-        return { ...b, scheduleLottery: newSL };
+        const amount = customAmount !== null ? customAmount : b.amount;
+        return { ...b, amount, scheduleLottery: newSL };
       })
       .filter((b) => b.scheduleLottery.length > 0);
-  }, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteriesById, disabledSchedules]);
+  }, [repeatBets, scheduleLotteriesToPlay, schedulesById, lotteriesById, disabledSchedules, customAmount]);
 
   const selectedTotal = useMemo(() => {
     return selectedBets.reduce((acc, b) => {
@@ -166,46 +168,32 @@ useEffect(() => {
   const schedulesMap = new Map<string, IScheduleEntityFront>();
   schedules.forEach((sch) => schedulesMap.set(sch.schedule_id, sch));
 
-  // 2. Recolectar las lotteries originales del ticket por schedule
-  const originalLotteriesBySchedule = new Map<string, Set<string>>();
-
+  // 2. Procesar cada bet usando bet_order como clave única
   for (const bet of data.bets) {
-    for (const sl of bet.scheduleLottery) {
-      const schId = sl.schedule.schedule_id;
+    // Usar bet_order como clave única (cada bet_order representa una jugada original)
+    const betKey = String(bet.bet_order);
 
-      if (!originalLotteriesBySchedule.has(schId)) {
-        originalLotteriesBySchedule.set(schId, new Set());
-      }
-
-      for (const lot of sl.lotteries) {
-        originalLotteriesBySchedule.get(schId)!.add(lot.lottery_id);
-      }
-    }
-  }
-
-  // 3. Procesar cada bet, extrayendo SOLO los campos básicos (number, amount, place, position, with)
-  for (const bet of data.bets) {
-    // Crear clave única que combine number, place, position y with para diferenciar jugadas
-    const betKey = `${bet.number}-${bet.place}-${bet.position ?? 'null'}-${bet.with ?? 'null'}`;
-
-    // Si ya procesamos esta jugada exacta, saltearla (evitar duplicados)
+    // Si ya procesamos esta jugada, saltearla (evitar duplicados)
     if (betsByKey.has(betKey)) continue;
 
-    // 4. Regenerar scheduleLottery basándose en las lotteries del ticket original que ESTÁN DISPONIBLES ahora
+    // 3. Regenerar scheduleLottery basándose en las lotteries de ESTA bet que ESTÁN DISPONIBLES ahora
     const newScheduleLottery: IBetTable['scheduleLottery'] = [];
 
-    // Iterar sobre los schedules que estaban en el ticket original
-    for (const [originalSchId, originalLotteryIds] of originalLotteriesBySchedule.entries()) {
+    // Iterar sobre los schedules que estaban en ESTA bet específica
+    for (const sl of bet.scheduleLottery) {
+      const originalSchId = sl.schedule.schedule_id;
+      const originalLotteryIds = new Set(sl.lotteries.map((l) => l.lottery_id));
+
       // Obtener las lotteries disponibles AHORA para este schedule
       const availableLotteryIds = scheduleLottery[todayKey]?.[originalSchId] ?? [];
 
-      // Intersección: lotteries del ticket original que están disponibles AHORA
+      // Intersección: lotteries de esta bet que están disponibles AHORA
       const matchingLotteryIds = availableLotteryIds.filter((id) => originalLotteryIds.has(id));
 
       // Si no hay coincidencias, saltar este schedule
       if (matchingLotteryIds.length === 0) continue;
 
-      // Obtener el schedule actual (puede haber cambiado de horario)
+      // Obtener el schedule actual
       const currentSchedule = schedulesMap.get(originalSchId);
       if (!currentSchedule) continue;
 
@@ -222,8 +210,9 @@ useEffect(() => {
       });
     }
 
-    // 5. Crear la apuesta con campos básicos y scheduleLottery regenerado
+    // 4. Crear la apuesta con campos básicos y scheduleLottery regenerado
     const basicBet: IBetTable = {
+      bet_order: bet.bet_order,
       number: bet.number,
       amount: bet.amount,
       place: bet.place,
@@ -235,7 +224,7 @@ useEffect(() => {
     betsByKey.set(betKey, basicBet);
   }
 
-  // 6. Pre-seleccionar solo las lotteries que están en newScheduleLottery (ya filtradas)
+  // 5. Pre-seleccionar solo las lotteries que están en newScheduleLottery (ya filtradas)
   for (const bet of betsByKey.values()) {
     for (const sl of bet.scheduleLottery) {
       const schId = sl.schedule.schedule_id;
@@ -278,7 +267,7 @@ useEffect(() => {
     >
       {/* Contenedor con scroll - Todo excepto los botones */}
       <div className="overflow-y-auto flex-1 pr-1 -mr-1 min-h-0">
-        {/* Input de Ticket - Layout Responsive */}
+        {/* Input de Ticket y Monto - Layout Responsive */}
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <Text size="sm" weight="medium" className="text-slate-200 whitespace-nowrap">
@@ -287,9 +276,22 @@ useEffect(() => {
             <Input
               type="number"
               value={ticketNumber}
-              onChange={(e) => setTicketNumber(e.target.value)}
+              onChange={(e) => {
+                setTicketNumber(e.target.value);
+                setCustomAmount(null);
+              }}
               className="w-full sm:w-64"
               placeholder="Ingrese el número de ticket"
+            />
+            <Text size="sm" weight="medium" className="text-slate-200 whitespace-nowrap">
+              Monto:
+            </Text>
+            <Input
+              type="number"
+              value={customAmount ?? ''}
+              onChange={(e) => setCustomAmount(e.target.value ? Number(e.target.value) : null)}
+              className="w-full sm:w-32"
+              placeholder="Original"
             />
           </div>
         </div>
@@ -369,11 +371,11 @@ useEffect(() => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.from(repeatBets.values()).map((bet, index) => (
-                  <TableRow key={index} className="text-slate-300 hover:bg-slate-800/50">
+                {Array.from(repeatBets.values()).map((bet) => (
+                  <TableRow key={bet.bet_order} className="text-slate-300 hover:bg-slate-800/50">
                     <TableCell className="font-medium">{bet.number}</TableCell>
                     <TableCell>{bet.with || '-'}</TableCell>
-                    <TableCell>${bet.amount}</TableCell>
+                    <TableCell>${customAmount ?? bet.amount}</TableCell>
                     <TableCell>
                       {betPlaceDictionary[bet.place]}
                       {bet?.position ? ` ${betPlaceDictionary[bet.position]}` : ''}
@@ -393,9 +395,9 @@ useEffect(() => {
 
           {/* Vista de Cards - Solo Mobile */}
           <div className="md:hidden space-y-2 sm:space-y-3">
-            {Array.from(repeatBets.values()).map((bet, index) => (
+            {Array.from(repeatBets.values()).map((bet) => (
               <div
-                key={index}
+                key={bet.bet_order}
                 className="bg-slate-800/40 rounded-lg p-3 border border-slate-700 space-y-2"
               >
                 <div className="flex justify-between items-start">
@@ -412,7 +414,7 @@ useEffect(() => {
                       Monto
                     </Text>
                     <Text size="lg" weight="semibold" className="text-green-400">
-                      ${bet.amount}
+                      ${customAmount ?? bet.amount}
                     </Text>
                   </div>
                 </div>

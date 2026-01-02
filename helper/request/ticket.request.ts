@@ -36,6 +36,7 @@ export interface ILotterySchedule {
   lotteries: ILotteryEntityFront[];
 }
 export interface IBetTable {
+  bet_order?: number;
   number: string;
   amount: number;
   place: PLACE_TYPE;
