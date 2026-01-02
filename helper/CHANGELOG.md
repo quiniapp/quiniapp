@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-02
+
+#### IBetTable Type - Added bet_order Field
+**Change:** Added optional `bet_order` field to `IBetTable` interface
+
+**Files Modified:**
+- `helper/request/ticket.request.ts`
+  - **`IBetTable` Interface:**
+    - Added `bet_order?: number` - Optional field returned by backend
+    - Used as unique identifier when grouping/repeating bets
+    - Helps differentiate bets with same number but different amounts
+
 ### Changed - 2025-12-29
 
 #### User Request Types - Custom Auth Field Exclusion
