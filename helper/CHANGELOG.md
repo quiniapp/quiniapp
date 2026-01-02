@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-02
+
+#### CAPITALIST User Type and Organization Hierarchy Types
+**Feature:** New types and functions to support hierarchical organizations
+
+**Files Modified:**
+
+1. **`helper/types/user.type.ts`**
+   - Added `CAPITALIST` to `USER_TYPE` enum
+   - Updated `OwnerOrAdminUserEntityBack` interface to include `USER_TYPE.CAPITALIST`
+   - Updated `OwnerOrAdminUserEntityFront` interface to include `USER_TYPE.CAPITALIST`
+   - New hierarchy: OWNER → CAPITALIST → SUPERADMIN → ADMIN → CASHIER
+
+2. **`helper/types/organization.type.ts`**
+   - Added `parent_organization_id: string | null` to `IOrganizationEntityBack`
+   - NULL = root organization, non-NULL = sub-organization/group
+   - `IOrganizationEntityFront` now includes `parent_organization_id`
+
+3. **`helper/functions/userTypeDictionary.ts`**
+   - Added CAPITALIST entry: `[USER_TYPE.CAPITALIST]: 'CAPITALISTA'`
+
+4. **`helper/schemas/user.schema.ts`**
+   - Added `capitalistSchema` for CAPITALIST user validation
+
+**Use Cases:**
+- CAPITALIST is the new "organization owner" level, below OWNER but above SUPERADMIN
+- Sub-organizations (groups) reference their parent via `parent_organization_id`
+- CAPITALIST sees entire organization + all sub-organizations
+- SUPERADMIN with assigned group sees only that group
+
 ### Changed - 2025-12-29
 
 #### User Request Types - Custom Auth Field Exclusion

@@ -13,6 +13,20 @@ import {
 } from '@helper/types/current_account.type';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
 
+interface INetworkSummary {
+  organization_id: string;
+  organization_name: string;
+  total_pass: number;
+  total_successes: number;
+  total_claims: number;
+  total_collections: number;
+  total_paid: number;
+  total_balance: number;
+  total_leave: number;
+  total_drag: number;
+  cashier_count: number;
+}
+
 type AllowedManualKeys =
   | 'claims'
   | 'paid'
@@ -151,6 +165,84 @@ export class CurrentAccountController {
       );
     } catch (error) {
       console.error('updateCurrentAccountByUserHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  // Network-aware methods for CAPITALIST users
+
+  /**
+   * Calculate current accounts for entire network (org + sub-orgs)
+   */
+  calculateCurrentAccountNetworkHandler = async (
+    organization_id: string,
+    date?: string,
+    leave?: boolean,
+    liquidated?: boolean
+  ) => {
+    try {
+      const results = await this.repository.calculateCurrentAccountNetworkHandler(
+        organization_id,
+        date,
+        leave,
+        liquidated
+      );
+
+      return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
+    } catch (error) {
+      console.error('calculateCurrentAccountNetworkHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  /**
+   * Get all current accounts for network (org + sub-orgs)
+   */
+  getAllCurrentAccountNetworkHandler = async (
+    props: IGetAllCurrentAccountEntity & { include_network?: boolean }
+  ): Promise<ICurrentAccountEntityFront[]> => {
+    try {
+      let currentaccounts;
+
+      if (props.user_type === USER_TYPE.CASHIER) {
+        // CASHIER solo ve su propia cuenta
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          organization_id: props.organization_id,
+          user_id: props.user_id,
+          date: props.date,
+        });
+      } else if (props.include_network && props.user_type === USER_TYPE.CAPITALIST) {
+        // CAPITALIST con include_network ve toda la red
+        currentaccounts = await this.repository.getAllCurrentAccountNetworkHandler({
+          organization_id: props.organization_id,
+          date: props.date,
+        });
+      } else {
+        // Otros usuarios ven solo su organización
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          organization_id: props.organization_id,
+          date: props.date,
+        });
+      }
+
+      return currentaccounts.map((currentaccount) => parseCurrentAccount(currentaccount));
+    } catch (error) {
+      console.error('getAllCurrentAccountNetworkHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  /**
+   * Get network summary (aggregated totals per organization)
+   */
+  getNetworkSummaryHandler = async (
+    organization_id: string,
+    date?: string
+  ): Promise<INetworkSummary[]> => {
+    try {
+      return await this.repository.getNetworkSummaryHandler(organization_id, date);
+    } catch (error) {
+      console.error('getNetworkSummaryHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

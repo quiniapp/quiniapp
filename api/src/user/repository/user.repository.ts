@@ -4,6 +4,32 @@ import dayjs from 'dayjs';
 import { IUpdateUserEntity } from '@helper/request/user.request';
 
 export class UserRepository {
+  /**
+   * Get all descendant organization IDs (including the org itself)
+   * Uses recursive SQL function for efficiency
+   */
+  async getOrganizationDescendants(organizationId: string): Promise<string[]> {
+    const { data, error } = await supabase.rpc('get_organization_descendants', {
+      p_org_id: organizationId,
+    });
+
+    if (error) throw new Error(error.message);
+    return data?.map((d: { organization_id: string }) => d.organization_id) || [organizationId];
+  }
+
+  /**
+   * Check if an organization is a sub-organization (has a parent)
+   */
+  async isSubOrganization(organizationId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('parent_organization_id')
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data?.parent_organization_id !== null;
+  }
   async getById(id: string, organization_id: string) {
     const { data, error } = await supabase
       .from('users')
@@ -54,33 +80,61 @@ export class UserRepository {
     let query = supabase.from('users').select('*').is('deleted_at', null);
 
     // Hierarchical permission filtering
+    // Hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER
     if (user_type === USER_TYPE.OWNER) {
-      // OWNER can see SUPERADMIN (any org), ADMIN/CASHIER (own org)
+      // OWNER can see all users in their organization
       query = query.eq('organization_id', organization_id);
 
-      // If filter is provided, apply it
       if (filter_user_type) {
         query = query.eq('user_type', filter_user_type);
       } else {
         // Default: show all except OWNER
+        query = query.in('user_type', [
+          USER_TYPE.CAPITALIST,
+          USER_TYPE.SUPERADMIN,
+          USER_TYPE.ADMIN,
+          USER_TYPE.CASHIER,
+        ]);
+      }
+
+      query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
+    } else if (user_type === USER_TYPE.CAPITALIST) {
+      // CAPITALIST can see all users in their org + all sub-orgs
+      const descendantOrgs = await this.getOrganizationDescendants(organization_id);
+      query = query.in('organization_id', descendantOrgs);
+
+      if (filter_user_type) {
+        // CAPITALIST can see SUPERADMIN, ADMIN, CASHIER
+        if ([USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(filter_user_type)) {
+          query = query.eq('user_type', filter_user_type);
+        } else {
+          query = query.in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
+        }
+      } else {
         query = query.in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
       }
 
       query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
     } else if (user_type === USER_TYPE.SUPERADMIN) {
-      // SUPERADMIN can see ADMIN/CASHIER from own organization
-      query = query.eq('organization_id', organization_id);
+      // SUPERADMIN visibility depends on whether they're in a sub-org or main org
+      const isSubOrg = await this.isSubOrganization(organization_id);
+
+      if (isSubOrg) {
+        // SUPERADMIN in sub-org: only see users in their sub-org
+        query = query.eq('organization_id', organization_id);
+      } else {
+        // SUPERADMIN in main org: see all like CAPITALIST (their org + sub-orgs)
+        const descendantOrgs = await this.getOrganizationDescendants(organization_id);
+        query = query.in('organization_id', descendantOrgs);
+      }
 
       if (filter_user_type) {
-        // Validate filter is allowed (ADMIN or CASHIER only)
         if ([USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(filter_user_type)) {
           query = query.eq('user_type', filter_user_type);
         } else {
-          // Default to CASHIER if invalid filter
-          query = query.eq('user_type', USER_TYPE.CASHIER);
+          query = query.in('user_type', [USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
         }
       } else {
-        // Default: show ADMIN and CASHIER
         query = query.in('user_type', [USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
       }
 

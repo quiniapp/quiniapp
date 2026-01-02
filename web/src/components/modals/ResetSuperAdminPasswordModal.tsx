@@ -65,10 +65,10 @@ const ResetSuperAdminPasswordModal = ({
 
     try {
       setIsSearching(true);
-      // Validate SUPERADMIN exists in the specified organization
+      // Validate CAPITALIST exists in the specified organization
       // apiClient returns the first value of data object (user_id as string)
       const userId = await apiClient.get<string>(
-        BACKEND_ROUTES.user.validateSuperAdmin(username, organization.organization_id)
+        BACKEND_ROUTES.user.validateCapitalist(username, organization.organization_id)
       );
 
       await onConfirm(userId, newPassword);

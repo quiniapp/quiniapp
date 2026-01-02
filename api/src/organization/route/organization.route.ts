@@ -20,14 +20,21 @@ export class OrganizationRouter {
   private setupRoutes() {
     this.router.get('/', this.getAllHandler);
     this.router.get('/:id', this.getByIdHandler);
+    this.router.get('/:id/children', this.getChildrenHandler); // Get sub-organizations
     this.router.post('/', this.createHandler);
+    this.router.post('/:id/sub', this.createSubOrganizationHandler); // Create sub-organization
     this.router.put('/:id', this.updateHandler);
     this.router.delete('/:id', this.deleteHandler);
   }
 
-  // Solo OWNER puede crear organizaciones
+  /**
+   * POST /api/private/organization
+   * Create a new organization with a CAPITALIST user
+   * Only OWNER can create organizations
+   * NOTE: New organizations do NOT inherit configuration
+   */
   private createHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { organization, superAdmin } = req.body;
+    const { organization, capitalist } = req.body;
     const user = req.user;
 
     // Validar que se reciban los datos de la organización
@@ -39,12 +46,12 @@ export class OrganizationRouter {
       return;
     }
 
-    // Validar que se reciban los datos del super admin
-    if (!superAdmin) {
+    // Validar que se reciban los datos del capitalista
+    if (!capitalist) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
-          message: 'Los datos del Super Admin son requeridos',
+          message: 'Los datos del Capitalista son requeridos',
         },
       };
       res.status(400).json(response);
@@ -61,11 +68,101 @@ export class OrganizationRouter {
     }
 
     try {
-      const createdOrganization = await this.controller.create(organization, superAdmin);
+      const createdOrganization = await this.controller.create(organization, capitalist);
       const response: APIResponse<IOrganizationEntityFront> = {
         data: { organization: createdOrganization },
       };
       res.status(201).json(response);
+    } catch (error) {
+      console.error(error);
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * POST /api/private/organization/:id/sub
+   * Create a sub-organization (group) under a parent organization
+   * Only OWNER and CAPITALIST can create sub-organizations
+   * NOTE: Sub-organizations INHERIT configuration from parent
+   */
+  private createSubOrganizationHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: parentOrgId } = req.params;
+    const { organization, superAdmin } = req.body;
+    const user = req.user;
+
+    // Validar que se reciban los datos de la organización
+    if (!organization || !organization.name || typeof organization.name !== 'string') {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.NAME_IS_REQUIRED, message: ERROR_MESSAGE.NAME_IS_REQUIRED },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Solo OWNER y CAPITALIST pueden crear sub-organizaciones
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user?.user.user_type as USER_TYPE)) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: 'Solo OWNER y CAPITALIST pueden crear grupos',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const createdOrg = await this.controller.createSubOrganization(
+        parentOrgId,
+        organization,
+        superAdmin // Optional - can be undefined
+      );
+      const response: APIResponse<IOrganizationEntityFront> = {
+        data: { organization: createdOrg },
+      };
+      res.status(201).json(response);
+    } catch (error) {
+      console.error(error);
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * GET /api/private/organization/:id/children
+   * Get direct sub-organizations of an organization
+   * OWNER can see all, CAPITALIST can see their org's children
+   */
+  private getChildrenHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: parentOrgId } = req.params;
+    const user = req.user;
+
+    // Solo OWNER y CAPITALIST pueden ver sub-organizaciones
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user?.user.user_type as USER_TYPE)) {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const children = await this.controller.getChildren(parentOrgId);
+      const response: APIResponse<IOrganizationEntityFront[]> = {
+        data: { organizations: children },
+      };
+      res.status(200).json(response);
     } catch (error) {
       console.error(error);
       const response: APIResponse<null> = {

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-02
+
+#### Frontend Updates for Groups/Sub-Organizations Feature
+**Feature:** Updated frontend components to support CAPITALIST user type and hierarchical organizations
+
+**Files Modified:**
+
+1. **`web/routes/routes.ts`**
+   - Renamed `validateSuperAdmin` to `validateCapitalist`
+   - Route now points to `/validate-capitalist`
+
+2. **`web/src/components/modals/ResetSuperAdminPasswordModal.tsx`**
+   - Updated to use `validateCapitalist` route
+   - UI text already referenced "Capitalista"
+
+3. **`web/src/features/organizations/index.tsx`**
+   - Changed default user_type from `SUPERADMIN` to `CAPITALIST` in create form
+   - Removed `group_id` from form default values (field doesn't exist)
+
+4. **`web/src/features/user-list/user-table.tsx`**
+   - Removed "Grupo" column header (group_id not in types)
+   - Renamed "Cuenta" column to "Tipo"
+   - Moved user type display to "Tipo" column
+   - Reduced colSpan from 10 to 9
+
+**No New Components Required:**
+- The existing organization page creates CAPITALIST users (UI already says "Capitalista")
+- User table displays user types correctly using `userTypeDictionary`
+- CAPITALIST label from dictionary: "CAPITALISTA"
+
 ### Added - 2025-12-28
 
 #### Password Reset UI - Admin Features

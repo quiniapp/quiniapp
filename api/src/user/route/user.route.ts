@@ -19,8 +19,8 @@ export class UserRouter {
 
   private setupRoutes() {
     // IMPORTANT: Specific routes must come BEFORE parameterized routes
-    // Validate SUPERADMIN for cross-org password reset
-    this.router.get('/validate-superadmin', this.validateSuperAdminHandler);
+    // Validate CAPITALIST for cross-org password reset
+    this.router.get('/validate-capitalist', this.validateCapitalistHandler);
 
     // Password Management (Phase 3)
     this.router.post('/change-password', this.changePasswordHandler);
@@ -158,7 +158,8 @@ export class UserRouter {
   /**
    * POST /api/private/user/reset-password/:id
    * Admin endpoint to reset user password
-   * Only OWNER, SUPERADMIN, and ADMIN can reset passwords
+   * Hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER
+   * Each level can only reset passwords of lower levels
    */
   private resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
     const { id: targetUserId } = req.params;
@@ -173,8 +174,12 @@ export class UserRouter {
       throw new ForbiddenError('No autenticado');
     }
 
-    // Check permissions - only OWNER, SUPERADMIN, ADMIN can reset passwords
-    if (![USER_TYPE.OWNER, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(user.user.user_type)) {
+    // Check permissions - only OWNER, CAPITALIST, SUPERADMIN, ADMIN can reset passwords
+    if (
+      ![USER_TYPE.OWNER, USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(
+        user.user.user_type
+      )
+    ) {
       throw new ForbiddenError('No tienes permisos para resetear contraseñas');
     }
 
@@ -229,11 +234,11 @@ export class UserRouter {
   });
 
   /**
-   * GET /api/private/user/validate-superadmin?username=XXX&organization_id=YYY
-   * Validate that a user exists and is SUPERADMIN of the specified organization
+   * GET /api/private/user/validate-capitalist?username=XXX&organization_id=YYY
+   * Validate that a user exists and is CAPITALIST of the specified organization
    * Only accessible by OWNER
    */
-  private validateSuperAdminHandler = asyncHandler(async (req: Request, res: Response) => {
+  private validateCapitalistHandler = asyncHandler(async (req: Request, res: Response) => {
     const { username, organization_id } = req.query;
     const { user } = req;
 
@@ -249,12 +254,12 @@ export class UserRouter {
       throw new ForbiddenError('No autenticado');
     }
 
-    // Only OWNER can validate SUPERADMIN from other organizations
+    // Only OWNER can validate CAPITALIST from other organizations
     if (user.user.user_type !== USER_TYPE.OWNER) {
-      throw new ForbiddenError('Solo el OWNER puede validar SUPERADMIN de otras organizaciones');
+      throw new ForbiddenError('Solo el OWNER puede validar CAPITALIST de otras organizaciones');
     }
 
-    const result = await this.controller.validateSuperAdmin(
+    const result = await this.controller.validateCapitalist(
       username,
       organization_id,
       user.user.user_type

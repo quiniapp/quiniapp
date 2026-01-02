@@ -9,8 +9,11 @@ const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
   const timestamp = dayjs().toISOString();
 
   // Determinar si el número debe ser null basado en el tipo de usuario
+  // Hierarchy: OWNER, CAPITALIST, SUPERADMIN don't require number
   const shouldNumberBeNull =
-    user.user_type === USER_TYPE.OWNER || user.user_type === USER_TYPE.SUPERADMIN;
+    user.user_type === USER_TYPE.OWNER ||
+    user.user_type === USER_TYPE.CAPITALIST ||
+    user.user_type === USER_TYPE.SUPERADMIN;
 
   return {
     user_id: uuidv4(),
@@ -21,7 +24,6 @@ const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
     last_name: user.last_name ?? null,
     address: user.address ?? null,
     phone: user.phone ?? null,
-    group_id: user.group_id ? user.group_id : null,
     disabled: false,
     created_at: timestamp,
     edited_at: timestamp,
