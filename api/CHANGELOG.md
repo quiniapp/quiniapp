@@ -75,6 +75,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `getAllCurrentAccountHandler` to support `include_network` query param
 
 **New User Hierarchy:** OWNER → CAPITALIST → SUPERADMIN → ADMIN → CASHIER
+### Fixed - 2026-01-02
+
+#### ticket_full_json_plpgsql - Group by bet_order
+**Fix:** Updated `ticket_full_json_plpgsql` to group bets by `bet_order` instead of by `number/amount/place/with/position`
+
+**Problem:**
+- Function was grouping bets by field values, causing bets with same number but different amounts to merge incorrectly
+- Example: `1234 $10 HEAD` and `1234 $100 HEAD` would show as single entry
+
+**Solution:**
+- Changed grouping logic to use `bet_order` column as unique identifier
+- Updated DISTINCT ON clause to use `(ticket_id, bet_order, schedule_id, lottery_id)`
+- Added `bet_order` to JSON output for frontend use as React key
+
+**File:**
+- `supabase/migrations/20260102194200_fix_ticket_full_json_group_by_bet_order.sql`
 
 ### Fixed - 2025-12-31
 
