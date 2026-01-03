@@ -63,5 +63,7 @@ export const BACKEND_ROUTES = {
   organization: {
     base: `${PRIVATE}/organization`,
     id: (id: string) => `${PRIVATE}/organization/${id}`,
+    children: (id: string) => `${PRIVATE}/organization/${id}/children`,
+    createSub: (id: string) => `${PRIVATE}/organization/${id}/sub`,
   },
 };

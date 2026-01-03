@@ -13,10 +13,16 @@ import { apiClient, ApiError } from '@/lib/apiClient';
 // Auto-refresh access token every 13-14 minutes (random to avoid thundering herd)
 const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
 
+// Extended user type with organization_id from validate endpoint
+interface UserWithOrg extends IUserEntityFront {
+  organization_id: string;
+}
+
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<IUserEntityFront | null>(null);
   const [role, setRole] = useState<USER_TYPE | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -24,14 +30,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const refreshIntervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
 
-  const setSession = useCallback((u: IUserEntityFront | null) => {
+  const setSession = useCallback((u: UserWithOrg | null) => {
     if (u) {
       setUser(u);
       setRole(u.user_type);
+      setOrganizationId(u.organization_id);
       setIsAuth(true);
     } else {
       setUser(null);
       setRole(null);
+      setOrganizationId(null);
       setIsAuth(false);
     }
   }, []);
@@ -42,7 +50,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     lastValidateRef.current = now;
 
     try {
-      const user = await apiClient.get<IUserEntityFront>(BACKEND_ROUTES.auth.validate);
+      const user = await apiClient.get<UserWithOrg>(BACKEND_ROUTES.auth.validate);
       if (!user) throw new Error('Respuesta inválida del servidor');
       setSession(user);
     } catch (err) {
@@ -188,12 +196,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       loading,
       user,
       role,
+      organizationId,
       login,
       logout,
       validate,
       hasRole,
     }),
-    [isAuth, loading, user, role, login, logout, validate, hasRole]
+    [isAuth, loading, user, role, organizationId, login, logout, validate, hasRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

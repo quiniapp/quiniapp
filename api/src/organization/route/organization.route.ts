@@ -34,7 +34,9 @@ export class OrganizationRouter {
    * NOTE: New organizations do NOT inherit configuration
    */
   private createHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { organization, capitalist } = req.body;
+    const { organization, capitalist, superAdmin } = req.body;
+    // Accept both "capitalist" and "superAdmin" for backwards compatibility
+    const capitalistData = capitalist || superAdmin;
     const user = req.user;
 
     // Validar que se reciban los datos de la organización
@@ -47,7 +49,7 @@ export class OrganizationRouter {
     }
 
     // Validar que se reciban los datos del capitalista
-    if (!capitalist) {
+    if (!capitalistData) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
@@ -68,7 +70,7 @@ export class OrganizationRouter {
     }
 
     try {
-      const createdOrganization = await this.controller.create(organization, capitalist);
+      const createdOrganization = await this.controller.create(organization, capitalistData);
       const response: APIResponse<IOrganizationEntityFront> = {
         data: { organization: createdOrganization },
       };
