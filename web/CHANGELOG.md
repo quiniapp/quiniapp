@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-02
+
+#### Repeat Ticket Modal - Custom Amount and Bet Order Grouping
+**Feature:** Enhanced repeat ticket modal with custom amount input and proper bet grouping by `bet_order`
+
+**Changes in `web/src/components/modals/repeat-ticket-modal.tsx`:**
+1. **Custom Amount Input**
+   - Added `customAmount` state (`number | null`) for overriding bet amounts
+   - New input field next to ticket number input
+   - When empty, uses original bet amounts; when set, applies to all bets
+   - Resets to `null` when ticket number changes
+   - Total and preview table reflect custom amount when set
+
+2. **Bet Order Grouping**
+   - Changed bet grouping logic to use `bet_order` as unique key instead of `number-place-position-with-amount`
+   - Fixes issue where identical plays with different amounts were merged incorrectly
+   - Each bet now uses its own `scheduleLottery` for lottery filtering (not aggregated from all bets)
+   - React keys updated to use `bet.bet_order` for better reconciliation
+
 ### Added - 2025-12-28
 
 #### Password Reset UI - Admin Features

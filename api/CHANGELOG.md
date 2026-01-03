@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-01-02
+
+#### ticket_full_json_plpgsql - Group by bet_order
+**Fix:** Updated `ticket_full_json_plpgsql` to group bets by `bet_order` instead of by `number/amount/place/with/position`
+
+**Problem:**
+- Function was grouping bets by field values, causing bets with same number but different amounts to merge incorrectly
+- Example: `1234 $10 HEAD` and `1234 $100 HEAD` would show as single entry
+
+**Solution:**
+- Changed grouping logic to use `bet_order` column as unique identifier
+- Updated DISTINCT ON clause to use `(ticket_id, bet_order, schedule_id, lottery_id)`
+- Added `bet_order` to JSON output for frontend use as React key
+
+**File:**
+- `supabase/migrations/20260102194200_fix_ticket_full_json_group_by_bet_order.sql`
+
+### Fixed - 2025-12-31
+
+#### update_current_account_recompute - Soporte para previous_balance y previous_drag
+**Fix:** El stored procedure `update_current_account_recompute` ahora acepta `previous_balance` y `previous_drag` desde el JSON `p_props`
+
+**Problema:**
+- El SP ignoraba los campos `previous_balance` y `previous_drag` enviados en `p_props`
+- Siempre calculaba estos valores desde la fila anterior en la base de datos
+- Esto impedía actualizar manualmente estos campos para una cuenta corriente específica
+
+**Solución:**
+- Agregados flags `has_previous_balance` y `has_previous_drag` para detectar si vienen en el JSON
+- Si `previous_balance` viene en `p_props`, usa ese valor en lugar del calculado
+- Si `previous_drag` viene en `p_props`, usa ese valor directamente y resetea `v_prev_leave` para evitar interferencias
+
+**Archivo:**
+- `supabase/migrations/20251231173925_fix_update_current_account_recompute_prev_fields.sql`
+
 ### Fixed - 2025-12-29
 
 #### TypeScript Compilation Errors Resolution
