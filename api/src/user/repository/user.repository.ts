@@ -208,4 +208,51 @@ export class UserRepository {
     if (error) throw new Error(error.details);
     return data;
   }
+
+  /**
+   * Assign a user to a group by changing their organization_id
+   * Used by CAPITALIST to move users between their organization and sub-orgs
+   */
+  async assignToGroup(
+    userId: string,
+    currentOrgId: string,
+    targetOrgId: string
+  ): Promise<IUserEntityBack> {
+    const timestamp = dayjs().toISOString();
+    const { data, error } = await supabase
+      .from('users')
+      .update({ organization_id: targetOrgId, edited_at: timestamp })
+      .eq('user_id', userId)
+      .eq('organization_id', currentOrgId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.details || error.message);
+    return data;
+  }
+
+  /**
+   * Get users that can be assigned to groups (users in parent org or sibling groups)
+   * Returns users from the network that are not in the target group
+   */
+  async getUsersForGroupAssignment(
+    networkOrgIds: string[],
+    excludeOrgId?: string
+  ): Promise<IUserEntityBack[]> {
+    let query = supabase
+      .from('users')
+      .select('*')
+      .in('organization_id', networkOrgIds)
+      .is('deleted_at', null)
+      .in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER])
+      .order('number', { ascending: true });
+
+    if (excludeOrgId) {
+      query = query.neq('organization_id', excludeOrgId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.details || error.message);
+    return data || [];
+  }
 }

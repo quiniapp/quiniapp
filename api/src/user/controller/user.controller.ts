@@ -313,4 +313,88 @@ export class UserController {
       success: true,
     });
   };
+
+  /**
+   * Get all organization IDs in the network (for permission checks)
+   */
+  getNetworkOrgIds = async (organizationId: string): Promise<string[]> => {
+    const descendants = await this.repository.getOrganizationDescendants(organizationId);
+    return [organizationId, ...descendants];
+  };
+
+  /**
+   * Assign a user to a group (change their organization_id)
+   * Only CAPITALIST and OWNER can assign users to groups
+   */
+  assignUserToGroup = async (
+    userId: string,
+    targetGroupId: string,
+    adminOrgId: string,
+    adminUserType: USER_TYPE
+  ): Promise<IUserEntityFront> => {
+    // Only CAPITALIST and OWNER can assign users
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(adminUserType)) {
+      throw new ForbiddenError('Solo OWNER y CAPITALIST pueden asignar usuarios a grupos');
+    }
+
+    // Get the network of organizations (parent + all descendants)
+    const networkOrgIds = [
+      adminOrgId,
+      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
+    ];
+
+    // Get target user
+    const targetUser = await this.repository.getByIdWithoutOrgRestriction(userId);
+    if (!targetUser) {
+      throw new BadRequestError('Usuario no encontrado');
+    }
+
+    // Verify user is in the network
+    if (!networkOrgIds.includes(targetUser.organization_id)) {
+      throw new ForbiddenError('El usuario no pertenece a tu red de organizaciones');
+    }
+
+    // Verify target group is in the network
+    if (!networkOrgIds.includes(targetGroupId)) {
+      throw new ForbiddenError('El grupo destino no pertenece a tu red de organizaciones');
+    }
+
+    // Cannot assign CAPITALIST to a group
+    if (targetUser.user_type === USER_TYPE.CAPITALIST) {
+      throw new ForbiddenError('No se puede reasignar un CAPITALIST');
+    }
+
+    // Perform the assignment
+    const result = await this.repository.assignToGroup(
+      userId,
+      targetUser.organization_id,
+      targetGroupId
+    );
+
+    return parseUser(result);
+  };
+
+  /**
+   * Get users available for assignment to groups
+   * Returns users from the network (excluding those already in the target group)
+   */
+  getUsersForGroupAssignment = async (
+    adminOrgId: string,
+    adminUserType: USER_TYPE,
+    excludeGroupId?: string
+  ): Promise<IUserEntityFront[]> => {
+    // Only CAPITALIST and OWNER can see assignable users
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(adminUserType)) {
+      throw new ForbiddenError('Solo OWNER y CAPITALIST pueden ver usuarios asignables');
+    }
+
+    // Get the network of organizations
+    const networkOrgIds = [
+      adminOrgId,
+      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
+    ];
+
+    const users = await this.repository.getUsersForGroupAssignment(networkOrgIds, excludeGroupId);
+    return users.map((user) => parseUser(user));
+  };
 }

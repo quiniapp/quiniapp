@@ -26,6 +26,10 @@ export class UserRouter {
     this.router.post('/change-password', this.changePasswordHandler);
     this.router.post('/reset-password/:id', this.resetPasswordHandler);
 
+    // Group assignment routes
+    this.router.get('/assignable', this.getAssignableUsersHandler);
+    this.router.post('/assign-to-group', this.assignUserToGroupHandler);
+
     // Standard CRUD routes
     this.router.get('/:id', this.getUserHandler);
     this.router.get('/', this.getAllUserHandler);
@@ -79,7 +83,7 @@ export class UserRouter {
   });
   private getAllUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { cashier_number, filter_user_type } = req.query;
+    const { cashier_number, filter_user_type, group_id } = req.query;
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       throw new ForbiddenError('Los cajeros no pueden listar usuarios');
@@ -96,8 +100,23 @@ export class UserRouter {
       filterUserType = filter_user_type as USER_TYPE;
     }
 
+    // Determine which organization to query
+    let targetOrgId = req.organization_id!;
+
+    // CAPITALIST and OWNER can query users from a specific group in their network
+    if (group_id && typeof group_id === 'string') {
+      if ([USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user!.user.user_type)) {
+        // Verify group is in their network
+        const networkOrgIds = await this.controller.getNetworkOrgIds(req.organization_id!);
+        if (!networkOrgIds.includes(group_id)) {
+          throw new ForbiddenError('El grupo no pertenece a tu red de organizaciones');
+        }
+        targetOrgId = group_id;
+      }
+    }
+
     const users = await this.controller.getAll(
-      req.organization_id!,
+      targetOrgId,
       user!.user.user_type,
       parsedCashierNumber,
       filterUserType
@@ -268,6 +287,68 @@ export class UserRouter {
     const response: APIResponse<string> = {
       data: {
         user_id: result.user_id,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * GET /api/private/user/assignable?exclude_group_id=XXX
+   * Get users that can be assigned to groups
+   * Only OWNER and CAPITALIST can access
+   */
+  private getAssignableUsersHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { exclude_group_id } = req.query;
+    const { user } = req;
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    const users = await this.controller.getUsersForGroupAssignment(
+      req.organization_id!,
+      user.user.user_type,
+      exclude_group_id as string | undefined
+    );
+
+    const response: APIResponse<IUserEntityFront[]> = {
+      data: {
+        users,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/user/assign-to-group
+   * Assign a user to a group (change their organization_id)
+   * Only OWNER and CAPITALIST can access
+   * Body: { user_id: string, group_id: string }
+   */
+  private assignUserToGroupHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user_id, group_id } = req.body;
+    const { user } = req;
+
+    if (!user_id || !group_id) {
+      throw new BadRequestError('user_id y group_id son requeridos');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    const result = await this.controller.assignUserToGroup(
+      user_id,
+      group_id,
+      req.organization_id!,
+      user.user.user_type
+    );
+
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: result,
       },
     };
 

@@ -17,6 +17,9 @@ export const BACKEND_ROUTES = {
     changePassword: `${PRIVATE}/user/change-password`,
     validateCapitalist: (username: string, organizationId: string) =>
       `${PRIVATE}/user/validate-capitalist?username=${encodeURIComponent(username)}&organization_id=${encodeURIComponent(organizationId)}`,
+    assignable: (excludeGroupId?: string) =>
+      `${PRIVATE}/user/assignable${excludeGroupId ? `?exclude_group_id=${encodeURIComponent(excludeGroupId)}` : ''}`,
+    assignToGroup: `${PRIVATE}/user/assign-to-group`,
   },
   bet: {
     base: `${PRIVATE}/bet`,

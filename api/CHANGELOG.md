@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-03
+
+#### User Group Query Filter
+**Feature:** Added ability to query users by group_id for OWNER and CAPITALIST
+
+**Files Modified:**
+1. **`api/src/user/route/user.route.ts`**
+   - Added `group_id` query parameter to `getAllUserHandler`
+   - OWNER and CAPITALIST can query users from any group in their network
+   - Validates group belongs to user's organization network
+
+2. **`api/src/user/controller/user.controller.ts`**
+   - Added `getNetworkOrgIds()` method to get all org IDs in the hierarchy
+
 ### Added - 2026-01-02
 
 #### Groups/Sub-Organizations Feature - Hierarchical Organization Structure

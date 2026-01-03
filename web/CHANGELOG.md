@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-03
+
+#### Groups Feature - User Assignment and Display
+**Feature:** Enhanced groups page with user assignment functionality and improved UX
+
+**Files Created:**
+1. **`web/src/hooks/fetchs/users/useGroupUsers.ts`**
+   - New hook to fetch users belonging to a specific group
+   - Uses `group_id` query parameter to filter users
+   - Only enabled for OWNER and CAPITALIST roles
+
+**Files Modified:**
+1. **`web/src/features/groups/index.tsx`**
+   - Made group names clickable to select (cursor pointer, hover effect)
+   - Added visual highlight for selected group row
+   - Moved "Asignar Usuario" button next to "Usuarios del Grupo" header
+   - Added table to display users in selected group (number, name, type)
+   - Replaced incorrect useAssignableUsers with useGroupUsers for group members
+
+2. **`web/src/hooks/mutations/users/useAssignUserToGroup.ts`**
+   - Added `group-users` query invalidation on success
+
 ### Changed - 2026-01-02
 
 #### Frontend Updates for Groups/Sub-Organizations Feature

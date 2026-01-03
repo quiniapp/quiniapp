@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { UsersIcon, Users2Icon, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { UsersIcon, Users2Icon, Plus, Trash2, RefreshCw } from 'lucide-react';
 
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
@@ -29,9 +29,13 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 import { useCreateGroup } from '@/hooks/mutations/organization/useCreateGroup';
+import { useAssignableUsers } from '@/hooks/fetchs/users/useAssignableUsers';
+import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers';
+import { useAssignUserToGroup } from '@/hooks/mutations/users/useAssignUserToGroup';
 import { IOrganizationEntityFront } from '@helper/types/organization.type';
-import { USER_TYPE } from '@helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { INewUserEntity } from '@helper/request/user.request';
+import { userTypeDictionary } from '@helper/functions/userTypeDictionary';
 
 interface CreateGroupForm {
   organization: { name: string };
@@ -50,10 +54,24 @@ const UserGroupsContent = () => {
   const { role, organizationId } = useAuth();
   const { data: groups, isLoading, refetch } = useGroups(organizationId, role);
   const createGroupMutation = useCreateGroup();
+  const assignUserMutation = useAssignUserToGroup();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [includeSuperAdmin, setIncludeSuperAdmin] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<IOrganizationEntityFront | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+
+  // Get assignable users (excluding those already in the selected group)
+  const { data: assignableUsers, isLoading: isLoadingUsers } = useAssignableUsers(
+    role,
+    selectedGroup?.organization_id
+  );
+
+  // Get users that belong to the selected group
+  const { data: groupUsers, isLoading: isLoadingGroupUsers } = useGroupUsers(
+    selectedGroup?.organization_id || null,
+    role
+  );
 
   const {
     handleSubmit,
@@ -113,6 +131,19 @@ const UserGroupsContent = () => {
     }
   };
 
+  const handleAssignUser = async (user: IUserEntityFront) => {
+    if (!selectedGroup) return;
+
+    try {
+      await assignUserMutation.mutateAsync({
+        user_id: user.user_id,
+        group_id: selectedGroup.organization_id,
+      });
+    } catch (error) {
+      console.error('Error asignando usuario:', error);
+    }
+  };
+
   // Solo OWNER y CAPITALIST pueden ver grupos
   if (!role || ![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(role)) {
     return (
@@ -169,21 +200,21 @@ const UserGroupsContent = () => {
                     </TableRow>
                   ) : groups && groups.length > 0 ? (
                     groups.map((group) => (
-                      <TableRow key={group.organization_id} className="hover:bg-dark-lighter/50">
-                        <TableCell className="font-medium">{group.name}</TableCell>
+                      <TableRow
+                        key={group.organization_id}
+                        className={`hover:bg-dark-lighter/50 ${selectedGroup?.organization_id === group.organization_id ? 'bg-dark-lighter/30' : ''}`}
+                      >
+                        <TableCell
+                          className="font-medium cursor-pointer hover:text-primary"
+                          onClick={() => setSelectedGroup(group)}
+                        >
+                          {group.name}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {group.organization_id.slice(0, 8)}...
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedGroup(group)}
-                              className="gap-1"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -207,26 +238,72 @@ const UserGroupsContent = () => {
             </Flex>
           </FlexCol>
 
-          <div>
-            <HeaderTitleSection
-              title={'Usuarios del Grupo'}
-              icon={<UsersIcon size="24px" />}
-              variant={'lead'}
-              className={'!mb-[36px]'}
-            />
+          <FlexCol>
+            <div className="flex justify-between items-center !mb-[36px]">
+              <HeaderTitleSection
+                title={'Usuarios del Grupo'}
+                icon={<UsersIcon size="24px" />}
+                variant={'lead'}
+                className={'!mb-0'}
+              />
+              {selectedGroup && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAssignDialogOpen(true)}
+                  className="gap-1"
+                >
+                  <Plus className="h-4 w-4" />
+                  Asignar Usuario
+                </Button>
+              )}
+            </div>
             {selectedGroup ? (
-              <div className="border border-dark-lighter rounded-lg p-4">
+              <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Grupo seleccionado: <strong>{selectedGroup.name}</strong>
+                  Grupo: <strong>{selectedGroup.name}</strong> - Los usuarios asignados solo verán datos de este grupo.
                 </p>
-                {/* TODO: Mostrar usuarios del grupo seleccionado */}
+                <Flex className={'border border-dark-lighter rounded-lg overflow-hidden w-full'}>
+                  <Table>
+                    <TableHeader className="bg-dark-light">
+                      <TableRow>
+                        <TableHead className="text-white">Número</TableHead>
+                        <TableHead className="text-white">Nombre</TableHead>
+                        <TableHead className="text-white">Tipo</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoadingGroupUsers ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                            Cargando usuarios...
+                          </TableCell>
+                        </TableRow>
+                      ) : groupUsers && groupUsers.length > 0 ? (
+                        groupUsers.map((user) => (
+                          <TableRow key={user.user_id} className="hover:bg-dark-lighter/50">
+                            <TableCell>{user.number ?? '-'}</TableCell>
+                            <TableCell className="font-medium">{user.name} {user.last_name}</TableCell>
+                            <TableCell>{userTypeDictionary[user.user_type] ?? user.user_type}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                            No hay usuarios en este grupo
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </Flex>
               </div>
             ) : (
               <div className="border border-dark-lighter rounded-lg p-4 text-center text-muted-foreground">
                 Selecciona un grupo para ver sus usuarios
               </div>
             )}
-          </div>
+          </FlexCol>
         </Box>
       </FlexCol>
 
@@ -384,6 +461,68 @@ const UserGroupsContent = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Asignar Usuario */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Asignar Usuario al Grupo</DialogTitle>
+            <DialogDescription>
+              Selecciona un usuario para asignar al grupo{' '}
+              <strong>{selectedGroup?.name}</strong>. El usuario pasara a ver
+              solo los datos de este grupo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {isLoadingUsers ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Cargando usuarios...
+              </div>
+            ) : assignableUsers && assignableUsers.length > 0 ? (
+              <Table>
+                <TableHeader className="bg-dark-light">
+                  <TableRow>
+                    <TableHead className="text-white">Numero</TableHead>
+                    <TableHead className="text-white">Nombre</TableHead>
+                    <TableHead className="text-white">Tipo</TableHead>
+                    <TableHead className="text-white text-right">Accion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assignableUsers.map((user) => (
+                    <TableRow key={user.user_id} className="hover:bg-dark-lighter/50">
+                      <TableCell>{user.number ?? '-'}</TableCell>
+                      <TableCell>{user.name}</TableCell>
+                      <TableCell>{userTypeDictionary[user.user_type] ?? user.user_type}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignUser(user)}
+                          disabled={assignUserMutation.isPending}
+                        >
+                          {assignUserMutation.isPending ? 'Asignando...' : 'Asignar'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay usuarios disponibles para asignar
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Box>
