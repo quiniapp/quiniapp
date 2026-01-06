@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-01-05
+
+#### User List Table Scrolling
+**Fix:** User list table now scrolls properly when there are many users, with sticky headers
+
+**Changes in `web/src/features/user-list/user-table.tsx`:**
+- Added `max-h-[calc(100vh-280px)]` to table container to enable scrolling when content exceeds viewport
+- Added `h-full` to ensure table uses available space
+- Added `sticky top-0 z-10` to `TableHeader` to keep headers visible while scrolling
+- Users can now see all users in the list by scrolling while column headers remain fixed at the top
+
 ### Changed - 2026-01-02
 
 #### Repeat Ticket Modal - Custom Amount and Bet Order Grouping

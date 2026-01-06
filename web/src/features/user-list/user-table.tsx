@@ -52,9 +52,9 @@ const UsersTable = () => {
   if (error) return <div>Error al obtener usuarios</div>;
 
   return (
-    <div className="border border-dark-lighter rounded-lg overflow-y-auto w-full">
+    <div className="border border-dark-lighter rounded-lg overflow-y-auto w-full h-full max-h-[calc(100vh-280px)]">
       <Table>
-        <TableHeader className="bg-dark-light">
+        <TableHeader className="bg-dark-light sticky top-0 z-10">
           <TableRow>
             <TableHead className="text-white">Numero</TableHead>
             <TableHead className="text-white">Nombre</TableHead>
