@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ### Added - 2026-01-03
 
 #### Groups Feature - User Assignment and Display
@@ -28,6 +29,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 2. **`web/src/hooks/mutations/users/useAssignUserToGroup.ts`**
    - Added `group-users` query invalidation on success
+=======
+### Fixed - 2026-01-06
+
+#### User List Table - Sticky Header Fixed
+**Fix:** Table headers now remain visible while scrolling, preventing headers from scrolling away with content
+
+**Changes in `web/src/features/user-list/user-table.tsx`:**
+- Restructured table container with `flex flex-col` and `overflow-hidden` to properly handle sticky positioning
+- Moved `overflow-y-auto` to inner div wrapper with `flex-1` for correct scroll behavior
+- Changed from using `Table` and `TableHeader` components to native `<table>` and `<thead>` elements for better control
+- Added `bg-dark-light` class to each `TableHead` cell to ensure solid background covers scrolling content
+- Maintained `sticky top-0 z-10` on thead for proper sticky positioning
+- **Why:** Previous implementation had overflow on parent container which prevented sticky positioning from working correctly. Headers now stay fixed at top while table body scrolls independently.
+
+### Fixed - 2026-01-05
+
+#### User List Table Scrolling
+**Fix:** User list table now scrolls properly when there are many users, with sticky headers
+
+**Changes in `web/src/features/user-list/user-table.tsx`:**
+- Added `max-h-[calc(100vh-280px)]` to table container to enable scrolling when content exceeds viewport
+- Added `h-full` to ensure table uses available space
+- Added `sticky top-0 z-10` to `TableHeader` to keep headers visible while scrolling
+- Users can now see all users in the list by scrolling while column headers remain fixed at the top
+>>>>>>> 5168f83160877d2f43cdfa931f3d0db39c465ad3
 
 ### Changed - 2026-01-02
 
