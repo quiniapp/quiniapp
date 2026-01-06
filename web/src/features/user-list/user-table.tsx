@@ -2,8 +2,6 @@ import { EditIcon, TrashIcon, KeyRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableHeader,
   TableBody,
   TableRow,
   TableHead,
@@ -52,22 +50,23 @@ const UsersTable = () => {
   if (error) return <div>Error al obtener usuarios</div>;
 
   return (
-    <div className="border border-dark-lighter rounded-lg overflow-y-auto w-full h-full max-h-[calc(100vh-280px)]">
-      <Table>
-        <TableHeader className="bg-dark-light sticky top-0 z-10">
-          <TableRow>
-            <TableHead className="text-white">Numero</TableHead>
-            <TableHead className="text-white">Nombre</TableHead>
-            <TableHead className="text-white">Grupo</TableHead>
-            <TableHead className="text-white">Comision</TableHead>
-            <TableHead className="text-white">Deje</TableHead>
-            <TableHead className="text-white">Conexion</TableHead>
-            <TableHead className="text-white">Cuenta</TableHead>
-            <TableHead className="text-white">Editar</TableHead>
-            <TableHead className="text-white">Contraseña</TableHead>
-            <TableHead className="text-white">Eliminar</TableHead>
-          </TableRow>
-        </TableHeader>
+    <div className="border border-dark-lighter rounded-lg overflow-hidden w-full h-full max-h-[calc(100vh-280px)] flex flex-col">
+      <div className="overflow-y-auto flex-1">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="bg-dark-light sticky top-0 z-10 [&_tr]:border-b">
+            <TableRow>
+              <TableHead className="text-white bg-dark-light">Numero</TableHead>
+              <TableHead className="text-white bg-dark-light">Nombre</TableHead>
+              <TableHead className="text-white bg-dark-light">Grupo</TableHead>
+              <TableHead className="text-white bg-dark-light">Comision</TableHead>
+              <TableHead className="text-white bg-dark-light">Deje</TableHead>
+              <TableHead className="text-white bg-dark-light">Conexion</TableHead>
+              <TableHead className="text-white bg-dark-light">Cuenta</TableHead>
+              <TableHead className="text-white bg-dark-light">Editar</TableHead>
+              <TableHead className="text-white bg-dark-light">Contraseña</TableHead>
+              <TableHead className="text-white bg-dark-light">Eliminar</TableHead>
+            </TableRow>
+          </thead>
         <TableBody>
           {data && data.length === 0 ? (
             <TableRow>
@@ -127,7 +126,8 @@ const UsersTable = () => {
             </TableRow>
           )))}
         </TableBody>
-      </Table>
+        </table>
+      </div>
       <Suspense fallback={<div>Cargando...</div>}>
         <DeleteUsersModal
           isOpen={open}
