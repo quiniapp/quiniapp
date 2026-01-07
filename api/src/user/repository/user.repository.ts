@@ -38,7 +38,7 @@ export class UserRepository {
       .eq('organization_id', organization_id)
       .single();
 
-    if (error) throw new Error(error.details);
+    if (error) throw new Error(error.details || error.message || JSON.stringify(error));
     return data;
   }
 
@@ -54,7 +54,7 @@ export class UserRepository {
       .is('deleted_at', null)
       .single();
 
-    if (error) throw new Error(error.details);
+    if (error) throw new Error(error.details || error.message || JSON.stringify(error));
     return data;
   }
 
@@ -67,7 +67,7 @@ export class UserRepository {
       .is('deleted_at', null)
       .single();
 
-    if (error) throw new Error(error.details);
+    if (error) throw new Error(error.details || error.message || JSON.stringify(error));
     return data;
   }
 
@@ -160,7 +160,9 @@ export class UserRepository {
 
     const { data, error } = await query;
 
-    if (error) throw new Error(error.details);
+    if (error) {
+      throw new Error(error.details || error.message || JSON.stringify(error));
+    }
     return data || [];
   }
 
@@ -180,7 +182,7 @@ export class UserRepository {
       .eq('organization_id', organization_id)
       .select()
       .single();
-    if (error) throw new Error(error.details);
+    if (error) throw new Error(error.details || error.message || JSON.stringify(error));
     return data;
   }
 
@@ -193,7 +195,7 @@ export class UserRepository {
       .eq('organization_id', organization_id)
       .select()
       .single();
-    if (error) throw new Error(error.details);
+    if (error) throw new Error(error.details || error.message || JSON.stringify(error));
     return data;
   }
 
@@ -205,7 +207,7 @@ export class UserRepository {
       .select()
       .single();
 
-    if (error) throw new Error(error.details);
+    if (error) throw new Error(error.details || error.message || JSON.stringify(error));
     return data;
   }
 

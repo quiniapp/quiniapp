@@ -7,30 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-<<<<<<< HEAD
-### Added - 2026-01-03
+### Added - 2026-01-06
 
-#### Groups Feature - User Assignment and Display
-**Feature:** Enhanced groups page with user assignment functionality and improved UX
+#### User Creation Form - SuperAdmin Support with Role-Based Hierarchy
+**Feature:** Added ability to create SUPERADMIN users with role-based hierarchy restrictions
 
-**Files Created:**
-1. **`web/src/hooks/fetchs/users/useGroupUsers.ts`**
-   - New hook to fetch users belonging to a specific group
-   - Uses `group_id` query parameter to filter users
-   - Only enabled for OWNER and CAPITALIST roles
+**Changes in `web/src/features/user-list/user-list-form.tsx`:**
+- Imported `useAuth` from `@/contexts/AuthContext` to access current user's role
+- Added `availableUserTypes` logic that determines which user types can be created based on hierarchy:
+  - OWNER can create: SUPERADMIN, ADMIN, CASHIER
+  - SUPERADMIN can create: ADMIN, CASHIER
+  - ADMIN can create: CASHIER
+- Added SUPERADMIN option to user type Select dropdown with 🔱 icon
+- Updated `shouldShowCashierType` to only display for CASHIER users (hidden for SUPERADMIN and ADMIN)
+- Updated `shouldShowCommissionFields` to only display for CASHIER users (hidden for SUPERADMIN and ADMIN)
+- Updated `isAvailable` logic to show login credentials for SUPERADMIN and ADMIN always, CASHIER only when not STREET type
+- Conditional rendering: "Tipo de pasador" field only shows when user type is CASHIER
+- Conditional rendering: Commission fields (fee, fee_plus) only show when user type is CASHIER
+- **Why:** Enforces proper user hierarchy (OWNER → SUPERADMIN → ADMIN → CASHIER) where higher roles can create lower roles but not vice versa. SUPERADMIN users don't need cashier-specific fields like commissions or cashier type.
 
-**Files Modified:**
-1. **`web/src/features/groups/index.tsx`**
-   - Made group names clickable to select (cursor pointer, hover effect)
-   - Added visual highlight for selected group row
-   - Moved "Asignar Usuario" button next to "Usuarios del Grupo" header
-   - Added table to display users in selected group (number, name, type)
-   - Replaced incorrect useAssignableUsers with useGroupUsers for group members
+**User Experience:**
+- Form adapts based on logged-in user's role - only shows user types they're authorized to create
+- Fields automatically show/hide based on selected user type (SUPERADMIN/ADMIN don't see cashier fields)
+- SUPERADMIN and ADMIN always get login credentials, while CASHIER credentials depend on cashier type
 
-2. **`web/src/hooks/mutations/users/useAssignUserToGroup.ts`**
-   - Added `group-users` query invalidation on success
-=======
 ### Fixed - 2026-01-06
+
+#### User List Filter - Select Value Binding and Initial State
+**Fix:** User type filter select now correctly reflects selected value and shows all users by default
+
+**Changes in `web/src/features/user-list/header-user-list.tsx`:**
+- Added `filterUserType` to destructuring from `useUserListContext()` (was only getting `setFilterUserType`)
+- Changed Select `value` from hardcoded `USER_TYPE.CASHIER` to `selectValue` variable
+- Added `selectValue` computed value that converts `filterUserType` to select value (`undefined` → `'TODOS'`)
+- Reordered options to show "TODOS" first, matching the default initial state
+- **Why:** Select was hardcoded to always show CASHIER, preventing UI from reflecting actual filter state. Now select value is bound to context state.
+
+**Changes in `web/src/features/user-list/UserListContext.tsx`:**
+- Changed initial `filterUserType` state from `USER_TYPE.CASHIER` to `undefined`
+- **Why:** Initial state should show all users (undefined filter) rather than filtering to CASHIER only.
+
+**User Experience:**
+- On page load, "TODOS" is selected and all users in the organization are displayed
+- Selecting "PASADORES" filters to show only CASHIER users
+- Selecting "ADMIN" or "SUPERADMIN" filters to those types accordingly
+- Select dropdown visually reflects the current active filter
 
 #### User List Table - Sticky Header Fixed
 **Fix:** Table headers now remain visible while scrolling, preventing headers from scrolling away with content
@@ -53,7 +74,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `h-full` to ensure table uses available space
 - Added `sticky top-0 z-10` to `TableHeader` to keep headers visible while scrolling
 - Users can now see all users in the list by scrolling while column headers remain fixed at the top
->>>>>>> 5168f83160877d2f43cdfa931f3d0db39c465ad3
+
+### Added - 2026-01-03
+
+#### Groups Feature - User Assignment and Display
+**Feature:** Enhanced groups page with user assignment functionality and improved UX
+
+**Files Created:**
+1. **`web/src/hooks/fetchs/users/useGroupUsers.ts`**
+   - New hook to fetch users belonging to a specific group
+   - Uses `group_id` query parameter to filter users
+   - Only enabled for OWNER and CAPITALIST roles
+
+**Files Modified:**
+1. **`web/src/features/groups/index.tsx`**
+   - Made group names clickable to select (cursor pointer, hover effect)
+   - Added visual highlight for selected group row
+   - Moved "Asignar Usuario" button next to "Usuarios del Grupo" header
+   - Added table to display users in selected group (number, name, type)
+   - Replaced incorrect useAssignableUsers with useGroupUsers for group members
+
+2. **`web/src/hooks/mutations/users/useAssignUserToGroup.ts`**
+   - Added `group-users` query invalidation on success
 
 ### Changed - 2026-01-02
 

@@ -43,8 +43,11 @@ import { CASHIER_TYPE, USER_TYPE } from '@helper/types/user.type';
 import { ErrorMessage } from '@/components/atoms/ErrorMessage';
 import { Text } from '@/components/atoms/Text';
 import { INewUserEntity } from '@helper/request/user.request';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function UserListAddNewUserForm() {
+  const { role } = useAuth();
+
   const {
     handleSubmit,
     control,
@@ -88,17 +91,41 @@ export default function UserListAddNewUserForm() {
   const useResetForm = () => {
     reset();
   };
-  const isAvailable = useMemo(() => {
-    return watch('cashier_type') !== CASHIER_TYPE.STREET;
-  }, [watch('cashier_type')]);
-
-  const isAdmin = useMemo(() => {
-    return watch('user_type') === USER_TYPE.ADMIN;
-  }, [watch('user_type')]);
 
   const selectedUserType = watch('user_type');
+  const selectedCashierType = watch('cashier_type');
+
+  const isAvailable = useMemo(() => {
+    // SUPERADMIN y ADMIN siempre tienen credenciales, CASHIER solo si no es de calle
+    return selectedUserType === USER_TYPE.SUPERADMIN ||
+           selectedUserType === USER_TYPE.ADMIN ||
+           (selectedUserType === USER_TYPE.CASHIER && selectedCashierType !== CASHIER_TYPE.STREET);
+  }, [selectedUserType, selectedCashierType]);
+
   const shouldShowNumberField = useMemo(() => {
     return selectedUserType === USER_TYPE.ADMIN || selectedUserType === USER_TYPE.CASHIER;
+  }, [selectedUserType]);
+
+  // Determinar qué tipos de usuario puede crear según la jerarquía
+  const availableUserTypes = useMemo(() => {
+    if (role === USER_TYPE.OWNER) {
+      return [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER];
+    } else if (role === USER_TYPE.SUPERADMIN) {
+      return [USER_TYPE.ADMIN, USER_TYPE.CASHIER];
+    } else if (role === USER_TYPE.ADMIN) {
+      return [USER_TYPE.CASHIER];
+    }
+    return [];
+  }, [role]);
+
+  // Determinar si se debe mostrar el campo de tipo de cajero
+  const shouldShowCashierType = useMemo(() => {
+    return selectedUserType === USER_TYPE.CASHIER;
+  }, [selectedUserType]);
+
+  // Determinar si se debe mostrar los campos de comisión
+  const shouldShowCommissionFields = useMemo(() => {
+    return selectedUserType === USER_TYPE.CASHIER;
   }, [selectedUserType]);
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -164,8 +191,15 @@ export default function UserListAddNewUserForm() {
                       <SelectValue placeholder="Seleccione el tipo" className="text-white" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={USER_TYPE.ADMIN}>👑 Admin</SelectItem>
-                      <SelectItem value={USER_TYPE.CASHIER}>💼 Cajero</SelectItem>
+                      {availableUserTypes.includes(USER_TYPE.SUPERADMIN) && (
+                        <SelectItem value={USER_TYPE.SUPERADMIN}>🔱 SuperAdmin</SelectItem>
+                      )}
+                      {availableUserTypes.includes(USER_TYPE.ADMIN) && (
+                        <SelectItem value={USER_TYPE.ADMIN}>👑 Admin</SelectItem>
+                      )}
+                      {availableUserTypes.includes(USER_TYPE.CASHIER) && (
+                        <SelectItem value={USER_TYPE.CASHIER}>💼 Cajero</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -175,90 +209,93 @@ export default function UserListAddNewUserForm() {
               )}
             </FlexCol>
 
-            <FlexCol className="space-y-2">
-              <Label htmlFor="cashier_type" className="flex items-center gap-2 text-sm font-medium">
-                <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                Tipo de pasador
-              </Label>
-              <Controller
-                name="cashier_type"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value ?? undefined}
-                    disabled={isAdmin}
-                  >
-                    <SelectTrigger
-                      className="h-10 text-white transition-all focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+            {shouldShowCashierType && (
+              <FlexCol className="space-y-2">
+                <Label htmlFor="cashier_type" className="flex items-center gap-2 text-sm font-medium">
+                  <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                  Tipo de pasador
+                </Label>
+                <Controller
+                  name="cashier_type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? undefined}
                     >
-                      <SelectValue placeholder="Seleccione el tipo" className="text-white" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={CASHIER_TYPE.STREET}>🚶 Calle</SelectItem>
-                      <SelectItem value={CASHIER_TYPE.PC}>💻 PC</SelectItem>
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        className="h-10 text-white transition-all focus:ring-2 focus:ring-primary/20"
+                      >
+                        <SelectValue placeholder="Seleccione el tipo" className="text-white" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={CASHIER_TYPE.STREET}>🚶 Calle</SelectItem>
+                        <SelectItem value={CASHIER_TYPE.PC}>💻 PC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.cashier_type?.message && (
+                  <ErrorMessage>{errors.cashier_type.message}</ErrorMessage>
                 )}
-              />
-              {errors.cashier_type?.message && (
-                <ErrorMessage>{errors.cashier_type.message}</ErrorMessage>
-              )}
-            </FlexCol>
+              </FlexCol>
+            )}
           </div>
 
           {/* Segunda fila - Comisiones */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 pt-4 border-t">
-            <FlexCol className="space-y-2">
-              <Label htmlFor="fee" className="flex items-center gap-2 text-sm font-medium">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                Comisión
-              </Label>
-              <Controller
-                name="fee"
-                control={control}
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <div className="relative">
-                    <Input
-                      {...rest}
-                      id="fee"
-                      type="number"
-                      placeholder="0.00"
-                      className="h-10 pr-8 transition-all focus:ring-2 focus:ring-primary/20"
-                      value={value ?? ''}
-                      onChange={(e) => onChange(e.target.valueAsNumber || 0)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                  </div>
-                )}
-              />
-            </FlexCol>
+          {shouldShowCommissionFields && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 pt-4 border-t">
+              <FlexCol className="space-y-2">
+                <Label htmlFor="fee" className="flex items-center gap-2 text-sm font-medium">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  Comisión
+                </Label>
+                <Controller
+                  name="fee"
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <div className="relative">
+                      <Input
+                        {...rest}
+                        id="fee"
+                        type="number"
+                        placeholder="0.00"
+                        className="h-10 pr-8 transition-all focus:ring-2 focus:ring-primary/20"
+                        value={value ?? ''}
+                        onChange={(e) => onChange(e.target.valueAsNumber || 0)}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                    </div>
+                  )}
+                />
+              </FlexCol>
 
-            <FlexCol className="space-y-2">
-              <Label htmlFor="fee_plus" className="flex items-center gap-2 text-sm font-medium">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                Deje
-              </Label>
-              <Controller
-                name="fee_plus"
-                control={control}
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <div className="relative">
-                    <Input
-                      {...rest}
-                      id="fee_plus"
-                      type="number"
-                      placeholder="0.00"
-                      className="h-10 pr-8 transition-all focus:ring-2 focus:ring-primary/20"
-                      value={value ?? ''}
-                      onChange={(e) => onChange(e.target.valueAsNumber || 0)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                  </div>
-                )}
-              />
-            </FlexCol>
-          </div>
+              <FlexCol className="space-y-2">
+                <Label htmlFor="fee_plus" className="flex items-center gap-2 text-sm font-medium">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  Deje
+                </Label>
+                <Controller
+                  name="fee_plus"
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <div className="relative">
+                      <Input
+                        {...rest}
+                        id="fee_plus"
+                        type="number"
+                        placeholder="0.00"
+                        className="h-10 pr-8 transition-all focus:ring-2 focus:ring-primary/20"
+                        value={value ?? ''}
+                        onChange={(e) => onChange(e.target.valueAsNumber || 0)}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                    </div>
+                  )}
+                />
+              </FlexCol>
+            </div>
+          )}
         </CardContent>
       </Card>
 
