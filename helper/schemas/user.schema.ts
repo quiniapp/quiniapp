@@ -61,6 +61,16 @@ const ownerSchema = baseSchema.extend({
   password: z.string().min(1, 'Password is required'),
 });
 
+// Schema para CAPITALIST (number opcional)
+const capitalistSchema = baseSchema.extend({
+  user_type: z.literal(USER_TYPE.CAPITALIST),
+  cashier_type: z.null().optional(),
+  fee: z.null().optional(),
+  fee_plus: z.null().optional(),
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
 // Schema para SUPERADMIN (number opcional)
 const superAdminSchema = baseSchema.extend({
   user_type: z.literal(USER_TYPE.SUPERADMIN),
@@ -71,12 +81,13 @@ const superAdminSchema = baseSchema.extend({
   password: z.string().min(1, 'Password is required'),
 });
 
-// Unión final
+// Unión final - orden jerárquico: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER
 export const UserSchema = z.union([
   cashierStreetSchema,
   cashierPCSchema,
   adminSchema,
   ownerSchema,
+  capitalistSchema,
   superAdminSchema,
 ]);
 

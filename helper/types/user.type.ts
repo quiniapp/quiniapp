@@ -1,9 +1,11 @@
 /* eslint-disable no-unused-vars */
+// User hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER
 export enum USER_TYPE {
   OWNER = 'OWNER',
+  CAPITALIST = 'CAPITALIST',
+  SUPERADMIN = 'SUPERADMIN',
   ADMIN = 'ADMIN',
   CASHIER = 'CASHIER',
-  SUPERADMIN = 'SUPERADMIN',
 }
 
 export enum CASHIER_TYPE {
@@ -18,7 +20,6 @@ interface BaseUserEntityBack {
   name: string;
   organization_id: string;
   username?: string | null;
-  group_id?: string | null;
   last_name?: string | null;
   address?: string | null;
   phone?: number | null;
@@ -38,9 +39,9 @@ interface BaseUserEntityBack {
   last_login_ip?: string | null;
 }
 
-// Usuario tipo OWNER o ADMIN
+// Usuario tipo OWNER, CAPITALIST, SUPERADMIN o ADMIN (no-cashier users)
 export interface OwnerOrAdminUserEntityBack extends BaseUserEntityBack {
-  user_type: USER_TYPE.OWNER | USER_TYPE.ADMIN | USER_TYPE.SUPERADMIN;
+  user_type: USER_TYPE.OWNER | USER_TYPE.CAPITALIST | USER_TYPE.SUPERADMIN | USER_TYPE.ADMIN;
   cashier_type: null;
   fee: null;
   fee_plus: null;
@@ -62,16 +63,14 @@ export type IBaseUserEntityFront = Omit<
   'created_at' | 'deleted_at' | 'edited_at' | 'organization_id'
 >;
 
-// Usuario tipo OWNER o ADMIN
+// Usuario tipo OWNER, CAPITALIST, SUPERADMIN o ADMIN (no-cashier users)
 export interface OwnerOrAdminUserEntityFront extends IBaseUserEntityFront {
-  user_type: USER_TYPE.OWNER | USER_TYPE.ADMIN | USER_TYPE.SUPERADMIN;
-  group_id?: string | null;
+  user_type: USER_TYPE.OWNER | USER_TYPE.CAPITALIST | USER_TYPE.SUPERADMIN | USER_TYPE.ADMIN;
 }
 
 // Usuario tipo CASHIER
 export interface CashierUserEntityFront extends IBaseUserEntityFront {
   user_type: USER_TYPE.CASHIER;
-  group_id?: string | null;
   cashier_type: CASHIER_TYPE;
   fee: number;
   fee_plus: number;

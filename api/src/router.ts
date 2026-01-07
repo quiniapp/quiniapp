@@ -18,6 +18,7 @@ const authRouter = new AuthRouter();
 
 // Rutas públicas
 publicRouter.use('/auth', authRouter.publicRouter);
+// publicRouter.use('/user', new UserRouter().router);
 
 // Rutas privadas
 router.use('/auth', authRouter.privateRouter);

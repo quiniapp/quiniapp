@@ -70,7 +70,7 @@ const UsersTable = () => {
         <TableBody>
           {data && data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                 No hay usuarios disponibles
               </TableCell>
             </TableRow>
@@ -79,11 +79,10 @@ const UsersTable = () => {
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
               <TableCell>{user.name}</TableCell>
-              <TableCell>{user.group_id}</TableCell>
+              <TableCell>{`${userTypeDictionary[user.user_type] ?? ''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee : '-'}</TableCell>
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee_plus : '-'}</TableCell>
               <TableCell>{user.address}</TableCell>
-              <TableCell>{`${userTypeDictionary[user.user_type] ?? ''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
               <TableCell>
                 <Button
                   variant="ghost"
