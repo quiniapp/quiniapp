@@ -20,8 +20,6 @@ export const NODE_ENV =
 export const IS_LOCAL = ENVIROMENT === 'LOCAL';
 export const IS_PRODUCTION = NODE_ENV === 'production' || ENVIROMENT === 'PRODUCTION';
 
-export const JWT_SECRET_USER = must(process.env.JWT_SECRET_USER, 'JWT_SECRET_USER');
-
 // JWT Secrets for custom authentication (Phase 1)
 export const JWT_SECRET_ACCESS = must(process.env.JWT_SECRET_ACCESS, 'JWT_SECRET_ACCESS');
 export const JWT_SECRET_REFRESH = must(process.env.JWT_SECRET_REFRESH, 'JWT_SECRET_REFRESH');
