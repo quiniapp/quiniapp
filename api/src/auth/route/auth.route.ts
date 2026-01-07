@@ -174,9 +174,12 @@ export class AuthRouter {
       throw new UnauthorizedError('Usuario no encontrado');
     }
 
-    const response: APIResponse<IUserEntityFront> = {
+    const response: APIResponse<IUserEntityFront & { organization_id: string }> = {
       data: {
-        user,
+        user: {
+          ...user,
+          organization_id: req.organization_id!,
+        },
       },
     };
 

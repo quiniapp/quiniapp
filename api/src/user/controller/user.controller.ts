@@ -20,8 +20,26 @@ import { AuditRepository } from 'api/src/session/repository/audit.repository';
 import { AuthRepository } from 'api/src/auth/repository/auth.repository';
 // import { generateEmail } from 'helper/generateEmail';
 
+// User hierarchy levels for permission checks
+// Lower number = higher privilege
+const USER_HIERARCHY: Record<USER_TYPE, number> = {
+  [USER_TYPE.OWNER]: 0,
+  [USER_TYPE.CAPITALIST]: 1,
+  [USER_TYPE.SUPERADMIN]: 2,
+  [USER_TYPE.ADMIN]: 3,
+  [USER_TYPE.CASHIER]: 4,
+};
+
 export class UserController {
   private repository = new UserRepository();
+
+  /**
+   * Check if admin user can manage target user based on hierarchy
+   * Returns true if admin has higher privilege than target
+   */
+  canManageUser = (adminType: USER_TYPE, targetType: USER_TYPE): boolean => {
+    return USER_HIERARCHY[adminType] < USER_HIERARCHY[targetType];
+  };
 
   create = async (newUser: INewUserEntity, organization_id: string): Promise<IUserEntityFront> => {
     const user = await buildUserForDB(newUser, organization_id);
@@ -67,23 +85,23 @@ export class UserController {
   };
 
   /**
-   * Validate that a user exists and is SUPERADMIN of the specified organization
-   * Used by OWNER when resetting SUPERADMIN passwords from organizations page
+   * Validate that a user exists and is CAPITALIST of the specified organization
+   * Used by OWNER when resetting CAPITALIST passwords from organizations page
    */
-  validateSuperAdmin = async (
+  validateCapitalist = async (
     username: string,
     organization_id: string,
     adminUserType: USER_TYPE
   ): Promise<{ user_id: string; username: string }> => {
     // Only OWNER can use this endpoint
     if (adminUserType !== USER_TYPE.OWNER) {
-      throw new ForbiddenError('Solo el OWNER puede validar SUPERADMIN de otras organizaciones');
+      throw new ForbiddenError('Solo el OWNER puede validar CAPITALIST de otras organizaciones');
     }
 
     const user = await this.repository.getByUsernameAndOrganization(username, organization_id);
 
-    if (user.user_type !== USER_TYPE.SUPERADMIN) {
-      throw new BadRequestError('El usuario no es SUPERADMIN de esta organización');
+    if (user.user_type !== USER_TYPE.CAPITALIST) {
+      throw new BadRequestError('El usuario no es CAPITALIST de esta organización');
     }
 
     return {
@@ -103,9 +121,10 @@ export class UserController {
    * @param newPassword - Optional new password (if not provided, generates random)
    * @returns Object with the new password
    *
-   * Permission Rules:
-   * - OWNER: Can reset SUPERADMIN (any org), ADMIN/CASHIER (own org only)
-   * - SUPERADMIN: Can reset ADMIN/CASHIER (own org only)
+   * Permission Rules (hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER):
+   * - OWNER: Can reset CAPITALIST (any org), SUPERADMIN/ADMIN/CASHIER (own org only)
+   * - CAPITALIST: Can reset SUPERADMIN/ADMIN/CASHIER (own org + sub-orgs)
+   * - SUPERADMIN: Can reset ADMIN/CASHIER (own org/group only)
    * - ADMIN: Can reset CASHIER (own org only)
    * - CASHIER: Cannot reset passwords (use changePassword instead)
    */
@@ -116,34 +135,53 @@ export class UserController {
     adminOrgId: string,
     newPassword?: string
   ): Promise<{ password: string }> => {
-    // Check base permissions - only OWNER, SUPERADMIN, ADMIN can reset passwords
-    if (![USER_TYPE.OWNER, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(adminUserType)) {
+    // Check base permissions - only OWNER, CAPITALIST, SUPERADMIN, ADMIN can reset passwords
+    if (
+      ![USER_TYPE.OWNER, USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(
+        adminUserType
+      )
+    ) {
       throw new ForbiddenError('No tienes permisos para resetear contraseñas');
     }
 
     // Get target user to check their type and organization
-    // For OWNER, fetch without org restriction to allow resetting SUPERADMIN from other orgs
+    // For OWNER, fetch without org restriction to allow resetting CAPITALIST from other orgs
     let targetUser;
     if (adminUserType === USER_TYPE.OWNER) {
       targetUser = await this.repository.getByIdWithoutOrgRestriction(targetUserId);
+    } else if (adminUserType === USER_TYPE.CAPITALIST) {
+      // CAPITALIST can reset users from their org + sub-orgs
+      const descendantOrgs = await this.repository.getOrganizationDescendants(adminOrgId);
+      targetUser = await this.repository.getByIdWithoutOrgRestriction(targetUserId);
+      if (!descendantOrgs.includes(targetUser.organization_id)) {
+        throw new ForbiddenError(
+          'Solo puedes resetear contraseñas de usuarios de tu organización o sub-organizaciones'
+        );
+      }
     } else {
       targetUser = await this.repository.getById(targetUserId, adminOrgId);
     }
 
-    // Hierarchical permission validation
+    // Validate hierarchy - cannot reset password of same level or higher
+    if (!this.canManageUser(adminUserType, targetUser.user_type)) {
+      throw new ForbiddenError(
+        'No puedes resetear la contraseña de un usuario de igual o mayor jerarquía'
+      );
+    }
+
+    // Additional organization-based restrictions
     switch (adminUserType) {
       case USER_TYPE.OWNER:
         // OWNER can reset:
-        // - SUPERADMIN from any organization
-        // - ADMIN/CASHIER from their own organization only
-        if (targetUser.user_type === USER_TYPE.OWNER) {
-          throw new ForbiddenError('No puedes resetear la contraseña de otro OWNER');
-        }
-        if (targetUser.user_type === USER_TYPE.SUPERADMIN) {
-          // OWNER can reset SUPERADMIN from any organization - allow it
+        // - CAPITALIST from any organization
+        // - SUPERADMIN/ADMIN/CASHIER from their own organization only
+        if (targetUser.user_type === USER_TYPE.CAPITALIST) {
+          // OWNER can reset CAPITALIST from any organization - allow it
           break;
         }
-        if ([USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(targetUser.user_type)) {
+        if (
+          [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(targetUser.user_type)
+        ) {
           // Must be from same organization
           if (targetUser.organization_id !== adminOrgId) {
             throw new ForbiddenError(
@@ -153,11 +191,13 @@ export class UserController {
         }
         break;
 
+      case USER_TYPE.CAPITALIST:
+        // CAPITALIST can reset SUPERADMIN/ADMIN/CASHIER from their org + sub-orgs
+        // Already validated above with getOrganizationDescendants
+        break;
+
       case USER_TYPE.SUPERADMIN:
         // SUPERADMIN can reset ADMIN/CASHIER from their own organization only
-        if ([USER_TYPE.OWNER, USER_TYPE.SUPERADMIN].includes(targetUser.user_type)) {
-          throw new ForbiddenError('No puedes resetear la contraseña de un OWNER o SUPERADMIN');
-        }
         if (targetUser.organization_id !== adminOrgId) {
           throw new ForbiddenError(
             'Solo puedes resetear contraseñas de usuarios de tu organización'
@@ -167,9 +207,6 @@ export class UserController {
 
       case USER_TYPE.ADMIN:
         // ADMIN can reset CASHIER from their own organization only
-        if (targetUser.user_type !== USER_TYPE.CASHIER) {
-          throw new ForbiddenError('Solo puedes resetear contraseñas de cajeros');
-        }
         if (targetUser.organization_id !== adminOrgId) {
           throw new ForbiddenError(
             'Solo puedes resetear contraseñas de cajeros de tu organización'
@@ -275,5 +312,89 @@ export class UserController {
       event_type: 'password_changed',
       success: true,
     });
+  };
+
+  /**
+   * Get all organization IDs in the network (for permission checks)
+   */
+  getNetworkOrgIds = async (organizationId: string): Promise<string[]> => {
+    const descendants = await this.repository.getOrganizationDescendants(organizationId);
+    return [organizationId, ...descendants];
+  };
+
+  /**
+   * Assign a user to a group (change their organization_id)
+   * Only CAPITALIST and OWNER can assign users to groups
+   */
+  assignUserToGroup = async (
+    userId: string,
+    targetGroupId: string,
+    adminOrgId: string,
+    adminUserType: USER_TYPE
+  ): Promise<IUserEntityFront> => {
+    // Only CAPITALIST and OWNER can assign users
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(adminUserType)) {
+      throw new ForbiddenError('Solo OWNER y CAPITALIST pueden asignar usuarios a grupos');
+    }
+
+    // Get the network of organizations (parent + all descendants)
+    const networkOrgIds = [
+      adminOrgId,
+      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
+    ];
+
+    // Get target user
+    const targetUser = await this.repository.getByIdWithoutOrgRestriction(userId);
+    if (!targetUser) {
+      throw new BadRequestError('Usuario no encontrado');
+    }
+
+    // Verify user is in the network
+    if (!networkOrgIds.includes(targetUser.organization_id)) {
+      throw new ForbiddenError('El usuario no pertenece a tu red de organizaciones');
+    }
+
+    // Verify target group is in the network
+    if (!networkOrgIds.includes(targetGroupId)) {
+      throw new ForbiddenError('El grupo destino no pertenece a tu red de organizaciones');
+    }
+
+    // Cannot assign CAPITALIST to a group
+    if (targetUser.user_type === USER_TYPE.CAPITALIST) {
+      throw new ForbiddenError('No se puede reasignar un CAPITALIST');
+    }
+
+    // Perform the assignment
+    const result = await this.repository.assignToGroup(
+      userId,
+      targetUser.organization_id,
+      targetGroupId
+    );
+
+    return parseUser(result);
+  };
+
+  /**
+   * Get users available for assignment to groups
+   * Returns users from the network (excluding those already in the target group)
+   */
+  getUsersForGroupAssignment = async (
+    adminOrgId: string,
+    adminUserType: USER_TYPE,
+    excludeGroupId?: string
+  ): Promise<IUserEntityFront[]> => {
+    // Only CAPITALIST and OWNER can see assignable users
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(adminUserType)) {
+      throw new ForbiddenError('Solo OWNER y CAPITALIST pueden ver usuarios asignables');
+    }
+
+    // Get the network of organizations
+    const networkOrgIds = [
+      adminOrgId,
+      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
+    ];
+
+    const users = await this.repository.getUsersForGroupAssignment(networkOrgIds, excludeGroupId);
+    return users.map((user) => parseUser(user));
   };
 }

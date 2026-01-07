@@ -16,7 +16,6 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
   if (user.user_type === USER_TYPE.CASHIER) {
     return {
       ...base,
-      group_id: user.group_id,
       user_type: USER_TYPE.CASHIER,
       cashier_type: user.cashier_type,
       fee: user.fee,
@@ -24,10 +23,9 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
     };
   }
 
-  // Para OWNER o ADMIN
+  // Para OWNER, CAPITALIST, SUPERADMIN o ADMIN
   return {
     ...base,
     user_type: user.user_type,
-    group_id: user.group_id,
   };
 };
