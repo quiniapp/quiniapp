@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { ClockIcon } from 'lucide-react';
 import Box from '@/components/box';
 import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
@@ -8,6 +8,7 @@ import { useClock } from '@/providers/ClockProvider';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
 import { Text } from '@/components/atoms/Text';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface SchedulesProps {
   time: string;
@@ -50,8 +51,57 @@ const SchedulesCheckboxListDesktop = ({
   const isEnabled = (t: string) =>
     (isScheduleAfter(t) && !isLessThanTenMinutes(t)) || role !== USER_TYPE.CASHIER;
 
+  // Calcular turnos disponibles (habilitados)
+  const availableSchedules = useMemo(
+    () => schedules.slice(0, 10).filter((sch) => isEnabled(sch.time)),
+    [schedules, isEnabled]
+  );
+
+  // Verificar si todos los turnos disponibles están seleccionados
+  const allAvailableSelected = useMemo(() => {
+    if (availableSchedules.length === 0) return false;
+    return availableSchedules.every((sch) => checkedSchedules.has(sch.schedule_id));
+  }, [availableSchedules, checkedSchedules]);
+
+  // Función para seleccionar/deseleccionar todos los turnos disponibles
+  const handleSelectAll = () => {
+    if (allAvailableSelected) {
+      // Deseleccionar todos los disponibles
+      availableSchedules.forEach((sch) => {
+        if (checkedSchedules.has(sch.schedule_id)) {
+          setSchedules(sch as IScheduleEntityFront);
+        }
+      });
+    } else {
+      // Seleccionar todos los disponibles
+      availableSchedules.forEach((sch) => {
+        if (!checkedSchedules.has(sch.schedule_id)) {
+          setSchedules(sch as IScheduleEntityFront);
+        }
+      });
+    }
+  };
+
+  const selectAllCheckbox = availableSchedules.length > 0 && (
+    <div className="flex items-center gap-2">
+      <Checkbox
+        checked={allAvailableSelected}
+        onCheckedChange={handleSelectAll}
+        className="h-4 w-4 rounded-[4px] border-2 border-primary"
+      />
+      <Text size="sm" className="text-white font-semibold">
+        Todos
+      </Text>
+    </div>
+  );
+
   return (
-    <CheckboxSection title="Turnos" icon={<ClockIcon size="16px" />} className="w-full">
+    <CheckboxSection
+      title="Turnos"
+      icon={<ClockIcon size="16px" />}
+      className="w-full"
+      headerAction={selectAllCheckbox}
+    >
       <Box className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
         {schedules.slice(0, 10).map((sch, index) => {
           const enabled = isEnabled(sch.time);

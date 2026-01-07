@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-07
+
+#### Make Plays - "Select All" Checkbox for Schedules and Lotteries
+**Feature:** Added "Select All" checkbox to quickly select/deselect all available schedules and lotteries
+
+**Changes:**
+
+1. **CheckboxSection Component** (`web/src/features/make-plays/components/CheckboxSection.tsx`):
+   - Added optional `headerAction` prop to support adding action elements (like checkboxes) next to the title
+   - Wrapped header in flex container with `justify-between` to position action on the right side
+
+2. **SchedulesCheckboxListDesktop** (`web/src/features/make-plays/schedules-checkbox-list-desktop.tsx`):
+   - Added "Todos" (Select All) checkbox next to "Turnos" title
+   - Checkbox intelligently selects only available (enabled) schedules
+   - Checkbox state reflects whether all available schedules are selected
+   - Click toggles selection of all available schedules
+
+3. **LotteriesCheckboxListDesktop** (`web/src/features/make-plays/lotteries-checkbox-list-desktop.tsx`):
+   - Added "Todos" (Select All) checkbox next to "Quiniela" title
+   - Click toggles selection of all available lotteries
+   - Checkbox state reflects whether all lotteries are selected
+
+4. **SchedulesCheckboxListMobile** (`web/src/features/make-plays/schedules-checkbox-list-mobile.tsx`):
+   - Added "Seleccionar todos" option as first item in the popover list
+   - Positioned before individual schedule items for easy access
+   - Includes checkbox that reflects selection state
+   - Border bottom to visually separate from individual items
+
+5. **LotteriesCheckboxListMobile** (`web/src/features/make-plays/lotteries-checkbox-list-mobile.tsx`):
+   - Added "Seleccionar todos" option as first item in the popover list
+   - Positioned before individual lottery items for easy access
+   - Includes checkbox that reflects selection state
+   - Border bottom to visually separate from individual items
+
+6. **Removed TODO comment** from `web/src/features/make-plays/lotteries-checkbox-list.tsx`
+
+**Why:** Improves user experience by allowing quick selection of all available options, especially useful when users want to bet on all schedules or lotteries. Mobile-first design places the option prominently at the top of the list.
+
 ### Fixed - 2026-01-06
 
 #### User List Table - Sticky Header Fixed

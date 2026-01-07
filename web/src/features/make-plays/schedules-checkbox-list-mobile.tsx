@@ -59,6 +59,38 @@ const SchedulesCheckboxListMobile = ({
     Array.from(checkedSchedules.values()).forEach(setSchedules);
   };
 
+  // Calcular turnos disponibles (habilitados)
+  const availableSchedules = useMemo(
+    () => schedules.filter((sch) => isEnabled(sch.time)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [schedules]
+  );
+
+  // Verificar si todos los turnos disponibles están seleccionados
+  const allAvailableSelected = useMemo(() => {
+    if (availableSchedules.length === 0) return false;
+    return availableSchedules.every((sch) => checkedSchedules.has(sch.schedule_id));
+  }, [availableSchedules, checkedSchedules]);
+
+  // Función para seleccionar/deseleccionar todos los turnos disponibles
+  const handleSelectAll = () => {
+    if (allAvailableSelected) {
+      // Deseleccionar todos los disponibles
+      availableSchedules.forEach((sch) => {
+        if (checkedSchedules.has(sch.schedule_id)) {
+          setSchedules(sch as IScheduleEntityFront);
+        }
+      });
+    } else {
+      // Seleccionar todos los disponibles
+      availableSchedules.forEach((sch) => {
+        if (!checkedSchedules.has(sch.schedule_id)) {
+          setSchedules(sch as IScheduleEntityFront);
+        }
+      });
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -82,6 +114,21 @@ const SchedulesCheckboxListMobile = ({
         <Command>
           <CommandList className="max-h-80">
             <CommandGroup heading="Turnos">
+              {/* Checkbox "Seleccionar todos" como primer elemento */}
+              {availableSchedules.length > 0 && (
+                <CommandItem
+                  onSelect={handleSelectAll}
+                  className="text-base font-medium border-b"
+                >
+                  <Flex className="items-center gap-2">
+                    <Checkbox
+                      checked={allAvailableSelected}
+                      className="h-4 w-4 rounded-[4px] pointer-events-none"
+                    />
+                    <span className="text-base">Seleccionar todos</span>
+                  </Flex>
+                </CommandItem>
+              )}
               {schedules.map((sch) => {
                 const enabled = isEnabled(sch.time);
                 const checked = checkedSchedules.has(sch.schedule_id);
