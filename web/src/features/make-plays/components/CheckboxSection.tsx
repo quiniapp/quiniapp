@@ -7,12 +7,16 @@ interface CheckboxSectionProps {
   icon: ReactNode;
   children: ReactNode;
   className?: string;
+  headerAction?: ReactNode;
 }
 
-const CheckboxSection = ({ title, icon, children, className = '' }: CheckboxSectionProps) => {
+const CheckboxSection = ({ title, icon, children, className = '', headerAction }: CheckboxSectionProps) => {
   return (
     <FlexCol className={`border-2 p-1 sm:p-4 lg:p-1.5 rounded-lg gap-1 lg:gap-1 ${className}`}>
-      <HeaderTitleSection title={title} icon={icon} variant="small" />
+      <div className="flex items-center  gap-2">
+        <HeaderTitleSection title={title} icon={icon}  />
+        {headerAction}
+      </div>
       {children}
     </FlexCol>
   );

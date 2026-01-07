@@ -99,7 +99,7 @@ const GameTurns = () => {
       const newMap = new Map(prev);
       let changed = false;
 
-      prev.forEach((lottery, id) => {
+      prev.forEach((_lottery, id) => {
         if (!availableIds.has(id)) {
           newMap.delete(id);
           changed = true;
