@@ -114,7 +114,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           };
 
           if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = makeTicketPdf(lastTicket);
+            const { blob, fileName } = await makeTicketPdf(lastTicket);
             const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             try {

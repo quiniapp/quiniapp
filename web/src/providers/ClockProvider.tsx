@@ -62,14 +62,22 @@ export function ClockProvider({
   // offset contra el reloj del cliente, en ms. Se calcula con tiempo de red del servidor.
   const [offsetMs, setOffsetMs] = useState(0);
 
-  // ‘tick’ para re-renderizar cada segundo
-  const [, setTick] = useState(0);
+  // 'tick' para re-renderizar cada segundo
+  const [tick, setTick] = useState(0);
 
   const computeNow = useCallback(() => dayjs.utc(Date.now() + offsetMs).tz(tz), [offsetMs, tz]);
 
-  const now = computeNow();
-  const time = useMemo(() => now.format('HH:mm:ss'), [now]);
-  const date = useMemo(() => now.format('dddd, D [de] MMMM [de] YYYY'), [now]);
+  // Calcular now, time y date en un solo useMemo para reducir re-renders
+  const { now, time, date } = useMemo(() => {
+    const currentNow = dayjs.utc(Date.now() + offsetMs).tz(tz);
+    return {
+      now: currentNow,
+      time: currentNow.format('HH:mm:ss'),
+      date: currentNow.format('dddd, D [de] MMMM [de] YYYY'),
+    };
+  // El tick fuerza recálculo cada segundo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offsetMs, tz, tick]);
 
   // Obtiene hora de red y devuelve offset (serverUTC - clientUTCmedio)
   const fetchNetworkOffset = useCallback(
