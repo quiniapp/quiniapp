@@ -19,12 +19,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build API
-        run: npm run build --workspace=api
-
-
-
       - name: Run Linter
         run: npm run lint --workspace=api
+
+      - name: Build API
+        run: npm run build --workspace=api
 
 
