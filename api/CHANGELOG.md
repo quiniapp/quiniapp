@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-15
+
+#### HTTP Error Logging Enhancement - Morgan Custom Token
+**Goal:** Improve visibility of error details in production logs (Vercel dashboard)
+
+**Problem:**
+- Morgan HTTP logs only showed status codes (401, 404, etc.) without context
+- Error messages were logged to Winston JSON files but not visible in Vercel logs
+- When users got blocked by failed login attempts, logs showed `POST /api/auth/login 401` without explaining why
+- Frontend received descriptive errors but backend logs were cryptic
+
+**Solution:**
+- Created custom Morgan token `error-info` that includes error code and message in HTTP logs
+- Modified error handler to store error details in `res.locals.errorInfo` before responding
+- Updated 404 handler to also include error info
+
+**Changes:**
+
+1. **Error Middleware** (`api/src/middlewares/error.middleware.ts`):
+   - All error types now set `res.locals.errorInfo` with `code`, `message`, and `statusCode`
+   - Applies to: ZodError, AppError, PostgrestError, and unexpected errors
+   - Error info is set before `res.status().json()` so Morgan can read it
+
+2. **Index Server Setup** (`api/src/index.ts`):
+   - Registered custom Morgan token `error-info` that reads `res.locals.errorInfo`
+   - Token truncates messages to 100 chars for log readability
+   - Custom format string includes `:error-info` token after status code
+   - 404 handler now sets `res.locals.errorInfo` for consistent logging
+
+**Log Format Examples:**
+
+**Before:**
+```
+100.52.219.255 - - [15/Jan/2026:15:19:17 +0000] "POST /api/auth/login HTTP/1.1" 401 25 "https://quini-app.vercel.app/make-plays" "Mozilla/5.0..."
+```
+
+**After:**
+```
+100.52.219.255 - - [15/Jan/2026:15:19:17 +0000] "POST /api/auth/login HTTP/1.1" 401 25 [UNAUTHORIZED: Cuenta bloqueada por múltiples intentos fallidos. Intenta nuevamente después de...] "https://quini-app.vercel.app/make-plays" "Mozilla/5.0..."
+```
+
+**Benefits:**
+- Errors are immediately visible in Vercel logs without checking Winston files
+- Faster debugging: see error reason directly in HTTP log line
+- Better incident response: understand issue without reading application logs
+- No performance impact: token only executes on error responses (4xx/5xx)
+
 ### Fixed - 2026-01-06
 
 #### User Repository - Error Handling Improvement

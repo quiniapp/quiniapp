@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
@@ -70,7 +70,25 @@ app.use(corsMiddleware);
 app.options('*', corsMiddleware); // preflight
 
 // ---- Middlewares globales ----
-app.use(morgan(IS_LOCAL ? 'dev' : 'combined'));
+// Custom Morgan token para mostrar info de errores en logs
+morgan.token('error-info', (req, res) => {
+  // Type assertion: Morgan usa tipos de http nativo, pero Express agrega locals
+  const expressRes = res as unknown as Response;
+  if (expressRes.locals?.errorInfo && expressRes.statusCode >= 400) {
+    const { code, message } = expressRes.locals.errorInfo;
+    // Truncar mensaje a 100 chars para logs limpios
+    const truncatedMsg = message.length > 100 ? message.substring(0, 97) + '...' : message;
+    return `[${code}: ${truncatedMsg}]`;
+  }
+  return '';
+});
+
+// Formato custom que incluye error-info para producción
+const morganFormat = IS_LOCAL
+  ? 'dev'
+  : ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] :error-info ":referrer" ":user-agent"';
+
+app.use(morgan(morganFormat));
 app.use(cookieParser());
 
 // ---- Body parsers por ruta ----
@@ -79,10 +97,17 @@ app.use('/api', express.json({ limit: '200kb' }), publicRouter);
 
 // ---- 404 Handler ----
 app.use((req, res) => {
+  const errorMessage = `Ruta ${req.path} no encontrada`;
+  // Guardar info para Morgan custom token
+  res.locals.errorInfo = {
+    code: 'NOT_FOUND',
+    message: errorMessage,
+    statusCode: 404,
+  };
   res.status(404).json({
     error: {
       code: 'NOT_FOUND',
-      message: `Ruta ${req.path} no encontrada`,
+      message: errorMessage,
     },
   });
 });
