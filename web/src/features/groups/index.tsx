@@ -179,7 +179,6 @@ const UserGroupsContent = () => {
             <HeaderTitleSection
               title={'Grupos'}
               icon={<Users2Icon size="24px" />}
-              variant={'lead'}
               className={'!mb-[36px]'}
             />
             <Flex className={'border border-dark-lighter rounded-lg overflow-hidden w-full'}>
@@ -243,7 +242,6 @@ const UserGroupsContent = () => {
               <HeaderTitleSection
                 title={'Usuarios del Grupo'}
                 icon={<UsersIcon size="24px" />}
-                variant={'lead'}
                 className={'!mb-0'}
               />
               {selectedGroup && (
@@ -410,7 +408,7 @@ const UserGroupsContent = () => {
                         name="superAdmin.last_name"
                         control={control}
                         render={({ field }) => (
-                          <Input id="sa-last_name" value={field.value ?? ''} {...field} />
+                          <Input id="sa-last_name" {...field} value={field.value ?? ''} />
                         )}
                       />
                     </div>
@@ -426,8 +424,8 @@ const UserGroupsContent = () => {
                           <Input
                             id="sa-email"
                             type="email"
-                            value={field.value ?? ''}
                             {...field}
+                            value={field.value ?? ''}
                           />
                         )}
                       />
@@ -438,7 +436,7 @@ const UserGroupsContent = () => {
                         name="superAdmin.address"
                         control={control}
                         render={({ field }) => (
-                          <Input id="sa-address" value={field.value ?? ''} {...field} />
+                          <Input id="sa-address"  {...field} value={field.value ?? ''}/>
                         )}
                       />
                     </div>

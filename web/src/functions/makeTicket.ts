@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
@@ -149,8 +148,10 @@ function addFeedLines(lines: string[], extraMm: number, lineHeightMm: number) {
 }
 
 
-//blob 
-export function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
+//blob
+export async function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
+  const { jsPDF } = await import('jspdf');
+
   let lines = buildTicketLines(
     {
       user_name: cashier_number,

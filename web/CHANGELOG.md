@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-15
+
+#### Performance Optimizations - Bundle Size & Core Web Vitals
+**Goal:** Improve LCP (2.37s → < 2.0s) and FCP (1.04s → < 0.8s)
+
+**Changes:**
+
+1. **Dynamic Import for jsPDF** (`web/src/functions/makeTicket.ts`):
+   - Changed static `import { jsPDF } from 'jspdf'` to dynamic `await import('jspdf')`
+   - Function `makeTicketPdf` is now async
+   - Removes 368KB from initial bundle (loaded only when generating PDFs)
+
+2. **Updated MakePlaysProvider** (`web/src/features/make-plays/provider/MakePlaysProvider.tsx`):
+   - Added `await` to `makeTicketPdf` call to support async function
+
+3. **Improved Vendor Chunk Splitting** (`web/vite.config.ts`):
+   - Split monolithic vendor chunk (~1MB) into smaller, parallel-loaded chunks:
+     - `react-dom-vendor` (131KB): React DOM
+     - `radix-vendor` (78KB): Radix UI components
+     - `router-vendor` (76KB): React Router
+     - `icons-vendor` (12KB): Lucide React icons
+     - `query-vendor` (2.6KB): TanStack Query
+     - `utils-vendor` (26KB): clsx, tailwind-merge, cva
+   - Improved browser caching (unchanged chunks stay cached)
+
+4. **Migrated date-fns to dayjs** (`web/src/components/button/SelectDayToSearch.tsx`, `web/src/features/plays-and-hits/select-day-to-search.tsx`):
+   - Replaced `parseISO` and `format` functions with dayjs equivalents
+   - Kept `date-fns` locale only for react-day-picker Calendar
+   - Reduced redundant code, dayjs already loaded by ClockProvider
+
+5. **QueryClient Default Configuration** (`web/src/pages/App.tsx`):
+   - Added default `staleTime: 5 minutes`
+   - Added default `gcTime: 30 minutes`
+   - Disabled `refetchOnWindowFocus`
+   - Set `retry: 1` to reduce failed request overhead
+
+6. **ClockProvider Optimization** (`web/src/providers/ClockProvider.tsx`):
+   - Consolidated `now`, `time`, `date` calculation into single `useMemo`
+   - Reduced object recreation on each tick
+
+**Expected Impact:**
+- Initial bundle reduced by ~370KB (jsPDF lazy-loaded)
+- Better caching with smaller, granular vendor chunks
+- Reduced network requests with TanStack Query defaults
+
 ### Added - 2026-01-07
 
 #### Make Plays - "Select All" Checkbox for Schedules and Lotteries
