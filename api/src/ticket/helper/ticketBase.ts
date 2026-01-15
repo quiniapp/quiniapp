@@ -1,4 +1,4 @@
-import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.response';
+import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.request';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';
@@ -8,7 +8,9 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export const ticketBase = (ticket: INewTicketEntity): INewTicketBaseEntity => {
+export const ticketBase = (
+  ticket: INewTicketEntity
+): Omit<INewTicketBaseEntity, 'organization_id'> => {
   const timestamp = dayjs().tz('America/Argentina/Buenos_Aires');
   const ticket_id = uuidv4();
   const ticket_number = dayjs().tz('America/Argentina/Buenos_Aires').format('YYYYMMDDHHmmssSSS');

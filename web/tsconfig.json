@@ -10,7 +10,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "dist",
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
     "module": "esnext",
     "types": ["tailwindcss"],
     "esModuleInterop": true,

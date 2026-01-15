@@ -9,7 +9,7 @@ import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
@@ -109,7 +109,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
         onSuccess: async (res) => {
           const lastTicket = {
             bets: [...bets].reverse(),
-            ticket: res.data.ticket,
+            ticket: res,
             cashier_number: user?.number,
           };
 
@@ -120,7 +120,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             try {
               if (isMobile) {
                 await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.data.ticket.ticket_number}`,
+                  text: `Ticket ${res.ticket_number}`,
                 });
               } else {
                 printPdfBlob(blob);

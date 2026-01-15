@@ -19,6 +19,7 @@ export enum PLACE_TYPE {
 
 export interface IBetEntityBase {
   bet_id: string;
+  organization_id: string;
   bet_type: BET_TYPE;
   ticket_id: string;
   user_id: string;
@@ -49,7 +50,7 @@ export type IBetEntityBack = Omit<IBetEntityBase, 'bet_order'> & {
 
 export type IBetEntityFront = Omit<
   IBetEntityBase,
-  'created_at' | 'edited_at' | 'deleted_at' | 'bet_order'
+  'created_at' | 'edited_at' | 'deleted_at' | 'bet_order' | 'organization_id'
 > & {
   lottery: ILotteryEntityFront;
   schedule: IScheduleEntityFront;

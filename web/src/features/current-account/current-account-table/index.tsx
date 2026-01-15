@@ -15,6 +15,19 @@ import SkeletonList from '@/components/skeletons/skeleton-list';
 import { Button } from '@/components/ui/button';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import React, { Suspense, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
+
+// TODO: Mejoras en liquidación de cuenta corriente
+// 1. Agregar botón "Descargar" junto al botón "Liquidar" individual
+//    - Ubicación: Al lado de cada botón "Liquidar" en la tabla (líneas 268-270 desktop, 143-150 mobile)
+//    - Funcionalidad: Permitir descargar PDF individual sin liquidar
+//    - Icon sugerido: Download de lucide-react
+//
+// 2. Orden de columnas en vista de impresión
+//    - La vista de impresión debe mostrar las columnas en el mismo orden que la vista del cajero
+//    - Verificar orden actual en CurrentAcoountByUserTable.tsx (vista cajero)
+//    - Asegurar consistencia entre: vista admin, vista cajero, y PDF exportado
 
 interface CurrentAccountTableProps {
   data: ICurrentAccountEntityFront[];
@@ -31,6 +44,7 @@ const currency = new Intl.NumberFormat('es-AR', {
 const PAGE_SIZE = 30; // ⬅️ fácil de ajustar
 
 const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccountTableProps) => {
+  const { role } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentAccount, setCurrentAccount] = useState<ICurrentAccountEntityFront | undefined>();
   const [page, setPage] = useState(1);
@@ -75,7 +89,7 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
   }, [data, page]);
 
   const totalPages = Math.max(1, Math.ceil((data?.length || 0) / PAGE_SIZE));
-
+  console.log(role)
   return (
     <Box className="p-2 sm:p-3">
       {/* --------- MOBILE CARDS (≤640) --------- */}
@@ -84,7 +98,9 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
           <SkeletonList />
         ) : data.length === 0 ? (
           <div className="text-center py-8 rounded-md border border-dashed">
-            <Text size="lg" weight="semibold">No se encontraron Datos</Text>
+            <Text size="lg" weight="semibold">
+              No se encontraron Datos
+            </Text>
             <Caption size="sm" color="muted" className="font-light">
               Por favor realice una nueva búsqueda
             </Caption>
@@ -134,14 +150,16 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
                 </span>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-3"
-                onClick={() => handleClick(account)}
-              >
-                Liquidar
-              </Button>
+              {role !== USER_TYPE.ADMIN && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-3"
+                  onClick={() => handleClick(account)}
+                >
+                  Liquidar
+                </Button>
+              )}
             </div>
           ))
         )}
@@ -217,7 +235,7 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
           <Table className="overflow-hidden rounded-[16px_16px_0_0]">
             <TableHeader className="border sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <TableRow>
-                <TableHead className="whitespace-nowrap">Liquidar</TableHead>
+                {role !== USER_TYPE.ADMIN &&  <TableHead className="whitespace-nowrap">Liquidar</TableHead>}
                 <TableHead className="whitespace-nowrap">Número</TableHead>
                 <TableHead className="whitespace-nowrap">Nombre</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Pase</TableHead>
@@ -245,7 +263,9 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
                 <TableRow>
                   <TableCell colSpan={14} className="text-center">
                     <FlexCol className="w-full items-center justify-center gap-3 py-8">
-                      <Text size="lg" weight="semibold">No se encontraron Datos</Text>
+                      <Text size="lg" weight="semibold">
+                        No se encontraron Datos
+                      </Text>
                       <Caption size="sm" color="muted" className="font-light">
                         Por favor realice una nueva búsqueda
                       </Caption>
@@ -255,11 +275,11 @@ const CurrentAccountTable = ({ data = [], isLoading, isPending }: CurrentAccount
               ) : (
                 paginated.map((account) => (
                   <TableRow key={account.current_account_id}>
-                    <TableCell>
+                    {role !== USER_TYPE.ADMIN && <TableCell>
                       <Button variant="outline" size="sm" onClick={() => handleClick(account)}>
                         Liquidar
                       </Button>
-                    </TableCell>
+                    </TableCell>}
                     <TableCell>{account.user_number}</TableCell>
                     <TableCell className="max-w-[220px] truncate">{account.user_name}</TableCell>
 
@@ -364,94 +384,3 @@ const UserCurrentAccountModal = React.lazy(
   () => import('../../../components/modals/UserCurrentAccountModal')
 );
 
-/*  <Box className="p-1 sm:p-3">
-   <Table className="overflow-hidden rounded-[16px_16px_0_0]">
-     <TableHeader className="border overflow-hidden rounded-[16px_16px_0_0]">
-       <TableRow>
-         <TableHead> Liquidar </TableHead>
-         <TableHead> Numero </TableHead>
-         <TableHead> Nombre </TableHead>
-         <TableHead> Pase </TableHead>
-         <TableHead> Aciertos </TableHead>
-         <TableHead> Reclamos </TableHead>
-         <TableHead> Subtotal </TableHead>
-         <TableHead> Saldo Anterior </TableHead>
-         <TableHead> Cobros </TableHead>
-         <TableHead> Pagos </TableHead>
-         <TableHead> Total </TableHead>
-         <TableHead> Arrastre </TableHead>
-         <TableHead> Deje </TableHead>
-         <TableHead> Grupo </TableHead>
-       </TableRow>
-     </TableHeader>
-
-     <TableBody className="border">
-       {isLoading || isPending ? (
-         <TableRow>
-           <TableCell colSpan={14}>
-             <SkeletonList />
-           </TableCell>
-         </TableRow>
-       ) : data?.length === 0 ? (
-         <TableRow>
-           <TableCell colSpan={14} className="text-center">
-             <FlexCol className="w-full items-center justify-center gap-3 py-8">
-               <Typography variant="large">No se encontraron Datos</Typography>
-               <Typography variant="small" className="font-light text-muted-foreground">
-                 Por favor realice una nueva búsqueda
-               </Typography>
-             </FlexCol>
-           </TableCell>
-         </TableRow>
-       ) : (
-         data?.map((account: ICurrentAccountEntityFront) => (
-           <TableRow key={account.current_account_id}>
-             <TableCell>
-               <Button
-                 variant="outline"
-                 size="sm"
-                 onClick={() => {
-                   handleClick(account);
-                 }}
-               >
-                 Liquidar
-               </Button>
-             </TableCell>
-             <TableCell>{account.user_number}</TableCell>
-             <TableCell>{account.user_name}</TableCell>
-             <TableCell>{account.pass}</TableCell>
-             <TableCell>{account.successes}</TableCell>
-             <TableCell>{account.claims}</TableCell>
-             <TableCell>{account.subtotal}</TableCell>
-             <TableCell>{account.previous_balance}</TableCell>
-             <TableCell>{account.collections}</TableCell>
-             <TableCell>{account.paid}</TableCell>
-             <TableCell>{account.total}</TableCell>
-             <TableCell>{account.drag}</TableCell>
-             <TableCell>{account.leave}</TableCell>
-             <TableCell></TableCell>
-           </TableRow>
-         ))
-       )}
-     </TableBody>
-
-     <TableFooter className="border">
-       <TableRow>
-         <TableCell colSpan={3}>Total General</TableCell>
-         <TableCell>${totals?.pass}</TableCell>
-         <TableCell>${totals?.successes}</TableCell>
-         <TableCell>${totals?.claims}</TableCell>
-         <TableCell>${totals?.subtotal.toFixed(2)}</TableCell>
-         <TableCell>${totals?.previous_balance.toFixed(2)}</TableCell>
-         <TableCell>${totals?.collections.toFixed(2)}</TableCell>
-         <TableCell>${totals?.paid.toFixed(2)}</TableCell>
-         <TableCell>${totals?.total.toFixed(2)}</TableCell>
-         <TableCell>${totals?.drag.toFixed(2)}</TableCell>
-         <TableCell>${totals?.leave.toFixed(2)}</TableCell>
-       </TableRow>
-     </TableFooter>
-   </Table>
-   <Suspense fallback={<div>Cargando...</div>}>
-     <UserCurrentAccountModal isOpen={isOpen} onClose={() => setIsOpen(false)} currentAccount={currentAccount} />
-   </Suspense>
- </Box> */

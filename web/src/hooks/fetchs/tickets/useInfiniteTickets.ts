@@ -1,8 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { IPaginatedResponse } from '@helper/request/pagination.response';
+import { IPaginatedResponse } from '@helper/request/pagination.request';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import dayjs from 'dayjs';
+import { apiClient } from '@/lib/apiClient';
 
 interface FetchInfiniteTicketsProps {
   user_id?: string;
@@ -18,35 +19,37 @@ const fetchPaginatedTickets = async (
   page: number
 ): Promise<IPaginatedResponse<ITicketEntityFront>> => {
   const normalizedDate = props.date ?? dayjs().format('YYYY-MM-DD');
-  const params = new URLSearchParams({
-    date: normalizedDate,
-    page: page.toString(),
-    limit: (props.limit ?? 100).toString(),
-  });
 
-  if (props.user_id) params.append('cashier_id', props.user_id);
-  if (props.winner) params.append('winner', 'true');
-  if (props.paid) params.append('paid', 'true');
-  if (props.not_paid) params.append('paid', 'false');
+  const data = await apiClient.get<IPaginatedResponse<ITicketEntityFront>>(
+    BACKEND_ROUTES.ticket.base,
+    {
+      params: {
+        date: normalizedDate,
+        page: page.toString(),
+        limit: (props.limit ?? 100).toString(),
+        cashier_id: props.user_id || undefined,
+        winner: props.winner ? 'true' : undefined,
+        paid: props.paid
+          ? 'true'
+          : props.not_paid
+            ? 'false'
+            : undefined,
+      },
+    }
+  );
 
-  const res = await fetch(`${BACKEND_ROUTES.ticket.base}?${params.toString()}`, {
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-  });
-
-  if (!res.ok) throw new Error('Error fetching tickets');
-
-  const { data } = await res.json();
-  return data?.ticket ?? {
-    data: [],
-    pagination: {
-      currentPage: 1,
-      pageSize: 0,
-      totalCount: 0,
-      totalPages: 0,
-      hasMore: false,
-    },
-  };
+  return (
+    data ?? {
+      data: [],
+      pagination: {
+        currentPage: 1,
+        pageSize: 0,
+        totalCount: 0,
+        totalPages: 0,
+        hasMore: false,
+      },
+    }
+  );
 };
 
 export const useInfiniteTickets = (props: FetchInfiniteTicketsProps) => {

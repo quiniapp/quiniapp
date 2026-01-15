@@ -124,7 +124,7 @@ const CurrentAccountContent = () => {
   return (
     <PageWrapper>
       <HeaderSection title={'Cuenta Corriente'}>
-        <IsRoleCashier role={role}>
+        {role !== USER_TYPE.ADMIN &&<IsRoleCashier role={role}>
           <Box className={'grid grid-cols-2 gap-4'}>
             <Button onClick={handlePrintDiaryLiquidation} disabled={printing}>
               Exportar Diario
@@ -139,7 +139,7 @@ const CurrentAccountContent = () => {
               Generar Liquidación
             </Button>
           </Box>
-        </IsRoleCashier>
+        </IsRoleCashier>}
       </HeaderSection>
       <SettlementPayrollTable />
       <Suspense>

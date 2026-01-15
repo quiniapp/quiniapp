@@ -4,7 +4,9 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 
 import { isAuthenticated } from '../middlewares/auth.middleware';
+import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
+import { startSessionCleanupJob } from './utils/session-cleanup.job';
 
 import {
   PORT,
@@ -75,9 +77,25 @@ app.use(cookieParser());
 app.use('/api/private', express.json({ limit: '5mb' }), isAuthenticated, router);
 app.use('/api', express.json({ limit: '200kb' }), publicRouter);
 
+// ---- 404 Handler ----
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: `Ruta ${req.path} no encontrada`,
+    },
+  });
+});
+
+// ---- Error Handler (DEBE SER EL ÚLTIMO MIDDLEWARE) ----
+app.use(errorHandler);
+
 // ---- Arranque ----
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
   console.log('[CORS] allowed origins:', baseAllowedOrigins);
   if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
+
+  // Start session cleanup job (runs every hour)
+  startSessionCleanupJob();
 });

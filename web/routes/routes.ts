@@ -5,12 +5,18 @@ const PRIVATE = `${BASE}/private`;
 export const BACKEND_ROUTES = {
   auth: {
     login: `${BASE}/auth/login`,
+    refresh: `${BASE}/auth/refresh`,
     logout: `${PRIVATE}/auth/logout`,
+    logoutAll: `${PRIVATE}/auth/logout-all`,
     validate: `${PRIVATE}/auth/validate`,
   },
   user: {
     base: `${PRIVATE}/user`,
     id: (id: string) => `${PRIVATE}/user/${id}`,
+    resetPassword: (id: string) => `${PRIVATE}/user/reset-password/${id}`,
+    changePassword: `${PRIVATE}/user/change-password`,
+    validateSuperAdmin: (username: string, organizationId: string) =>
+      `${PRIVATE}/user/validate-superadmin?username=${encodeURIComponent(username)}&organization_id=${encodeURIComponent(organizationId)}`,
   },
   bet: {
     base: `${PRIVATE}/bet`,
@@ -53,5 +59,9 @@ export const BACKEND_ROUTES = {
   },
   settings: {
     storage: `${PRIVATE}/settings/storage`,
+  },
+  organization: {
+    base: `${PRIVATE}/organization`,
+    id: (id: string) => `${PRIVATE}/organization/${id}`,
   },
 };

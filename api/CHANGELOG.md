@@ -7,594 +7,1038 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed - 2025-12-10
+### Fixed - 2026-01-02
 
-#### Authentication Middleware - Incorrect HTTP Status Code
-**Issue:** Middleware returned 400 (Bad Request) when authentication token was missing
-**Root Cause:** Missing token is an authentication issue, not a malformed request
-**Solution:** Changed HTTP status code from 400 to 401 in `api/middlewares/auth.middleware.ts:29`
+#### ticket_full_json_plpgsql - Group by bet_order
+**Fix:** Updated `ticket_full_json_plpgsql` to group bets by `bet_order` instead of by `number/amount/place/with/position`
+
+**Problem:**
+- Function was grouping bets by field values, causing bets with same number but different amounts to merge incorrectly
+- Example: `1234 $10 HEAD` and `1234 $100 HEAD` would show as single entry
+
+**Solution:**
+- Changed grouping logic to use `bet_order` column as unique identifier
+- Updated DISTINCT ON clause to use `(ticket_id, bet_order, schedule_id, lottery_id)`
+- Added `bet_order` to JSON output for frontend use as React key
+
+**File:**
+- `supabase/migrations/20260102194200_fix_ticket_full_json_group_by_bet_order.sql`
+
+### Fixed - 2025-12-31
+
+#### update_current_account_recompute - Soporte para previous_balance y previous_drag
+**Fix:** El stored procedure `update_current_account_recompute` ahora acepta `previous_balance` y `previous_drag` desde el JSON `p_props`
+
+**Problema:**
+- El SP ignoraba los campos `previous_balance` y `previous_drag` enviados en `p_props`
+- Siempre calculaba estos valores desde la fila anterior en la base de datos
+- Esto impedía actualizar manualmente estos campos para una cuenta corriente específica
+
+**Solución:**
+- Agregados flags `has_previous_balance` y `has_previous_drag` para detectar si vienen en el JSON
+- Si `previous_balance` viene en `p_props`, usa ese valor en lugar del calculado
+- Si `previous_drag` viene en `p_props`, usa ese valor directamente y resetea `v_prev_leave` para evitar interferencias
+
+**Archivo:**
+- `supabase/migrations/20251231173925_fix_update_current_account_recompute_prev_fields.sql`
+
+### Fixed - 2025-12-29
+
+#### TypeScript Compilation Errors Resolution
+**Fix:** Fixed all TypeScript compilation errors in API routes and auth modules
+
+**Files Modified:**
+
+1. **`src/user/route/user.route.ts`** (3 errors fixed)
+   - Line 189-193: `resetPasswordHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ password: string }>` → `APIResponse<string>`
+     - Fixed data structure to match `{ [key: string]: T }` format
+   - Line 222-226: `changePasswordHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ success: boolean }>` → `APIResponse<boolean>`
+   - Line 263-267: `validateSuperAdminHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ user_id: string }>` → `APIResponse<string>`
+
+2. **`src/auth/route/auth.route.ts`** (1 error fixed)
+   - Line 115-119: `refreshHandler` - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ success: boolean }>` → `APIResponse<boolean>`
+
+3. **`src/ticket/route/ticket.route.ts`** (1 error fixed)
+   - Line 182-186: Handler - Fixed `APIResponse` type
+     - Changed: `APIResponse<{ success: boolean }>` → `APIResponse<boolean>`
+
+4. **`src/auth/controller/auth.controller.ts`** (1 error fixed)
+   - Line 95: Fixed possibly undefined `failed_login_attempts`
+     - Changed: `userData?.failed_login_attempts + 1`
+     - Fixed: `(userData.failed_login_attempts ?? 0) + 1`
+     - Prevents `undefined + 1 = NaN`
+
+5. **`src/auth/repository/auth.repository.ts`** (1 error fixed)
+   - Lines 64-84: `incrementFailedAttempts()` fallback
+     - Removed invalid `supabase.sql` usage (doesn't exist in JS client)
+     - Implemented fetch-then-update pattern:
+       1. Fetch current `failed_login_attempts`
+       2. Increment locally: `(value ?? 0) + 1`
+       3. Update in database
+     - Maintains robust fallback if RPC function unavailable
+
+6. **`src/session/repository/session.repository.ts`** (16 errors fixed)
+   - Lines 243-260: `mapToSession()` method
+     - Added type assertions for all `unknown` values from database:
+       - `data.session_id as string`
+       - `data.user_id as string`
+       - `data.organization_id as string`
+       - `data.refresh_token_hash as string`
+       - `data.refresh_token_version as number`
+       - `data.ip_address as string || null`
+       - `data.user_agent as string || null`
+       - `data.device_fingerprint as string || null`
+       - `data.created_at as string` → `new Date(...)`
+       - `data.last_activity_at as string` → `new Date(...)`
+       - `data.expires_at as string` → `new Date(...)`
+       - `data.is_active as boolean`
+       - `data.revoked_at as string || null` → `new Date(...) || null`
+       - `data.revoked_reason as string || null`
+
+**Root Cause Analysis:**
+
+**APIResponse Type Structure:**
+```typescript
+type APIResponse<T> = {
+  data: {
+    [key: string]: T;  // ← Data must be object with string keys
+  };
+};
+```
+
+**Incorrect Usage:**
+```typescript
+const response: APIResponse<{ success: boolean }> = {
+  data: { success: true },  // Type: { success: boolean }
+  // Expected: { [key: string]: { success: boolean } }
+};
+```
+
+**Correct Usage:**
+```typescript
+const response: APIResponse<boolean> = {
+  data: { success: true },  // Type: { success: boolean }
+  // Matches: { [key: string]: boolean }
+};
+```
+
 **Impact:**
-- Frontend AuthProvider now correctly handles missing tokens
-- Eliminates 400 errors in console during initial app load
-- Proper REST API semantics (401 = Unauthorized, 400 = Bad Request)
+- ✅ All TypeScript compilation errors resolved (0 errors)
+- ✅ Type safety improved across authentication and user management
+- ✅ Proper handling of nullable/undefined values
+- ✅ Consistent API response format
+- ✅ Ready for production deployment
+
+**Testing:**
+- `npx tsc --noEmit` passes with 0 errors
+- `npx eslint "src/**/*.ts" --max-warnings=0` passes
 
 ---
 
-### Added - 2025-12-07
+#### ESLint Type Safety Improvements
+**Fix:** Replaced all `any` types with proper TypeScript types to pass ESLint checks
 
-#### Ticket Payment - Database RPC Implementation
-- **New RPC Function**: `pay_ticket(p_ticket_number TEXT, p_user_id TEXT)`
-  - Path: `api/supabase/migrations/20251208005000_sp_pay_ticket_fix_uuid_type.sql`
-  - **Migration History:**
-    - `20251208002530`: Initial version with UUID parameter (caused type errors)
-    - `20251208004059`: Added winner validation and paid validation
-    - `20251208005000`: Fixed UUID casting issue - accepts TEXT, converts internally
-  - **Type Handling:**
-    - Parameters: Both TEXT for TypeScript compatibility
-    - Internal conversion: `p_user_id::UUID` with error handling
-    - Variables: Proper UUID types for database columns
-    - Prevents `uuid = text` operator errors
-  - **Atomic Operation:** Single database transaction for ticket + bets update
-  - **Validations at DB level:**
-    - Ticket exists and not deleted
-    - Ticket belongs to user (ownership verification)
-    - Ticket not already paid (prevents duplicate payment)
-    - **Ticket is winner** (winner = TRUE) - NEW
-    - Valid UUID format for user_id - NEW
-  - **Updates:**
-    - Marks ticket as `paid = TRUE` with timestamp
-    - Marks **only winning bets** (`winner = TRUE`) as `paid = TRUE`
-    - Uses `edited_at` timestamp for audit trail
-  - **Returns:** Simple JSON response:
-    ```json
-    {
-      "success": true,
-      "ticket_id": "uuid-here",
-      "bets_updated": 5
-    }
-    ```
-    - No longer returns full ticket (performance optimization)
-    - Returns only essential confirmation data
-  - **Error Handling:**
-    - `TICKET_NOT_FOUND`: Ticket doesn't exist or doesn't belong to user
-    - `TICKET_ALREADY_PAID`: Ticket already marked as paid
-    - `TICKET_NOT_WINNER`: Ticket has no winning bets (new validation)
-    - `INVALID_USER_ID`: Invalid UUID format (new validation)
-  - **Performance Notes:**
-    - Uses `idx_bets_ticket_id` (existing, 2,529 uses)
-    - No new indices needed based on BETS_OPTIMIZACION_FINAL.md
-    - Monitors future performance; may add `idx_bets_ticket_winner` if needed
-  - **Benefits:**
-    - Atomicity: All-or-nothing update (ticket + bets in single transaction)
-    - Consistency: Validations at database level prevent race conditions
-    - Performance: Single round-trip to database vs multiple queries
-    - Maintainability: Business logic centralized in database
-    - Type Safety: Proper UUID handling with TypeScript compatibility
+**Files Modified:**
 
-#### Ticket Payment Functionality - Complete Implementation
-- **Pay Ticket Endpoint**: Completed implementation of `PUT /api/private/ticket/paid/:id`
-  - Path: `api/src/ticket/route/ticket.route.ts` (payTicketHandler)
-  - **Validations:**
-    - User authentication required (`user.user_id` must exist)
-    - Ticket number validation (from URL params)
-    - Ticket ownership verification (user who created ticket must be the same who pays it)
-    - Prevents duplicate payment (validates ticket not already paid)
-  - **Error Handling:**
-    - 401: User not authenticated
-    - 400: Missing ticket_number or ticket already paid
-    - 403: Ticket doesn't belong to authenticated user
-    - 404: Ticket not found
-    - 500: Internal server error
+1. **`src/auth/route/auth.route.ts`**
+   - Removed unused variable `IS_PRODUCTION` (no-unused-vars)
+   - Now uses `SESSION_CONFIG.COOKIE_SECURE` directly
 
-- **Controller Logic**: Simplified `paid()` method in `TicketController`
-  - Path: `api/src/ticket/controller/ticket.controller.ts:181-200`
-  - **Flow:**
-    1. Call repository `payTicket()` method
-    2. Repository calls `pay_ticket` RPC (handles all validations and updates)
-    3. Return simple confirmation object (not full ticket)
-  - **Returns:** `{ success: boolean, ticket_id: string, bets_updated: number }`
-  - **Benefits:** Thin controller layer, no parsing needed, faster response
+2. **`src/cache/CacheManager.ts`**
+   - Changed `CacheManager<T = any>` → `CacheManager<T = unknown>`
+   - Changed `Promise<CacheEntry<any>>` → `Promise<CacheEntry<unknown>>`
+   - Changed `CacheEntry<any>` → `CacheEntry<unknown>>`
+   - Changed `estimateSize(data: any)` → `estimateSize(data: unknown)`
+   - **Why:** `unknown` is type-safe (requires type checking before use), `any` bypasses type safety
 
-- **Error Messages**: Added new error constants in helper
-  - Path: `helper/types/errors.type.ts`
-  - `TICKET_NOT_OWNED`: "El ticket no pertenece al usuario"
-  - `TICKET_ALREADY_PAID`: "El ticket ya fue pagado"
-  - **Why:** Better error messaging for frontend user experience
+3. **`src/user/repository/user.repository.ts`**
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: IUpdateUserEntity, ...)`
+   - **Benefit:** Prevents updating auth fields through general update endpoint
 
-- **Repository Method**: Refactored to use RPC
-  - Path: `api/src/ticket/repository/ticket.repository.ts:180-197`
-  - **Before:** 2 separate UPDATE queries (tickets + bets)
-  - **After:** Single RPC call `pay_ticket()`
-  - Returns simple confirmation: `{ success: boolean, ticket_id: string, bets_updated: number }`
-  - Propagates database errors to controller layer
-  - **Performance:** ~90% faster (no need to fetch full ticket JSON)
+4. **`src/lottery/repository/lottery.repository.ts`**
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: IUpdateLotteryEntity, ...)`
+   - **Benefit:** Type-safe lottery updates
 
-### Changed - 2025-12-03
+5. **`src/results/repository/results.repository.ts`**
+   - Added import: `IResultsBase` type
+   - Changed `create(payload: any)` → `create(payload: Omit<IResultsBase, 'results_id' | 'created_at' | 'edited_at' | 'deleted_at'>)`
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: Partial<IResultsBase>, ...)`
+   - **Benefit:** Type-safe results CRUD operations
 
-#### Database Index Optimization - Execution Completed ✅
-- **Index Migration Executed**: Successfully applied database optimizations identified in audit
-  - **Phase 1 (Tickets)**: 4 composite indices created
-  - **Phase 2 (Bets)**: 2 optimized indices created
-  - **Cleanup**: 2 unused indices removed
-  - **Files executed:**
-    - `db_migration_indexes.sql` - Tickets optimization (executed)
-    - `db_migration_bets_indexes.sql` - Bets optimization reference
-  - **Documentation created:**
-    - `benchmark_ANTES.sql` - Pre-optimization benchmarks with results
-    - `benchmark_DESPUES.sql` - Post-optimization benchmarks with results
-    - `RESULTADOS_OPTIMIZACION.md` - Complete analysis and results
-    - `BETS_OPTIMIZACION_FINAL.md` - Detailed bets optimization report
-    - `ESTRATEGIA_OPTIMIZACION.md` - Complete strategy and roadmap
-    - `GUIA_EJECUCION.md` - Step-by-step execution guide (updated)
+6. **`src/shcedule/repository/schedule.repository.ts`**
+   - Added import: `IScheduleEntityBack` and `IUpdateScheduleEntity` types
+   - Changed `create(payload: any)` → `create(payload: Omit<IScheduleEntityBack, 'schedule_id' | 'created_at' | 'edited_at' | 'schedule_lotteries'>)`
+   - Changed `update(id, payload: any, ...)` → `update(id, payload: IUpdateScheduleEntity, ...)`
+   - **Benefit:** Type-safe schedule CRUD operations
 
-  - **Indices Created - Tickets (4):**
-    1. `idx_tickets_date_deleted_winner_created`
-       - Columns: `(date DESC, deleted_at, winner, created_at DESC)`
-       - Condition: `WHERE deleted_at IS NULL`
-       - Size: ~35-50 KB
-       - Use case: Queries by date (B1)
+**Impact:**
+- ✅ All ESLint warnings and errors resolved
+- ✅ Passes `npm run lint` with `--max-warnings=0`
+- ✅ Ready for commit and GitHub Actions CI/CD
+- ✅ Improved type safety across all repositories
+- ✅ Better IDE autocomplete and error detection
 
-    2. `idx_tickets_user_date_deleted_created`
-       - Columns: `(user_id, date DESC, deleted_at, created_at DESC)`
-       - Condition: `WHERE deleted_at IS NULL`
-       - Size: ~35-50 KB
-       - Use case: User tickets by date (B2)
+**Testing:** `npx eslint "src/**/*.ts" --max-warnings=0` passes with no errors
 
-    3. `idx_tickets_winner_deleted_created`
-       - Columns: `(winner, deleted_at, created_at DESC)`
-       - Condition: `WHERE winner = true AND deleted_at IS NULL`
-       - Size: ~35-50 KB (partial - 393 rows)
-       - Use case: List all winners (B3)
+---
 
-    4. `idx_tickets_winner_user_deleted_created`
-       - Columns: `(winner, user_id, deleted_at, created_at DESC)`
-       - Condition: `WHERE winner = true AND deleted_at IS NULL`
-       - Size: ~35-50 KB (partial - 393 rows)
-       - Use case: Winners by user (B4)
+### Changed - 2025-12-29
 
-  - **Indices Created - Bets (2):**
-    1. `idx_bets_date_schedule_winner_deleted`
-       - Columns: `(date, schedule_id, winner, deleted_at)`
-       - Condition: `WHERE winner = true AND deleted_at IS NULL`
-       - Size: ~40 KB (partial - 832 winners)
-       - Use case: Winner bets by date (B5)
+#### User CRUD Migration to Custom Authentication System
+**Change:** Fully migrated user creation to custom authentication system, removing dependency on Supabase Auth
 
-    2. `idx_bets_user_date_deleted`
-       - Columns: `(user_id, date, deleted_at)`
-       - Condition: `WHERE deleted_at IS NULL`
-       - Size: ~1,960 KB
-       - Use case: User bets by date (B6)
+**Files Modified:**
+- `api/src/user/helper/userBase.ts` - `buildUserForDB()` function
+  - **Added:** Password hashing for all users except STREET cashiers
+  - **Added:** Custom authentication fields initialization:
+    - `password_hash`: bcrypt hashed password (12 rounds)
+    - `password_changed_at`: timestamp of password creation
+    - `password_reset_required`: false (users can login immediately)
+    - `failed_login_attempts`: 0 (initial value)
+    - `locked_until`: null
+    - `last_login_at`: null
+    - `last_login_ip`: null
+  - **Validation:** Throws error if password not provided for users that need it
+  - **Logic:** STREET cashiers don't need password (no username/email)
 
-  - **Indices Removed (2):**
-    - `idx_tpt_ticket` on `ticket_prizes_by_turn` (0 uses, 16 KB freed)
-    - `idx_bets_date_winner_deleted_created` (0 uses, 40 KB freed, redundant)
+**Type Definitions Updated:**
+- `helper/request/user.request.ts`
+  - **`INewUserEntity`**: Excluded auto-generated auth fields from creation payload
+    - Removed: `password_hash`, `password_changed_at`, `password_reset_required`
+    - Removed: `failed_login_attempts`, `locked_until`, `last_login_at`, `last_login_ip`
+    - Added: `password` field (plain text - hashed by backend)
+  - **`IUpdateUserEntity`**: Excluded auth fields from update payload
+    - Prevents updating auth fields through general update endpoint
+    - Auth fields only updated through dedicated password/auth endpoints
 
-  - **Performance Results - MEASURED:**
+**User Flow:**
+1. Frontend sends `INewUserEntity` with plain text password
+2. Backend `buildUserForDB()` hashes password with bcrypt
+3. Backend initializes all auth fields with secure defaults
+4. User is created in database with full custom auth support
+5. User can login immediately (no password reset required)
 
-    **Tickets Benchmarks:**
-    - B1 (Tickets by date): 0.942ms → 0.987ms (Cache cold anomaly, validated identical with warm cache)
-    - B2 (User tickets): 3.876ms → 1.085ms (**72.0% improvement**)
-    - B3 (Winners): 1.092ms → 13.115ms (Cache cold, see validation below)
-    - B4 (Winners by user): 0.918ms → 8.263ms (Cache cold, see validation below)
+**Security:**
+- ✅ All passwords hashed with bcrypt (12 rounds)
+- ✅ Auth fields cannot be set/updated through general CRUD endpoints
+- ✅ STREET cashiers don't have passwords (consistent with no username/email)
+- ✅ Type safety ensures auth fields are not accidentally exposed
 
-    **Bets Benchmarks - CRITICAL IMPROVEMENTS:**
-    - B5 (Winner bets): 489.030ms → 11.684ms (**97.6% improvement - 42x faster**) ✅✅✅
-    - B6 (User bets): 499.892ms → 20.037ms (**96.0% improvement - 25x faster**) ✅✅✅
-    - B7 (Complex query): 92.278ms → 81.486ms (**11.7% improvement**)
+**Impact:** User creation now fully independent of Supabase Auth - Phase 5 cutover complete for user CRUD
 
-    **Global Impact:**
-    - Total time BEFORE: 1,088.028ms
-    - Total time AFTER: 155.875ms
-    - **Overall improvement: 85.7%** (89.5% after cleanup)
-    - **Bets improvement: 96.8%** (989ms → 32ms)
+---
 
-  - **Scientific Validation - Cache Warm Test:**
-    - **Hypothesis tested**: Tickets degradation was due to cold cache, not real performance loss
-    - **Method**: Executed same query 3 times consecutively to warm cache
-    - **Results**:
-      - 1st execution (cold): 20.205ms
-      - 2nd execution (warm): ~2-4ms
-      - 3rd execution (hot): **0.987ms**
-    - **Comparison with baseline**: 0.987ms vs 0.942ms = +0.045ms (+4.8%)
-    - **Verdict**: ✅ **NO REAL DEGRADATION** - Performance identical with warm cache
-    - **Confirmation**: Indices include ALL data (old dates confirmed - returned 54 rows from 19 days ago)
+### Added - 2025-12-28
 
-  - **Technical Details:**
-    - All indices use `CREATE INDEX CONCURRENTLY` (no table locks)
-    - Partial indices with `WHERE deleted_at IS NULL` for soft delete optimization
-    - Column order optimized: equality → range → sort
-    - `ANALYZE` executed on both tables after changes
-    - Total space added: ~15-16 MB (<3% of database size)
-    - Write overhead: Estimated 5-10% slower INSERTs (acceptable trade-off)
+#### Hierarchical Password Reset Permissions
+**Feature:** Implemented granular permission controls for password reset functionality
 
-  - **B5 Optimization Details (Winner Bets):**
-    - **Problem identified**:
-      - Scanned 5,216 rows, filtered to 30 rows (99.4% waste)
-      - Used `idx_bets_schedule_date` but missing `winner` column
-    - **Solution**: Composite index with winner + date + schedule
-    - **Result**: Direct scan of ~30 winner rows (0% waste)
-    - **Impact**: Eliminated 5,186 unnecessary row reads
+**User Repository Enhancement:**
+- `api/src/user/repository/user.repository.ts`
+  - Added `getByIdWithoutOrgRestriction()` method
+  - Used for OWNER to reset SUPERADMIN passwords across organizations
+  - Returns user without organization constraint
 
-  - **B6 Optimization Details (User Bets):**
-    - **Problem identified**:
-      - Used BitmapAnd (expensive operation)
-      - Combined 2 separate indices: user_id + schedule_date
-      - 3 I/O operations: scan + scan + intersect
-    - **Solution**: Single composite index (user_id + date)
-    - **Result**: Direct lookup with single I/O
-    - **Impact**: Eliminated BitmapAnd overhead, 96% faster
+**Permission Rules Implemented:**
+1. **OWNER:**
+   - Can reset SUPERADMIN passwords from ANY organization
+   - Can reset ADMIN/CASHIER passwords from OWN organization only
+   - Cannot reset other OWNER passwords
 
-  - **Index Usage Analysis (pg_stat_user_indexes):**
-    - **Most used indices (bets)**:
-      - `idx_bets_schedule_date`: 20,531 uses (3,696 KB)
-      - `idx_bets_user_id`: 5,380 uses (2,696 KB)
-      - `idx_bets_ticket_id`: 2,529 uses (4,136 KB)
-    - **New indices already in use**:
-      - `idx_bets_user_date_deleted`: 106 uses (1,960 KB)
-      - `idx_bets_date_schedule_winner_deleted`: 28 uses (40 KB)
-    - **Conclusion**: All indices actively used, no further cleanup needed
+2. **SUPERADMIN:**
+   - Can reset ADMIN/CASHIER passwords from OWN organization only
+   - Cannot reset OWNER or other SUPERADMIN passwords
 
-  - **Scalability Projection:**
-    - Current tickets table: 1,225 rows (small)
-    - Performance with cache warm: Identical (0.987ms vs 0.942ms)
-    - Expected improvements at scale:
-      - 10,000 rows: 87% improvement
-      - 100,000 rows: 97% improvement
-      - 1,000,000 rows: 99% improvement
-    - **Verdict**: Indices are future-proofing investment
+3. **ADMIN:**
+   - Can reset CASHIER passwords from OWN organization only
+   - Cannot reset OWNER, SUPERADMIN, or other ADMIN passwords
 
-  - **Production Impact (Estimated):**
-    - Bets queries: ~150 executions/day
-    - Time saved per day: ~72 seconds (B5+B6 combined)
-    - Time saved per month: ~36 minutes
-    - **UX improvement**: Queries now instantaneous (<25ms vs ~500ms)
+4. **CASHIER:**
+   - Cannot reset any passwords (use `changePassword` endpoint instead)
 
-  - **Decision Rationale - Why stop at 8 bets indices:**
-    1. Already achieved 96.8% improvement (diminishing returns)
-    2. Write overhead: 8 indices = ~8-10% slower INSERTs (acceptable)
-    3. Law of diminishing returns: 9th index would add <3% improvement
-    4. Balance: Read optimization vs write performance
-    5. **Conclusion**: 8 indices is optimal point for this table
+**Controller Changes:**
+- `api/src/user/controller/user.controller.ts:resetPassword()`
+  - Added hierarchical permission validation with detailed error messages
+  - Uses `getByIdWithoutOrgRestriction()` for OWNER to allow cross-org SUPERADMIN resets
+  - Validates target user type against admin user type
+  - Enhanced audit logging with target user type metadata
+  - Changed `password_reset_required` to `false` (users can login immediately)
 
-  - **Lessons Learned:**
-    - ✅ Composite indices critical for multi-column filters
-    - ✅ Partial indices (`WHERE condition`) reduce size 90-99%
-    - ✅ Column order matters: equality → range → sort
-    - ✅ `pg_stat_user_indexes` essential for usage analysis
-    - ✅ Cache warm testing needed for small tables
-    - ✅ Scientific validation > assumptions
-    - ⚠️ Small tables (<10K rows): Index overhead may exceed benefit
-    - ⚠️ Always verify indices are actually used (idx_scan > 0)
+**Error Messages:**
+- "No puedes resetear la contraseña de otro OWNER"
+- "Solo puedes resetear contraseñas de usuarios de tu organización"
+- "No puedes resetear la contraseña de un OWNER o SUPERADMIN" (for SUPERADMIN)
+- "Solo puedes resetear contraseñas de cajeros" (for ADMIN)
 
-  - **Next Steps (Monitoring):**
-    - Monitor index usage for 48-72 hours in production
-    - Verify no INSERT/UPDATE performance degradation
-    - Check Supabase Performance Insights for new bottlenecks
-    - Consider archival strategy for old bets (if table grows >1M rows)
+**Security:**
+- Organization isolation enforced (except OWNER → SUPERADMIN cross-org)
+- All sessions revoked on password reset
+- Audit trail includes admin user ID, type, and target user type
 
-### Changed - 2025-11-21
+**Use Case:** Prevents unauthorized password resets while allowing proper administrative hierarchy
 
-#### Database Index Optimization - Days 1 & 2 Completed
-- **Index Audit Completed**: Comprehensive analysis of database indices
-  - **Files created:**
-    - `db_index_analysis.md` - Day 1 audit results
-    - `day2_query_analysis.md` - Query pattern analysis
-    - `db_migration_indexes.sql` - Migration script ready to execute
-    - `resumen_para_manana.md` - Summary and next steps
-  - **Key findings:**
-    - 4 unused indices identified (64 KB wasted space)
-    - `tickets` table critically under-indexed
-    - `bets` table well-indexed (2,708 uses on primary index)
-    - No `winners` table exists (uses `winner` column in tickets/bets)
-  - **Tables analyzed:**
-    - `tickets`: 13 columns, 104 KB total, 4 critical indices needed
-    - `bets`: 23 columns, 6.9 MB total, 3 optional indices proposed
-    - `ticket_prizes_by_turn`: PK with 0 uses (requires investigation)
-    - `results`: Well optimized, possible redundancy detected
-  - **Repository queries analyzed:**
-    - `WinnerRepository.getAllWinners()` - Full table scan (500-1000ms)
-    - `TicketRepository.getAll()` - Missing composite indices (200-500ms)
-    - `TicketRepository.getAllTicketNumber()` - Same as getAll()
-    - `BetRepository.getWinnerBets()` - Partial index scan (80-150ms)
-    - `BetRepository.getAllBets()` - Uses existing indices well
-  - **Proposed indices (7 new, 1 to drop):**
-    - **Priority HIGH - tickets (4 indices):**
-      - `idx_tickets_date_deleted_winner_created` - 60-80% improvement
-      - `idx_tickets_user_date_deleted_created` - 70-90% improvement
-      - `idx_tickets_winner_deleted_created` - 80-95% improvement
-      - `idx_tickets_winner_user_deleted_created` - 85-95% improvement
-    - **Priority MEDIUM - bets (3 indices):**
-      - `idx_bets_date_winner_deleted_created` - 40-60% improvement
-      - `idx_bets_date_schedule_winner_deleted` - 50-70% improvement
-      - `idx_bets_user_date_deleted` - 30-50% improvement
-    - **To drop:**
-      - `idx_tpt_ticket` on `ticket_prizes_by_turn` (0 uses)
-  - **Expected impact:**
-    - 60-95% faster queries on tickets by date/user/winner
-    - 40-70% faster queries on winner bets
-    - Minimal impact on INSERTs (5-10% slower, acceptable trade-off)
-    - +140-280 KB disk space (negligible)
-  - **Validation with Production Data:**
-    - Analyzed Supabase Performance Insights from production
-    - **CONFIRMED**: Tickets query is #1 most problematic
-      - 707 calls, 15.8ms average, 11.17 seconds total (7.98% of total time)
-      - Filters by user_id, date, deleted_at
-      - Orders by created_at DESC
-      - Exactly matches `TicketRepository.getAll()` identified in analysis
-    - **CONFIRMED**: Bets table well-indexed
-      - 216 calls, 16.67ms average (excellent performance)
-      - Cache hit rate: 99.999%
-      - Current indices working perfectly
-    - **CONFIRMED**: Schedules query excellent
-      - 1,489 calls but only 1.68ms average (super fast)
-      - No changes needed
-    - **CONFIRMED**: Write RPCs acceptable
-      - create_ticket_with_bets: 70-111ms (reasonable for complex INSERT)
-      - generate_winners: 44-109ms (reasonable for complex logic)
-    - **Expected impact validated:**
-      - Conservative: 70% improvement on tickets query → saves ~7.8 seconds
-      - Optimistic: 85% improvement → saves ~9.5 seconds
-      - Additional 20-30% improvement on generate_winners RPCs (~1.8-2.7s)
-      - Total: 6.9-8.7% improvement in total query time
-    - File: `supabase_query_analysis.md`
-  - **Next steps (Day 3):**
-    - Execute EXPLAIN ANALYZE benchmarks BEFORE
-    - Apply indices in development environment
-    - Measure specific improvements
-    - Validate no INSERT/UPDATE degradation
-    - Prepare production deployment
-  - **Technical decisions:**
-    - All indices use partial indexes (`WHERE deleted_at IS NULL`)
-    - Column order optimized (equality → range → order)
-    - Using `CONCURRENTLY` for production safety
-    - Rollback plan documented in SQL script
+---
 
-### Added - 2025-11-20
+### Added - 2025-12-28
 
-#### Action Plan for TODOs Implementation
-- **Strategic Action Plan**: Created comprehensive prioritized action plan
-  - Path: `ACTION_PLAN.md`
-  - Prioritization criteria:
-    - Performance impact (Critical → Low)
-    - Business value (Critical → Low)
-    - Implementation complexity (High → Low)
-  - **4 Phases planned:**
-    - **Phase 1 - Quick Wins** (1 week): Database indices + purge ticket_prizes_by_turn
-    - **Phase 2 - Essential Reports** (1-2 weeks): Basic tickets, bets, and financial reports
-    - **Phase 3 - Statistics Features** (1 week): Delayed numbers and hot numbers
-    - **Phase 4 - Advanced** (Future): Data archiving system and advanced reports
-  - Immediate priorities (P0):
-    - Database indices audit and optimization (3-4 days)
-    - 30-50% expected performance improvement on main queries
-  - High priorities (P1):
-    - Purge non-winner prizes (1 day, ~80% row reduction)
-    - Basic reports system (1-2 weeks, critical for business)
-  - Timeline: 3-4 weeks for Phases 1-3
-  - Success metrics clearly defined for each phase
-  - Rollback plans and security considerations included
+#### 🚨 Emergency Owner Password Reset Script
+**Purpose:** Emergency script to reset OWNER password when locked out after migration
 
-#### Reports and Analytics System TODO
-- **Reports System Planning**: Added comprehensive TODO for reports and analytics system
-  - Path: `TODO.md` - Section "Sistema de Reportes y Estadísticas"
-  - Planned features:
-    - **Tickets Reports**: Quantity per day, averages, trends
-    - **Bets Reports**: Quantity per day, average per ticket, distribution by lottery
-    - **Financial Reports**: Income vs prizes, unpaid prizes, RTP (Return to Player)
-    - **User Reports**: Top users by volume, behavior analysis, winners
-    - **Lottery Reports**: Most popular lotteries, analysis by schedule, top numbers
-    - **Trend Reports**: Weekly/monthly trends, peak hours
-    - **Dashboard**: Summary metrics with real-time updates
-    - **Export**: CSV and PDF export capabilities
-  - Technical approach:
-    - New module: `api/src/reports/`
-    - Stored procedures for complex calculations
-    - Caching with CacheManager (5-15 min TTL)
-    - Materialized views for heavy calculations
-    - Pre-aggregated daily summaries table
-  - Endpoints planned:
-    - `/api/private/reports/tickets/*`
-    - `/api/private/reports/bets/*`
-    - `/api/private/reports/financial/*`
-    - `/api/private/reports/users/*`
-    - `/api/private/reports/lotteries/*`
-    - `/api/private/reports/trends/*`
-    - `/api/private/reports/dashboard/*`
-    - `/api/private/reports/export/*`
-  - Estimated: 6-8 weeks of full development
-  - Priority: High (important for business analytics)
+**Script Created:**
+- `api/scripts/reset-owner-password.ts` - Emergency password reset for OWNER users
+  - Requires `OWNER_ID` and `OWNER_PASSWORD` environment variables
+  - Only works for OWNER user type (security)
+  - Validates password strength (non-empty)
+  - Hashes password with bcrypt
+  - Updates password in database
+  - Resets failed login attempts and unlocks account
+  - Revokes all existing sessions for security
+  - Creates audit log entry
+  - Run with: `OWNER_ID=<uuid> OWNER_PASSWORD=<password> npx tsx scripts/reset-owner-password.ts`
 
-### Added - 2025-11-19
+**Documentation Created:**
+- `api/scripts/README.md` - Comprehensive guide for emergency scripts
+  - Step-by-step instructions to get OWNER_ID from database
+  - Multiple execution methods (PowerShell, Git Bash, CMD)
+  - Examples for different deployment scenarios
+  - Security best practices
+  - Troubleshooting guide
+  - Post-reset verification queries
 
-#### Cache Management System
-- **CacheManager Class**: Created centralized cache management system
-  - Path: `src/cache/CacheManager.ts`
-  - Features:
-    - Multiple cache instances identified by unique keys
-    - Optional TTL (time-to-live) configuration per cache
-    - Three ETag generation strategies: counter, timestamp, hash
-    - Statistics tracking: size, access count, uptime, last access
-    - Automatic invalidation support
-    - Inflight request deduplication to prevent duplicate DB queries
-  - Benefits:
-    - Eliminates code duplication across route files
-    - Centralized cache monitoring and management
-    - Easy to query cache state (size, age, hit rate)
-    - Consistent caching behavior across all endpoints
+**Environment Variables:**
+- `api/.env.example` - Added emergency owner access section
+  - `OWNER_ID` - Owner user ID from database
+  - `OWNER_PASSWORD` - Temporary password for reset (comment out after use)
 
-#### Database Optimization TODO
-- **Database Indices Review**: Added comprehensive TODO in `TODO.md`
-  - Detailed plan for auditing and optimizing database indices
-  - Recommendations for indices on all major tables
-  - Performance testing methodology
-  - Integration with CacheManager for maximum performance
-  - Estimated 3-4 days of work for full implementation
+**Use Case:** After migration to custom auth, all users need password reset. Only admins can reset passwords. If OWNER is locked out, no one can reset anyone's password. This script solves that chicken-egg problem.
 
-### Changed - 2025-11-19
+**Security:**
+- Only works for OWNER user type
+- Requires direct database access
+- Creates audit trail
+- Should only be used in emergencies
+- Password should not be committed to version control
 
-#### Lottery Routes - Cache Refactoring
-- **lottery.route.ts**: Migrated to use CacheManager
-  - Path: `src/lottery/route/lottery.route.ts`
-  - Removed local cache implementation (Map, helper functions)
-  - Now uses `globalCacheManager.getOrLoad()` with timestamp ETag strategy
-  - Cache keys: `lotteries:all=true` and `lotteries:all=false`
-  - Automatic invalidation on create/update/delete operations
-  - Reduced code from ~45 lines to ~20 lines of cache logic
-  - Maintains ETag/304 support for bandwidth optimization
+---
 
-#### Schedule-Lottery Routes - Cache Refactoring
-- **schedule-lottery.route.ts**: Migrated to use CacheManager
-  - Path: `src/schedule-lottery/route/schedule-lottery.route.ts`
-  - Removed local cache implementation with TTL
-  - Now uses `globalCacheManager.getOrLoad()` with hash ETag strategy
-  - Cache key: `schedule-lotteries:all`
-  - TTL: 24 hours (configurable)
-  - Automatic invalidation on POST operations
-  - Reduced code complexity and improved maintainability
+### Changed - 2025-12-28
 
-#### Schedule Routes - Cache Refactoring
-- **schedule.route.ts**: Migrated to use CacheManager
-  - Path: `src/shcedule/route/schedule.route.ts`
-  - Removed local cache with counter-based ETag
-  - Now uses `globalCacheManager.getOrLoad()` with counter ETag strategy
-  - Cache key: `schedules:all`
-  - No TTL (cache persists until invalidation)
-  - Automatic invalidation on create/update/delete operations
-  - Removed manual inflight request handling (now managed by CacheManager)
+#### Password Validation Simplification
+**Change:** Simplified password strength requirements to only check for non-empty passwords
 
-### Added - 2025-11-13
+**Files Modified:**
+- `api/helper/password.ts` - `validatePasswordStrength()` function
+  - **Old:** Required 8+ characters, uppercase, lowercase, number
+  - **New:** Only requires non-empty password
+  - **Validation:** `password.trim().length > 0`
+  - **Error:** "La contraseña no puede estar vacía"
 
-#### Winners - Unified Transaction for Consistency
-- **New RPC `generate_winners_and_calculate_accounts`**: Unified function
-  - Migration: `20251113181041_sp_generate_winners_and_calculate_current_account.sql`
-  - Executes `generate_winners` + `calculate_current_account` in single transaction
-  - Guarantees data consistency: current accounts always reflect latest winners
-  - Returns combined result with statistics from both operations
-  - Use case: Ensures cuenta corriente updates immediately after generating winners
+- `api/scripts/reset-owner-password.ts` - Updated error messages
+  - Removed complexity requirements from console output
+  - Only mentions "Password cannot be empty"
 
-### Changed - 2025-11-13
+- `api/scripts/README.md` - Updated documentation
+  - Step 2: Any non-empty text is valid (admin, 123456, etc.)
+  - Troubleshooting: Removed complexity requirements section
+  - Support: Changed "cumpla los requisitos" to "no esté vacía"
 
-#### Winners Repository - Simplified Flow
-- **`generateWinners` now uses unified RPC**: Simplified implementation
-  - Path: `src/winners/repository/winners.repository.ts:5-16`
-  - Changed from calling 2 separate RPCs to 1 unified RPC
-  - Removed manual date formatting (handled by stored procedure)
-  - Removed `dayjs` dependency from this file
-  - Returns JSONB result with statistics instead of boolean
-  - Fixes race condition: cuenta corriente now updates reliably on first run
+**Reason:** Application does not require password complexity rules per user feedback
 
-#### Database RPC - `generate_winners` Return Type
-- **`generate_winners` now returns JSONB**: Breaking change for direct callers
-  - Migration: `20251113181041_sp_generate_winners_and_calculate_current_account.sql`
-  - Changed from `RETURNS VOID` to `RETURNS JSONB`
-  - Returns: `{success, schedule_id, date, affected_tickets, winner_tickets}`
-  - Forces PostgreSQL to complete transaction before returning
-  - Improves observability: can now see how many tickets were affected
-  - Note: Application code updated to use new unified RPC instead
+**Impact:** Users can set simple passwords like "admin" or "123456" if desired
 
-### Added - 2025-11-11
+---
 
-#### Bet Aggregates - Enhanced Pagination Response
-- **Total Counts in Aggregates**: Added `totalCount` and `totalWinnersCount` to bet aggregates
-  - Path: `src/bet/controller/bet.controller.ts:75-113`
-  - When filtering by `ticket_number`, uses `getAmountsByTicket` RPC
-  - Returns `totalCount` (total plays) and `totalWinnersCount` (winning plays)
-  - Ensures accurate totals even with pagination
-  - Backend now distinguishes between ticket-specific and general totals
+### Fixed - 2025-12-28
 
-#### Database RPC
-- **get_ticket_sums Enhancement**: Modified to return play counts
-  - Migration: `20251111131145_sp_sum_amount_by_ticket_number.sql` (modified)
-  - Now returns: `total_amount`, `total_prize`, `total_count`, `total_winners_count`
-  - Allows accurate count of total plays and winners per ticket
-  - Supports paginated display with correct totals
+#### Login Handler Legacy Code Removal
+**Fix:** Removed remaining Supabase Auth code from login handler
 
-#### Authentication
-- **Session Cookies Documentation**: Added comments explaining cookie behavior
-  - Path: `src/auth/route/auth.route.ts` (lines 60-61)
-  - Documented that cookies are session cookies (no `maxAge`)
-  - Noted that 3-hour timeout is managed by frontend `AuthProvider`
+**File:** `api/src/auth/route/auth.route.ts`
 
-#### Current Account - New Endpoints
-- **POST /api/private/current_account/calculate**: New calculate-only endpoint
-  - Path: `src/current-account/route/current-account.route.ts` (line 26)
-  - Handler: `calculateCurrentAccountHandler` (lines 84-133)
-  - Parameters: `date` (query string)
-  - Behavior: Recalculates current account WITHOUT liquidating
-  - Sets `leave = false` and `liquidated = false`
-  - Use case: Refresh/update button functionality
+**Problem:** After Phase 5 cutover, login handler still had imports and code referencing deleted legacy functions:
+- Importing `signUserToken` (deleted in Phase 5)
+- Importing `supabase` (no longer using Supabase Auth)
+- Importing `generateEmail` (no longer needed)
+- Error: "SyntaxError: The requested module 'api/helper/JWT' does not provide an export named 'signUserToken'"
 
-- **POST /api/private/current_account/liquidate**: New liquidation endpoint
-  - Path: `src/current-account/route/current-account.route.ts` (line 27)
-  - Handler: `liquidateCurrentAccountHandler` (lines 135-184)
-  - Parameters: `date`, `leave` (query strings)
-  - Behavior: Liquidates current account, can mark as leave
-  - Sets `liquidated = true`
-  - Use case: Official liquidation generation
+**Solution:** Completely rewrote `loginHandler` to use new session system:
+1. Removed legacy imports (`signUserToken`, `supabase`, `generateEmail`)
+2. Changed to use `loginWithSession()` controller method
+3. Set `access_token` cookie (15 minutes, httpOnly, secure)
+4. Set `refresh_token` cookie (30 days, httpOnly, secure)
+5. Return user data in `APIResponse` format
 
-### Changed - 2025-11-11
+**Impact:** Login endpoint now fully uses custom JWT session management
 
-#### Current Account Routes
-- **Route Organization**: Restructured current account routes
-  - Path: `src/current-account/route/current-account.route.ts`
-  - `/calculate` → Calculate only (no liquidation)
-  - `/liquidate` → Full liquidation with leave option
-  - `/` (base) → Maintained for backward compatibility, uses calculate logic
+---
 
-#### Current Account Handler
-- **calculateCurrentAccountHandler**: Modified behavior
-  - Path: `src/current-account/route/current-account.route.ts` (lines 84-133)
-  - Previously accepted `leave` parameter from query
-  - Now hardcoded to `leave = false` and `liquidated = false`
-  - Only recalculates values without marking as liquidated
-  - Used by both `/calculate` endpoint and legacy `/` endpoint
+#### TypeScript Type Error in Session Cleanup Job
+**Fix:** Fixed `NodeJS.Timeout` type error in session cleanup job
 
-### Documentation - 2025-11-11
+**File:** `api/src/utils/session-cleanup.job.ts`
 
-#### Controller Method Signature
-The underlying controller method remains unchanged:
+**Problem:** TypeScript error "'NodeJS' is not defined" for interval ID type
+- Using `NodeJS.Timeout` requires @types/node to be available
+- Not portable across different TypeScript configurations
+
+**Solution:** Changed type to `ReturnType<typeof setInterval>`
 ```typescript
-calculateCurrentAccountHandler(
-  date?: string,
-  leave?: boolean,
-  liquidated?: boolean
-)
+// Before (ERROR):
+let cleanupIntervalId: NodeJS.Timeout | null = null;
+
+// After (FIXED):
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 ```
 
-#### Endpoint Behavior Matrix
-| Endpoint | leave | liquidated | Use Case |
-|----------|-------|-----------|----------|
-| POST /calculate | false | false | Refresh/Update |
-| POST /liquidate | from query | true | Official Liquidation |
-| POST / (legacy) | false | false | Backward compatibility |
+**Impact:** More portable TypeScript code, no external type dependencies
 
-#### RPC Function
-All endpoints use the same RPC: `calculate_current_account`
-```sql
-calculate_current_account(
-  p_date_text: text,
-  p_calculate_leave: boolean,
-  p_liquidated: boolean
-)
+---
+
+#### Module Resolution Error in Reset Script
+**Fix:** Fixed import path resolution in emergency reset script
+
+**File:** `api/scripts/reset-owner-password.ts`
+
+**Problem:** Import using alias `@helper/types/user.type` failed
+- TypeScript path aliases don't work from `scripts/` folder
+- Error: "Cannot find module '@helper/types/user.type'"
+
+**Solution:** Changed to relative path
+```typescript
+// Before (ERROR):
+import { USER_TYPE } from '@helper/types/user.type';
+
+// After (FIXED):
+import { USER_TYPE } from '../../helper/types/user.type';
 ```
 
-## Notes
+**Impact:** Script can be executed with `npx tsx` without additional TypeScript configuration
 
-### Breaking Changes
-- None - All changes are additive or internal refactoring
-- Legacy `POST /current_account` endpoint maintained for compatibility
+---
 
-### Backward Compatibility
-- Existing clients using `POST /current_account` continue to work
-- Behavior unchanged: recalculates without liquidating
-- No migration required for existing integrations
+### Added - 2025-12-28
 
-### Frontend Integration
-These backend changes support the frontend separation of:
-- "Actualizar" button → Uses `/calculate` (refresh only)
-- "Generar Liquidación" button → Uses `/liquidate` (official liquidation)
+#### 🔐 Custom JWT Session Management System (Migration Complete)
+**Major Feature:** Migrated from Supabase Auth to custom JWT-based session management with database tracking
 
-### Future Improvements
-Consider:
-- Adding response type indicators (calculated vs liquidated)
-- Audit logging for liquidation operations
-- Transaction support for bulk updates + liquidation
+**Migration Phases Completed:** All 5 phases (Database, Auth Endpoints, Password Management, Frontend Integration, Cutover)
+
+---
+
+##### Phase 1: Database & Infrastructure
+
+**SQL Migrations Created:**
+- `20260101000001_create_sessions_table.sql` - Session tracking with refresh tokens
+- `20260101000002_alter_users_for_custom_auth.sql` - Password management fields
+- `20260101000003_create_auth_audit_log.sql` - Security audit logging
+- `20260101000004_initial_data_migration.sql` - Mark users for password reset
+
+**Configuration Files:**
+- `api/src/config/session.config.ts` - Centralized session configuration
+  - Access token: 15 minutes
+  - Refresh token: 30 days
+  - Inactivity timeout: 4 hours (sliding window)
+  - Absolute timeout: 30 days
+  - Max failed attempts: 5
+  - Account lockout: 15 minutes
+  - BCrypt rounds: 12
+
+**Helper Functions:**
+- `api/helper/password.ts` - BCrypt password hashing utilities
+  - `hashPassword()` - Hash password with 12 rounds
+  - `comparePassword()` - Verify password securely
+  - `generateRandomPassword()` - Generate random passwords
+  - `validatePasswordStrength()` - Validate password is non-empty
+
+**JWT Helpers Updated:**
+- `api/helper/JWT.ts` - Access and refresh token functions
+  - `signAccessToken()` - Generate 15-min access tokens
+  - `verifyAccessToken()` - Validate access tokens
+  - `signRefreshToken()` - Generate 30-day refresh tokens
+  - `verifyRefreshToken()` - Validate refresh tokens
+
+**Repositories Created:**
+- `api/src/session/repository/session.repository.ts` - Session CRUD and lifecycle
+  - `create()` - Create new session with refresh token hash
+  - `getById()` - Get active session by ID
+  - `updateActivity()` - Implement sliding window (extends expiration)
+  - `revoke()` - Mark session inactive
+  - `revokeAllUserSessions()` - Security measure for password changes
+  - `rotateRefreshToken()` - Update token and increment version
+  - `cleanupExpiredSessions()` - Periodic cleanup job
+  - `countActiveSessions()` - Check concurrent sessions
+  - `revokeOldestSession()` - Enforce session limit
+
+- `api/src/audit/repository/audit.repository.ts` - Security event logging
+  - `log()` - Create audit entries
+  - `getRecentFailedAttempts()` - Brute force detection
+  - `getUserLogs()` - User activity history
+  - `getSessionLogs()` - Session activity history
+
+**Dependencies Added:**
+```bash
+npm install bcrypt @types/bcrypt
+```
+
+---
+
+##### Phase 2: Authentication Endpoints
+
+**Auth Repository Enhanced:**
+- `api/src/auth/repository/auth.repository.ts`
+  - `getUserByUsername()` - Login lookup
+  - `getUserById()` - Session validation
+  - `incrementFailedAttempts()` - Brute force tracking
+  - `resetFailedAttempts()` - Clear counter on success
+  - `lockAccount()` - Temporary lockout
+  - `updateLoginMetadata()` - Track last login
+  - `updatePassword()` - Update password hash
+
+**Auth Controller Rewritten:**
+- `api/src/auth/controller/auth.controller.ts`
+
+**New Method:** `loginWithSession()`
+1. Fetch user from database by username
+2. Check if account is locked
+3. Verify password hash exists
+4. Verify password with bcrypt
+5. Check concurrent sessions limit
+6. Create session with refresh_token_hash
+7. Generate access + refresh tokens
+8. Update user login metadata
+9. Reset failed attempts
+10. Log successful login
+
+**New Method:** `refreshToken()`
+1. Verify refresh token JWT
+2. Get session from database
+3. Check if session expired
+4. Verify refresh token hash (detect token reuse)
+5. Get user data
+6. Generate new tokens (rotate refresh token)
+7. Update session with new refresh token hash
+8. Update activity (sliding window)
+9. Log successful refresh
+
+**New Method:** `logoutSession()`
+- Revoke single session or all user sessions
+- Create audit log entry
+
+**Auth Routes Updated:**
+- `api/src/auth/route/auth.route.ts`
+  - `POST /api/auth/login` - Login with username/password
+  - `POST /api/auth/refresh` - Refresh access token (NEW)
+  - `POST /api/private/auth/logout` - Logout current session
+  - `POST /api/private/auth/logout-all` - Logout all sessions (NEW)
+  - `GET /api/private/auth/validate` - Validate session
+
+**Cookie Configuration:**
+- Access token: httpOnly, secure, sameSite=none, 15 min
+- Refresh token: httpOnly, secure, sameSite=none, 30 days
+
+---
+
+##### Phase 3: Password Management
+
+**User Controller Enhanced:**
+- `api/src/user/controller/user.controller.ts`
+
+**New Method:** `resetPassword()` (Admin-only)
+- OWNER, SUPERADMIN, ADMIN can reset any user's password
+- Generates random password if not provided
+- Validates password strength
+- Hashes password with bcrypt
+- Revokes all user sessions (security)
+- Creates audit log entry
+- Returns plaintext password for admin to share
+
+**New Method:** `changePassword()` (Self-service)
+- Any authenticated user can change own password
+- Verifies current password
+- Validates new password strength
+- Checks new password is different
+- Hashes new password
+- Revokes all user sessions (security)
+- Creates audit log entry
+
+**User Routes Updated:**
+- `api/src/user/route/user.route.ts`
+  - `POST /api/private/user/reset-password/:id` - Admin reset password
+  - `POST /api/private/user/change-password` - User change password
+
+**Migration Script Created:**
+- `api/scripts/migrate-users-to-custom-auth.ts`
+  - Marks all users without password_hash as requiring password reset
+  - Creates audit log entry
+  - Run with: `npx tsx scripts/migrate-users-to-custom-auth.ts`
+
+---
+
+##### Phase 4: Middleware & Cleanup Job
+
+**Auth Middleware Replaced:**
+- `api/middlewares/auth.middleware.ts` (COMPLETELY REWRITTEN)
+
+**Old Behavior (Removed):**
+- Only validated `user_token` cookie (custom JWT)
+- Ignored `access_token` (Supabase JWT never validated) ⚠️ Security issue
+- No session tracking in database
+- No expiration checking in backend
+- No sliding window
+
+**New Behavior:**
+1. Validates `access_token` cookie (15-min JWT)
+2. Verifies session in database (is_active, expires_at)
+3. Updates last_activity_at (sliding window → +4h)
+4. Gets fresh user data from database
+5. Attaches user and session info to request
+
+**Request Object Updated:**
+```typescript
+req.user = {
+  user: IUserEntityFront,
+  session_id: string,
+  organization_id: string
+}
+```
+
+**Session Cleanup Job Created:**
+- `api/src/utils/session-cleanup.job.ts`
+  - Runs every 1 hour
+  - Calls `cleanup_expired_sessions()` PostgreSQL function
+  - Marks expired sessions as inactive
+  - Logs cleanup results
+  - Started automatically in `api/src/index.ts`
+
+**Server Initialization Updated:**
+- `api/src/index.ts`
+  - Starts session cleanup job on server start
+  - Logs session configuration on startup
+
+---
+
+##### Phase 5: Legacy Code Removal
+
+**Removed from JWT Helper:**
+- `api/helper/JWT.ts`
+  - ❌ `signUserToken()` (deprecated, replaced by `signAccessToken()`)
+  - ❌ `verifyUserToken()` (deprecated, replaced by `verifyAccessToken()`)
+
+**Removed from Auth Controller:**
+- `api/src/auth/controller/auth.controller.ts`
+  - ❌ `login()` (deprecated, replaced by `loginWithSession()`)
+  - ❌ `logout()` (deprecated, replaced by `logoutSession()`)
+  - ❌ `refresh()` (deprecated, replaced by `refreshToken()`)
+
+**Removed Imports:**
+- ❌ `supabase` (no longer using Supabase Auth)
+- ❌ `generateEmail()` (no longer needed)
+- ❌ `IAuthLogout` (replaced by session-based logout)
+
+**Removed File:**
+- ❌ `api/middlewares/auth.middleware.new.ts` (merged into main middleware)
+
+---
+
+##### Security Features Implemented
+
+**Password Security:**
+- BCrypt hashing with 12 rounds
+- Password strength validation (non-empty only)
+- Secure comparison with timing attack protection
+- Password change requires current password verification
+- All sessions revoked on password change
+
+**Brute Force Protection:**
+- Failed login attempts tracking
+- Account lockout after 5 failed attempts
+- Lockout duration: 15 minutes
+- Audit logging of failed attempts
+
+**Token Security:**
+- Refresh token rotation (each use generates new token)
+- Token reuse detection → revokes ALL user sessions
+- Access token: 15 minutes (short-lived)
+- Refresh token: 30 days (long-lived, stored as bcrypt hash)
+- Tokens include type validation ('access' vs 'refresh')
+
+**Session Security:**
+- Sliding window: Session extends with activity (4h inactivity timeout)
+- Absolute timeout: Maximum 30 days regardless of activity
+- Session tracking in database (IP, user agent)
+- Session revocation on security events (password change, token reuse)
+- Concurrent session limit (configurable, default: unlimited)
+
+**Audit Logging:**
+- All auth events logged (login, logout, refresh, failures)
+- Failed login attempts with username and IP
+- Account lockouts
+- Password changes/resets
+- Token reuse detections
+- System migrations
+
+---
+
+##### Environment Variables Required
+
+Add to `.env`:
+```bash
+# JWT Secrets (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+JWT_SECRET_ACCESS=<256_BIT_SECRET_HERE>
+JWT_SECRET_REFRESH=<DIFFERENT_256_BIT_SECRET_HERE>
+```
+
+See `api/.env.example` for full configuration.
+
+---
+
+##### Breaking Changes
+
+**⚠️ All existing sessions will be invalidated**
+- Users must re-login after deployment
+- Supabase Auth sessions no longer work
+- Old `user_token` cookie replaced with `access_token` and `refresh_token`
+
+**Migration Steps:**
+1. Deploy database migrations
+2. Deploy backend code
+3. Run migration script: `npx tsx scripts/migrate-users-to-custom-auth.ts`
+4. Admins reset user passwords via API or frontend
+5. Users login with new passwords
+
+---
+
+##### Performance Improvements
+
+**Database Queries:**
+- Indexed session lookups by `session_id`, `user_id`, `expires_at`
+- PostgreSQL function for efficient session cleanup
+- Single query to update session activity
+
+**Caching:**
+- User data cached in session (refreshed on each request)
+- No need for repeated user lookups within same session
+
+**Token Validation:**
+- JWT validation is fast (cryptographic signature check)
+- Session lookup by ID is O(1) with index
+
+---
+
+##### Monitoring & Observability
+
+**Logs:**
+- Session cleanup results (every hour)
+- Failed login attempts
+- Account lockouts
+- Token reuse detections
+- Session creation/revocation
+
+**Audit Table:**
+- Query for security events
+- Track user activity
+- Detect suspicious patterns
+- Generate security reports
+
+---
+
+**Files Modified:**
+- Database: 4 SQL migrations
+- Config: `session.config.ts`, `envs.ts`, `.env.example`
+- Helpers: `password.ts`, `JWT.ts`
+- Repositories: `session.repository.ts`, `audit.repository.ts`, `auth.repository.ts`
+- Controllers: `auth.controller.ts`, `user.controller.ts`
+- Routes: `auth.route.ts`, `user.route.ts`
+- Middleware: `auth.middleware.ts`
+- Utils: `session-cleanup.job.ts`
+- Server: `index.ts`
+- Scripts: `migrate-users-to-custom-auth.ts`
+
+**Lines of Code:**
+- Added: ~2,500 lines
+- Modified: ~500 lines
+- Removed: ~200 lines
+
+**Dependencies:**
+- Added: `bcrypt`, `@types/bcrypt`
+
+---
+
+### Added - 2025-12-26
+
+#### Current Account - User Type Access Control
+**Added:** Access restrictions for CASHIER and ADMIN users on current account modification endpoints
+**File:** `api/src/current-account/route/current-account.route.ts`
+
+**Implementation:** Added validation checks in POST and PUT handlers to prevent CASHIER and ADMIN users from:
+- POST `/api/private/current-account/calculate` - Calculating current accounts
+- POST `/api/private/current-account/liquidate` - Liquidating current accounts
+- POST `/api/private/current-account/` - Legacy calculate endpoint
+- PUT `/api/private/current-account/:id` - Updating individual current accounts
+- PUT `/api/private/current-account/bulk` - Bulk updating current accounts
+
+**Access Control:**
+- Allowed: `USER_TYPE.OWNER` and `USER_TYPE.SUPERADMIN`
+- Denied: `USER_TYPE.CASHIER` and `USER_TYPE.ADMIN` (returns 403 Forbidden)
+
+**Response:** Returns HTTP 403 with error message: "Access denied: CASHIER and ADMIN users cannot perform this action"
+
+**Use case:** Prevents unauthorized users from modifying financial calculations and liquidations that should only be performed by owners or superadmins.
+
+### Fixed - 2025-12-26
+
+#### REDOUBLE Bet Calculation - Same Number Payout Adjustment
+**Fix:** Adjusted payout calculation when `number` and `with` are the same in REDOUBLE bets
+**File:** `api/supabase/migrations/20251226143157_sp_calc_redouble_fix_payout_equal_number_with.sql`
+
+**Problem:** When `number` equals `with` and the number appears multiple times, the payout was calculated incorrectly. Since both "slots" of the bet are used for the same number, we need 2 occurrences as minimum and should only pay for additional occurrences beyond those 2.
+
+**Example:**
+- Bet: number="05", with="05" (same number)
+- Results: "05" appears 3 times
+- Old logic: pays for 3 hits
+- New logic: pays for 3-1 = 2 hits (because you need the first 2 to meet the minimum)
+
+**Solution:** Modified hits calculation in section 6:
+- If `number = with`: `hits = GREATEST(number_hits, with_hits) - 1`
+- If `number ≠ with`: `hits = GREATEST(number_hits, with_hits)` (original logic)
+
+**Impact:** Correct payout calculation for REDOUBLE bets when the same number is used for both positions.
+
+#### REDOUBLE Bet Calculation - Same Number Validation
+**Fix:** Added validation for when `number` and `with` are the same in REDOUBLE bets
+**File:** `api/supabase/migrations/20251226140710_sp_calc_redouble_fix.sql`
+
+**Problem:** The `calculate_redouble_payout` function was incorrectly paying out when `number` and `with` were the same and only appeared once in the results. When betting on the same number twice (number = with), the number must appear at least 2 times to win.
+
+**Solution:** Added conditional logic to check if `number` equals `with`:
+- If they're equal: requires at least 2 occurrences of the number
+- If they're different: each number must appear at least once (original logic)
+
+**Impact:** Correct validation for REDOUBLE bets minimum requirements.
+
+### Fixed - 2025-12-24
+
+#### Delete Ticket Endpoint - Response Format
+**Fix:** Changed response from plain text to JSON format
+**File:** `api/src/ticket/route/ticket.route.ts:181-187`
+
+**Problem:** DELETE `/api/private/ticket/:id` endpoint was using `res.sendStatus(200)` which sends HTTP status code with plain text "OK". Frontend expects all responses to be JSON with `APIResponse<T>` structure, causing "Invalid response format: text/plain" error.
+
+**Solution:** Replaced `res.sendStatus(200)` with `res.status(200).json(response)` including proper `APIResponse` structure:
+```typescript
+const response: APIResponse<{ success: boolean }> = {
+  data: { success: true }
+};
+res.status(200).json(response);
+```
+
+**Impact:** Consistent JSON responses across all endpoints. Frontend can properly handle delete ticket success/error states.
+
+### Added - 2025-12-20
+
+#### Schedule Lottery Atomic Transactions
+- **PostgreSQL RPC Function**: Created RPC function for atomic schedule lottery saves
+  - File: `api/supabase/migrations/20251220085729_add_save_schedule_lottery_rpc.sql`
+  - Function `save_schedule_lottery(p_schedule_lottery jsonb, p_organization_id uuid)`
+  - Ensures all delete+insert operations happen in a single database transaction
+  - Prevents partial updates if something fails during save
+  - Handles day key to day number conversion (MONDAY → 1, etc.)
+  - Validates day keys and raises exception for invalid values
+  - Use case: Data consistency for schedule lottery configuration
+
+- **Performance Indexes**: Added indexes for schedule_lotteries table
+  - File: `api/supabase/migrations/20251220085730_add_schedule_lottery_indexes.sql`
+  - `idx_schedule_lotteries_org_day_schedule`: Optimizes delete operations in RPC function
+  - `idx_schedule_lotteries_org_day`: Optimizes queries filtering by organization and day
+  - `idx_schedule_lotteries_org_schedule`: Optimizes queries filtering by organization and schedule
+  - Use case: Faster query performance for schedule lottery operations
+
+- **Day Filtering for Lotteries**: Added `?day=MONDAY` query parameter to GET /api/lotteries
+  - Files:
+    - `api/src/lottery/route/lottery.route.ts`
+    - `api/src/lottery/controller/lottery.controller.ts`
+    - `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+    - `api/src/schedule-lottery/repository/schedule-lottery.repositroy.ts`
+  - Returns only lotteries configured for specified day based on schedule_lotteries table
+  - Can combine with `active_only=true` to get active lotteries for a day
+  - Validates day parameter against SCHEDULE_DAY enum
+  - Returns 400 for invalid day values with clear error message
+  - Cache-Control: `public, max-age=60, must-revalidate` for day-filtered queries
+  - Use case: Optimizes make plays page to fetch only relevant lotteries
+
+- **Day Filtering for Schedules**: Added `?day=MONDAY&with_lotteries=true` to GET /api/schedules
+  - Files:
+    - `api/src/shcedule/route/schedule.route.ts`
+    - `api/src/shcedule/controller/schedule.controller.ts`
+  - Returns only schedules that have lotteries configured for specified day
+  - When `with_lotteries=true`, includes lottery_ids array in response for each schedule
+  - Validates day parameter against SCHEDULE_DAY enum
+  - Returns 400 for invalid day values
+  - Cache-Control: `public, max-age=60, must-revalidate` for day-filtered queries
+  - Use case: Single request in make plays to get schedules with their lotteries for a specific day
+
+- **Schedule Lottery Helper Methods**: Added utility methods to ScheduleLotteryController
+  - File: `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+  - `getLotteryIdsForDay(organization_id, day)`: Returns unique lottery IDs for a day
+  - `getScheduleIdsForDay(organization_id, day)`: Returns unique schedule IDs for a day
+  - `getLotteryIdsByScheduleAndDay(organization_id, schedule_id, day)`: Returns lottery IDs for specific schedule and day
+  - Used by lotteries and schedules endpoints for day filtering
+  - Use case: Reusable logic for day-based filtering across multiple endpoints
+
+### Changed - 2025-12-20
+
+#### Schedule Lottery Backend Robustness
+- **Simplified Architecture**: Moved business logic from route handler to controller
+  - Files:
+    - `api/src/schedule-lottery/controller/schedule-lottery.controller.ts`
+    - `api/src/schedule-lottery/route/schedule-lottery.route.ts`
+  - Added `saveScheduleLottery()` method to controller that orchestrates the save
+  - Route handler now calls controller method instead of manual loops
+  - Better separation of concerns and easier to test
+  - Code reduction: ~60% fewer lines in route handler (80 → 30 lines)
+  - Use case: Cleaner architecture following controller pattern
+
+- **RPC-Based Save**: Repository now uses PostgreSQL RPC function for atomic saves
+  - File: `api/src/schedule-lottery/repository/schedule-lottery.repositroy.ts`
+  - Added `saveScheduleLottery()` method that calls `save_schedule_lottery` RPC function
+  - Keeps existing methods for backwards compatibility
+  - Proper error handling for RPC calls
+  - Use case: Atomic transactions prevent data corruption
+
+### Added - 2025-12-20
+
+#### Database Integrity Improvements
+- **Organization Foreign Key**: Added foreign key constraint for organization_id in schedule_lotteries
+  - File: `api/supabase/migrations/20251220133625_add_schedule_lotteries_org_fk.sql`
+  - Ensures referential integrity with organizations table
+  - ON DELETE CASCADE: Automatically cleans up schedule_lotteries when organization is deleted
+  - Prevents orphaned records
+  - Use case: Maintains data consistency when organizations are removed
+
+### Fixed - 2025-12-20
+
+#### Cookie Logout Fix
+- **Environment-Based Cookie Security**: Fixed logout not clearing cookies correctly in development
+  - File: `api/src/auth/route/auth.route.ts`
+  - Added `IS_PRODUCTION` constant based on `process.env.IS_LOCAL`
+  - Development (HTTP): `secure: false` and `sameSite: 'lax'`
+  - Production (HTTPS): `secure: true` and `sameSite: 'none'`
+  - Fixed both login and logout handlers to use matching cookie parameters
+  - Issue: Cookies with `secure: true` don't work on HTTP (localhost), preventing proper logout
+  - Solution: Cookie parameters now match exactly between set and clear operations
+  - Use case: Logout now correctly clears session cookies in all environments
+
+#### Schedule Lottery Data Consistency
+- **Transaction Handling**: All delete+insert operations now wrapped in database transaction
+  - File: `api/supabase/migrations/20251220085729_add_save_schedule_lottery_rpc.sql`
+  - RPC function ensures atomicity - either all changes succeed or none do
+  - Prevents partial updates if operation fails midway
+  - Use case: Data integrity for schedule lottery configuration
+
+- **Request Validation**: Added comprehensive validation layer for schedule lottery save requests
+  - File: `api/src/schedule-lottery/route/schedule-lottery.route.ts`
+  - Validates scheduleLottery is an object
+  - Validates day keys are valid SCHEDULE_DAY enum values (SUNDAY, MONDAY, etc.)
+  - Validates schedule_id and lottery_id are valid UUIDs using regex pattern
+  - Validates lotteries arrays are actually arrays
+  - Returns 400 with clear error messages for invalid data
+  - Use case: Prevents invalid data from reaching database
+
+### Added - 2025-12-19
+
+#### Standardized Error Handling System
+- **Error Middleware**: Created centralized error handling middleware
+  - File: `api/src/middlewares/error.middleware.ts`
+  - `errorHandler`: Centralized error handler with 4 parameters (Express requirement)
+  - `asyncHandler`: Wrapper to eliminate try-catch boilerplate in route handlers
+  - Handles ZodError, AppError, PostgrestError, and unexpected errors automatically
+  - Uses Winston logger for structured error logging
+  - Returns consistent APIResponse format with error codes
+  - Hides sensitive details in production
+  - Use case: Eliminates 60-70% of manual error handling code across all routes
+
+- **Winston Logger**: Professional structured logging system
+  - File: `api/src/utils/logger.ts`
+  - Logs to `logs/error.log` and `logs/combined.log`
+  - Console output in development with colors
+  - Automatic log rotation (5MB max, 5 files)
+  - Structured JSON format for production
+  - Use case: Better debugging and error tracking
+
+### Changed - 2025-12-19
+
+#### User Module - Error System Migration
+- **User Controller**: Migrated to typed errors
+  - File: `api/src/user/controller/user.controller.ts`
+  - Removed all try-catch blocks
+  - Throws `InternalServerError` for Supabase auth failures
+  - Cleaner code without manual error handling
+  - Code reduction: ~19% fewer lines
+
+- **User Routes**: Applied asyncHandler pattern
+  - File: `api/src/user/route/user.route.ts`
+  - All 5 handlers wrapped with `asyncHandler`
+  - Uses `BadRequestError` and `ForbiddenError` for validation
+  - Eliminated manual error responses
+  - Code reduction: 65% fewer lines (387 → 135 lines)
+  - Use case: Consistent error handling across all user endpoints
+
+#### Auth Module - Error System Migration
+- **Auth Repository**: Security improvement
+  - File: `api/src/auth/repository/auth.repository.ts`
+  - Throws `UnauthorizedError` with same message for non-existent users and wrong passwords
+  - Use case: Prevents user enumeration attacks
+
+- **Auth Controller**: Migrated to typed errors
+  - File: `api/src/auth/controller/auth.controller.ts`
+  - Throws `UnauthorizedError` instead of generic Error
+  - Removed console.error statements (middleware logs now)
+
+- **Auth Routes**: Applied asyncHandler pattern
+  - File: `api/src/auth/route/auth.route.ts`
+  - All handlers wrapped with `asyncHandler`
+  - Uses `loginSchema.parse()` for automatic validation
+  - Eliminated manual try-catch blocks
+  - Code reduction: ~50% fewer lines
+
+- **Auth Middleware**: Applied asyncHandler pattern
+  - File: `api/middlewares/auth.middleware.ts`
+  - `isAuthenticated` wrapped with `asyncHandler`
+  - Throws `UnauthorizedError` instead of manual responses
+  - Code reduction: 44% fewer lines (32 → 18 lines)
+
+#### Ticket Module - Error System Migration
+- **Ticket Controller**: Migrated to typed errors
+  - File: `api/src/ticket/controller/ticket.controller.ts`
+  - Removed all try-catch blocks
+  - Uses `NotFoundError` and `InvalidDeleteTimeError`
+  - Code reduction: 19% fewer lines (214 → 173 lines)
+
+- **Ticket Routes**: Applied asyncHandler pattern
+  - File: `api/src/ticket/route/ticket.route.ts`
+  - All 8 handlers wrapped with `asyncHandler`
+  - Uses `newTicketSchema.parse()` for validation
+  - Eliminated manual error handling
+  - Code reduction: 62% fewer lines (541 → 204 lines)
+  - Use case: Massive simplification of ticket endpoints
+
+### Fixed - 2025-12-19
+
+#### Error Handler Recognition
+- **Error Middleware Signature**: Fixed Express error handler not being recognized
+  - File: `api/src/middlewares/error.middleware.ts`
+  - Added `next: NextFunction` as 4th parameter (Express requirement)
+  - Previously returned HTML instead of JSON for errors
+  - Use case: Backend now correctly returns JSON error responses
+
+### Dependencies - 2025-12-19
+
+#### Logging
+- **winston**: Added for professional structured logging
+  - Version: Latest
+  - Use case: Production-grade error logging and monitoring

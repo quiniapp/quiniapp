@@ -7,6 +7,1054 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-01-06
+
+#### User List Table - Sticky Header Fixed
+**Fix:** Table headers now remain visible while scrolling, preventing headers from scrolling away with content
+
+**Changes in `web/src/features/user-list/user-table.tsx`:**
+- Restructured table container with `flex flex-col` and `overflow-hidden` to properly handle sticky positioning
+- Moved `overflow-y-auto` to inner div wrapper with `flex-1` for correct scroll behavior
+- Changed from using `Table` and `TableHeader` components to native `<table>` and `<thead>` elements for better control
+- Added `bg-dark-light` class to each `TableHead` cell to ensure solid background covers scrolling content
+- Maintained `sticky top-0 z-10` on thead for proper sticky positioning
+- **Why:** Previous implementation had overflow on parent container which prevented sticky positioning from working correctly. Headers now stay fixed at top while table body scrolls independently.
+
+### Fixed - 2026-01-05
+
+#### User List Table Scrolling
+**Fix:** User list table now scrolls properly when there are many users, with sticky headers
+
+**Changes in `web/src/features/user-list/user-table.tsx`:**
+- Added `max-h-[calc(100vh-280px)]` to table container to enable scrolling when content exceeds viewport
+- Added `h-full` to ensure table uses available space
+- Added `sticky top-0 z-10` to `TableHeader` to keep headers visible while scrolling
+- Users can now see all users in the list by scrolling while column headers remain fixed at the top
+
+### Changed - 2026-01-02
+
+#### Repeat Ticket Modal - Custom Amount and Bet Order Grouping
+**Feature:** Enhanced repeat ticket modal with custom amount input and proper bet grouping by `bet_order`
+
+**Changes in `web/src/components/modals/repeat-ticket-modal.tsx`:**
+1. **Custom Amount Input**
+   - Added `customAmount` state (`number | null`) for overriding bet amounts
+   - New input field next to ticket number input
+   - When empty, uses original bet amounts; when set, applies to all bets
+   - Resets to `null` when ticket number changes
+   - Total and preview table reflect custom amount when set
+
+2. **Bet Order Grouping**
+   - Changed bet grouping logic to use `bet_order` as unique key instead of `number-place-position-with-amount`
+   - Fixes issue where identical plays with different amounts were merged incorrectly
+   - Each bet now uses its own `scheduleLottery` for lottery filtering (not aggregated from all bets)
+   - React keys updated to use `bet.bet_order` for better reconciliation
+
+### Added - 2025-12-28
+
+#### Password Reset UI - Admin Features
+**Feature:** Complete UI for admins to reset user passwords with hierarchical permissions
+
+**Components Created:**
+1. **`web/src/components/modals/ResetPasswordModal.tsx`** (NEW)
+   - Generic password reset modal for user list
+   - Input fields for new password and confirmation
+   - Client-side validation (non-empty, passwords match)
+   - Shows user name/username in dialog description
+   - Disabled state during async operations
+
+2. **`web/src/components/modals/ResetSuperAdminPasswordModal.tsx`** (NEW)
+   - Specialized modal for resetting SUPERADMIN password from organization page
+   - Input fields: username, new password, confirmation
+   - Searches for user by username within organization
+   - Error handling for user not found
+   - Loading states for user search and password reset
+
+**Mutation Hook:**
+- **`web/src/hooks/mutations/users/useResetPassword.ts`** (NEW)
+  - POST to `/api/private/user/reset-password/:id`
+  - Payload: `{ newPassword: string }`
+  - Success toast: "Contraseña reseteada exitosamente"
+  - Error toast with server error message
+  - Invalidates `users` query on success
+
+**Routes Added:**
+- `web/routes/routes.ts`
+  - `BACKEND_ROUTES.user.resetPassword(id)` → `/api/private/user/reset-password/:id`
+  - `BACKEND_ROUTES.user.changePassword` → `/api/private/user/change-password`
+
+**User List Table Enhancement:**
+- **`web/src/features/user-list/user-table.tsx`**
+  - Added "Contraseña" column with KeyRound icon button
+  - Hover color: yellow-500
+  - Opens `ResetPasswordModal` on click
+  - Lazy-loaded modal with Suspense
+  - Updated `colSpan` from 9 to 10 for empty state
+
+**Organizations Page Enhancement:**
+- **`web/src/features/organizations/index.tsx`**
+  - Added "Resetear Contraseña" button next to Edit/Delete
+  - Icon: KeyRound (yellow-600 / hover yellow-500)
+  - Opens `ResetSuperAdminPasswordModal` on click
+  - Modal asks for username + new password
+  - Fetches users to find SUPERADMIN by username
+  - Lazy-loaded modal with Suspense
+
+**User Experience:**
+- Admins can reset passwords directly from user list or organization page
+- Clear visual feedback with icons and loading states
+- Password confirmation prevents typos
+- Error messages guide users when something goes wrong
+
+**Use Case:** Enables admins to reset user passwords according to their permission level (OWNER → all, SUPERADMIN → ADMIN/CASHIER, ADMIN → CASHIER)
+
+---
+
+### Added - 2025-12-28
+
+#### Session Management - Auto-Refresh de Access Token
+**Feature:** Auto-refresh automático de access tokens cada 13-14 minutos
+**File:** `web/src/providers/AuthProvider.tsx`
+
+- Agregado timer de auto-refresh que renueva el access token antes de que expire (15 min)
+- Intervalo aleatorio de 13-14 minutos para evitar "thundering herd"
+- Refresh automático falla silenciosamente y hace logout si la sesión expiró
+- Backend maneja el sliding window (4 horas de inactividad)
+- Eliminado timer de inactividad del cliente (redundante con backend)
+
+**Cambios:**
+- Agregado `AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000`
+- Agregado `refreshAccessToken()` callback que llama a `/api/auth/refresh`
+- Agregado useEffect para auto-refresh periódico
+- Eliminado `lastActivityRef`, `inactivityTimerRef`, `armInactivityTimer()`
+- Eliminado listeners de eventos de actividad del usuario
+- Eliminado check de inactividad en `onVisibilityOrFocus`
+
+**Por qué:** El backend ahora maneja completamente la expiración de sesión con sliding window. El cliente solo necesita refrescar el access token periódicamente.
+
+#### API Client - Interceptor 401 con Auto-Refresh
+**Feature:** Manejo automático de 401 con refresh de tokens y retry de requests
+**File:** `web/src/lib/apiClient.ts`
+
+- Interceptor de respuestas que detecta errores 401 Unauthorized
+- Auto-refresh de access token cuando detecta 401
+- Cola de requests fallidos que se reintentan después del refresh exitoso
+- Previene múltiples refresh simultáneos con flag `isRefreshing`
+- Previene loops infinitos con flag `_skipRefreshRetry`
+
+**Cambios:**
+- Agregado `private isRefreshing = false`
+- Agregado `private refreshQueue: PendingRequest[]`
+- Agregado `refreshAccessToken()` que llama a `/api/auth/refresh`
+- Agregado `handleUnauthorized()` que maneja la lógica de refresh y retry
+- Agregado `processPendingRequests()` para ejecutar requests en cola
+- Modificado `request()` para capturar 401 y llamar a `handleUnauthorized()`
+- Agregado `_skipRefreshRetry` a `RequestConfig` para prevenir loops
+
+**Por qué:** Mejora la UX evitando que el usuario vea errores 401 cuando el access token expira. El sistema automáticamente refresca el token y reintenta la operación.
+
+#### Auth Routes - Rutas de Refresh y Logout All
+**Feature:** Agregadas rutas de frontend para refresh y logout de todos los dispositivos
+**File:** `web/routes/routes.ts`
+
+- Agregado `refresh: '/api/auth/refresh'` - Ruta pública para refrescar access token
+- Agregado `logoutAll: '/api/private/auth/logout-all'` - Ruta privada para cerrar todas las sesiones
+
+**Por qué:** Soporte para el nuevo sistema de sesiones JWT con refresh tokens y gestión multi-dispositivo.
+
+### Changed - 2025-12-28
+
+#### Auth Context - Logout con Opción Multi-Dispositivo
+**Change:** Función logout ahora acepta parámetro opcional para cerrar todas las sesiones
+**File:** `web/src/contexts/AuthContext.tsx`
+
+- Cambiado tipo de `logout: () => Promise<void>` a `logout: (logoutAll?: boolean) => Promise<void>`
+- Permite cerrar sesión solo en dispositivo actual o en todos los dispositivos
+- Compatible con backend que maneja sesiones multi-dispositivo
+
+**Por qué:** Preparación para feature de "Cerrar sesión en todos los dispositivos" en UI de configuración.
+
+#### Auth Provider - Logout Multi-Dispositivo
+**Change:** Implementado soporte para logout de todas las sesiones
+**File:** `web/src/providers/AuthProvider.tsx`
+
+- Modificado `logout()` para aceptar parámetro `logoutAll?: boolean`
+- Llama a `/api/private/auth/logout-all` si `logoutAll === true`
+- Llama a `/api/private/auth/logout` si `logoutAll === false` (default)
+
+**Por qué:** Permite al usuario cerrar sesión en todos sus dispositivos desde la UI.
+
+---
+
+### Fixed - 2025-12-28
+
+#### API Client - Enhanced Refresh Token Error Handling
+**Fix:** Improved error handling for refresh token failures on old sessions
+**File:** `web/src/lib/apiClient.ts`
+
+**Problem:** When refresh token fails (e.g., old session without refresh token), the error response wasn't being checked properly. This could cause unexpected behavior during migration.
+
+**Solution:** Updated `refreshAccessToken()` to check response status:
+- Returns `false` if refresh fails (triggers logout)
+- Returns `true` if refresh succeeds (retries original request)
+- Handles old sessions gracefully by logging out user
+
+**Impact:** Smoother migration experience - users with old sessions get logged out cleanly
+
+---
+
+#### Auth Provider - Refresh Failure Logging
+**Fix:** Added warning log when refresh token fails before logout
+**File:** `web/src/providers/AuthProvider.tsx`
+
+**Problem:** When refresh fails, user was logged out without any indication why. This made debugging migration issues difficult.
+
+**Solution:** Added console warning before logout:
+```typescript
+console.warn('[Auth] Refresh token failed, logging out:', error);
+```
+
+**Impact:** Better debugging and visibility into why users are being logged out
+
+---
+
+### Fixed - 2025-12-24
+
+#### Repeat Ticket Modal - Multiple Bets with Same Number But Different Place Ignored
+**Fix:** Changed bet grouping to use unique key combining number, place, position, and with
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** When a ticket had multiple bets with the same number but different `place` values (e.g., 4444 place head, 4444 place 5, 4444 place 20), only the last bet was being captured. This happened because bets were being grouped solely by `number`, causing subsequent bets with the same number to overwrite previous ones.
+
+**Example of lost bets:**
+- Original ticket: 4444 place head, 4444 place 5, 5555 place 10, 4444 place 20
+- What was shown: Only 4444 place 20 (other bets were lost)
+
+**Solution:**
+- Changed Map key from `number` (line 188-189) to `betKey` combining all identifying fields
+- Bet key format: `${number}-${place}-${position ?? 'null'}-${with ?? 'null'}`
+- Renamed variable from `betsByNumber` to `betsByKey` for clarity
+- Each unique combination of number/place/position/with is now treated as a separate bet
+
+**Impact:** All bets are now correctly captured and displayed, even when they share the same number but differ in place, position, or with values.
+
+#### Repeat Ticket Modal - Label Click Toggling Wrong Checkbox
+**Fix:** Made checkbox IDs unique per schedule to prevent ID collisions
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** When clicking a lottery label, the first checkbox with that lottery name would toggle instead of the clicked one. This happened because all `QuinielaFieldset` components used the same `namePrefix="tone"`, causing duplicate IDs when the same lottery appeared in multiple schedules.
+
+**Example of duplicate IDs:**
+- Schedule "Matutina", Lottery "Primera" → `id="tone-lottery-id-1"`
+- Schedule "Vespertina", Lottery "Primera" → `id="tone-lottery-id-1"` (DUPLICATE!)
+
+**Solution:**
+- Changed `namePrefix` from static `"tone"` to dynamic `repeat-${sch.schedule_id}`
+- Each schedule now has unique checkbox IDs: `repeat-{scheduleId}-{lotteryId}`
+- Labels correctly associate with their corresponding checkboxes via `htmlFor`
+
+**Impact:** Clicking lottery labels now correctly toggles the intended checkbox, not the first one with that lottery name.
+
+#### Repeat Ticket Modal - Selections Reset After User Interaction
+**Fix:** Prevented useEffect from overwriting user selections
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** When user selected/deselected lotteries or schedules, the selections would immediately reset to pre-selected state. This happened because the main useEffect had too many dependencies and re-executed on every state change, overwriting user selections with automatic pre-selection.
+
+**Solution:**
+- Changed useEffect dependencies from `[data, scheduleLottery, schedules, todayKey, disabledSchedules, lotteriesById]` to only `[data, ticketNumber]`
+- Added eslint-disable comment to acknowledge intentional dependency list
+- useEffect now only executes when ticket data changes, not when supporting data or user selections change
+- Added cleanup logic to reset state when no ticket is entered
+
+**Impact:** User selections are now preserved and persist until they manually change them or enter a different ticket number.
+
+#### Repeat Ticket Modal - TypeScript Type Error with Lottery Objects
+**Fix:** Complete lottery object construction using useLotteries hook
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Problem:** TypeScript error when creating lottery objects - partial objects missing required properties `active` and `order` from `ILotteryEntityFront` interface.
+
+**Solution:**
+- Added `useLotteries({ all: true })` hook to fetch complete lottery data
+- Created `lotteriesById` memoized map for quick lottery lookup
+- Replaced partial object creation with complete lottery objects from hook
+- Added type-safe filter for lottery mapping: `.filter((lot): lot is ILotteryEntityFront => lot !== undefined)`
+- Removed old `lotteryById` useMemo that created incomplete objects
+
+**Impact:** Proper type safety and complete lottery data with all required properties throughout the component.
+
+#### Delete Ticket - Invalid Response Format Error
+**Fix:** Changed backend response from plain text to JSON format
+**Files:**
+- `api/src/ticket/route/ticket.route.ts:181-187` (Backend)
+- `web/src/hooks/mutations/tickets/useDeleteTicket.ts:18-24` (Frontend - preventive fix)
+- `web/src/hooks/mutations/tickets/usePayTicket.ts:18-24` (Frontend - preventive fix)
+
+**Problem:** When deleting a ticket, users received error toast "Formato de respuesta inválido: text/plain; charset=utf-8" even though the ticket was successfully deleted. This occurred because:
+1. Backend was using `res.sendStatus(200)` which sends only HTTP status code with plain text "OK"
+2. Frontend `apiClient` expects all responses to be JSON with `APIResponse<T>` structure
+3. The format mismatch caused the frontend to throw an error despite successful deletion
+
+**Solution:**
+- **Backend:** Changed `res.sendStatus(200)` to `res.status(200).json(response)` with proper `APIResponse` structure containing `{ data: { success: true } }`
+- **Frontend (preventive):** Removed `async`/`await` from `onSuccess` callback in mutation hooks to prevent future issues where refetch failures could incorrectly mark successful operations as failed
+
+**Impact:** Users now see success toast when tickets are deleted successfully. Error toasts only appear when the actual delete operation fails.
+
+### Changed - 2025-12-24
+
+#### Repeat Ticket Modal - Cross-Schedule Bet Replication
+**Enhancement:** Allow repeating bets from previous schedules/shifts with dynamic lottery regeneration
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Changes:**
+1. **Basic Field Extraction**
+   - Modified bet processing to extract only basic fields: `number`, `amount`, `place`, `position`, `with`
+   - Removed dependency on original `scheduleLottery` from ticket
+   - Allows replicating bets regardless of original schedule/shift
+
+2. **Smart Schedule/Lottery Regeneration**
+   - Regenerates `scheduleLottery` using only schedules/lotteries from original ticket
+   - Filters to show only those that are currently available
+   - Table displays only original ticket's schedules/lotteries (if available)
+   - User can still modify selection using QuinielaFieldset checkboxes
+   - Enables cross-shift bet replication (e.g., morning bets can be repeated in afternoon)
+
+3. **Precise Pre-selection**
+   - Pre-selects ONLY lotteries that were in original ticket AND are currently available
+   - Groups original lotteries by schedule for accurate matching
+   - Skips disabled/closed schedules from pre-selection
+   - Maintains lottery information (names) from original ticket when available
+
+4. **Enhanced Dependencies**
+   - Added `scheduleLottery`, `schedules`, `todayKey`, `disabledSchedules` to useEffect dependencies
+   - Ensures proper reactivity when schedule availability changes
+   - Prevents race conditions during data loading
+
+**Use Case:** Users can now repeat bets from past shifts (e.g., repeat morning bets in the afternoon) by selecting currently available schedules and lotteries, while maintaining the core bet information (number, amount, type).
+
+### Changed - 2025-12-22
+
+#### Repeat Ticket Modal - UX/UI Redesign
+**Enhancement:** Comprehensive responsive redesign of repeat ticket modal for improved mobile and desktop experience
+**File:** `web/src/components/modals/repeat-ticket-modal.tsx`
+
+**Improvements:**
+1. **Responsive Input Section**
+   - Changed from complex grid layout to flex-based responsive design
+   - Better mobile layout with stacked label and input
+   - Added placeholder text for better UX
+   - Constrained input width on desktop (sm:w-64)
+
+2. **Quiniela Fieldsets Grid**
+   - Replaced horizontal flex with responsive grid layout
+   - Grid adapts: 1 col (mobile) → 2 cols (sm) → 3 cols (lg) → 4 cols (xl)
+   - Better space utilization on all screen sizes
+   - Improved visual organization of schedules
+
+3. **Total and Selection Section**
+   - Added visual container with background (bg-slate-800/30)
+   - Improved hierarchy with larger total display
+   - Total amount highlighted in green (text-green-400)
+   - Responsive button layout (stacked mobile, horizontal desktop)
+   - Better visual separation with rounded corners
+
+4. **Dual View for Bets Display**
+   - **Desktop (md+)**: Table view with sticky header, improved styling
+   - **Mobile (<md)**: Card-based layout for better readability
+   - Cards show organized information with clear labels
+   - Better typography hierarchy in mobile cards
+   - Improved scrolling with max-height constraints
+
+5. **Action Buttons**
+   - Reversed button order on mobile for better UX (Cancel first)
+   - Full-width buttons on mobile, auto-width on desktop
+   - Minimum width on desktop for consistency (min-w-[140px])
+   - Better visual separation with border-top
+
+6. **Visual Polish**
+   - Consistent spacing with mb-6 between sections
+   - Improved color contrast for better readability
+   - Better border styling (border-slate-700)
+   - Removed unnecessary Box/Flex wrappers for cleaner code
+   - Added helpful comments for each section
+   - Increased modal padding (p-3 sm:p-6)
+
+**Benefits:**
+- ✅ Fully responsive from mobile to 4K displays
+- ✅ Intuitive card layout on mobile devices
+- ✅ Better visual hierarchy and information organization
+- ✅ Improved readability with consistent spacing
+- ✅ Maintained all original functionality
+- ✅ Cleaner, more maintainable code structure
+
+### Fixed - 2025-12-20
+
+#### Schedule Lottery Save Bug
+- **State Synchronization**: Fixed critical bug where incremental saves (Modo 1) only persisted first save to database
+  - Root cause: useEffect dependency on `isPending` instead of query data
+  - Solution: Mutation now uses server response via setQueryData, syncs savedData in onSuccess
+  - Files:
+    - `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`
+    - `web/src/features/upcoming-lotteries/index.tsx`
+  - Changed mutation return type from `void` to `IScheduleLotteryEntityFront`
+  - Parse and return server response data
+  - Use `queryClient.setQueryData()` instead of just invalidating queries
+  - Add onSuccess callback to mutation that syncs `setSavedData(freshData)`
+  - Fix useEffect dependency from `[isPending]` to `[scheduleLottery]`
+  - Use case: Ensures multiple incremental saves persist correctly without page reload
+
+- **Save Button Disabled State**: Added disabled state during save operation to prevent multiple submissions
+  - File: `web/src/features/upcoming-lotteries/index.tsx:129`
+  - Button disabled when `isPendingSave` is true
+  - Button text changes to "Guardando..." during save
+  - Use case: Prevents race conditions from double-clicking save button
+
+### Fixed - 2025-12-20
+
+#### Upcoming Lotteries - Data Loss Bug
+- **Partial Update Bug**: Fixed bug where modifying a single day would delete other days' configurations
+  - File: `web/src/features/upcoming-lotteries/index.tsx:136-140`
+  - Root cause: Partial updates sent only changed days, but backend RPC deletes all and inserts only what it receives
+  - Solution: Removed partial update logic, always send full configuration
+  - Previous behavior: Modifying T4 would send only `{THURSDAY: {...}}` and lose T1, T2, T3
+  - New behavior: Always sends complete configuration for all 7 days
+  - Use case: Ensures data consistency when modifying schedule lottery configurations
+  - Note: Payload size is negligible (~7 days × 5 schedules × 10 lotteries = ~350 IDs max)
+
+### Added - 2025-12-20
+
+#### Make Plays - Day Filtering & Dynamic Lottery Display
+
+- **Day-filtered API calls**: Optimized Make Plays to fetch only today's data
+  - Files:
+    - `web/src/hooks/fetchs/lottery/useLotteries.ts`
+    - `web/src/hooks/fetchs/schedule/useSchedules.ts`
+    - `web/src/features/make-plays/game-turns.tsx`
+    - `web/src/features/make-plays/fill-out-a-ticket.tsx`
+  - Added `day` parameter to useLotteries hook (e.g., `useLotteries({ day: 'MONDAY' })`)
+  - Added `day` and `withLotteries` parameters to useSchedules hook
+  - Make Plays now uses `?day=TODAY` query param to fetch only relevant data
+  - Reduces payload size by ~85% (only 1/7 days fetched)
+  - Faster page load in Make Plays (less data to parse)
+  - Use case: High-frequency page (cashiers use it all day) now loads instantly
+
+- **Dynamic lottery filtering by schedule**: Lotteries now appear only when schedules are selected
+  - Files:
+    - `web/src/features/make-plays/game-turns.tsx`
+    - `web/src/features/make-plays/lotteries-checkbox-list.tsx`
+    - `web/src/features/make-plays/lotteries-checkbox-list-desktop.tsx`
+    - `web/src/features/make-plays/lotteries-checkbox-list-mobile.tsx`
+  - No schedules selected → No lotteries shown (empty list)
+  - One schedule selected → Shows only lotteries from that schedule
+  - Multiple schedules selected → Shows union of all lotteries (no duplicates)
+  - Auto-cleanup: Deselecting a schedule removes its exclusive lotteries from selection
+  - Use case: Prevents cashiers from selecting invalid lottery/schedule combinations
+
+#### Schedule Lottery - Advanced Features
+
+- **Change Tracking System**: Implemented intelligent change detection for schedule lottery configurations
+  - File: `web/src/features/upcoming-lotteries/index.tsx`
+  - Added `detectChanges()` function that compares current state with server state
+  - Detects modifications, additions, and deletions across days and schedules
+  - Used for unsaved changes indicator and auto-cleanup
+  - Use case: Provides real-time feedback on pending changes
+
+- **Unsaved Changes Indicator**: Visual feedback for pending changes
+  - File: `web/src/features/upcoming-lotteries/index.tsx:199-216`
+  - Yellow banner appears when local state differs from server state
+  - Shows count of modified days
+  - AlertCircle icon for visual emphasis
+  - Badge displays: "X día(s) modificado(s)"
+  - Use case: Users always know when they have unsaved work
+
+- **Navigation Blocker**: Prevents accidental data loss when navigating away
+  - File: `web/src/features/upcoming-lotteries/index.tsx:105-114,285-306`
+  - Uses React Router's `useBlocker` hook to intercept navigation
+  - Only blocks when unsaved changes exist
+  - Shows confirmation dialog with 3 options:
+    - **Cancelar**: Stay on current page
+    - **Descartar cambios**: Revert to server state and navigate
+    - **Guardar y continuar**: Save changes then navigate
+  - Use case: Prevents users from losing 10+ minutes of configuration work
+
+### Changed - 2025-12-19
+
+#### Upcoming Lotteries - UI Improvement
+- **Day Selector Component**: Converted day selector from dropdown to radio buttons
+  - Files:
+    - `web/src/features/upcoming-lotteries/day-radio-list.tsx` (new)
+    - `web/src/features/upcoming-lotteries/index.tsx`
+  - Created new `DayRadioList` component following same pattern as `ScheduleRadioList`
+  - Replaced Select dropdown with radio buttons for better UX consistency
+  - Removed unused Select component imports
+  - Updated layout to use card style with HeaderTitleSection
+  - Use case: Consistent UI pattern for day and schedule selection
+
+#### User Module - API Client Migration
+- **User Mutations**: Migrated to centralized apiClient
+  - Files:
+    - `web/src/hooks/mutations/users/useAddNewUser.ts`
+    - `web/src/hooks/mutations/users/useDeleteUser.ts`
+    - `web/src/hooks/mutations/users/useUpdateUser.ts`
+  - Replaced manual fetch calls with `apiClient.post()`, `apiClient.delete()`, `apiClient.put()`
+  - Automatic error handling with ApiError
+  - Cleaner code with better type safety
+  - Use case: Consistent HTTP client across all user operations
+
+- **User Queries**: Migrated to centralized apiClient
+  - Files:
+    - `web/src/hooks/fetchs/users/useUsers.ts`
+    - `web/src/hooks/fetchs/users/useUsersByNumber.ts`
+  - Replaced manual fetch calls with `apiClient.get()`
+  - Uses query params for filtering (cashier_number)
+  - Automatic data extraction from APIResponse wrapper
+  - Use case: Unified data fetching for user lists and queries
+
+#### Ticket Module - API Client Migration
+- **Ticket Mutations**: Migrated to centralized apiClient (4 hooks)
+  - Files:
+    - `web/src/hooks/mutations/tickets/useTicket.ts`
+    - `web/src/hooks/mutations/tickets/useDeleteTicket.ts`
+    - `web/src/hooks/mutations/tickets/usePayTicket.ts`
+    - `web/src/hooks/mutations/tickets/useEditTicket.ts`
+  - All CRUD operations use apiClient methods
+  - Consistent error handling
+  - Use case: Standardized ticket operations
+
+- **Ticket Queries**: Migrated to centralized apiClient (7 hooks)
+  - Files:
+    - `web/src/hooks/fetchs/tickets/useGetDeletedTickets.ts`
+    - `web/src/hooks/fetchs/tickets/useGetGroupedBetsByTicketId.ts`
+    - `web/src/hooks/fetchs/tickets/useGetTicketById.ts`
+    - `web/src/hooks/fetchs/tickets/useInfiniteTickets.ts`
+    - `web/src/hooks/fetchs/tickets/useTicketByNumber.ts`
+    - `web/src/hooks/fetchs/tickets/useTickets.ts`
+    - `web/src/hooks/fetchs/tickets/useWinnersGroupedByDate.ts`
+  - Supports pagination with query params
+  - Automatic data extraction
+  - Use case: Complete ticket data fetching layer
+
+#### Auth Provider - API Client Migration
+- **Auth Operations**: Migrated login, validate, and logout to apiClient
+  - File: `web/src/providers/AuthProvider.tsx`
+  - Replaced manual fetch with `apiClient.post()` and `apiClient.get()`
+  - Simplified error handling
+  - Better type safety with IUserEntityFront
+  - Use case: Centralized authentication flow
+
+### Fixed - 2025-12-19
+
+#### Ticket Creation Response Handling
+- **MakePlaysProvider**: Fixed undefined error after ticket creation
+  - File: `web/src/features/make-plays/provider/MakePlaysProvider.tsx:109-124`
+  - Changed from `res.data.ticket` to `res` (apiClient auto-extracts data)
+  - Changed from `res.data.ticket.ticket_number` to `res.ticket_number`
+  - Error: `Cannot read properties of undefined (reading 'ticket')`
+  - Use case: Ticket creation now works correctly with PDF generation
+
+#### TypeScript Configuration
+- **Module Resolution**: Fixed TypeScript compilation error
+  - File: `web/tsconfig.json:13`
+  - Changed `moduleResolution` from "node16" to "bundler"
+  - Fixed: "Option 'module' must be set to 'Node16' when option 'moduleResolution' is set to 'Node16'"
+  - Use case: TypeScript compilation works correctly
+
+- **Import Extensions**: Removed .ts extensions from imports
+  - Files:
+    - `web/src/hooks/fetchs/users/useUsers.ts`
+    - `web/src/hooks/fetchs/users/useUsersByNumber.ts`
+    - `web/src/hooks/mutations/users/useAddNewUser.ts`
+  - Fixed: "An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled"
+  - Use case: Follows TypeScript best practices
+
+### Fixed - 2025-12-18
+
+#### HTML Language Attribute
+- **Spanish Language Declaration**: Changed HTML `lang` attribute from "en" to "es"
+  - File: `web/index.html:2`
+  - Fixed browser incorrectly offering translation for Spanish content
+  - Use case: Prevents translation prompts when opening app in browsers with Spanish content already present
+
+### TODO - Future Improvements
+
+#### Lottery Reordering Optimization
+- **Batch Reorder Endpoint**: Create dedicated endpoint for reordering multiple lotteries
+  - Backend: `PUT /api/lotteries/reorder` endpoint
+  - Accept array of `{ lottery_id, order }` objects
+  - Update all orders in single database transaction
+  - Return updated lotteries array
+- **Frontend Hook**: Create `useReorderLotteries` mutation hook
+  - File: `web/src/hooks/mutations/lottery/useReorderLotteries.ts`
+  - Replace multiple individual updates with single batch update
+  - Improve performance and reduce network requests
+  - Use case: ReorderLotteriesModal currently makes N individual requests, should make 1
+
+### Fixed - 2025-12-16
+
+#### Lottery Position Display
+- **Human-Friendly Position Input**: Fixed position input in both Create and Update modals to use 1-indexed values
+  - Files:
+    - `web/src/components/modals/CreateLotteryModal.tsx:19,36,67-78`
+    - `web/src/components/modals/UpdateLotteryModal.tsx:21,28,53,83-94`
+  - Changed inputs to display human-friendly positions (#1, #2, #3, etc.)
+  - CreateLotteryModal: shows `nextOrder + 1` instead of raw array index
+  - UpdateLotteryModal: shows `lottery.order + 1` instead of raw array index
+  - Automatically converts back to 0-indexed order when saving
+  - Changed label from "Orden" to "Posición" for clarity
+  - Updated help text to reference position numbers (#1, #2, #3, etc.)
+  - Changed minimum value from 0 to 1 for human-friendly range
+  - Example: If you have 3 lotteries, creating a new one shows "4" (not "3")
+  - Use case: Makes position selection intuitive for users who see #1, #2, #3 badges
+
+#### Lottery CRUD UX Issues
+- **Toast Notifications**: Fixed toast messages not appearing after lottery operations
+  - Files:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts:43,51`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts:46,54`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts:45,53`
+  - Centralized success and error toasts in the mutation hooks
+  - Messages: "Lotería creada/actualizada/eliminada exitosamente" on success
+  - Use case: Provides clear feedback to users for all lottery operations
+
+- **Duplicate Toast Messages**: Removed duplicate toast notifications from modals
+  - Files:
+    - `web/src/components/modals/CreateLotteryModal.tsx:20-25`
+    - `web/src/components/modals/UpdateLotteryModal.tsx:31-35`
+    - `web/src/components/modals/DeleteLotteryModal.tsx:16-20`
+  - Removed toast calls from modal components
+  - Toasts now managed centrally by mutation hooks
+  - Modals only handle UI state (close, reset form)
+  - Use case: Eliminates confusing duplicate notifications
+
+- **Mutation Hooks Refetch Issues**: Fixed all mutation hooks not refetching queries correctly
+  - Lottery hooks:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts:31-50`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts:39-57`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts:33-56`
+  - Schedule hooks:
+    - `web/src/hooks/mutations/schedule/useCreateSchedule.ts:34-52`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts:39-62`
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts:32-55`
+  - Schedule-Lottery hooks:
+    - `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts:34-56`
+  - Changed from `refetchType: 'all'` to `exact: false` for proper query invalidation
+  - Added proper destructuring of `onSuccess`, `onError`, and `...rest` from options
+  - Used optional chaining (`onSuccess?.()`) instead of if-checks for callbacks
+  - Ensures queries with different parameters (e.g., `{ all: true }`) are invalidated
+  - Added support for custom callback options in all hooks
+  - Use case: Changes now appear immediately regardless of query parameters
+
+- **Form Submit Handler**: Fixed incorrect onClick handler on submit button
+  - File: `web/src/components/modals/CreateLotteryModal.tsx:88-93`
+  - Removed redundant `onClick={()=>handleSubmit}` from submit button
+  - Form submission handled by `type="submit"` attribute
+  - Use case: Prevents potential double submission issues
+
+### Changed - 2025-12-16
+
+#### Schedule Toast Messages Localization
+- **Spanish Toast Messages**: Translated schedule mutation toast messages to Spanish
+  - Files:
+    - `web/src/hooks/mutations/schedule/useCreateSchedule.ts:45,49`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts:55,59`
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts:48,52`
+  - "Schedule created successfully" → "Turno creado exitosamente"
+  - "Schedule updated successfully" → "Turno actualizado correctamente"
+  - "Schedule deleted successfully" → "Turno eliminado correctamente"
+  - Error messages also translated to Spanish
+  - Use case: Consistent Spanish interface for users
+
+#### Lottery Mutation Hooks Enhancement
+- **Mutation Hooks with suppressToast**: Enhanced all lottery hooks with toast suppression capability
+  - Files:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts:24-56`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts:29-64`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts:23-63`
+  - Added `suppressToast?: boolean` option to prevent duplicate toasts
+  - Toasts shown by default, suppressed only when explicitly requested
+  - Custom callbacks always execute after toast logic
+  - Use case: ReorderModal uses `suppressToast: true` to show single toast instead of multiple
+
+- **ReorderLotteriesModal Improvements**: Fixed modal not closing and multiple toasts
+  - File: `web/src/components/modals/ReorderLotteriesModal.tsx:93,128-172`
+  - Uses `suppressToast: true` to prevent toast per lottery update
+  - Shows single "Orden actualizado correctamente" toast at end
+  - Uses `Promise.all()` to wait for all updates before closing
+  - Compares by `lottery_id` instead of array index for change detection
+  - Closes modal only after all updates complete successfully
+  - Use case: Clean UX when reordering multiple lotteries
+
+### Added - 2025-12-16
+
+#### Lottery Reordering Modal
+- **ReorderLotteriesModal Component**: Created new modal for reordering lotteries
+  - File: `web/src/components/modals/ReorderLotteriesModal.tsx`
+  - Full drag-and-drop functionality with @dnd-kit
+  - Independent state management - changes preview in modal only
+  - Saves all order changes on "Guardar Orden" button click
+  - Auto-closes modal on successful save
+  - Shows numbered badges and lottery status (active/inactive)
+  - Mobile-friendly with touch support
+  - Use case: Prevents sync issues by isolating reorder state in modal
+
+### Changed - 2025-12-16
+
+#### Lotteries Page Architecture
+- **Simplified Lotteries Page**: Removed inline edit mode, moved to modal
+  - File: `web/src/features/lotteries/index.tsx`
+  - Removed: `isEditMode` state, `tempLotteries` state, drag-and-drop context
+  - Removed: `handleEnterEditMode`, `handleCancelEditMode`, `handleSaveOrder`, `handleDragEnd`
+  - Changed: `SortableItem` component replaced with simpler `LotteryCard` component
+  - Page now directly maps `lotteries` data without temporary state
+  - New "Cambiar orden" button opens ReorderLotteriesModal
+  - Use case: Eliminates synchronization issues between temp state and server data
+
+### Added - 2025-12-16
+
+#### Cache Management Improvements
+- **Auth Provider Cache Clearing**: Implemented cache clearing on logout
+  - File: `web/src/providers/AuthProvider.tsx`
+  - Added `queryClient.clear()` call in logout function
+  - Prevents data leakage between user sessions (admin/cashier)
+  - Use case: Ensures fresh data when switching between users
+
+#### Global Schedule Map Hook
+- **useScheduleMap Hook**: Created reusable hook for schedule lookups
+  - File: `web/src/hooks/useScheduleMap.ts`
+  - Provides Map<schedule_id, schedule> for O(1) lookups
+  - Returns schedule with name and time for display
+  - Use case: Consistent schedule display across multiple features
+
+#### Lottery UI Improvements
+- **Numbered Badges**: Added position badges to lottery cards
+  - File: `web/src/features/lotteries/index.tsx`
+  - Display format: "#1", "#2", "#3" based on order field
+  - Visible in both view and edit modes
+  - Use case: Makes lottery order explicit and easy to reference
+
+- **Edit Mode for Reordering**: Implemented toggle-based reordering
+  - File: `web/src/features/lotteries/index.tsx`
+  - "Reorder" button enters edit mode
+  - Drag-and-drop enabled only in edit mode
+  - "Save Order" commits changes, "Cancel" discards
+  - Edit/Delete buttons hidden in edit mode
+  - Mobile-friendly with touch support
+  - Use case: Prevents accidental reordering, clear UX for changing lottery order
+
+- **Schedule Display Fix**: Fixed bug showing schedule IDs instead of names
+  - File: `web/src/features/lotteries/index.tsx`
+  - Corrected variable naming in schedule extraction logic
+  - Now displays: "Schedule Name (HH:MM)" instead of UUIDs
+  - Integrated with global useScheduleMap hook
+  - Use case: Clear display of which schedules each lottery is active in
+
+#### Toast Notifications
+- **Success/Error Toasts**: Added feedback for all CRUD operations
+  - Files:
+    - `web/src/hooks/mutations/lottery/useCreateLottery.ts`
+    - `web/src/hooks/mutations/lottery/useUpdateLottery.ts`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+    - `web/src/hooks/mutations/schedule/useCreateSchedule.ts`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+    - `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`
+  - Success messages for create/update/delete operations
+  - Error messages with detailed error information
+  - Use case: Immediate user feedback for all operations
+
+### Changed - 2025-12-16
+
+#### TanStack Query Cache Configuration
+- **Query Hook Cache Settings**: Updated cache strategy for all schedule/lottery queries
+  - Files:
+    - `web/src/hooks/fetchs/lottery/useLotteries.ts`
+    - `web/src/hooks/fetchs/schedule/useSchedules.ts`
+    - `web/src/hooks/fetchs/schedule-lottery/useScheduleLottery.ts`
+  - `staleTime`: Changed to 12 hours (from 5 minutes)
+  - `refetchOnMount`: Set to true (ensures fresh data on login)
+  - `refetchOnWindowFocus`: Set to false (no automatic refetch)
+  - Rationale: Changes are infrequent, users can refresh manually or logout/login
+  - Use case: Reduces unnecessary network requests, improves performance
+
+- **Schedule Query Key Fix**: Added missing 'all' parameter
+  - File: `web/src/hooks/fetchs/schedule/useSchedules.ts`
+  - Query key now includes `{ all: !!all }` like lottery hook
+  - Ensures proper cache segregation between admin and cashier views
+  - Use case: Prevents cache collision between different user roles
+
+#### Cache Invalidation Improvements
+- **Mutation Cache Invalidation**: Added schedule-lottery cache invalidation
+  - Files:
+    - `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+    - `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+    - `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+  - Now invalidates both entity cache AND schedule-lottery cache
+  - Ensures make-plays feature gets updated data immediately
+  - Use case: Keeps all related caches synchronized after CRUD operations
+
+### Added - 2025-12-15
+
+#### Organization Creation with Super Admin User
+- **Organization Form Enhancement**: Updated organization creation form to include super admin user fields
+  - File: `web/src/features/organizations/index.tsx`
+  - Implemented React Hook Form for managing organization and super admin data
+  - Form now includes two sections:
+    - **Organization Data**: Name field
+    - **Super Admin Data**: Username, password, name, last name, email, phone, address, user number
+  - Form type: `CreateOrganizationWithSuperAdminForm` with nested structure for organization and superAdmin data
+  - Added form validation with required field rules
+  - Use case: When creating an organization, a super admin user is automatically created for that organization
+
+- **Create Organization Mutation**: Updated mutation to send super admin data
+  - File: `web/src/hooks/mutations/organization/useCreateOrganization.ts`
+  - Updated payload interface: `CreateOrganizationWithSuperAdminPayload`
+  - Sends both organization and superAdmin data to backend
+  - Use case: Coordinates organization and super admin creation in a single request
+
+### Changed - 2025-12-15
+
+#### User Number Field Made Conditionally Visible
+- **User List Form**: Updated to conditionally show number field
+  - File: `web/src/features/user-list/user-list-form.tsx`
+  - Changed default value from `0` to `null`
+  - Added `shouldShowNumberField` logic to show field only for ADMIN and CASHIER users
+  - Number field hidden for OWNER and SUPERADMIN users
+  - Added required field indicator (red asterisk) and validation
+  - Use case: Simplifies form for OWNER/SUPERADMIN creation by removing unnecessary number field
+
+- **Update User Modal**: Updated to conditionally show number field
+  - File: `web/src/components/modals/UpdateUserModal.tsx`
+  - Added `shouldShowNumberField` logic matching user list form
+  - Updated modal title to handle null numbers gracefully
+  - Number field hidden when editing OWNER/SUPERADMIN users
+  - Added required validation for ADMIN/CASHIER
+  - Use case: Prevents confusion when editing users who don't need numbers
+
+- **Organization Form**: Updated SUPERADMIN default values
+  - File: `web/src/features/organizations/index.tsx`
+  - Added `number: null` to superAdmin default values
+  - Form already doesn't display number field for SUPERADMIN (correct behavior maintained)
+  - Use case: Ensures SUPERADMIN users are created with null numbers
+
+#### Complete UX/UI Redesign of User Form
+- **Modern User Form Design**: Complete redesign with professional UI/UX improvements
+  - File: `web/src/features/user-list/user-list-form.tsx`
+  - **Visual Improvements**:
+    - Replaced fieldsets with modern Card components with shadows and hover effects
+    - Added contextual icons to each section and field label (Building2, User, Shield, Key, Phone, Mail, etc.)
+    - Color-coded sections: primary for app data, blue for personal data, green for login credentials
+    - Added section headers with titles and descriptive text for better context
+    - Improved visual hierarchy with icon badges in colored backgrounds
+    - Enhanced input fields with placeholder text and focus ring animations
+    - Added percentage (%) symbols inside commission fields for better UX
+    - **Consistent height (h-10)** for all inputs and select components across all breakpoints
+    - White text color on select components for better contrast
+  - **Responsive Layout**:
+    - Mobile (default): Single column, stacked layout
+    - Tablet (sm): 2 columns for most sections
+    - Desktop (lg): 3 columns for app and personal data
+    - Max-width constraint (7xl) with centered layout for better readability
+  - **Enhanced Interactivity**:
+    - Smooth transitions on all interactive elements
+    - Hover effects on cards (shadow-md)
+    - Focus rings with primary color on inputs (focus:ring-2)
+    - Button states with proper disabled styling
+    - Loading state with "Guardando..." text
+    - **Conditional field disabling**: "Tipo de pasador" field is automatically disabled when "Admin" user type is selected
+  - **Button Improvements**:
+    - Primary save button with shadow on hover
+    - Outline variant for reset button with destructive color scheme on hover
+    - Responsive button layout (stacked on mobile, side-by-side on desktop)
+    - Proper sizing (h-11) for better touch targets
+  - **Accessibility**:
+    - All labels properly associated with inputs
+    - Icon + text labels for better comprehension
+    - Descriptive placeholders for guidance
+    - Clear visual feedback on errors
+    - Semantic HTML structure with proper Card components
+    - Disabled states with proper cursor and opacity styling
+  - **Smart Form Logic**:
+    - Added `isAdmin` computed property to detect when Admin user type is selected
+    - Automatically disables "Tipo de pasador" select when user is Admin (admins don't need cashier type)
+  - Use case: Provides a modern, professional, and user-friendly interface for creating new users with clear visual hierarchy, smart form logic, and excellent mobile experience
+
+#### Fix: Query Hooks Now Refetch After Mutations
+
+**Problem**: Creating, updating, or deleting items (schedules, users, lotteries, organizations) didn't update the UI automatically - required page reload.
+
+**Root Cause**: Query hooks had overly aggressive cache settings:
+- `refetchOnMount: false` - prevented refetch even after cache invalidation
+- `staleTime: 12 hours` - extremely long stale time
+- `refetchOnWindowFocus: false` - no updates when returning to tab
+
+**Files Fixed**:
+- `web/src/hooks/fetchs/schedule/useSchedules.ts`
+- `web/src/hooks/fetchs/users/useUsers.ts`
+- `web/src/hooks/fetchs/lottery/useLotteries.ts`
+- `web/src/hooks/fetchs/organization/useOrganizations.ts`
+
+**New Configuration**:
+- `staleTime: 5 * 60 * 1000` - 5 minutes (reasonable for dynamic data)
+- `gcTime: 30 * 60 * 1000` - 30 minutes garbage collection
+- `refetchOnMount: true` - ✅ Refetch after invalidations
+- `refetchOnWindowFocus: true` - ✅ Refetch when returning to tab
+- `refetchOnReconnect: true` - ✅ Refetch on network recovery
+
+**Result**: UI now updates immediately after create/update/delete operations without page reload.
+
+#### Security Enhancement: organization_id No Longer Exposed in Types
+
+**Impact**: No frontend code changes required. This is a transparent security improvement.
+
+**What Changed**:
+- All Frontend entity types (`*EntityFront`) from `@helper/types/*` no longer include `organization_id`
+- The field has been removed from:
+  - User entities (`IUserEntityFront`)
+  - Lottery entities (`ILotteryEntityFront`)
+  - Ticket entities (`ITicketEntityFront`)
+  - Results entities (`IResultsEntityFront`)
+  - Current account entities (`ICurrentAccountEntityFront`)
+  - Bet entities (`IBetEntityFront`)
+  - Organization entities (`IOrganizationEntityFront`)
+
+**Why**:
+- `organization_id` is a security-sensitive parameter that should only exist on the backend
+- The backend extracts it from the authenticated user's JWT token
+- Frontend never needed to send or track this value
+
+**Migration**:
+- ✅ No changes required in frontend code
+- ✅ API requests remain unchanged (backend handles organization_id from auth context)
+- ✅ TypeScript will catch any accidental references to `organization_id` on front entities
+
+### Added - 2025-12-15
+
+#### Lotteries Management Page - Complete CRUD with Drag & Drop
+- **New Page**: `web/src/features/lotteries/index.tsx`
+  - Full CRUD functionality for lotteries
+  - **Drag & Drop Ordering**: Reorder lotteries by dragging (uses @dnd-kit)
+  - Real-time order updates saved to backend
+  - Display lottery status (active/inactive)
+  - Show associated schedules/shifts for each lottery
+  - Empty state with call-to-action
+  - Responsive design with loading states
+
+#### Shifts/Schedules Management Page - Complete CRUD
+- **New Page**: `web/src/features/shifts/index.tsx`
+  - Full CRUD functionality for schedules/shifts
+  - Table view with name, time, and active status
+  - Edit and delete actions in table rows
+  - Active/inactive toggle in edit modal
+  - Ordered by time (handled by backend)
+  - Empty state with call-to-action
+  - Responsive table design
+
+#### Lottery Mutation Hooks
+- **useCreateLottery**: `web/src/hooks/mutations/lottery/useCreateLottery.ts`
+  - Creates new lottery with name and order
+  - Invalidates lottery cache on success
+- **useUpdateLottery**: `web/src/hooks/mutations/lottery/useUpdateLottery.ts`
+  - Updates lottery name, order, and active status
+  - Used for both manual edits and drag & drop order updates
+- **useDeleteLottery**: `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+  - Soft deletes lottery (sets deleted_at)
+  - Invalidates lottery cache
+
+#### Schedule Mutation Hooks
+- **useCreateSchedule**: `web/src/hooks/mutations/schedule/useCreateSchedule.ts`
+  - Creates new schedule with name, time, and active status
+  - Invalidates schedule cache on success
+- **useUpdateSchedule**: `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+  - Updates schedule name, time, and active status
+  - Includes active/inactive toggle functionality
+- **useDeleteSchedule**: `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+  - Permanently deletes schedule
+  - Invalidates schedule cache
+
+#### Lottery Modals
+- **CreateLotteryModal**: `web/src/components/modals/CreateLotteryModal.tsx`
+  - Form with name and order fields
+  - Auto-suggests next order number
+  - Validation and error handling
+- **UpdateLotteryModal**: `web/src/components/modals/UpdateLotteryModal.tsx`
+  - Edit name, order, and active status
+  - Switch component for active/inactive toggle
+  - Pre-populated with current values
+- **DeleteLotteryModal**: `web/src/components/modals/DeleteLotteryModal.tsx`
+  - Confirmation dialog before deletion
+  - Shows lottery name for context
+  - Cancel/confirm actions
+
+#### Schedule Modals
+- **CreateScheduleModal**: `web/src/components/modals/CreateScheduleModal.tsx`
+  - Form with name and time fields
+  - HTML time input for hour selection
+  - Defaults to active state
+- **UpdateScheduleModal**: `web/src/components/modals/UpdateScheduleModal.tsx`
+  - Edit name, time, and active status
+  - Switch component for active/inactive toggle
+  - Pre-populated with current values
+- **DeleteScheduleModal**: `web/src/components/modals/DeleteScheduleModal.tsx`
+  - Confirmation dialog before deletion
+  - Shows schedule name and time
+  - Cancel/confirm actions
+
+#### Dependencies Required
+- **@dnd-kit/core**, **@dnd-kit/sortable**, **@dnd-kit/utilities**
+  - Required for drag & drop functionality in lotteries page
+  - Installation instructions in `INSTALL_DEPENDENCIES.md`
+
+### Fixed - 2025-12-15
+
+#### User List Table - UI Improvements
+- **Table Headers**: Fixed missing white text color on "Eliminar" column header
+  - Path: `web/src/features/user-list/user-table.tsx:58`
+  - All table headers now consistently use `text-cyan` class
+  - Previously one header was missing the color class
+
+- **Empty State Handling**: Fixed error display when no users exist
+  - Path: `web/src/features/user-list/user-table.tsx:62-68`
+  - Now displays "No hay usuarios disponibles" message in empty table
+  - Previously showed error message when data array was empty
+  - Added conditional rendering with proper empty state UI
+
+#### User Form - Type Consistency
+- **Default Values**: Fixed inconsistent type defaults in new user form
+  - Path: `web/src/features/user-list/user-list-form.tsx:45-46`
+  - Changed `fee` and `fee_plus` defaults from `undefined` to `0`
+  - Now matches `CashierUserEntityBack` type requirements (number, not undefined)
+  - Ensures type consistency when `user_type` is `CASHIER`
+
+- **Null Value Handling**: Fixed TypeScript errors for null values in form inputs
+  - Paths: Multiple fields in `web/src/features/user-list/user-list-form.tsx`
+  - **Line 134**: `cashier_type` - Convert null to undefined for Select component
+  - **Lines 177-183, 194-200**: `fee` and `fee_plus` - Handle null values with `value ?? ''` and fallback to 0
+  - **Lines 229-230**: `last_name` - Convert null to empty string
+  - **Lines 242-243**: `address` - Convert null to empty string
+  - **Lines 258-259**: `phone` - Convert null to empty string
+  - **Lines 271-275**: `email` - Convert null to empty string
+  - **Lines 297-298**: `username` - Convert null to empty string
+  - **Why**: React Hook Form fields can be null from type definitions, but Input/Select components require string/number/undefined
+  - **Solution**: Destructure field value and use nullish coalescing (`value ?? ''`) to convert null to empty string
+
+#### Settings - Access Control
+- **Owner-Only Delete Card**: Restricted data deletion feature to OWNER role
+  - Path: `web/src/features/settings/index.tsx:105-155`
+  - Delete data card now only visible to users with OWNER role
+  - Added `useAuth` hook integration and `USER_TYPE.OWNER` check
+  - Prevents non-owner users from accessing data deletion feature
+  - Improves security by enforcing role-based access control
+
+### Changed - 2025-12-15
+
+#### Import Updates
+- **Request Types**: Updated all imports from `.response` to `.request` extension
+  - Multiple files across web workspace
+  - Reflects proper naming convention: request types sent from frontend to backend
+  - No functional changes, improved code organization and clarity
+
 ### Added - 2025-12-10
 
 #### Route Prefetching on Hover

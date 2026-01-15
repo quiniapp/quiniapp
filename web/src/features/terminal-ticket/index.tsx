@@ -39,7 +39,8 @@ const TerminalTicketContentInner = () => {
         setIsOpenDeleteTicket(false);
         toast.success('Ticket eliminado correctamente');
       },
-      onError: () => {
+      onError: (err) => {
+        console.error(err);
         toast.error('Ocurrió un error al eliminar el ticket, intente nuevamente');
       },
     });

@@ -8,15 +8,16 @@ import { ROUTES } from '@/types/routes.type';
 
 // Lazy imports (cargados bajo demanda)
 const Layout = lazy(() => import('@/components/layout'));
-const Index = lazy(() => import('@/pages').then(module => ({ default: module.Index })));
-const ClientPage = lazy(() => import('@/pages/clients'));
+const Index = lazy(() => import('@/pages').then((module) => ({ default: module.Index })));
 const CurrentAccountPage = lazy(() => import('@/pages/current-account.tsx'));
 const GroupsPage = lazy(() => import('@/pages/groups'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 const UserListPage = lazy(() => import('@/pages/user-list'));
 const PlayDetailsPage = lazy(() => import('@/pages/MakePlays'));
 const PlaysAndHitsPage = lazy(() => import('@/pages/plays-and-hits'));
-const TerminalTicketPage = lazy(() => import('@/pages/terminal-ticket').then(module => ({ default: module.TerminalTicketPage })));
+const TerminalTicketPage = lazy(() =>
+  import('@/pages/terminal-ticket').then((module) => ({ default: module.TerminalTicketPage }))
+);
 const ReportsPage = lazy(() => import('@/pages/reports'));
 const ResultsPage = lazy(() => import('@/pages/results'));
 const SettingsPage = lazy(() => import('@/pages/settings'));
@@ -25,6 +26,8 @@ const UpcomingLotteriesPage = lazy(() => import('@/pages/upcoming-lotteries.tsx'
 const UsersPage = lazy(() => import('@/pages/users'));
 const NewUserPage = lazy(() => import('@/pages/new-user.tsx'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const OrganizationsPage = lazy(() => import('@/pages/organizations'));
+const LotteriesPage = lazy(() => import('@/pages/Lotteries'));
 
 // Helper para envolver componentes lazy con Suspense
 function withSuspense(Component: React.LazyExoticComponent<any>) {
@@ -78,18 +81,13 @@ export const RoutesContent = [
         element: withSuspense(ResultsPage),
       },
       {
-        path: ROUTES.CLIENTS,
-        id: 'Clients',
-        element: withSuspense(ClientPage),
-      },
-      {
         path: ROUTES.CURRENT_ACCOUNT,
         id: 'CurrentAccount',
         element: withSuspense(CurrentAccountPage),
       },
       {
-        path: ROUTES.SHIFTS,
-        id: 'Shifts',
+        path: ROUTES.SCHEDULES,
+        id: 'Schedules',
         element: withSuspense(ShiftsPage),
       },
       {
@@ -98,7 +96,7 @@ export const RoutesContent = [
         element: withSuspense(UsersPage),
       },
       {
-        path: ROUTES.USERS_List,
+        path: ROUTES.USERS_LIST,
         id: 'UsersList',
         element: withSuspense(UserListPage),
       },
@@ -113,8 +111,8 @@ export const RoutesContent = [
         element: withSuspense(SettingsPage),
       },
       {
-        path: ROUTES.LOTTERIES,
-        id: 'Lotteries',
+        path: ROUTES.UPCOMING_LOTTERIES,
+        id: 'UpcomingLotteries',
         element: withSuspense(UpcomingLotteriesPage),
       },
       {
@@ -131,7 +129,17 @@ export const RoutesContent = [
         path: ROUTES.RESET_PASSWORD,
         id: 'Reset_Password',
         element: withSuspense(ResetPassword),
-      }
+      },
+      {
+        path: ROUTES.ORGANIZATIONS,
+        id: 'Organizations',
+        element: withSuspense(OrganizationsPage),
+      },
+      {
+        path: ROUTES.LOTTERIES,
+        id: 'Lotteries',
+        element: withSuspense(LotteriesPage),
+      },
     ],
   },
   {

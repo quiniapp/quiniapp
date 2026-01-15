@@ -7,14 +7,12 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
-// ====== Cache Manager para Lotteries ======
-function keyFor(allFlag: boolean) {
-  return `lotteries:all=${allFlag ? 'true' : 'false'}`;
-}
+import { getLotteryCacheKey, invalidateLotteryRelated } from 'src/cache/cacheInvalidation';
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
-function invalidateAllLotteries() {
-  globalCacheManager.invalidate(keyFor(true));
-  globalCacheManager.invalidate(keyFor(false));
+// ====== Cache Manager para Lotteries ======
+function keyFor(organization_id: string, allFlag: boolean) {
+  return getLotteryCacheKey(organization_id, allFlag);
 }
 
 export class LotteryRouter {
@@ -54,10 +52,10 @@ export class LotteryRouter {
     }
 
     try {
-      const lottery = await this.controller.create({ name });
+      const lottery = await this.controller.create({ name }, req.organization_id!);
 
       // invalidación (ambas variantes all=true/false)
-      invalidateAllLotteries();
+      invalidateLotteryRelated(req.organization_id!);
 
       const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
@@ -82,6 +80,7 @@ export class LotteryRouter {
   private getAllLotteryHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const allFlag = !!req.query.all;
+    const dayParam = req.query.day as string | undefined;
 
     if (!user?.user) {
       const response: APIResponse<null> = {
@@ -91,11 +90,47 @@ export class LotteryRouter {
       return;
     }
 
+    // Validate day parameter if provided
+    let day: SCHEDULE_DAY | undefined;
+    if (dayParam) {
+      if (!(dayParam in SCHEDULE_DAY)) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: `Invalid day parameter: ${dayParam}. Must be one of: SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY`,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+      day = SCHEDULE_DAY[dayParam as keyof typeof SCHEDULE_DAY];
+    }
+
     try {
-      const key = keyFor(allFlag);
-      const snap = await globalCacheManager.getOrLoad(key, () => this.controller.getAll(allFlag), {
-        etagStrategy: 'timestamp',
-      });
+      // If day filter is provided, fetch filtered lotteries
+      // Note: day-filtered queries are not cached as they're typically used in high-frequency contexts
+      if (day !== undefined) {
+        const lotteries = await this.controller.getAllByDay(day, allFlag, req.organization_id!);
+
+        const response: APIResponse<ILotteryEntityFront[]> = {
+          data: { lottery: lotteries },
+        };
+
+        // Cache-Control for day-filtered queries
+        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        res.status(200).json(response);
+        return;
+      }
+
+      // Original caching logic for non-filtered queries
+      const key = keyFor(req.organization_id!, allFlag);
+      const snap = await globalCacheManager.getOrLoad(
+        key,
+        () => this.controller.getAll(allFlag, req.organization_id),
+        {
+          etagStrategy: 'timestamp',
+        }
+      );
 
       // 304 si el cliente tiene la misma versión
       const inm = req.headers['if-none-match'];
@@ -155,9 +190,9 @@ export class LotteryRouter {
     }
 
     try {
-      const lottery = await this.controller.update(lottery_id, updateLottery);
+      const lottery = await this.controller.update(lottery_id, updateLottery, req.organization_id!);
 
-      invalidateAllLotteries();
+      invalidateLotteryRelated(req.organization_id!);
 
       const response: APIResponse<ILotteryEntityFront> = { data: { lottery } };
       res.status(200).json(response);
@@ -192,9 +227,9 @@ export class LotteryRouter {
     }
 
     try {
-      await this.controller.delete({ lottery_id });
+      await this.controller.delete({ lottery_id }, req.organization_id!);
 
-      invalidateAllLotteries();
+      invalidateLotteryRelated(req.organization_id!);
 
       res.status(200).json({ data: { deleted: true } });
     } catch (error) {

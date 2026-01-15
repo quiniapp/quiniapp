@@ -1,9 +1,10 @@
 import { supabase } from '@database/db.connection';
-import { TicketSums } from '@helper/request/bet.response';
+import { TicketSums } from '@helper/request/bet.request';
 import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
 
 export class BetRepository {
   async getAllBets({
+    organization_id,
     schedule_id,
     date,
     cashier_id,
@@ -15,6 +16,7 @@ export class BetRepository {
     page = 1,
     limit = 100,
   }: {
+    organization_id: string;
     schedule_id?: string;
     date: string;
     cashier_id?: string;
@@ -26,25 +28,25 @@ export class BetRepository {
     page?: number;
     limit?: number;
   }) {
-    // Calcular offset basado en página
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
     let query = supabase
       .from('bets')
       .select('*, lotteries(*), schedules(*)', { count: 'exact' })
+      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false }) // 1° por fecha de creación (tickets más nuevos primero)
-      .order('bet_order', { ascending: true }) // 2° por bloque dentro del ticket
+      .order('created_at', { ascending: false })
+      .order('bet_order', { ascending: true })
       .range(from, to);
-    // .order('created_at', { ascending: true, referencedTable : 'lotteries' }); // 3️⃣ Dentro del bloque, orden por creación de la lotería
 
     if (ticket_number) {
       const { data: ticket, error: errorTicketNumber } = await supabase
         .from('tickets')
         .select('ticket_id')
         .eq('ticket_number', ticket_number)
+        .eq('organization_id', organization_id)
         .single();
       if (errorTicketNumber) throw errorTicketNumber;
       query = query.eq('ticket_id', ticket?.ticket_id);
@@ -64,6 +66,7 @@ export class BetRepository {
   }
 
   async getAllBetsGrouped({
+    organization_id,
     schedule_id,
     date,
     cashier_id,
@@ -72,6 +75,7 @@ export class BetRepository {
     quatern,
     tern,
   }: {
+    organization_id: string;
     schedule_id?: string;
     date: string;
     cashier_id?: string;
@@ -86,6 +90,7 @@ export class BetRepository {
       p_cashier_id: cashier_id ?? null,
       p_lottery_id: lottery_id ?? null,
       p_winners_only: !!winners,
+      p_organization_id: organization_id,
     });
 
     if (error) throw error;
@@ -106,11 +111,13 @@ export class BetRepository {
   }
 
   async getTotalAmount({
+    organization_id,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
   }: {
+    organization_id: string;
     date: string;
     schedule_id?: string;
     cashier_id?: string;
@@ -121,17 +128,20 @@ export class BetRepository {
       p_schedule_id: schedule_id ?? null,
       p_cashier_id: cashier_id ?? null,
       p_lottery_id: lottery_id ?? null,
+      p_organization_id: organization_id,
     });
     if (error) throw error;
-    return data as number; // total en moneda
+    return data as number;
   }
 
   async getTotalPrize({
+    organization_id,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
   }: {
+    organization_id: string;
     date: string;
     schedule_id?: string;
     cashier_id?: string;
@@ -142,18 +152,21 @@ export class BetRepository {
       p_schedule_id: schedule_id ?? null,
       p_cashier_id: cashier_id ?? null,
       p_lottery_id: lottery_id ?? null,
+      p_organization_id: organization_id,
     });
     if (error) throw error;
-    return data as number; // cantidad de aciertos
+    return data as number;
   }
 
   async getWinnerBets({
+    organization_id,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
     ticket_number,
   }: {
+    organization_id: string;
     date: string;
     schedule_id?: string;
     cashier_id?: string;
@@ -163,6 +176,7 @@ export class BetRepository {
     let query = supabase
       .from('bets')
       .select('*, lotteries(*), schedules(*)')
+      .eq('organization_id', organization_id)
       .eq('date', date)
       .eq('winner', true)
       .is('deleted_at', null)
@@ -172,7 +186,8 @@ export class BetRepository {
       const ticket = supabase
         .from('tickets')
         .select('ticket_id')
-        .eq('ticket_number', ticket_number);
+        .eq('ticket_number', ticket_number)
+        .eq('organization_id', organization_id);
       query = query.eq('ticket_id', ticket);
     }
     if (schedule_id) {
@@ -189,10 +204,19 @@ export class BetRepository {
     return data;
   }
 
-  async getAmountsByTicket({ ticket_number }: { ticket_number: string }) {
+  async getAmountsByTicket({
+    ticket_number,
+    organization_id,
+  }: {
+    ticket_number: string;
+    organization_id: string;
+  }) {
     const { data, error } = await supabase
-      .rpc('get_ticket_sums', { p_ticket: ticket_number })
-      .single(); // una fila
+      .rpc('get_ticket_sums', {
+        p_ticket: ticket_number,
+        p_organization_id: organization_id,
+      })
+      .single();
 
     if (error) throw error;
     return data as TicketSums;

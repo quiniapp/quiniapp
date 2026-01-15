@@ -14,7 +14,7 @@ import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleL
 import dayjs from 'dayjs';
 import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { usePlayDetails } from './context/MakePlaysContext';
@@ -50,6 +50,8 @@ const FillOutATicket = () => {
 
   const isEnabled = isEnabledCreateBet && isEnabledCreateBetByAdmin;
   const today = dayjs().day();
+  const todayKey: DayKey = dayParseToString[today];
+
   const [bet, setBet] = useState<IBetForm>({
     number: '',
     amount: undefined,
@@ -58,8 +60,8 @@ const FillOutATicket = () => {
     position: '',
   });
   const { data: scheduleLotteryPerDate } = useScheduleLottery();
-  const { data: scheduleOrder } = useSchedules();
-  const { data: lotteryOrder } = useLotteries();
+  const { data: scheduleOrder } = useSchedules({ day: todayKey });
+  const { data: lotteryOrder } = useLotteries({ day: todayKey });
   // 1. Refs de cada input
   const numberRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);

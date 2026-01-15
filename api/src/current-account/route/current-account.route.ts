@@ -3,6 +3,7 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import { USER_TYPE } from '@helper/types/user.type';
 // import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
 // Helper opcional para parsear booleanos
@@ -49,6 +50,7 @@ export class CurrentAccountRouter {
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date as string,
+        organization_id: req.organization_id!,
       });
 
       const response: APIResponse<ICurrentAccountEntityFront[]> = {
@@ -96,9 +98,22 @@ export class CurrentAccountRouter {
       return;
     }
 
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
     try {
       // Calculate solo recalcula, no liquida (leave = false)
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
+        req.organization_id!,
         date as string,
         false,
         false
@@ -147,9 +162,22 @@ export class CurrentAccountRouter {
       return;
     }
 
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
     try {
       // Liquidate liquida y puede marcar como leave
       const currentaccount = await this.controller.calculateCurrentAccountHandler(
+        req.organization_id!,
         date as string,
         typeof leave === 'string' && leave === 'true',
         true
@@ -197,25 +225,24 @@ export class CurrentAccountRouter {
       };
       res.status(500).json(response);
       return;
-    } /* 
-    const result = updateCurrentAccountSchema.safeParse(updateCurrentAccount);
-    if (!result.success) {
-      const response: APIResponse<undefined> = {
+    }
+
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
         error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: String(result.error.message),
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
         },
       };
-      res.status(400).json(response); // <-- SIN return
-
+      res.status(403).json(response);
       return;
-    } */
+    }
     try {
       const currentaccount = await this.controller.updateCurrentAccountHandler(
         current_account_id,
-        {
-          ...updateCurrentAccount,
-        },
+        updateCurrentAccount,
+        req.organization_id!,
         typeof leave === 'string' && leave === 'true'
       );
 
@@ -270,6 +297,7 @@ export class CurrentAccountRouter {
         user_type: user.user.user_type,
         user_id: id,
         date: typeof date === 'string' ? date : undefined,
+        organization_id: req.organization_id!,
       });
 
       const response: APIResponse<ICurrentAccountEntityFront> = {
@@ -324,6 +352,18 @@ export class CurrentAccountRouter {
       return;
     }
 
+    // Validar que el usuario no sea CASHIER ni ADMIN
+    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
     // fecha requerida siempre (seguimos tu regla actual)
     if (!date || typeof date !== 'string') {
       const response: APIResponse<null> = {
@@ -356,12 +396,11 @@ export class CurrentAccountRouter {
     try {
       let updated: ICurrentAccountEntityFront[] = [];
       let failed: Array<{ id: string; error: string }> = [];
-
       // 1) Si hay updates, los aplico (si no, lo salto sin error)
       if (entries.length > 0) {
         const results = await Promise.allSettled(
           entries.map(([id, payload]) =>
-            this.controller.updateCurrentAccountByUserHandler(id, { ...payload })
+            this.controller.updateCurrentAccountByUserHandler(id, payload, req.organization_id!)
           )
         );
 
@@ -376,8 +415,13 @@ export class CurrentAccountRouter {
       }
 
       // 2) Siempre ejecuto el cálculo del día (regla nueva: aunque no haya updates y leave=false)
-      //    `liquidatedFlag` viaja al controller para tu lógica de “liquidado” del día.
-      await this.controller.calculateCurrentAccountHandler(String(date), leaveFlag, true);
+      //    `liquidatedFlag` viaja al controller para tu lógica de "liquidado" del día.
+      await this.controller.calculateCurrentAccountHandler(
+        req.organization_id!,
+        String(date),
+        leaveFlag,
+        true
+      );
 
       const statusCode = failed.length ? 207 : 200;
       const response: APIResponse<{

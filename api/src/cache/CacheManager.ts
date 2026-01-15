@@ -59,7 +59,7 @@ export interface GlobalCacheStats {
  * - Automatic invalidation support
  * - Inflight request deduplication
  */
-export class CacheManager<T = any> {
+export class CacheManager<T = unknown> {
   private cache = new Map<string, CacheEntry<T>>();
   private inflightRequests = new Map<string, Promise<CacheEntry<T>>>();
   private etagCounters = new Map<string, number>();
@@ -94,7 +94,7 @@ export class CacheManager<T = any> {
 
     // Create new inflight request
     const loadPromise = this.load(key, loader, config);
-    this.inflightRequests.set(key, loadPromise as Promise<CacheEntry<any>>);
+    this.inflightRequests.set(key, loadPromise as Promise<CacheEntry<T>>);
 
     try {
       const result = await loadPromise;
@@ -138,7 +138,7 @@ export class CacheManager<T = any> {
       sizeBytes,
     };
 
-    this.cache.set(key, entry as CacheEntry<any>);
+    this.cache.set(key, entry as CacheEntry<T>);
     return entry;
   }
 
@@ -240,7 +240,7 @@ export class CacheManager<T = any> {
   /**
    * Estimate size of data in bytes
    */
-  private estimateSize(data: any): number {
+  private estimateSize(data: unknown): number {
     const str = JSON.stringify(data);
     // Rough estimation: each char is ~2 bytes in UTF-16
     return str.length * 2;

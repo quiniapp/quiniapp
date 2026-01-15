@@ -1,4 +1,4 @@
-import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.response';
+import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.request';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -9,15 +9,16 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export class CurrentAccountRepository {
-  async calculateCurrentAccountHandler(date?: string, leave?: boolean, liquidated?: boolean) {
-    // Si la fecha no se ha proporcionado (es undefined o null)
-
+  async calculateCurrentAccountHandler(
+    organization_id: string,
+    date?: string,
+    leave?: boolean,
+    liquidated?: boolean
+  ) {
     let dateToProcess: string;
     if (!date) {
-      // Usa la fecha del día anterior en la zona horaria del servidor
       dateToProcess = dayjs().tz('America/Argentina/Buenos_Aires').format('DD-MM-YYYY');
     } else {
-      // Usa la fecha proporcionada, ajustando la zona horaria si es necesario
       dateToProcess = dayjs(date).format('DD-MM-YYYY');
     }
 
@@ -25,39 +26,42 @@ export class CurrentAccountRepository {
       p_date_text: dateToProcess,
       p_calculate_leave: leave,
       p_liquidated: liquidated,
+      p_organization_id: organization_id,
     });
     if (error) throw error;
     return data;
   }
 
-  async getAllCurrentAccountHandler({ user_id, date }: { user_id?: string; date?: string }) {
-    // Base query to select current accounts and join with users table
-
+  async getAllCurrentAccountHandler({
+    organization_id,
+    user_id,
+    date,
+  }: {
+    organization_id: string;
+    user_id?: string;
+    date?: string;
+  }) {
     let query = supabase
       .from('current_accounts')
       .select('*, users!inner(*)')
+      .eq('organization_id', organization_id)
       .is('users.deleted_at', null)
       .order('date', { ascending: false })
       .order('user_number', { ascending: true });
-    // The .order() method already ensures the newest record is first.
+
     if (user_id) {
       query = query.eq('user_id', user_id).limit(1);
     }
-    // If a date is provided, filter the results for that specific date.
     if (date) {
       query = query.eq('date', dayjs(date).format('YYYY-MM-DD'));
     }
     const { data, error } = await query;
     if (error) {
       throw error;
-    } // If a specific date or user_id was provided, we don't need to deduplicate.
-    // // We can return the results directly.
+    }
     if (date || user_id) {
       return data;
     }
-    // If neither a user_id nor a date was provided,
-    // // we need to return the *most recent* current account for *each* user.
-    // // The .order() method already has the most recent one at the beginning of the array.
     const byUser: Record<string, (typeof data)[number]> = {};
     for (const row of data ?? []) {
       if (!byUser[row.user_id]) {
@@ -66,8 +70,10 @@ export class CurrentAccountRepository {
     }
     return Object.values(byUser);
   }
+
   async updateCurrentAccountHandler(
     current_account_id: string,
+    organization_id: string,
     props: IUpdateCurrentAccountEntity,
     leave?: boolean
   ) {
@@ -75,12 +81,15 @@ export class CurrentAccountRepository {
       p_current_account_id: current_account_id,
       p_props: props,
       p_calculate_leave: leave,
+      p_organization_id: organization_id,
     });
     if (error) throw error;
     return data;
   }
+
   async updateCurrentAccountByUserHandler(
     current_account_id: string,
+    organization_id: string,
     props: IUpdateCurrentAccountEntity
   ) {
     const timestamp = dayjs().toISOString();
@@ -89,25 +98,29 @@ export class CurrentAccountRepository {
       .from('current_accounts')
       .update({ ...props, edited_at: timestamp })
       .eq('current_account_id', current_account_id)
-      .single(); // esperamos una sola fila
+      .eq('organization_id', organization_id)
+      .single();
 
     if (error) throw error;
-    // data es la fila actualizada
     return data;
   }
+
   async getCurrentAccountByUserHandler(
     user_id: string,
+    organization_id: string,
     date?: string
   ): Promise<ICurrentAccountEntityBack | undefined> {
-    const query = supabase.from('current_accounts').select('*').eq('user_id', user_id);
-    if (date) {
-      // Fila de ese día (si existe)
-      const { data, error } = await query.eq('date', date).maybeSingle(); // 0..1
+    const query = supabase
+      .from('current_accounts')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('organization_id', organization_id);
 
+    if (date) {
+      const { data, error } = await query.eq('date', date).maybeSingle();
       if (error) throw error;
       return data ?? undefined;
     } else {
-      // Última LIQUIDADA
       const { data, error } = await query
         .eq('is_liquidated', true)
         .order('date', { ascending: false })

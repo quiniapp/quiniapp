@@ -1,25 +1,28 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
 import {
-  SESSION_DURATION_MS,
   VALIDATE_INTERVAL_MS,
   VALIDATE_ON_VISIBILITY,
   VISIBILITY_MIN_GAP_MS,
-  USER_ACTIVITY_EVENTS,
 } from '@helper/config/session.config';
+import { apiClient, ApiError } from '@/lib/apiClient';
+
+// Auto-refresh access token every 13-14 minutes (random to avoid thundering herd)
+const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<IUserEntityFront | null>(null);
   const [role, setRole] = useState<USER_TYPE | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const intervalRef = useRef<number | null>(null);
+  const validateIntervalRef = useRef<number | null>(null);
+  const refreshIntervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
-  const lastActivityRef = useRef<number>(Date.now());
-  const inactivityTimerRef = useRef<number | null>(null);
 
   const setSession = useCallback((u: IUserEntityFront | null) => {
     if (u) {
@@ -39,23 +42,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     lastValidateRef.current = now;
 
     try {
-      const res = await fetch(BACKEND_ROUTES.auth.validate, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (res.status === 401) {
+      const user = await apiClient.get<IUserEntityFront>(BACKEND_ROUTES.auth.validate);
+      if (!user) throw new Error('Respuesta inválida del servidor');
+      setSession(user);
+    } catch (err) {
+      // Si es un error 401, simplemente limpiar la sesión
+      if (err instanceof ApiError && err.statusCode === 401) {
         setSession(null);
-        return;
+      } else {
+        setSession(null);
       }
-
-      if (!res.ok) throw new Error('No autenticado');
-
-      const { data } = await res.json();
-      if (!data?.user) throw new Error('Respuesta inválida del servidor');
-      setSession(data.user);
-    } catch {
-      setSession(null);
     } finally {
       setLoading(false);
     }
@@ -65,25 +61,22 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     async (payload: LoginPayload) => {
       setLoading(true);
       try {
-        const res = await fetch(BACKEND_ROUTES.auth.login, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err?.message || 'Login failed');
-        }
-
-        const { data } = await res.json();
-        if (!data?.user) throw new Error('Respuesta inválida del servidor');
+        const user = await apiClient.post<IUserEntityFront>(
+          BACKEND_ROUTES.auth.login,
+          payload
+        );
+        if (!user) throw new Error('Respuesta inválida del servidor');
 
         // seteo inmediato para actualizar UI
-        setSession(data.user);
+        setSession(user);
         // una sola validación posterior para asegurar cookies/estado del server
         await validate();
+      } catch (err) {
+        // Re-lanzar el error con el mensaje del servidor para que el componente lo capture
+        if (err instanceof ApiError) {
+          throw new Error(err.message);
+        }
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -91,25 +84,35 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     [setSession, validate]
   );
 
-  const logout = useCallback(async () => {
-    setLoading(true);
-    try {
-      await fetch(BACKEND_ROUTES.auth.logout, { method: 'POST', credentials: 'include' });
-    } catch {
-      // no-op
-    } finally {
-      setSession(null);
-      setLoading(false);
-    }
-  }, [setSession]);
+  const logout = useCallback(
+    async (logoutAll: boolean = false) => {
+      setLoading(true);
+      try {
+        const endpoint = logoutAll
+          ? BACKEND_ROUTES.auth.logoutAll
+          : BACKEND_ROUTES.auth.logout;
+        await apiClient.post(endpoint);
+      } catch {
+        // no-op - even if logout fails on server, clear local session
+      } finally {
+        // Clear all TanStack Query cache to prevent data leakage between users
+        queryClient.clear();
+        setSession(null);
+        setLoading(false);
+      }
+    },
+    [setSession, queryClient]
+  );
 
-  const armInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
-    inactivityTimerRef.current = window.setTimeout(() => {
-      // si sigue autenticado y se cumplió el tiempo, cerrar sesión
-      if (isAuth) void logout();
-    }, SESSION_DURATION_MS) as unknown as number;
-  }, [isAuth, logout]);
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      await apiClient.post(BACKEND_ROUTES.auth.refresh);
+    } catch (error) {
+      // Refresh failed - session likely expired or no refresh token (old session)
+      console.warn('[Auth] Refresh token failed, logging out:', error);
+      void logout();
+    }
+  }, [logout]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
 
@@ -119,19 +122,40 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Revalidate periódico
+  // Validación periódica (cada 4 minutos)
+  // Backend maneja expiración de sesión con sliding window
   useEffect(() => {
-    if (intervalRef.current) window.clearInterval(intervalRef.current);
-    intervalRef.current = window.setInterval(() => {
-      if (isAuth) void validate();
-    }, VALIDATE_INTERVAL_MS) as unknown as number;
+    if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
+
+    if (isAuth) {
+      validateIntervalRef.current = window.setInterval(() => {
+        void validate();
+      }, VALIDATE_INTERVAL_MS) as unknown as number;
+    }
 
     return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
     };
   }, [isAuth, validate]);
 
-  // Revalidate al volver a la pestaña/ventana, con throttle + cierre por inactividad
+  // Auto-refresh de access token (cada 13-14 minutos)
+  // Access token expira a los 15 minutos, refrescamos antes
+  useEffect(() => {
+    if (refreshIntervalRef.current) window.clearInterval(refreshIntervalRef.current);
+
+    if (isAuth) {
+      refreshIntervalRef.current = window.setInterval(() => {
+        void refreshAccessToken();
+      }, AUTO_REFRESH_INTERVAL_MS) as unknown as number;
+    }
+
+    return () => {
+      if (refreshIntervalRef.current) window.clearInterval(refreshIntervalRef.current);
+    };
+  }, [isAuth, refreshAccessToken]);
+
+  // Revalidate al volver a la pestaña/ventana con throttle
+  // Backend maneja el sliding window, solo validamos para actualizar UI
   useEffect(() => {
     if (!VALIDATE_ON_VISIBILITY) return;
 
@@ -140,13 +164,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
       const now = Date.now();
 
-      // 1) Si hubo más de SESSION_DURATION_MS sin actividad, cerrar sesión
-      if (now - lastActivityRef.current >= SESSION_DURATION_MS) {
-        void logout();
-        return;
-      }
-
-      // 2) Si la pestaña está visible, validar como máximo cada VISIBILITY_MIN_GAP_MS
+      // Validar como máximo cada VISIBILITY_MIN_GAP_MS
       if (
         document.visibilityState === 'visible' &&
         now - lastValidateRef.current >= VISIBILITY_MIN_GAP_MS
@@ -162,27 +180,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       document.removeEventListener('visibilitychange', onVisibilityOrFocus);
       window.removeEventListener('focus', onVisibilityOrFocus);
     };
-  }, [isAuth, validate, logout]);
-
-  useEffect(() => {
-    // función que marca actividad y reinicia watchdog
-    const onUserActivity = () => {
-      lastActivityRef.current = Date.now();
-      armInactivityTimer();
-    };
-
-    // usar eventos definidos en la configuración compartida
-    const events = [...USER_ACTIVITY_EVENTS];
-
-    events.forEach((ev) => window.addEventListener(ev, onUserActivity, { passive: true }));
-    // armar timer al montar
-    armInactivityTimer();
-
-    return () => {
-      events.forEach((ev) => window.removeEventListener(ev, onUserActivity));
-      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
-    };
-  }, [armInactivityTimer]);
+  }, [isAuth, validate]);
 
   const value: AuthContextValue = useMemo(
     () => ({

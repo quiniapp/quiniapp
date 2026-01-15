@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IGetResultsEntity } from '@helper/request/results.response.ts';
+import { IGetResultsEntity } from '@helper/request/results.request.ts';
 
 const fetchResults = async ({ lottery_id, schedule_id, date }: IGetResultsEntity) => {
   const url = `${BACKEND_ROUTES.results.base}?date=${date}&schedule_id=${schedule_id}&lottery_id=${lottery_id}`;

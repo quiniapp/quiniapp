@@ -10,7 +10,9 @@ export type APIResponse<T> =
   | { data?: undefined; error: ErrorResponse };
 
 export interface ErrorResponse {
-  error: ERROR_TYPE; // o un enum si querés definir tipos específicos de error
-  message: string;
-  details?: unknown; // opcional, por si querés agregar más info
+  // TEMPORALMENTE acepta ambos formatos durante la migración
+  code?: string; // ✅ NUEVO - Código de error estandarizado (ej: 'VALIDATION_ERROR', 'NOT_FOUND')
+  error?: ERROR_TYPE; // ⚠️ DEPRECATED - Mantener temporalmente para compatibilidad
+  message: string; // Mensaje descriptivo del error
+  details?: unknown; // Información adicional (validaciones Zod, stack traces en dev, etc.)
 }

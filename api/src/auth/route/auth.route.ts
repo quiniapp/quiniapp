@@ -1,12 +1,20 @@
-import { Request, RequestHandler, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { AuthController } from '../controller/auth.controller';
-import { z } from 'zod';
 import { APIResponse } from '@helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { IUserEntityFront } from '@helper/types/user.type';
-import { supabase } from 'api/database/db.connection';
-import { generateEmail } from 'api/helper/generateEmail';
-import { signUserToken } from 'api/helper/JWT';
+import { asyncHandler } from '../../middlewares/error.middleware';
+import { UnauthorizedError } from '@helper/errors';
+import { loginSchema } from '@helper/schemas/auth.schema';
+import { SESSION_CONFIG } from 'api/src/config/session.config';
+
+// Cookie configuration based on SESSION_CONFIG
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: SESSION_CONFIG.COOKIE_SECURE,
+  sameSite: SESSION_CONFIG.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none',
+  path: '/',
+  domain: SESSION_CONFIG.COOKIE_DOMAIN,
+};
 
 export class AuthRouter {
   public publicRouter: Router;
@@ -23,191 +31,155 @@ export class AuthRouter {
 
   private setupPublicRoutes() {
     this.publicRouter.post('/login', this.loginHandler);
+    this.publicRouter.post('/refresh', this.refreshTokenHandler); // NEW - Phase 2
   }
 
   private setupPrivateRoutes() {
     this.privateRouter.post('/logout', this.logoutHandler);
-    this.privateRouter.get('/validate', this.refreshHandler);
+    this.privateRouter.post('/logout-all', this.logoutAllHandler); // NEW - Phase 2
+    this.privateRouter.get('/validate', this.validateHandler);
   }
 
-  // Definís el handler afuera:
-  private loginHandler: RequestHandler = async (req: Request, res: Response) => {
-    try {
-      const { username, password } = req.body;
+  /**
+   * POST /api/auth/login
+   * Login with username and password using custom JWT session system
+   */
+  private loginHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { username, password } = req.body;
 
-      const result = loginSchema.safeParse({ username, password });
-      if (!result.success) {
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.BAD_REQUEST,
-            message: String(result.error.message),
-          },
-        };
-        res.status(400).json(response); // <-- SIN return
+    // Validación automática - Zod lanza error si falla
+    const validated = loginSchema.parse({ username, password });
 
-        return;
-      }
+    const ipAddress = (req.ip || req.socket.remoteAddress) as string;
+    const userAgent = req.headers['user-agent'];
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: generateEmail(username),
-        password: password,
-      });
+    // Login with session system
+    const loginResponse = await this.controller.loginWithSession(
+      {
+        username: validated.username,
+        password: validated.password,
+      },
+      ipAddress,
+      userAgent
+    );
 
-      if (error) {
-        console.error(error);
-        throw new Error(ERROR_MESSAGE.INVALID_CREDENTIALS);
-      }
-      // Cookies de sesión (sin maxAge) - se borran al cerrar el navegador
-      // El timeout de 3 horas se maneja en el frontend (AuthProvider)
-      res.cookie('access_token', data.session.access_token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-      });
-      const loginResponse = await this.controller.login({ username, password });
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user: loginResponse,
-        },
-      };
-      res.cookie('user_token', signUserToken(loginResponse), {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-      });
-      res.status(200).json(response); // <-- SIN return
-    } catch (error) {
-      console.error('Login route error', error);
+    // Set access token cookie (15 minutes)
+    res.cookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, loginResponse.access_token, {
+      ...COOKIE_OPTIONS,
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
 
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
+    // Set refresh token cookie (30 days)
+    res.cookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, loginResponse.refresh_token, {
+      ...COOKIE_OPTIONS,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
 
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
+    // Respuesta exitosa
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: loginResponse.user,
+      },
+    };
 
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
-        },
-      };
-      res.status(500).json(response);
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/auth/refresh (NEW - Phase 2)
+   * Refresh access token using refresh token
+   */
+  private refreshTokenHandler = asyncHandler(async (req: Request, res: Response) => {
+    const refreshToken = req.cookies[SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME];
+
+    if (!refreshToken) {
+      throw new UnauthorizedError('No refresh token provided');
     }
-  };
 
-  private logoutHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { user, token } = req.user!;
+    const ipAddress = (req.ip || req.socket.remoteAddress) as string;
+    const userAgent = req.headers['user-agent'];
 
-    if (!token) {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.TOKEN_ERROR,
-          message: 'Unexpected error',
-        },
-      };
-      res.status(500).json(response);
-    }
-    try {
-      const result = await this.controller.logout({ token: token, user_id: user.user_id! });
-      const response: APIResponse<boolean> = {
-        data: {
-          data: result,
-        },
-      };
+    const refreshResponse = await this.controller.refreshToken(refreshToken, ipAddress, userAgent);
 
-      res.clearCookie('access_token', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-      });
-      res.clearCookie('user_token', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-      });
+    // Set new cookies
+    res.cookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, refreshResponse.access_token, {
+      ...COOKIE_OPTIONS,
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
 
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('Login route error', error);
+    res.cookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, refreshResponse.refresh_token, {
+      ...COOKIE_OPTIONS,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
 
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
+    const response: APIResponse<boolean> = {
+      data: {
+        success: true,
+      },
+    };
 
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
+    res.status(200).json(response);
+  });
 
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
-        },
-      };
-      res.status(500).json(response);
-    }
-  };
+  /**
+   * POST /api/private/auth/logout
+   * Maintains backward compatibility
+   */
+  private logoutHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user, session_id } = req.user!;
 
-  private refreshHandler: RequestHandler = async (req: Request, res: Response) => {
+    await this.controller.logoutSession(session_id, user.user_id!, false);
+
+    // Also clear new session cookies if they exist (Phase 2+)
+    res.clearCookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
+    res.clearCookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
+
+    const response: APIResponse<boolean> = {
+      data: { data: true },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/auth/logout-all (NEW - Phase 2)
+   * Logout from all devices (revoke all user sessions)
+   */
+
+  private logoutAllHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user, session_id } = req.user!;
+
+    await this.controller.logoutSession(session_id, user.user_id!, true); // logoutAll = true
+
+    res.clearCookie(SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
+    res.clearCookie(SESSION_CONFIG.REFRESH_TOKEN_COOKIE_NAME, COOKIE_OPTIONS);
+
+    const response: APIResponse<boolean> = {
+      data: {
+        success: true,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * GET /api/private/auth/validate
+   * Validate current session
+   */
+  private validateHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req.user!;
+
     if (!user) {
-      const response: APIResponse<null> = {
-        error: {
-          error: ERROR_TYPE.TOKEN_ERROR,
-          message: 'Unexpected error',
-        },
-      };
-      res.status(401).json(response);
+      throw new UnauthorizedError('Usuario no encontrado');
     }
-    try {
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user,
-        },
-      };
 
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('Error in /refresh route', error);
-      res.status(500).json({
-        error: {
-          error: ERROR_TYPE.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
-        },
-      });
-    }
-  };
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user,
+      },
+    };
+
+    res.status(200).json(response);
+  });
 }
-
-export const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
-});

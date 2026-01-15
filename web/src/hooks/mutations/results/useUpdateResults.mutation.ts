@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
-import { IUpdateResultsEntity } from '@helper/request/results.response.ts';
+import { IUpdateResultsEntity } from '@helper/request/results.request.ts';
 
 
 const performUpdateResults = async (

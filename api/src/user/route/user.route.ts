@@ -1,9 +1,10 @@
-import { Request, RequestHandler, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { UserController } from '../controller/user.controller';
-import { INewUserEntity } from '@helper/request/user.response';
+import { INewUserEntity } from '@helper/request/user.request';
 import { APIResponse } from '@helper/response/api_response.response';
-import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
+import { BadRequestError, ForbiddenError } from '@helper/errors';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { asyncHandler } from '../../middlewares/error.middleware';
 
 export class UserRouter {
   public router: Router;
@@ -17,371 +18,254 @@ export class UserRouter {
   }
 
   private setupRoutes() {
+    // IMPORTANT: Specific routes must come BEFORE parameterized routes
+    // Validate SUPERADMIN for cross-org password reset
+    this.router.get('/validate-superadmin', this.validateSuperAdminHandler);
+
+    // Password Management (Phase 3)
+    this.router.post('/change-password', this.changePasswordHandler);
+    this.router.post('/reset-password/:id', this.resetPasswordHandler);
+
+    // Standard CRUD routes
     this.router.get('/:id', this.getUserHandler);
     this.router.get('/', this.getAllUserHandler);
     this.router.post('/', this.newUserhandler);
-    // this.router.put('/reset/:id', this.updatePasswordHandler);
     this.router.put('/:id', this.updateUserHandler);
     this.router.delete('/:id', this.deleteUserHandler);
   }
 
-  private newUserhandler: RequestHandler = async (req: Request, res: Response) => {
+  private newUserhandler = asyncHandler(async (req: Request, res: Response) => {
     const { newUser }: { newUser: INewUserEntity } = req.body;
+
     if (!newUser) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.NEW_USER_REQUIRED,
-          message: ERROR_MESSAGE.NEW_USER_REQUIRED,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new BadRequestError('Datos del nuevo usuario requeridos');
     }
+
     if (newUser?.user_type === USER_TYPE.OWNER) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new ForbiddenError('No se puede crear un usuario de tipo OWNER');
     }
-    /* const result = UserSchema.safeParse(newUser);
-     if (!result.success) {
-      console.log('no new user')
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: String(result.error.message),
-        },
-      };
-      res.status(400).json(response); // <-- SIN return
 
-      return;
-    } */
-    try {
-      const user = await this.controller.create(newUser);
+    const user = await this.controller.create(newUser, req.organization_id!);
 
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user: user!,
-        },
-      };
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: user!,
+      },
+    };
 
-      res.status(200).json(response);
-    } catch (error) {
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
+    res.status(200).json(response);
+  });
 
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
-    }
-  };
-
-  private getUserHandler: RequestHandler = async (req: Request, res: Response) => {
+  private getUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { id: user_id } = req.params;
     const { user } = req;
+
     if (!user_id) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.ID_REQUIRED,
-          message: ERROR_MESSAGE.ID_REQUIRED,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new BadRequestError('ID de usuario requerido');
     }
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new ForbiddenError('Los cajeros no pueden ver otros usuarios');
     }
-    try {
-      const user = await this.controller.get({ user_id });
-      if (!user) {
-        const response: APIResponse<undefined> = {
-          error: {
-            error: ERROR_TYPE.USER_NOT_FOUND,
-            message: ERROR_MESSAGE.USER_NOT_FOUND,
-          },
-        };
-        res.status(403).json(response);
-        return;
-      }
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user,
-        },
-      };
-      res.status(200).json(response);
-      return;
-    } catch (error) {
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
 
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
-    }
-  };
-  private getAllUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const fetchedUser = await this.controller.get({ user_id }, req.organization_id!);
+
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: fetchedUser,
+      },
+    };
+    res.status(200).json(response);
+  });
+  private getAllUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { cashier_number } = req.query;
+    const { cashier_number, filter_user_type } = req.query;
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new ForbiddenError('Los cajeros no pueden listar usuarios');
     }
+
     let parsedCashierNumber: number | undefined = undefined;
     if (typeof cashier_number === 'string') {
       parsedCashierNumber = parseInt(cashier_number, 10);
     }
-    try {
-      const users = await this.controller.getAll(parsedCashierNumber);
-      const response: APIResponse<IUserEntityFront[]> = {
-        data: {
-          users,
-        },
-      };
-      res.status(200).json(response);
-      return;
-    } catch (error) {
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
 
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
+    // Parse filter_user_type from query parameter
+    let filterUserType: USER_TYPE | undefined = undefined;
+    if (typeof filter_user_type === 'string' && filter_user_type in USER_TYPE) {
+      filterUserType = filter_user_type as USER_TYPE;
     }
-  };
-  private updateUserHandler: RequestHandler = async (req: Request, res: Response) => {
+
+    const users = await this.controller.getAll(
+      req.organization_id!,
+      user!.user.user_type,
+      parsedCashierNumber,
+      filterUserType
+    );
+    const response: APIResponse<IUserEntityFront[]> = {
+      data: {
+        users,
+      },
+    };
+    res.status(200).json(response);
+  });
+  private updateUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { id: user_id } = req.params;
     const { updateUser } = req.body;
     const { user } = req;
 
     if (!user_id || !updateUser) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new BadRequestError('ID de usuario y datos de actualización requeridos');
     }
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new ForbiddenError('Los cajeros no pueden actualizar usuarios');
     }
-    /* 
-    const result = updateUserSchema.safeParse(updateUser);
-    if (!result.success) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: String(result.error.message),
-        },
-      };
-      res.status(400).json(response); // <-- SIN return
 
-      return;
-    } */
-    try {
-      const user = await this.controller.update(user_id, { ...updateUser });
+    const updatedUser = await this.controller.update(user_id, updateUser, req.organization_id!);
 
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user,
-        },
-      };
-      res.status(200).json(response);
-      return;
-    } catch (error) {
-      if (error instanceof Error) {
-        let statusCode = 500;
-        if (
-          error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-          error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-        ) {
-          statusCode = 401;
-        }
-
-        const response: APIResponse<null> = {
-          error: {
-            error: ERROR_TYPE.AUTH_ERROR,
-            message: error.message,
-          },
-        };
-        res.status(statusCode).json(response);
-        return;
-      }
-    }
-  };
-  private deleteUserHandler: RequestHandler = async (req: Request, res: Response) => {
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: updatedUser,
+      },
+    };
+    res.status(200).json(response);
+  });
+  private deleteUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { id: user_id } = req.params;
     const { user } = req;
+
     if (!user_id) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new BadRequestError('ID de usuario requerido');
     }
+
     if (user?.user.user_type === USER_TYPE.CASHIER) {
-      const response: APIResponse<undefined> = {
-        error: {
-          error: ERROR_TYPE.FORBIDDEN,
-          message: ERROR_MESSAGE.FORBIDDEN,
-        },
-      };
-      res.status(403).json(response);
-      return;
+      throw new ForbiddenError('Los cajeros no pueden eliminar usuarios');
     }
-    try {
-      const user = await this.controller.delete({ user_id });
 
-      const response: APIResponse<IUserEntityFront> = {
-        data: {
-          user,
-        },
-      };
-      res.status(200).json(response);
-      return;
-    } catch (error) {
-      {
-        if (error instanceof Error) {
-          let statusCode = 500;
-          if (
-            error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-            error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-          ) {
-            statusCode = 401;
-          }
+    const deletedUser = await this.controller.delete({ user_id }, req.organization_id!);
 
-          const response: APIResponse<null> = {
-            error: {
-              error: ERROR_TYPE.AUTH_ERROR,
-              message: error.message,
-            },
-          };
-          res.status(statusCode).json(response);
-          return;
-        }
-      }
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: deletedUser,
+      },
+    };
+    res.status(200).json(response);
+  });
+
+  // ============= PASSWORD MANAGEMENT (Phase 3) =============
+
+  /**
+   * POST /api/private/user/reset-password/:id
+   * Admin endpoint to reset user password
+   * Only OWNER, SUPERADMIN, and ADMIN can reset passwords
+   */
+  private resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { id: targetUserId } = req.params;
+    const { newPassword } = req.body; // Optional - if not provided, generates random password
+    const { user } = req;
+
+    if (!targetUserId) {
+      throw new BadRequestError('ID de usuario requerido');
     }
-  };
 
-  // private updatePasswordHandler: RequestHandler = async (req: Request, res: Response) => {
-  //   const { id: user_id } = req.params;
-  //   const { user } = req;
-  //   if (!user_id) {
-  //     const response: APIResponse<undefined> = {
-  //       error: {
-  //         error: ERROR_TYPE.BAD_REQUEST,
-  //         message: ERROR_MESSAGE.BAD_REQUEST,
-  //       },
-  //     };
-  //     res.status(403).json(response);
-  //     return;
-  //   }
-  //   if (user?.user.user_type === USER_TYPE.CASHIER) {
-  //     const response: APIResponse<undefined> = {
-  //       error: {
-  //         error: ERROR_TYPE.FORBIDDEN,
-  //         message: ERROR_MESSAGE.FORBIDDEN,
-  //       },
-  //     };
-  //     res.status(403).json(response);
-  //     return;
-  //   }
-  //   try {
-  //     const user = await this.controller.updatePassword(user_id);
-  //     const response: APIResponse<IUserEntityFront> = {
-  //       data: {
-  //         user,
-  //       },
-  //     };
-  //     res.status(200).json(response);
-  //     return;
-  //   } catch (error) {
-  //     {
-  //       if (error instanceof Error) {
-  //         let statusCode = 500;
-  //         if (
-  //           error.message === ERROR_MESSAGE.USER_NOT_FOUND ||
-  //           error.message === ERROR_MESSAGE.INVALID_CREDENTIALS
-  //         ) {
-  //           statusCode = 401;
-  //         }
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
 
-  //         const response: APIResponse<null> = {
-  //           error: {
-  //             error: ERROR_TYPE.AUTH_ERROR,
-  //             message: error.message,
-  //           },
-  //         };
-  //         res.status(statusCode).json(response);
-  //         return;
-  //       }
-  //     }
-  //   }
-  // };
+    // Check permissions - only OWNER, SUPERADMIN, ADMIN can reset passwords
+    if (![USER_TYPE.OWNER, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(user.user.user_type)) {
+      throw new ForbiddenError('No tienes permisos para resetear contraseñas');
+    }
+
+    const result = await this.controller.resetPassword(
+      targetUserId,
+      user.user.user_id!,
+      user.user.user_type,
+      req.organization_id!,
+      newPassword
+    );
+
+    const response: APIResponse<string> = {
+      data: {
+        password: result.password,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/user/change-password
+   * User self-service password change
+   * Any authenticated user can change their own password
+   */
+  private changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    const { user } = req;
+
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestError('Contraseña actual y nueva requeridas');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    await this.controller.changePassword(
+      user.user.user_id!,
+      currentPassword,
+      newPassword,
+      req.organization_id!
+    );
+
+    const response: APIResponse<boolean> = {
+      data: {
+        success: true,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * GET /api/private/user/validate-superadmin?username=XXX&organization_id=YYY
+   * Validate that a user exists and is SUPERADMIN of the specified organization
+   * Only accessible by OWNER
+   */
+  private validateSuperAdminHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { username, organization_id } = req.query;
+    const { user } = req;
+
+    if (!username || typeof username !== 'string') {
+      throw new BadRequestError('Username requerido');
+    }
+
+    if (!organization_id || typeof organization_id !== 'string') {
+      throw new BadRequestError('ID de organización requerido');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    // Only OWNER can validate SUPERADMIN from other organizations
+    if (user.user.user_type !== USER_TYPE.OWNER) {
+      throw new ForbiddenError('Solo el OWNER puede validar SUPERADMIN de otras organizaciones');
+    }
+
+    const result = await this.controller.validateSuperAdmin(
+      username,
+      organization_id,
+      user.user.user_type
+    );
+
+    const response: APIResponse<string> = {
+      data: {
+        user_id: result.user_id,
+      },
+    };
+
+    res.status(200).json(response);
+  });
 }

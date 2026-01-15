@@ -1,22 +1,105 @@
-import { IUserEntityFront } from '@helper/types/user.type';
-import { JwtPayload } from '@supabase/supabase-js';
-import { JWT_SECRET_USER } from 'api/envs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import { JWT_SECRET_ACCESS, JWT_SECRET_REFRESH } from 'api/envs';
+import jwt from 'jsonwebtoken';
+import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { StringValue } from 'ms';
 
-function isJwtPayload(payload: any): payload is JwtPayload {
-  return typeof payload === 'object' && payload !== null && 'exp' in payload;
+// ============= ACCESS TOKEN (NEW) =============
+
+export interface IAccessTokenPayload {
+  user_id: string;
+  username: string;
+  user_type: string;
+  session_id: string;
+  organization_id: string;
+  type: 'access';
+  iat: number;
+  exp: number;
 }
 
-export const verifyAccessToken = (token: string): JwtPayload => {
-  const decoded = verifyUserToken(token);
-  if (!isJwtPayload(decoded)) throw new Error('Invalid token');
-  return decoded;
+/**
+ * Sign a new access token (15 minutes expiration)
+ */
+export const signAccessToken = (
+  userId: string,
+  username: string,
+  userType: string,
+  sessionId: string,
+  organizationId: string
+): string => {
+  const payload: Omit<IAccessTokenPayload, 'iat' | 'exp'> = {
+    user_id: userId,
+    username,
+    user_type: userType,
+    session_id: sessionId,
+    organization_id: organizationId,
+    type: 'access',
+  };
+
+  return jwt.sign(payload, String(JWT_SECRET_ACCESS), {
+    expiresIn: String(SESSION_CONFIG.JWT_ACCESS_EXPIRATION) as StringValue,
+  });
 };
 
-export const signUserToken = (payload: IUserEntityFront, options?: SignOptions): string => {
-  return jwt.sign(payload, JWT_SECRET_USER, options);
+/**
+ * Verify access token
+ */
+export const verifyAccessToken = (token: string): IAccessTokenPayload => {
+  try {
+    const decoded = jwt.verify(token, String(JWT_SECRET_ACCESS)) as IAccessTokenPayload;
+    if (decoded.type !== 'access') {
+      throw new Error('Invalid token type');
+    }
+    return decoded;
+  } catch {
+    throw new Error('Invalid access token');
+  }
 };
 
-export const verifyUserToken = (token: string): JwtPayload => {
-  return jwt.verify(token, JWT_SECRET_USER) as JwtPayload;
+// ============= REFRESH TOKEN (NEW) =============
+
+export interface IRefreshTokenPayload {
+  user_id: string;
+  session_id: string;
+  token_version: number;
+  type: 'refresh';
+  iat: number;
+  exp: number;
+}
+
+/**
+ * Sign a new refresh token (30 days expiration)
+ */
+export const signRefreshToken = (
+  userId: string,
+  sessionId: string,
+  tokenVersion: number
+): string => {
+  const payload: Omit<IRefreshTokenPayload, 'iat' | 'exp'> = {
+    user_id: userId,
+    session_id: sessionId,
+    token_version: tokenVersion,
+    type: 'refresh',
+  };
+
+  return jwt.sign(payload, String(JWT_SECRET_REFRESH), {
+    expiresIn: String(SESSION_CONFIG.JWT_REFRESH_EXPIRATION) as StringValue,
+  });
 };
+
+/**
+ * Verify refresh token
+ */
+export const verifyRefreshToken = (token: string): IRefreshTokenPayload => {
+  try {
+    const decoded = jwt.verify(token, String(JWT_SECRET_REFRESH)) as IRefreshTokenPayload;
+    if (decoded.type !== 'refresh') {
+      throw new Error('Invalid token type');
+    }
+    return decoded;
+  } catch {
+    throw new Error('Invalid refresh token');
+  }
+};
+
+// Legacy functions removed in Phase 5
+// Migration to custom JWT session system completed

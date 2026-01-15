@@ -5,5 +5,6 @@ export const parseLottery = (lottery: ILotteryEntityBack): ILotteryEntityFront =
     active: lottery.active,
     lottery_id: lottery.lottery_id,
     name: lottery.name,
+    order: lottery.order,
   };
 };

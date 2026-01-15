@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.response';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 
 // ======= width y utilidades base =======
 const WIDTH = 32;
