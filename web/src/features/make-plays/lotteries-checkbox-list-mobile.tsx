@@ -43,6 +43,31 @@ const LotteriesCheckboxListMobile = ({
     Array.from(checkedLotteries.values()).forEach(setLotteries);
   };
 
+  // Verificar si todas las loterías están seleccionadas
+  const allSelected = useMemo(() => {
+    if (lotteries.length === 0) return false;
+    return lotteries.every((lot) => checkedLotteries.has(lot.lottery_id));
+  }, [lotteries, checkedLotteries]);
+
+  // Función para seleccionar/deseleccionar todas las loterías
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deseleccionar todas
+      lotteries.forEach((lot) => {
+        if (checkedLotteries.has(lot.lottery_id)) {
+          setLotteries(lot);
+        }
+      });
+    } else {
+      // Seleccionar todas
+      lotteries.forEach((lot) => {
+        if (!checkedLotteries.has(lot.lottery_id)) {
+          setLotteries(lot);
+        }
+      });
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -66,6 +91,21 @@ const LotteriesCheckboxListMobile = ({
         <Command>
           <CommandList className="max-h-80">
             <CommandGroup heading="Loterías">
+              {/* Checkbox "Seleccionar todos" como primer elemento */}
+              {lotteries.length > 0 && (
+                <CommandItem
+                  onSelect={handleSelectAll}
+                  className="text-base font-medium border-b"
+                >
+                  <Flex className="items-center gap-2">
+                    <Checkbox
+                      checked={allSelected}
+                      className="h-4 w-4 rounded-[4px] pointer-events-none"
+                    />
+                    <span className="text-base">Seleccionar todos</span>
+                  </Flex>
+                </CommandItem>
+              )}
               {lotteries.map((lot) => {
                 const checked = checkedLotteries.has(lot.lottery_id);
                 return (
