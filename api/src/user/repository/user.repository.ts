@@ -30,10 +30,40 @@ export class UserRepository {
     if (error) throw new Error(error.message);
     return data?.parent_organization_id !== null;
   }
+  // Common select fields (all user fields including sensitive ones for backend operations)
+  private readonly allUserFields = `
+    user_id,
+    number,
+    user_type,
+    name,
+    last_name,
+    address,
+    phone,
+    email,
+    username,
+    disabled,
+    organization_id,
+    created_at,
+    edited_at,
+    deleted_at,
+    cashier_type,
+    fee,
+    fee_plus,
+    password_hash,
+    password_changed_at,
+    password_reset_required,
+    failed_login_attempts,
+    locked_until,
+    last_login_at,
+    last_login_ip
+  `
+    .replace(/\s+/g, ' ')
+    .trim();
+
   async getById(id: string, organization_id: string) {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(this.allUserFields)
       .eq('user_id', id)
       .eq('organization_id', organization_id)
       .single();
@@ -49,7 +79,7 @@ export class UserRepository {
   async getByIdWithoutOrgRestriction(id: string) {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(this.allUserFields)
       .eq('user_id', id)
       .is('deleted_at', null)
       .single();
@@ -61,7 +91,7 @@ export class UserRepository {
   async getByUsernameAndOrganization(username: string, organization_id: string) {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(this.allUserFields)
       .eq('username', username)
       .eq('organization_id', organization_id)
       .is('deleted_at', null)
@@ -75,9 +105,24 @@ export class UserRepository {
     organization_id: string,
     user_type: USER_TYPE,
     cashier_number?: number,
-    filter_user_type?: USER_TYPE
+    filter_user_type?: USER_TYPE,
+    include_session?: boolean
   ) {
-    let query = supabase.from('users').select('*').is('deleted_at', null);
+    // Include only the most recent session's last_activity_at if requested
+    // Uses left join so users without sessions are still included
+    const selectFields = include_session
+      ? `${this.allUserFields}, sessions(last_activity_at)`
+      : this.allUserFields;
+
+    let query = supabase.from('users').select(selectFields).is('deleted_at', null);
+
+    // If including session, filter for active sessions and get the most recent one
+    if (include_session) {
+      query = query
+        .eq('sessions.is_active', true)
+        .order('last_activity_at', { foreignTable: 'sessions', ascending: false })
+        .limit(1, { foreignTable: 'sessions' });
+    }
 
     // Hierarchical permission filtering
     // Hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER

@@ -119,6 +119,25 @@ export class AuthRepository {
   }
 
   /**
+   * Unlock account and reset failed attempts
+   * Used by administrators to manually unlock blocked accounts
+   */
+  async unlockAccount(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        locked_until: null,
+        failed_login_attempts: 0,
+      })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('[AuthRepository] Failed to unlock account:', error);
+      throw new InternalServerError(`Error unlocking account: ${error.message}`);
+    }
+  }
+
+  /**
    * Update user login metadata
    */
   async updateLoginMetadata(userId: string, ipAddress: string | null): Promise<void> {

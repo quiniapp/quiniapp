@@ -77,3 +77,22 @@ export interface CashierUserEntityFront extends IBaseUserEntityFront {
 }
 
 export type IUserEntityFront = OwnerOrAdminUserEntityFront | CashierUserEntityFront;
+
+// ============= Session Types =============
+
+/**
+ * Last session information (simplified for frontend)
+ * Only the most recent session's last_activity_at
+ */
+export interface ILastSessionInfo {
+  last_activity_at: string | Date;
+}
+
+/**
+ * User with last session information
+ * Used when fetching users with include_session=true
+ * Only includes the most recent session's activity time
+ */
+export type IUserWithSessionFront = IUserEntityFront & {
+  last_session?: ILastSessionInfo;
+};

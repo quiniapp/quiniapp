@@ -25,6 +25,7 @@ export class UserRouter {
     // Password Management (Phase 3)
     this.router.post('/change-password', this.changePasswordHandler);
     this.router.post('/reset-password/:id', this.resetPasswordHandler);
+    this.router.post('/unlock/:id', this.unlockAccountHandler);
 
     // Group assignment routes
     this.router.get('/assignable', this.getAssignableUsersHandler);
@@ -83,7 +84,7 @@ export class UserRouter {
   });
   private getAllUserHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { cashier_number, filter_user_type, group_id } = req.query;
+    const { cashier_number, filter_user_type, group_id, include_session } = req.query;
 
     if (user?.user.user_type === USER_TYPE.CASHIER) {
       throw new ForbiddenError('Los cajeros no pueden listar usuarios');
@@ -99,6 +100,9 @@ export class UserRouter {
     if (typeof filter_user_type === 'string' && filter_user_type in USER_TYPE) {
       filterUserType = filter_user_type as USER_TYPE;
     }
+
+    // Parse include_session from query parameter
+    const includeSession = include_session === 'true';
 
     // Determine which organization to query
     let targetOrgId = req.organization_id!;
@@ -119,7 +123,8 @@ export class UserRouter {
       targetOrgId,
       user!.user.user_type,
       parsedCashierNumber,
-      filterUserType
+      filterUserType,
+      includeSession
     );
     const response: APIResponse<IUserEntityFront[]> = {
       data: {
@@ -247,6 +252,46 @@ export class UserRouter {
       data: {
         success: true,
       },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/user/unlock/:id
+   * Admin endpoint to unlock a user account
+   * Resets locked_until and failed_login_attempts
+   * Only non-cashier users can unlock accounts
+   */
+  private unlockAccountHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { id: targetUserId } = req.params;
+    const { user } = req;
+
+    if (!targetUserId) {
+      throw new BadRequestError('ID de usuario requerido');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    // Only non-cashier users can unlock accounts
+    if (user.user.user_type === USER_TYPE.CASHIER) {
+      throw new ForbiddenError('Los cajeros no pueden desbloquear cuentas');
+    }
+
+    await this.controller.unlockAccount(
+      targetUserId,
+      user.user.user_id!,
+      user.user.user_type,
+      user.user.name,
+      req.organization_id!,
+      req.ip,
+      req.get('user-agent')
+    );
+
+    const response: APIResponse<boolean> = {
+      data: { success: true },
     };
 
     res.status(200).json(response);

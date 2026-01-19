@@ -7,6 +7,12 @@ import { isAuthenticated } from '../middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
 import { startSessionCleanupJob } from './utils/session-cleanup.job';
+import {
+  loginRateLimiter,
+  authRateLimiter,
+  publicApiRateLimiter,
+  privateApiRateLimiter,
+} from './middlewares/rate-limit.middleware';
 
 import {
   PORT,
@@ -91,9 +97,19 @@ const morganFormat = IS_LOCAL
 app.use(morgan(morganFormat));
 app.use(cookieParser());
 
-// ---- Body parsers por ruta ----
-app.use('/api/private', express.json({ limit: '5mb' }), isAuthenticated, router);
-app.use('/api', express.json({ limit: '200kb' }), publicRouter);
+// ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
+app.use('/api/auth/login', loginRateLimiter); // Login (más estricto)
+app.use('/api/auth', authRateLimiter); // Otros endpoints de auth
+
+// ---- Body parsers por ruta (con rate limiters) ----
+app.use(
+  '/api/private',
+  privateApiRateLimiter,
+  express.json({ limit: '5mb' }),
+  isAuthenticated,
+  router
+);
+app.use('/api', publicApiRateLimiter, express.json({ limit: '200kb' }), publicRouter);
 
 // ---- 404 Handler ----
 app.use((req, res) => {

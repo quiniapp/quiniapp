@@ -195,7 +195,7 @@ class ApiClient {
         // Refresh failed - reject all pending requests
         const refreshError = new ApiError(401, {
           code: 'REFRESH_FAILED',
-          message: 'Sesión expirada. Por favor, inicie sesión nuevamente.',
+          message: 'Ususario o contraseña incorrectas.',
         });
         this.processPendingRequests(refreshError);
         throw refreshError;

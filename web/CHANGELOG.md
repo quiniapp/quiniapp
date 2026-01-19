@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-15
+
+#### Account Unlock UI
+- **Unlock User Hook**: Created `web/src/hooks/mutations/users/useUnlockUser.ts`
+  - React Query mutation for unlocking user accounts
+  - Invalidates user list on success
+  - Toast notifications for success/error states
+
+- **Unlock User Modal**: Created `web/src/components/modals/UnlockUserModal.tsx`
+  - Confirmation dialog for unlocking accounts
+  - Shows user name and explains action
+  - Loading state during unlock operation
+  - LockOpen icon for visual clarity
+
+#### User List Improvements
+- **Lock Status Column**: Updated `web/src/features/user-list/user-table.tsx`
+  - Added "Estado" column showing account lock status
+  - Shows LockOpen button (green hover) for locked accounts
+  - Shows "Activo" text for active accounts
+  - Only non-cashier users see unlock button
+
+- **Last Connection Display**: Fixed "Conexion" column in `web/src/features/user-list/user-table.tsx`
+  - Changed from showing `user.address` to `user.last_login_at`
+  - Displays date/time in Spanish format: "15/01/2026, 14:30"
+  - Shows "Nunca" for users who never logged in
+
+**Use case**: Provides administrators with visibility into account lock status and last login times, plus ability to unlock accounts directly from the UI.
+
+### Changed - 2026-01-15
+
+#### Enhanced Login Messages
+- **Login Page**: Error messages in `web/src/features/login/index.tsx` now display:
+  - Countdown of remaining attempts before lockout
+  - Clear instructions to contact administrator when locked
+  - Improved user experience during authentication failures
+
 ### Changed - 2026-01-15
 
 #### Performance Optimizations - Bundle Size & Core Web Vitals
