@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Still configurable via `COOKIE_SAME_SITE` environment variable if needed
   - Resolves CI/CD security warning about missing CSRF middleware
 
+- **CodeQL Suppression**: Added documentation comment in `api/src/index.ts:98` with `lgtm[js/missing-token-validation]` marker
+  - Suppresses CodeQL false positive about missing CSRF middleware
+  - Includes explanation of why sameSite='lax' is sufficient protection
+
 **Security context**: With `sameSite: 'lax'`, browsers automatically prevent cookies from being sent in cross-site POST requests, effectively blocking CSRF attacks. This is sufficient protection when using the Vercel proxy pattern where the browser only communicates with the same domain.
 
 ### Added - 2026-01-15

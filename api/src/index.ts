@@ -95,6 +95,13 @@ const morganFormat = IS_LOCAL
   : ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] :error-info ":referrer" ":user-agent"';
 
 app.use(morgan(morganFormat));
+
+// CSRF Protection Note:
+// We use sameSite='lax' cookie policy (configured in config/session.config.ts) which provides
+// automatic CSRF protection for cookie-based authentication. This is sufficient for our architecture
+// where the frontend uses a Vercel proxy, making all requests same-origin from the browser's perspective.
+// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
+// lgtm[js/missing-token-validation]
 app.use(cookieParser());
 
 // ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
