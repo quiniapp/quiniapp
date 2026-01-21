@@ -7,6 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-21
+
+#### CSRF Protection via SameSite Cookie Policy
+- **Session Cookie Configuration**: Changed default `COOKIE_SAME_SITE` from `'none'` to `'lax'` in `api/src/config/session.config.ts`
+  - Provides automatic CSRF protection without requiring additional middleware
+  - Works correctly with Vercel proxy architecture (frontend and API share same domain from browser perspective)
+  - Still configurable via `COOKIE_SAME_SITE` environment variable if needed
+  - Resolves CI/CD security warning about missing CSRF middleware
+
+- **CodeQL Suppression**: Added documentation comment in `api/src/index.ts:98` with `lgtm[js/missing-token-validation]` marker
+  - Suppresses CodeQL false positive about missing CSRF middleware
+  - Includes explanation of why sameSite='lax' is sufficient protection
+
+**Security context**: With `sameSite: 'lax'`, browsers automatically prevent cookies from being sent in cross-site POST requests, effectively blocking CSRF attacks. This is sufficient protection when using the Vercel proxy pattern where the browser only communicates with the same domain.
+
+### Added - 2026-01-15
+
+#### User Last Activity in List Endpoint
+- **Last Activity Inclusion**: Updated `GET /api/private/user` endpoint to support `?include_session=true` parameter
+  - Returns users with their most recent session's `last_activity_at`
+  - Only includes the most recent active session (not all sessions)
+  - Modified `api/src/user/repository/user.repository.ts`:
+    - Explicit field selection instead of `SELECT *` for better performance and security
+    - Created `allUserFields` constant to avoid field duplication
+    - Joins with sessions table when requested, ordering by `last_activity_at DESC` and limiting to 1
+    - Uses left join so users without sessions are still included
+  - Modified `api/src/user/route/user.route.ts` to parse `include_session` query parameter
+
+- **New Types**: Added session-related types in `@helper/types/user.type.ts`
+  - `ILastSessionInfo`: Contains only `last_activity_at` (the only field needed)
+  - `IUserWithSessionFront`: User entity extended with optional `last_session` (singular)
+
+- **Enhanced parseUser**: Updated `api/src/user/helper/parseUser.ts`
+  - Now handles users with sessions from Supabase joins
+  - Automatically includes `last_session` in response when present
+  - **Security**: Explicitly omits sensitive fields (`password_hash`, `password_changed_at`, `password_reset_required`)
+  - Only includes safe Phase 5 fields (`failed_login_attempts`, `locked_until`, `last_login_at`, `last_login_ip`)
+  - Type-safe: returns `IUserEntityFront` or `IUserWithSessionFront` based on input
+
+**Use case**: Allows administrators to see when each user was last active in the system, useful for monitoring inactive users and detecting unusual activity patterns.
+
+#### Rate Limiting
+- **Rate Limit Configuration**: Created `api/src/config/rate-limit.config.ts`
+  - Configurable limits for login (5/15min), auth (10/15min), public (100/15min), private (200/15min)
+  - Environment variable overrides: RATE_LIMIT_*_WINDOW_MS, RATE_LIMIT_*_MAX, RATE_LIMIT_*_MESSAGE
+  - Spanish error messages matching app language
+
+- **Rate Limit Middleware**: Created `api/src/middlewares/rate-limit.middleware.ts`
+  - Factory function for creating rate limiters with consistent error format
+  - Four exported limiters: loginRateLimiter, authRateLimiter, publicApiRateLimiter, privateApiRateLimiter
+  - Returns 429 with RATE_LIMIT_EXCEEDED error code
+  - Standard RateLimit-* headers for client consumption
+  - Integrated with Morgan logging via res.locals.errorInfo
+
+- **Main App Integration**: Updated `api/src/index.ts`
+  - Applied rate limiters to all endpoint types
+  - Layered protection: IP-based rate limiting + existing account lockout
+  - IPs automatically freed after time window expires
+
+- **Dependencies**: Added express-rate-limit@^6.x for IP-based rate limiting
+
+**Use case**: Prevent brute force attacks on login endpoint and general API abuse. Works alongside existing account lockout system for two-layer security.
+
+#### Account Unlock Feature
+- **Unlock Account Method**: Added `unlockAccount()` to `api/src/auth/repository/auth.repository.ts`
+  - Resets `locked_until` and `failed_login_attempts` fields
+  - Allows administrators to manually unlock blocked user accounts
+
+- **Unlock Controller**: Added `unlockAccount()` method to `api/src/user/controller/user.controller.ts`
+  - Permission check: Only non-cashier users (ADMIN, SUPERADMIN, CAPITALIST, OWNER) can unlock
+  - Hierarchical permissions: Admins can only unlock users below their level
+  - Audit logging: Logs unlock events with admin details
+
+- **Unlock Route**: Added `POST /api/private/user/unlock/:id` to `api/src/user/route/user.route.ts`
+  - Protected route (requires authentication)
+  - Returns success message on unlock
+
+**Use case**: Allows administrators to manually unlock user accounts that were blocked due to failed login attempts, without requiring database access.
+
+### Changed - 2026-01-15
+
+#### Enhanced Login Error Messages
+- **Auth Controller**: Updated `loginWithSession()` in `api/src/auth/controller/auth.controller.ts`
+  - Wrong password now shows remaining attempts: "Contraseña incorrecta. Te quedan X intentos."
+  - Account lock message improved: "Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta."
+  - Removed auto-unlock time reference (now requires manual admin unlock)
+
+**Use case**: Provides better user feedback during login attempts and clear instructions when account is locked.
+
 ### Changed - 2026-01-15
 
 #### HTTP Error Logging Enhancement - Morgan Custom Token

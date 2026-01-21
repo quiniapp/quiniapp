@@ -68,7 +68,7 @@ export class AuthController {
         user_agent: userAgent,
       });
       throw new UnauthorizedError(
-        `Cuenta bloqueada. Intenta nuevamente después de ${new Date(userData.locked_until).toLocaleTimeString()}`
+        'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
       );
     }
 
@@ -93,6 +93,7 @@ export class AuthController {
       await this.repository.incrementFailedAttempts(userData.user_id);
 
       const newFailedAttempts = (userData?.failed_login_attempts ?? 0) + 1;
+      const remainingAttempts = SESSION_CONFIG.MAX_FAILED_ATTEMPTS - newFailedAttempts;
 
       // Lock account if max attempts reached
       if (newFailedAttempts >= SESSION_CONFIG.MAX_FAILED_ATTEMPTS) {
@@ -104,27 +105,30 @@ export class AuthController {
           username,
           event_type: 'account_locked',
           success: false,
-          error_message: `Max failed attempts reached (${newFailedAttempts})`,
+          error_message: 'Account locked due to multiple failed attempts',
           ip_address: ipAddress,
           user_agent: userAgent,
         });
 
         throw new UnauthorizedError(
-          `Cuenta bloqueada por múltiples intentos fallidos. Intenta nuevamente después de ${lockUntil.toLocaleTimeString()}`
+          'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
         );
       }
 
+      // Log failed login
       await this.auditRepository.log({
         user_id: userData.user_id,
         username,
         event_type: 'login_failed',
         success: false,
-        error_message: `Invalid password (attempt ${newFailedAttempts}/${SESSION_CONFIG.MAX_FAILED_ATTEMPTS})`,
+        error_message: 'Invalid password',
         ip_address: ipAddress,
         user_agent: userAgent,
       });
 
-      throw new UnauthorizedError('Usuario o contraseña incorrectos');
+      throw new UnauthorizedError(
+        `Contraseña incorrecta. Te quedan ${remainingAttempts} ${remainingAttempts === 1 ? 'intento' : 'intentos'}.`
+      );
     }
 
     // 5. Check concurrent sessions limit

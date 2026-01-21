@@ -5,7 +5,7 @@ import {
   INewUserEntity,
   IUpdateUserEntity,
 } from '@helper/request/user.request';
-import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { IUserEntityFront, IUserWithSessionFront, USER_TYPE } from '@helper/types/user.type';
 import { parseUser } from '../helper/parseUser';
 import { buildUserForDB } from '../helper/userBase';
 import { UnauthorizedError, BadRequestError, ForbiddenError } from '@helper/errors';
@@ -52,22 +52,26 @@ export class UserController {
     return parseUser(result);
   };
 
-  getAll = async (
+  async getAll(
     organization_id: string,
     user_type: USER_TYPE,
     cashier_number?: number,
-    filter_user_type?: USER_TYPE
-  ): Promise<IUserEntityFront[]> => {
+    filter_user_type?: USER_TYPE,
+    include_session?: boolean
+  ): Promise<IUserEntityFront[] | IUserWithSessionFront[]> {
     // OWNER can see all users from all organizations (for password reset)
     // Others only see users from their own organization
     const result = await this.repository.getAll(
       organization_id,
       user_type,
       cashier_number,
-      filter_user_type
+      filter_user_type,
+      include_session
     );
+
+    // parseUser now automatically preserves sessions if they exist
     return result.map((user) => parseUser(user));
-  };
+  }
 
   update = async (
     user_id: string,
@@ -311,6 +315,71 @@ export class UserController {
       organization_id,
       event_type: 'password_changed',
       success: true,
+    });
+  };
+
+  /**
+   * Unlock a user account (admins only, not cashiers)
+   * Resets locked_until and failed_login_attempts
+   * @param targetUserId - User ID whose account will be unlocked
+   * @param adminUserId - Admin user ID performing the unlock
+   * @param adminUserType - Admin user type (for permission check)
+   * @param adminName - Admin user name (for audit log)
+   * @param adminOrgId - Admin's organization ID
+   * @param ipAddress - Request IP address
+   * @param userAgent - Request user agent
+   */
+  unlockAccount = async (
+    targetUserId: string,
+    adminUserId: string,
+    adminUserType: USER_TYPE,
+    adminName: string,
+    adminOrgId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> => {
+    // Only non-cashier users can unlock accounts
+    if (adminUserType === USER_TYPE.CASHIER) {
+      throw new ForbiddenError('Los cajeros no pueden desbloquear cuentas');
+    }
+
+    // Get target user
+    // OWNER can unlock users from any org, others only from their own org
+    let targetUser;
+    if (adminUserType === USER_TYPE.OWNER) {
+      targetUser = await this.repository.getByIdWithoutOrgRestriction(targetUserId);
+    } else if (adminUserType === USER_TYPE.CAPITALIST) {
+      // CAPITALIST can unlock users from their org + sub-orgs
+      const descendantOrgs = await this.repository.getOrganizationDescendants(adminOrgId);
+      targetUser = await this.repository.getByIdWithoutOrgRestriction(targetUserId);
+      if (!descendantOrgs.includes(targetUser.organization_id)) {
+        throw new ForbiddenError(
+          'Solo puedes desbloquear cuentas de usuarios de tu organización o sub-organizaciones'
+        );
+      }
+    } else {
+      targetUser = await this.repository.getById(targetUserId, adminOrgId);
+    }
+
+    // Check if admin can manage this user type (hierarchical permissions)
+    if (!this.canManageUser(adminUserType, targetUser.user_type)) {
+      throw new ForbiddenError('No tienes permisos para desbloquear este usuario');
+    }
+
+    // Unlock the account via auth repository
+    const authRepository = new AuthRepository();
+    await authRepository.unlockAccount(targetUserId);
+
+    // Log the unlock action in audit log
+    const auditRepository = new AuditRepository();
+    await auditRepository.log({
+      user_id: targetUserId,
+      username: targetUser.username || targetUser.name,
+      event_type: 'account_unlocked',
+      success: true,
+      error_message: `Unlocked by ${adminName} (${adminUserType})`,
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
     });
   };
 
