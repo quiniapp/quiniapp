@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-21
+
+#### CSRF Protection via SameSite Cookie Policy
+- **Session Cookie Configuration**: Changed default `COOKIE_SAME_SITE` from `'none'` to `'lax'` in `api/src/config/session.config.ts`
+  - Provides automatic CSRF protection without requiring additional middleware
+  - Works correctly with Vercel proxy architecture (frontend and API share same domain from browser perspective)
+  - Still configurable via `COOKIE_SAME_SITE` environment variable if needed
+  - Resolves CI/CD security warning about missing CSRF middleware
+
+**Security context**: With `sameSite: 'lax'`, browsers automatically prevent cookies from being sent in cross-site POST requests, effectively blocking CSRF attacks. This is sufficient protection when using the Vercel proxy pattern where the browser only communicates with the same domain.
+
 ### Added - 2026-01-15
 
 #### User Last Activity in List Endpoint
