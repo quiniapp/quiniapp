@@ -1,16 +1,7 @@
 -- Función para apuesta 'REDOUBLE' (ajuste de pago cuando number = with)
-DROP FUNCTION IF EXISTS calculate_redouble_payout(RECORD, TEXT[]);
+DROP FUNCTION IF EXISTS calculate_redouble_payout (RECORD, TEXT[]);
 
-CREATE OR REPLACE FUNCTION calculate_redouble_payout(
-  bet     RECORD,
-  results TEXT[]
-)
-RETURNS TABLE(
-  payout NUMERIC,
-  hits   INT
-)
-LANGUAGE plpgsql
-AS $$
+CREATE OR REPLACE FUNCTION calculate_redouble_payout (bet RECORD, results TEXT[]) RETURNS TABLE (payout NUMERIC, hits INT) LANGUAGE plpgsql AS $$
 DECLARE
   place_limit    INT;
   position_limit INT;

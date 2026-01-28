@@ -1,14 +1,12 @@
-DROP FUNCTION IF EXISTS calculate_current_account(TEXT, BOOLEAN, BOOLEAN);
-DROP FUNCTION IF EXISTS calculate_current_account(TEXT, BOOLEAN);
+DROP FUNCTION IF EXISTS calculate_current_account (TEXT, BOOLEAN, BOOLEAN);
 
-CREATE OR REPLACE FUNCTION calculate_current_account(
-  p_date_text TEXT,
-  p_calculate_leave BOOLEAN DEFAULT FALSE,
-  p_liquidated BOOLEAN DEFAULT FALSE
-)
-RETURNS JSONB[]
-LANGUAGE plpgsql
-AS $$
+DROP FUNCTION IF EXISTS calculate_current_account (TEXT, BOOLEAN);
+
+CREATE OR REPLACE FUNCTION calculate_current_account (
+    p_date_text TEXT,
+    p_calculate_leave BOOLEAN DEFAULT FALSE,
+    p_liquidated BOOLEAN DEFAULT FALSE
+) RETURNS JSONB[] LANGUAGE plpgsql AS $$
 DECLARE
   v_date DATE := to_date(p_date_text, 'DD-MM-YYYY');
   result_array JSONB[];

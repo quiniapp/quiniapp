@@ -1,15 +1,8 @@
 -- Fix: Correct column name from is_active to active in schedules table
 -- The previous version used is_active but the actual column is named active
-
-CREATE OR REPLACE FUNCTION inherit_organization_config(
-  p_parent_org_id UUID,
-  p_new_org_id UUID
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION inherit_organization_config (p_parent_org_id UUID, p_new_org_id UUID) RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET
+  search_path = public AS $$
 DECLARE
   v_lottery RECORD;
   v_new_lottery_id UUID;
@@ -116,4 +109,4 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION inherit_organization_config(UUID, UUID) IS 'Copies lotteries, schedules, and schedule_lotteries from parent organization to new sub-organization';
+COMMENT ON FUNCTION inherit_organization_config (UUID, UUID) IS 'Copies lotteries, schedules, and schedule_lotteries from parent organization to new sub-organization';
