@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-01-27
+
+#### Current Account Liquidation - Drag Reset After Month-End Leave Calculation
+- **Drag Reset After Leave Calculation**: Fixed bug where drag (arrastre) was not resetting to 0 the day after calculating leave (deje) at month-end
+  - File: `api/supabase/migrations/20260127230728_fix_leave_drag_reset.sql`
+  - Root cause: The RPC function `calculate_current_account` was only resetting drag when `p_calculate_leave=true` (the current day), but it should reset when `previous_leave > 0` (the previous day had leave calculated)
+  - Impact: After month-end liquidation with `leave=true` and `drag > 0`, the next day (first day of new month) now correctly starts with `drag=0` instead of carrying forward the previous drag
+  - Business rule: Leave is only calculated on the last playable day of the month. If Day N had `leave > 0` and `drag > 0`, then Day N+1 starts with `previous_drag=0`
+  - Changes to drag reset logic (lines 83-104): Removed `p_calculate_leave AND` condition from both `prev_drag_eff_hist` and `prev_drag_eff_chosen` calculations, leaving only the check for `previous_leave > 0 AND previous_drag_raw > 0`
+  - Affects endpoints:
+    - POST `/api/private/current-account/calculate` (when called the day after month-end liquidation)
+    - POST `/api/private/current-account/liquidate` (when `leave=true` on last day of month)
+    - POST `/api/private/current-account/liquidate/network` (when `leave=true` on last day of month)
+    - PUT `/api/private/current-account/bulk` (when `leave=true` on last day of month)
+
 ### Changed - 2026-01-21
 
 #### CSRF Protection via SameSite Cookie Policy

@@ -89,6 +89,40 @@ This is a monorepo for QuiniApp, a lottery/betting application with the followin
 3. Web dev server automatically proxies `/api` requests to the backend
 4. Both servers support hot reloading during development
 
+## Database Migrations
+
+**CRITICAL RULES:**
+- **NEVER edit existing migration files** that have been applied to the database
+- Editing applied migrations causes inconsistencies between environments and breaks migration history
+- Always create **NEW migration files** for any schema, function, or data changes
+- Use descriptive timestamps and names for migration files (format: `YYYYMMDDHHmmss_description.sql`)
+
+### Migration Workflow
+1. **Create new migration**: Generate timestamp with `date +%Y%m%d%H%M%S` and create file in `api/supabase/migrations/`
+2. **Write changes**: Include `DROP FUNCTION IF EXISTS` or similar cleanup before creating/replacing objects
+3. **Test locally**: Apply migration to local Supabase instance
+4. **Document**: Update `api/CHANGELOG.md` with migration details
+5. **Deploy**: Migration will be automatically applied in deployment pipeline
+
+### Example Migration File
+```sql
+-- File: 20260127230728_fix_leave_drag_reset.sql
+DROP FUNCTION IF EXISTS calculate_current_account(TEXT, BOOLEAN, BOOLEAN);
+
+CREATE OR REPLACE FUNCTION calculate_current_account(...)
+RETURNS JSONB[]
+LANGUAGE plpgsql
+AS $$
+-- Function implementation
+$$;
+```
+
+### Why This Matters
+- **Immutability**: Applied migrations are part of the database history and must remain unchanged
+- **Consistency**: All environments (dev, staging, prod) must have identical migration sequences
+- **Rollback safety**: Migration history allows safe rollbacks and auditing
+- **Team coordination**: Other developers depend on stable migration files
+
 ## Documentation & Change Management
 
 ### CHANGELOGs
