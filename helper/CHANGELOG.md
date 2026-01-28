@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-27
+
+#### Database Migration Guidelines in CLAUDE.md
+- **Migration Best Practices**: Added comprehensive Database Migrations section to root `CLAUDE.md`
+  - Critical rule: NEVER edit existing migration files that have been applied to the database
+  - Always create NEW migration files for schema, function, or data changes
+  - Migration file naming convention: `YYYYMMDDHHmmss_description.sql`
+  - Includes migration workflow, example file structure, and reasoning
+  - Why: Ensures database consistency across environments, maintains migration history integrity, enables safe rollbacks
+  - Location: Added between "Development Workflow" and "Documentation & Change Management" sections
+
 ### Added - 2026-01-02
 
 #### CAPITALIST User Type and Organization Hierarchy Types
