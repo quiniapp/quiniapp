@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-01-28
+
+#### E2E Test Suite for Winners, Results and Current Account (Updated)
+- **Comprehensive Integration Tests**: Created complete E2E test suite for validating the critical betting flow with 0-20 hits scenarios
+  - Files:
+    - `api/__tests__/setup.ts` - Jest global setup
+    - `api/__tests__/integration/winners-results-account.test.ts` - Main E2E test
+    - `api/__tests__/fixtures/users.fixture.ts` - Test users (1 owner + 6 cashiers)
+    - `api/__tests__/fixtures/schedules.fixture.ts` - 5 schedules × 5 lotteries × 6 days
+    - `api/__tests__/fixtures/results/no-winners.fixture.ts` - Results guaranteeing 0 hits
+    - `api/__tests__/fixtures/results/one-hit.fixture.ts` - Results guaranteeing 1 hit per bet type
+    - `api/__tests__/fixtures/results/max-hits.fixture.ts` - Results guaranteeing maximum hits
+    - `api/__tests__/fixtures/bets/generate-bets.fixture.ts` - Bet generator for all scenarios
+    - `api/__tests__/helpers/test-database.helper.ts` - Database setup/cleanup utilities
+    - `api/__tests__/helpers/test-auth.helper.ts` - JWT token generation for tests
+    - `api/__tests__/helpers/calculate-expected.helper.ts` - Expected value calculators
+    - `api/__tests__/helpers/assertions.helper.ts` - Custom assertions for tests
+  - Test scenarios (8 cashiers covering 0-20 hits):
+    - HITS_0: All losing bets, 0 hits (validates revenue = pass - commission, successes = 0)
+    - HITS_1_TO_5: 1-5 hits distributed across schedules/lotteries (validates low hit ranges)
+    - HITS_6_TO_10: 6-10 hits using TEN place (validates medium hit ranges)
+    - HITS_11_TO_20: 11-20 hits using TWENTY place (validates high hit ranges and maximum hits)
+  - Coverage: Tests all bet types (ONE, DOUBLE, TERN, QUATERN, BORRATINA, REDOUBLE) with strategic place selection
+  - Results strategy: Uses simple repeated numbers (1111, 9999) for predictable hit patterns
+  - Hit distribution: 5 schedules × 5 lotteries = 25 unique combinations mapping to 0-20 hits
+  - Test environment configuration:
+    - **Isolated local Supabase:** Tests run on separate ports (54331/54332) to avoid touching development data
+    - **Security validations:** Tests enforce NODE_ENV=test and SUPABASE_ENVIROMENT=LOCAL
+    - **Automated setup:** Scripts for Windows (PowerShell) and Linux/Mac (Bash)
+  - New files:
+    - `api/__tests__/fixtures/results/hits-by-schedule-lottery.fixture.ts` - Maps schedule-lottery to hit count
+    - `api/__tests__/fixtures/bets/generate-bets-simple.fixture.ts` - Generates bets with simple numbers
+    - `api/TESTING-LOCAL-SETUP.md` - Complete guide for setting up second local Supabase for tests
+    - `api/TESTING-SETUP.md` - Alternative test environment options (remote, same project)
+    - `api/QUICK-TEST-START.md` - Quick start guide (3 minutes setup)
+    - `api/.env.test.example` - Template for test environment variables
+    - `api/scripts/setup-test-env.ps1` - Automated setup script (Windows)
+    - `api/scripts/setup-test-env.sh` - Automated setup script (Linux/Mac)
+    - `api/scripts/verify-test-env.ts` - Environment verification script
+  - Updated dependencies: Added `dotenv-cli@^11.0.0` for .env.test support
+  - Updated npm scripts:
+    - `test`, `test:watch`, `test:coverage` - Now use .env.test automatically
+    - `test:verify` - Verify test environment configuration
+    - `supabase:test:start` - Start test Supabase instance
+    - `supabase:test:stop` - Stop test Supabase instance
+    - `supabase:test:reset` - Reset test database
+    - `supabase:test:status` - Check test Supabase status
+  - Validates:
+    - Winner calculation via `generate_winners_and_calculate_accounts` RPC
+    - Current account calculation (pass, successes, revenue, commission, drag, leave)
+    - Drag accumulation for cashiers with fee_plus > 0
+    - Leave calculation and drag reset after month-end
+  - Jest configuration: `api/jest.config.js` with ESM support and ts-jest
+  - Added test scripts to `api/package.json`:
+    - `npm test` - Run all tests
+    - `npm run test:watch` - Watch mode
+    - `npm run test:coverage` - Coverage report
+  - Dependencies: jest@^29.7.0, @types/jest@^29.5.11, ts-jest@^29.1.1, supertest@^6.3.3
+
 ### Fixed - 2026-01-27
 
 #### Current Account Liquidation - Drag Reset After Month-End Leave Calculation

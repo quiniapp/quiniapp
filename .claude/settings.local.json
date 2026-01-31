@@ -12,7 +12,8 @@
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx eslint src/**/*.ts)"
     ],
     "deny": [],
     "ask": []
