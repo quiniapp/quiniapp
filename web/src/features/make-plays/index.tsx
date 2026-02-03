@@ -9,9 +9,20 @@ import { usePlayDetails } from './context/MakePlaysContext';
 import { LoadingState } from '@/components/molecules/LoadingState';
 
 const ResetPartialModal = React.lazy(() => import('../../components/modals/ResetPartialModal'));
+const ClosedSchedulesModal = React.lazy(
+  () => import('../../components/modals/ClosedSchedulesModal')
+);
 
 const MakePlaysContent = () => {
-  const { openDeleteModal, setOpenDeleteModal, setPartialAmount } = usePlayDetails();
+  const {
+    openDeleteModal,
+    setOpenDeleteModal,
+    setPartialAmount,
+    openClosedSchedulesModal,
+    setOpenClosedSchedulesModal,
+    closedSchedules,
+    handleConfirmClosedSchedules,
+  } = usePlayDetails();
 
   const handleResetPartial = () => {
     setPartialAmount(0);
@@ -29,6 +40,12 @@ const MakePlaysContent = () => {
           isOpen={openDeleteModal}
           onClose={() => setOpenDeleteModal(false)}
           onClick={handleResetPartial}
+        />
+        <ClosedSchedulesModal
+          isOpen={openClosedSchedulesModal}
+          onClose={() => setOpenClosedSchedulesModal(false)}
+          onConfirm={handleConfirmClosedSchedules}
+          closedSchedules={closedSchedules}
         />
       </Suspense>
     </PageWrapper>
