@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-02-03
+
+#### Make Plays - Closed Schedule Validation for Cashiers
+**Feature:** Added validation to prevent cashiers from creating tickets with schedules that are closed or closing soon (less than 10 minutes)
+
+**Changes:**
+
+1. **ClosedSchedulesModal Component** (`web/src/components/modals/ClosedSchedulesModal.tsx`):
+   - New modal to inform users about schedules that will be removed
+   - Displays list of closed/closing schedules with names and times
+   - Provides "Continuar" and "Cancelar" options for user confirmation
+   - Uses custom-modal base component with responsive design
+
+2. **MakePlaysContext** (`web/src/features/make-plays/context/MakePlaysContext.tsx`):
+   - Added `openClosedSchedulesModal` state to control modal visibility
+   - Added `closedSchedules` state to track schedules being removed
+   - Added setters for new states
+   - Added `handleConfirmClosedSchedules` action to process schedule removal
+
+3. **MakePlaysProvider** (`web/src/features/make-plays/provider/MakePlaysProvider.tsx`):
+   - Imported `useClock` hook to access `isScheduleEnabled` function
+   - Added `detectClosedSchedules()` helper to identify schedules that are closed or closing soon
+   - Added `cleanClosedSchedulesFromBets()` helper to remove closed schedules from bets
+   - Modified `handleCreateBet()` to validate schedules before ticket creation (cashiers only)
+   - Implemented `handleConfirmClosedSchedules()` to:
+     - Clean closed schedules from bets
+     - Recalculate totals
+     - Proceed with ticket creation/edit
+     - Handle edge case when no bets remain after cleaning
+
+4. **Make Plays Index** (`web/src/features/make-plays/index.tsx`):
+   - Lazy-loaded ClosedSchedulesModal component
+   - Added modal state management in MakePlaysContent
+   - Integrated modal in Suspense wrapper with LoadingState fallback
+
+**Why:**
+- Prevents cashiers from creating invalid tickets with expired schedules
+- Improves data integrity by ensuring tickets only contain valid, open schedules
+- Provides clear user feedback when schedules close while working on a ticket
+- Automatically removes problematic schedules rather than blocking the entire operation
+- Only applies to cashier user type, as other users may have different permissions
+
+**Use case:**
+When a cashier has selected multiple schedules and lotteries, if any schedule closes or is within 10 minutes of closing when they attempt to close the ticket, a modal appears listing the affected schedules. The cashier can choose to continue (removing those schedules) or cancel to review their bets.
+
 ### Added - 2026-01-07
 
 #### Make Plays - "Select All" Checkbox for Schedules and Lotteries
