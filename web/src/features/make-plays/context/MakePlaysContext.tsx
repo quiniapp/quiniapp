@@ -19,10 +19,14 @@ type PlayDetailsState = {
   isPendingEdit: boolean;
   isPendingCreate: boolean;
   openDeleteModal: boolean;
+  openClosedSchedulesModal: boolean;
+  closedSchedules: IScheduleEntityFront[];
   setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setOpenDeleteModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpenClosedSchedulesModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setClosedSchedules: React.Dispatch<React.SetStateAction<IScheduleEntityFront[]>>;
 };
 
 type PlayDetailsActions = {
@@ -39,6 +43,7 @@ type PlayDetailsActions = {
   handleEditTicket: (ticket_id: string) => void;
   handleResetBets: () => void;
   handleDeleteSelectedBets: () => void;
+  handleConfirmClosedSchedules: () => void;
 };
 
 export type MakePlaysContextType = PlayDetailsState & {
