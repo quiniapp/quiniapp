@@ -40,7 +40,7 @@ export class ActivityDaysRepository {
   /**
    * Get the last N active days (ordered by date DESC)
    */
-  async getLastActiveDays(limit: number = 3): Promise<string[]> {
+  async getLastActiveDays(limit: number = 2): Promise<string[]> {
     const { data, error } = await supabase.rpc('get_last_active_days', {
       p_limit: limit,
     });
@@ -55,7 +55,7 @@ export class ActivityDaysRepository {
   /**
    * Check if a date should be archived (older than last N active days)
    */
-  async shouldArchiveDate(date: string, daysToKeep: number = 3): Promise<boolean> {
+  async shouldArchiveDate(date: string, daysToKeep: number = 2): Promise<boolean> {
     const { data, error } = await supabase.rpc('should_archive_date', {
       p_date: date,
       p_days_to_keep: daysToKeep,
@@ -105,7 +105,7 @@ export class ActivityDaysRepository {
    * Get cutoff date (the date before which data should be archived)
    * Returns the Nth most recent active day
    */
-  async getCutoffDate(daysToKeep: number = 3): Promise<string | null> {
+  async getCutoffDate(daysToKeep: number = 2): Promise<string | null> {
     const activeDays = await this.getLastActiveDays(daysToKeep);
 
     if (activeDays.length < daysToKeep) {

@@ -2,7 +2,7 @@
 
 ## Visión General
 
-El sistema de archivado mantiene las tablas principales (bets, tickets) optimizadas manteniendo solo los datos de los últimos **3 días con actividad** indexados. Los datos más antiguos se mueven automáticamente a tablas de archivo.
+El sistema de archivado mantiene las tablas principales (bets, tickets) optimizadas manteniendo solo los datos de los últimos **2 días con actividad** indexados. Los datos más antiguos se mueven automáticamente a tablas de archivo.
 
 ### Conceptos Clave
 
@@ -22,7 +22,7 @@ El sistema de archivado mantiene las tablas principales (bets, tickets) optimiza
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    TABLAS PRINCIPALES                        │
-│                 (últimos 3 días activos)                     │
+│                 (últimos 2 días activos)                     │
 ├─────────────────────────────────────────────────────────────┤
 │  • bets                                                      │
 │  • tickets                                                   │
@@ -355,7 +355,7 @@ this.archiveTask = cron.schedule(
 - Query time: ~500ms
 
 **Después del archivado:**
-- Main table: 10,000 bets (3 días activos)
+- Main table: 10,000 bets (2 días activos)
 - Archive table: 90,000 bets
 - Query time on main: ~50ms (10x más rápido)
 
@@ -409,7 +409,7 @@ curl -X POST http://localhost:3000/api/private/admin/archive/run
 
 **Posibles causas:**
 
-1. **Menos de 3 días activos:**
+1. **Menos de 2 días activos:**
    - Verifica: `GET /api/private/admin/archive/activity-days`
    - Solución: Poblar activity_days con datos históricos
 

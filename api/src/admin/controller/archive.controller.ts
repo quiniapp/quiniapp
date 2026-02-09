@@ -19,7 +19,7 @@ export class ArchiveAdminController {
   async getStats(req: Request, res: Response) {
     try {
       const stats = await this.archiveService.getArchiveStats();
-      const activeDays = await this.activityDaysRepo.getLastActiveDays(3);
+      const activeDays = await this.activityDaysRepo.getLastActiveDays(2);
       const cronService = getCronService();
       const cronStatus = cronService.getStatus();
 
@@ -44,7 +44,7 @@ export class ArchiveAdminController {
    */
   async runArchiveManual(req: Request, res: Response) {
     try {
-      const { days_to_keep = 3 } = req.body;
+      const { days_to_keep = 2 } = req.body;
 
       const result = await this.archiveService.archiveOldData(days_to_keep);
 

@@ -7,6 +7,7 @@ import { isAuthenticated } from '../middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
 import { startSessionCleanupJob } from './utils/session-cleanup.job';
+import { getCronService } from './cron/service/cron.service';
 import {
   loginRateLimiter,
   authRateLimiter,
@@ -148,6 +149,12 @@ if (process.env.NODE_ENV !== 'test') {
 
     // Start session cleanup job (runs every hour)
     startSessionCleanupJob();
+
+    // Start archive cron job (runs daily at 3:00 AM Argentina Time)
+    const daysToKeep = 2; // Keep last 2 active days indexed
+    const cronService = getCronService(daysToKeep);
+    cronService.startArchiveCron();
+    console.log('[Archive] Cron job initialized - Daily archiving of old bets/tickets');
   });
 }
 

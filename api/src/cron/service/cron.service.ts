@@ -1,14 +1,14 @@
-import cron from 'node-cron';
+import cron, { ScheduledTask } from 'node-cron';
 import { ArchiveService } from '../../archive/service/archive.service';
 import { ActivityDaysRepository } from '../../activity/repository/activity-days.repository';
 
 export class CronService {
   private archiveService: ArchiveService;
   private activityDaysRepo: ActivityDaysRepository;
-  private archiveTask: cron.ScheduledTask | null = null;
+  private archiveTask: ScheduledTask | null = null;
   private daysToKeep: number;
 
-  constructor(daysToKeep: number = 3) {
+  constructor(daysToKeep: number = 2) {
     this.archiveService = new ArchiveService();
     this.activityDaysRepo = new ActivityDaysRepository();
     this.daysToKeep = daysToKeep;
@@ -33,7 +33,6 @@ export class CronService {
         await this.runArchiveJob();
       },
       {
-        scheduled: true,
         timezone: 'America/Argentina/Buenos_Aires', // UTC-3
       }
     );
@@ -181,7 +180,7 @@ let cronServiceInstance: CronService | null = null;
 /**
  * Get singleton instance of CronService
  */
-export function getCronService(daysToKeep: number = 3): CronService {
+export function getCronService(daysToKeep: number = 2): CronService {
   if (!cronServiceInstance) {
     cronServiceInstance = new CronService(daysToKeep);
   }

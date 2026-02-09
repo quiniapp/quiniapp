@@ -40,7 +40,7 @@ export class ArchiveService {
    * Archive old bets (older than N active days)
    * Uses stored procedure if available, fallback to TypeScript implementation
    */
-  async archiveOldBets(daysToKeep: number = 3): Promise<IArchiveResult> {
+  async archiveOldBets(daysToKeep: number = 2): Promise<IArchiveResult> {
     try {
       // Try using stored procedure first (performance optimization)
       const { data, error } = await supabase.rpc('archive_old_bets', {
@@ -63,7 +63,7 @@ export class ArchiveService {
    * Archive old tickets (older than N active days)
    * Uses stored procedure if available, fallback to TypeScript implementation
    */
-  async archiveOldTickets(daysToKeep: number = 3): Promise<IArchiveResult> {
+  async archiveOldTickets(daysToKeep: number = 2): Promise<IArchiveResult> {
     try {
       // Try using stored procedure first (performance optimization)
       const { data, error } = await supabase.rpc('archive_old_tickets', {
@@ -85,7 +85,7 @@ export class ArchiveService {
   /**
    * Archive both bets and tickets in a single operation
    */
-  async archiveOldData(daysToKeep: number = 3): Promise<{
+  async archiveOldData(daysToKeep: number = 2): Promise<{
     success: boolean;
     bets: IArchiveResult;
     tickets: IArchiveResult;
