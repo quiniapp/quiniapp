@@ -139,11 +139,17 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ---- Arranque ----
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
-  console.log('[CORS] allowed origins:', baseAllowedOrigins);
-  if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
+// Solo iniciar servidor si no estamos en entorno de test
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
+    console.log('[CORS] allowed origins:', baseAllowedOrigins);
+    if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
 
-  // Start session cleanup job (runs every hour)
-  startSessionCleanupJob();
-});
+    // Start session cleanup job (runs every hour)
+    startSessionCleanupJob();
+  });
+}
+
+// Exportar app para tests
+export default app;
