@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-02-10
+
+#### Archive System - Backfill and Management
+- **Activity Days Backfill Migration**: Populates activity_days with historical data
+  - Migration: `api/supabase/migrations/20260210060000_backfill_activity_days.sql`
+  - Counts all bets and tickets by date from main tables
+  - Populates activity_days table with historical dates
+  - Required for archive system to determine cutoff dates
+  - Prints verification report showing total days, oldest/newest dates
+
+- **Archive Management Routes**: Admin endpoints for managing archive system
+  - File: `api/src/archive/route/archive.route.ts`
+  - `POST /api/private/archive/trigger`: Manually trigger archive job
+  - `GET /api/private/archive/stats`: Get archive statistics (main vs archive table sizes)
+  - `GET /api/private/archive/cron-status`: Get cron job status
+  - Protected with private authentication middleware
+  - Registered in main router: `api/src/router.ts`
+
+- **Admin-Only Middleware**: Middleware to restrict access to non-cashier users
+  - File: `api/middlewares/admin-only.middleware.ts`
+  - `requireNonCashier`: Blocks CASHIER users from accessing routes
+  - `requireAdmin`: Alias for requireNonCashier with semantic naming
+  - Applied to all archive management endpoints
+  - Returns 403 Forbidden for cashier users
+
 ### Fixed - 2026-02-09
 
 #### TypeScript Type Errors
