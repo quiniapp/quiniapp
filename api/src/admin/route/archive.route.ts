@@ -28,9 +28,9 @@ archiveAdminRouter.get('/activity-days', (req, res) => archiveController.getActi
  * Update activity counts for a specific date
  * Body: { date: string } (format: YYYY-MM-DD)
  */
-archiveAdminRouter.post('/update-activity', (req, res) =>
-  archiveController.updateActivityForDate(req, res)
-);
+archiveAdminRouter.post('/update-activity', (req, res) => {
+  archiveController.updateActivityForDate(req, res);
+});
 
 /**
  * GET /api/private/admin/archive/cron-status

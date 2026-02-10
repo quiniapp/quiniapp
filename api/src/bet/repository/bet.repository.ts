@@ -236,8 +236,11 @@ export class BetRepository {
       .single();
 
     // If found in main table, return
-    if (!error && data && (data.total_count > 0 || data.total_amount > 0)) {
-      return data as TicketSums;
+    if (!error && data) {
+      const ticketData = data as TicketSums;
+      if (ticketData.total_count > 0 || ticketData.total_amount > 0) {
+        return ticketData;
+      }
     }
 
     // If not found in main table, try archive

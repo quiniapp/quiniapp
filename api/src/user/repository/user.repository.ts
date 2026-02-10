@@ -60,7 +60,7 @@ export class UserRepository {
     .replace(/\s+/g, ' ')
     .trim();
 
-  async getById(id: string, organization_id: string) {
+  async getById(id: string, organization_id: string): Promise<IUserEntityBack> {
     const { data, error } = await supabase
       .from('users')
       .select(this.allUserFields)
@@ -69,14 +69,14 @@ export class UserRepository {
       .single();
 
     if (error) throw new Error(error.details || error.message || JSON.stringify(error));
-    return data;
+    return data as unknown as IUserEntityBack;
   }
 
   /**
    * Get user by ID without organization restriction
    * Used for special cases like OWNER resetting SUPERADMIN password from another org
    */
-  async getByIdWithoutOrgRestriction(id: string) {
+  async getByIdWithoutOrgRestriction(id: string): Promise<IUserEntityBack> {
     const { data, error } = await supabase
       .from('users')
       .select(this.allUserFields)
@@ -85,10 +85,13 @@ export class UserRepository {
       .single();
 
     if (error) throw new Error(error.details || error.message || JSON.stringify(error));
-    return data;
+    return data as unknown as IUserEntityBack;
   }
 
-  async getByUsernameAndOrganization(username: string, organization_id: string) {
+  async getByUsernameAndOrganization(
+    username: string,
+    organization_id: string
+  ): Promise<IUserEntityBack> {
     const { data, error } = await supabase
       .from('users')
       .select(this.allUserFields)
@@ -98,7 +101,7 @@ export class UserRepository {
       .single();
 
     if (error) throw new Error(error.details || error.message || JSON.stringify(error));
-    return data;
+    return data as unknown as IUserEntityBack;
   }
 
   async getAll(
@@ -107,7 +110,7 @@ export class UserRepository {
     cashier_number?: number,
     filter_user_type?: USER_TYPE,
     include_session?: boolean
-  ) {
+  ): Promise<IUserEntityBack[]> {
     // Include only the most recent session's last_activity_at if requested
     // Uses left join so users without sessions are still included
     const selectFields = include_session
@@ -208,17 +211,21 @@ export class UserRepository {
     if (error) {
       throw new Error(error.details || error.message || JSON.stringify(error));
     }
-    return data || [];
+    return (data as unknown as IUserEntityBack[]) || [];
   }
 
-  async create(newUser: IUserEntityBack) {
+  async create(newUser: IUserEntityBack): Promise<IUserEntityBack> {
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as IUserEntityBack;
   }
 
-  async update(id: string, payload: IUpdateUserEntity, organization_id: string) {
+  async update(
+    id: string,
+    payload: IUpdateUserEntity,
+    organization_id: string
+  ): Promise<IUserEntityBack> {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')
@@ -228,10 +235,10 @@ export class UserRepository {
       .select()
       .single();
     if (error) throw new Error(error.details || error.message || JSON.stringify(error));
-    return data;
+    return data as unknown as IUserEntityBack;
   }
 
-  async delete(id: string, organization_id: string) {
+  async delete(id: string, organization_id: string): Promise<IUserEntityBack> {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')
@@ -241,7 +248,7 @@ export class UserRepository {
       .select()
       .single();
     if (error) throw new Error(error.details || error.message || JSON.stringify(error));
-    return data;
+    return data as unknown as IUserEntityBack;
   }
 
   async deleteFailedUser(id: string) {
