@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-02-09
+
+#### Archive Query System - Smart Table Routing
+- **Archive Helper Utilities**: Created in-memory cache system for query routing
+  - File: `api/src/archive/helper/archive-helper.ts`
+  - `isArchiveDate(date)`: Determines if date should query archive tables (cached check)
+  - `getTableName(date, baseTable)`: Returns correct table name ('bets' or 'bets_archive')
+  - `getRpcName(date, baseRpcName)`: Returns correct RPC name (with '_archive' suffix if needed)
+  - `initializeActiveDaysCache()`: Initializes cache on server startup
+  - `refreshActiveDaysCache()`: Updates cache after archiving (called by cron job)
+  - Uses `ARCHIVE_DAYS_TO_KEEP` env variable (defaults to 2 active days)
+  - Cache updated only when cron runs (the only time data moves between tables)
+
+- **Archive RPCs for Tickets**: Duplicate RPCs for querying archive tables
+  - Migration: `api/supabase/migrations/20260209211210_create_ticket_archive_rpcs.sql`
+  - `ticket_full_json_plpgsql_archive`: Queries tickets_archive + bets_archive
+  - `get_ticket_sums_archive`: Calculates sums from bets_archive
+  - Identical logic to main RPCs but query archive tables
+
+- **Archive RPCs for Bets**: Duplicate RPCs for querying archive tables
+  - Migration: `api/supabase/migrations/20260209211211_create_bets_archive_rpcs.sql`
+  - `get_grouped_bets_for_parse_archive`: Groups bets from archive
+  - `bets_total_amount_archive`: Calculates total amount from archive
+  - `bets_total_prize_archive`: Calculates total prize from archive
+  - Identical logic to main RPCs but query bets_archive table
+
+### Changed - 2026-02-09
+
+#### BetRepository - Archive-Aware Queries
+- **File**: `api/src/bet/repository/bet.repository.ts`
+- **getAllBets()**: Uses `getTableName()` to query correct table based on date
+- **getAllBetsGrouped()**: Uses `getRpcName()` to call correct RPC (_archive suffix if needed)
+- **getTotalAmount()**: Routes to archive RPC for old dates
+- **getTotalPrize()**: Routes to archive RPC for old dates
+- **getWinnerBets()**: Queries archive table for old dates
+- **getAmountsByTicket()**: Searches main table first (more indexes), then archive if not found
+- Zero changes needed in controllers or frontend
+
+#### TicketRepository - Archive-Aware Queries
+- **File**: `api/src/ticket/repository/ticket.repository.ts`
+- **getById()**: Searches main table first, then archive (no date parameter)
+- **getByNumber()**: Searches main table first, then archive (no date parameter)
+- **getAll()**: Uses `getTableName()` to query correct table based on date
+- **getAllTicketNumber()**: Routes to archive table for old dates
+- **getAllDeletedTickets()**: Routes to archive table for old dates
+- **delete()**, **update()**, **payTicket()**: Only work on main table (archive is read-only)
+
+#### BetController - Simplified Error Handling
+- **File**: `api/src/bet/controller/bet.controller.ts`
+- **getAmountsByTicket()**: Removed fallback comments, repository handles archive search
+- Cleaner error handling with repository managing archive lookup
+
+#### TicketController - Enhanced Archive Error Messages
+- **File**: `api/src/ticket/controller/ticket.controller.ts`
+- **get()**: Removed fallback comments, repository handles archive search
+- **paid()**: Better error message for archived tickets ("TICKET_ARCHIVED" instead of "TICKET_TOO_OLD")
+- Repository handles searching both tables, controller focuses on business logic
+
+#### CronService - Cache Refresh Integration
+- **File**: `api/src/cron/service/cron.service.ts`
+- Added `refreshActiveDaysCache()` call after successful archiving
+- Ensures query routing cache stays synchronized with archive operations
+- Cache refresh is Step 5 in daily archive job (before stats collection)
+
+#### Server Initialization - Archive Cache Setup
+- **File**: `api/src/index.ts`
+- Added `initializeActiveDaysCache()` on server startup
+- Cache loaded before cron job starts to ensure correct query routing from first request
+- Async initialization in server listen callback
+
+### Performance Impact - 2026-02-09
+- **Main tables**: Dramatically smaller (only last 2 active days), faster queries
+- **Query routing**: O(1) cache lookup, zero database overhead
+- **Archive queries**: Slower than main (fewer indexes) but rare (only for old dates)
+- **No frontend changes**: Complete transparency, zero impact on user experience
+- **Fallback searches**: Main table first (fast), archive only if needed (slower but correct)
+
 ### Added - 2026-01-28
 
 #### E2E Test Suite for Winners, Results and Current Account (Updated)

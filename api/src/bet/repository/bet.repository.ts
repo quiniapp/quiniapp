@@ -1,6 +1,7 @@
 import { supabase } from '@database/db.connection';
 import { TicketSums } from '@helper/request/bet.request';
 import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
+import { getTableName, getRpcName } from '../../archive/helper/archive-helper';
 
 export class BetRepository {
   async getAllBets({
@@ -31,8 +32,11 @@ export class BetRepository {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
+    // Determine which table to query based on date
+    const tableName = getTableName(date, 'bets');
+
     let query = supabase
-      .from('bets')
+      .from(tableName)
       .select('*, lotteries(*), schedules(*)', { count: 'exact' })
       .eq('organization_id', organization_id)
       .eq('date', date)
@@ -84,7 +88,10 @@ export class BetRepository {
     quatern?: boolean;
     tern?: boolean;
   }) {
-    const { data, error } = await supabase.rpc('get_grouped_bets_for_parse', {
+    // Determine which RPC to use based on date
+    const rpcName = getRpcName(date, 'get_grouped_bets_for_parse');
+
+    const { data, error } = await supabase.rpc(rpcName, {
       p_date: date,
       p_schedule_id: schedule_id ?? null,
       p_cashier_id: cashier_id ?? null,
@@ -123,7 +130,10 @@ export class BetRepository {
     cashier_id?: string;
     lottery_id?: string;
   }) {
-    const { data, error } = await supabase.rpc('bets_total_amount', {
+    // Determine which RPC to use based on date
+    const rpcName = getRpcName(date, 'bets_total_amount');
+
+    const { data, error } = await supabase.rpc(rpcName, {
       p_date: date,
       p_schedule_id: schedule_id ?? null,
       p_cashier_id: cashier_id ?? null,
@@ -147,7 +157,10 @@ export class BetRepository {
     cashier_id?: string;
     lottery_id?: string;
   }) {
-    const { data, error } = await supabase.rpc('bets_total_prize', {
+    // Determine which RPC to use based on date
+    const rpcName = getRpcName(date, 'bets_total_prize');
+
+    const { data, error } = await supabase.rpc(rpcName, {
       p_date: date,
       p_schedule_id: schedule_id ?? null,
       p_cashier_id: cashier_id ?? null,
@@ -173,8 +186,11 @@ export class BetRepository {
     lottery_id?: string;
     ticket_number?: string;
   }) {
+    // Determine which table to query based on date
+    const tableName = getTableName(date, 'bets');
+
     let query = supabase
-      .from('bets')
+      .from(tableName)
       .select('*, lotteries(*), schedules(*)')
       .eq('organization_id', organization_id)
       .eq('date', date)
@@ -211,6 +227,7 @@ export class BetRepository {
     ticket_number: string;
     organization_id: string;
   }) {
+    // Try main table first (has more indexes, faster)
     const { data, error } = await supabase
       .rpc('get_ticket_sums', {
         p_ticket: ticket_number,
@@ -218,7 +235,20 @@ export class BetRepository {
       })
       .single();
 
-    if (error) throw error;
-    return data as TicketSums;
+    // If found in main table, return
+    if (!error && data && (data.total_count > 0 || data.total_amount > 0)) {
+      return data as TicketSums;
+    }
+
+    // If not found in main table, try archive
+    const { data: archiveData, error: archiveError } = await supabase
+      .rpc('get_ticket_sums_archive', {
+        p_ticket: ticket_number,
+        p_organization_id: organization_id,
+      })
+      .single();
+
+    if (archiveError) throw archiveError;
+    return archiveData as TicketSums;
   }
 }

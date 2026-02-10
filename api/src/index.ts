@@ -8,6 +8,7 @@ import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
 import { startSessionCleanupJob } from './utils/session-cleanup.job';
 import { getCronService } from './cron/service/cron.service';
+import { initializeActiveDaysCache } from './archive/helper/archive-helper';
 import {
   loginRateLimiter,
   authRateLimiter,
@@ -27,6 +28,7 @@ import {
   CORS_EXTRA_ORIGINS,
 } from 'api/envs';
 import { URL } from 'url';
+import { ARCHIVE_DAYS_TO_KEEP } from 'api/envs';
 
 const app = express();
 
@@ -142,7 +144,7 @@ app.use(errorHandler);
 // ---- Arranque ----
 // Solo iniciar servidor si no estamos en entorno de test
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
     console.log('[CORS] allowed origins:', baseAllowedOrigins);
     if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
@@ -150,9 +152,11 @@ if (process.env.NODE_ENV !== 'test') {
     // Start session cleanup job (runs every hour)
     startSessionCleanupJob();
 
+    // Initialize active days cache (for query routing)
+    await initializeActiveDaysCache();
+
     // Start archive cron job (runs daily at 3:00 AM Argentina Time)
-    const daysToKeep = 2; // Keep last 2 active days indexed
-    const cronService = getCronService(daysToKeep);
+    const cronService = getCronService(ARCHIVE_DAYS_TO_KEEP);
     cronService.startArchiveCron();
     console.log('[Archive] Cron job initialized - Daily archiving of old bets/tickets');
   });

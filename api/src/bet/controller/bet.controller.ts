@@ -201,6 +201,7 @@ export class BetController {
     organization_id: string;
   }) => {
     try {
+      // Repository handles searching in both main and archive tables
       const totals = await this.repository.getAmountsByTicket({
         ticket_number,
         organization_id,

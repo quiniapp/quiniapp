@@ -1,6 +1,7 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { ArchiveService } from '../../archive/service/archive.service';
 import { ActivityDaysRepository } from '../../activity/repository/activity-days.repository';
+import { refreshActiveDaysCache } from '../../archive/helper/archive-helper';
 
 export class CronService {
   private archiveService: ArchiveService;
@@ -92,10 +93,14 @@ export class CronService {
       console.log('[CronService] Archiving old data...');
       const result = await this.archiveService.archiveOldData(this.daysToKeep);
 
-      // Step 5: Get stats after archiving
+      // Step 5: Refresh active days cache (critical for query routing)
+      console.log('[CronService] Refreshing active days cache...');
+      await refreshActiveDaysCache();
+
+      // Step 6: Get stats after archiving
       const statsAfter = await this.archiveService.getArchiveStats();
 
-      // Step 6: Log results
+      // Step 7: Log results
       const executionTime = Date.now() - startTime;
       console.log('\n========================================');
       console.log('[CronService] Archive job completed successfully');
