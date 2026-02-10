@@ -32,8 +32,15 @@ export class TicketController {
   get = async (props: IGetTicketEntity, organization_id: string): Promise<ITicketEntityFront> => {
     let ticket;
     if (props.ticket_id) {
-      ticket = await this.repository.getById(props?.ticket_id, organization_id);
+      // Repository handles searching in both main and archive tables
+      ticket = await this.repository.getById(props.ticket_id, organization_id);
+
+      // If found but organization doesn't match, treat as not found
+      if (ticket && ticket.organization_id !== organization_id) {
+        ticket = null;
+      }
     } else if (props.ticket_number) {
+      // Repository handles searching in both main and archive tables
       ticket = await this.repository.getByNumber(props.ticket_number, organization_id);
     }
     if (!ticket) {
@@ -151,7 +158,25 @@ export class TicketController {
   };
 
   paid = async ({ ticket_number, user_id, organization_id }: IPayTicketEntity) => {
-    const result = await this.repository.payTicket({ ticket_number, user_id, organization_id });
-    return result;
+    try {
+      // payTicket only works on main table (archive is read-only)
+      const result = await this.repository.payTicket({ ticket_number, user_id, organization_id });
+      return result;
+    } catch (error) {
+      // If ticket not found in main table, check if it's in archive
+      if (error instanceof Error && error.message === 'TICKET_NOT_FOUND') {
+        // Repository getByNumber searches both main and archive
+        const archivedTicket = await this.repository.getByNumber(ticket_number, organization_id);
+
+        if (archivedTicket) {
+          // Ticket exists but is archived (too old to pay)
+          throw new Error(
+            'TICKET_ARCHIVED: Este ticket está archivado y ya no puede ser pagado. Por favor contacte al administrador.'
+          );
+        }
+      }
+      // Re-throw original error if not archive-related
+      throw error;
+    }
   };
 }

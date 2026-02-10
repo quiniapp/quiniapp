@@ -75,3 +75,5 @@ function must<T extends string | undefined>(val: T, name: string): string {
 
 // Organization
 export const DEFAULT_ORG_ID = must(process.env.DEFAULT_ORG_ID, 'DEFAULT_ORG_ID');
+
+export const ARCHIVE_DAYS_TO_KEEP = parseInt(process.env.ARCHIVE_DAYS_TO_KEEP || '2');
