@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-02-10
+
+#### Generate Winners Timeout
+- **Problem**: `generate_winners_and_calculate_accounts` timing out with error code 57014
+  - Issue: Heavy RPC with complex CTEs, JOINs, and UPDATEs exceeding statement timeout
+  - Affected users: CAPITALIST, SUPERADMIN when generating winners for 2026-02-09
+
+- **Solution Migration 1**: Increase timeout and add indexes
+  - Migration: `api/supabase/migrations/20260210120000_fix_generate_winners_timeout.sql`
+  - Set statement_timeout to 5 minutes (300 seconds) for generate_winners functions
+  - Added indexes on bets(schedule_id, date, organization_id)
+  - Added indexes on results(lottery_id, schedule_id, date, organization_id)
+  - Added indexes on ticket_prizes_by_turn(date, schedule_id, organization_id)
+  - Added indexes on tickets(date, organization_id)
+  - Added corresponding indexes on archive tables for consistency
+  - Runs ANALYZE on all affected tables to update query planner statistics
+
+- **Solution Migration 2**: Add archive validation
+  - Migration: `api/supabase/migrations/20260210120001_add_archive_validation_generate_winners.sql`
+  - Validates data exists in MAIN tables before processing
+  - Checks ARCHIVE tables if not found in main
+  - Raises `BETS_ARCHIVED` error if data is in archive (read-only, cannot UPDATE)
+  - Raises `NO_BETS_FOUND` error if data doesn't exist anywhere
+  - Prevents silent failures and provides clear error messages
+  - Generate winners only works for active dates (last N days in main tables)
+
+- **Documentation**: Created `GENERATE_WINNERS_TIMEOUT_ANALYSIS.md`
+  - Comprehensive analysis of root cause
+  - Performance bottlenecks identified
+  - Impact of archive system explained
+  - Multiple solution approaches documented
+  - Testing and monitoring guidelines
+
 ### Added - 2026-02-10
 
 #### Archive System - Backfill and Management
