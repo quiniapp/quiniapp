@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Protected with private authentication middleware
   - Registered in main router: `api/src/router.ts`
 
+- **Admin-Only Middleware**: Middleware to restrict access to non-cashier users
+  - File: `api/middlewares/admin-only.middleware.ts`
+  - `requireNonCashier`: Blocks CASHIER users from accessing routes
+  - `requireAdmin`: Alias for requireNonCashier with semantic naming
+  - Applied to all archive management endpoints
+  - Returns 403 Forbidden for cashier users
+
 ### Fixed - 2026-02-09
 
 #### TypeScript Type Errors

@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { getCronService } from '../../cron/service/cron.service';
 import { ARCHIVE_DAYS_TO_KEEP } from '../../../envs';
+import { requireAdmin } from '../../../middlewares/admin-only.middleware';
 
 const router = Router();
+
+// Apply admin-only middleware to all routes in this router
+// Blocks CASHIER users from accessing archive management endpoints
+router.use(requireAdmin);
 
 /**
  * Manual trigger for archive job (admin only)

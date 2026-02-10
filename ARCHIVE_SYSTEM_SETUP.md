@@ -176,6 +176,10 @@ El cache es in-memory y se usa para routing O(1):
 
 ## Endpoints de Admin Disponibles
 
+**⚠️ IMPORTANTE**: Estos endpoints están protegidos con middleware `requireAdmin`:
+- ✅ Permitido: OWNER, CAPITALIST, SUPERADMIN, ADMIN
+- ❌ Bloqueado: CASHIER (retorna 403 Forbidden)
+
 ### POST /api/private/archive/trigger
 Ejecuta el job de archive manualmente (para testing).
 
@@ -332,4 +336,15 @@ ad02bb3 feat: implement database archive system for performance optimization
 
 ---
 
-**Nota**: Todos los endpoints de admin (`/api/private/archive/*`) requieren autenticación. En producción, considerar agregar un check adicional de rol admin si es necesario.
+## Seguridad y Permisos
+
+**Protección Admin-Only Implementada:**
+- Middleware `requireAdmin` aplicado a todas las rutas de archive
+- Solo usuarios con roles OWNER, CAPITALIST, SUPERADMIN, ADMIN pueden acceder
+- Usuarios CASHIER reciben error 403 Forbidden
+- Implementación: `api/middlewares/admin-only.middleware.ts`
+
+**Autenticación Requerida:**
+- Todos los endpoints requieren sesión activa (middleware `isAuthenticated`)
+- Cookie de sesión debe estar presente y válida
+- La sesión debe pertenecer a un usuario con permisos de administrador
