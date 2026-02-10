@@ -11,6 +11,7 @@ import { CurrentAccountRouter } from './current-account/route/current-account.ro
 import { ScheduleLotteryRouter } from './schedule-lottery/route/schedule-lottery.route';
 import { SettingsLotteryRouter } from './settings/route/settings.route';
 import { OrganizationRouter } from './organization/route/organization.route';
+import archiveRouter from './archive/route/archive.route';
 
 export const router = Router();
 export const publicRouter = Router();
@@ -33,6 +34,7 @@ router.use('/current_account', new CurrentAccountRouter().router);
 router.use('/schedule_lottery', new ScheduleLotteryRouter().router);
 router.use('/settings', new SettingsLotteryRouter().router);
 router.use('/organization', new OrganizationRouter().router);
+router.use('/archive', archiveRouter);
 router.use('/test', (req, res) => {
   res.send('ok');
 });
