@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-02-09
+
+#### TypeScript Type Errors
+- **User Repository**: Added explicit return type annotations to all methods
+  - Files: `api/src/user/repository/user.repository.ts`
+  - Methods: `getById`, `getByIdWithoutOrgRestriction`, `getByUsernameAndOrganization`, `getAll`, `create`, `update`, `delete`
+  - Issue: Supabase `GenericStringError` union type incompatibility
+  - Solution: Added `Promise<IUserEntityBack>` return types and `as unknown as` type assertions
+  - Why: Supabase client without type generation returns union types that don't overlap with our entity types
+
+- **Bet Repository**: Fixed type checking for ticket sums
+  - File: `api/src/bet/repository/bet.repository.ts`
+  - Issue: TypeScript couldn't infer properties on RPC response data
+  - Solution: Cast to `TicketSums` type before accessing properties
+
+- **Archive Route**: Fixed route handler syntax
+  - File: `api/src/admin/route/archive.route.ts`
+  - Issue: Arrow function expression incorrectly called instead of passed as callback
+  - Solution: Changed to arrow function with block body
+
 ### Added - 2026-02-09
 
 #### Archive Query System - Smart Table Routing
