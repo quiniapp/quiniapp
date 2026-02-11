@@ -154,7 +154,9 @@ export class ArchiveService {
     // Note: Gets ALL bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (selectError) {
-      throw new Error(`Failed to select old bets: ${selectError.message}`);
+      const errorMsg =
+        typeof selectError.message === 'string' ? selectError.message : JSON.stringify(selectError);
+      throw new Error(`Failed to select old bets: ${errorMsg}`);
     }
 
     if (!oldBets || oldBets.length === 0) {
@@ -177,7 +179,9 @@ export class ArchiveService {
     const { error: insertError } = await supabase.from('bets_archive').insert(betsToArchive);
 
     if (insertError) {
-      throw new Error(`Failed to insert bets into archive: ${insertError.message}`);
+      const errorMsg =
+        typeof insertError.message === 'string' ? insertError.message : JSON.stringify(insertError);
+      throw new Error(`Failed to insert bets into archive: ${errorMsg}`);
     }
 
     // Delete from main table (INCLUDING deleted ones)
@@ -185,7 +189,9 @@ export class ArchiveService {
     // Note: Deletes ALL archived bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (deleteError) {
-      throw new Error(`Failed to delete archived bets: ${deleteError.message}`);
+      const errorMsg =
+        typeof deleteError.message === 'string' ? deleteError.message : JSON.stringify(deleteError);
+      throw new Error(`Failed to delete archived bets: ${errorMsg}`);
     }
 
     return {
@@ -223,7 +229,9 @@ export class ArchiveService {
     // Note: Gets ALL tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (selectError) {
-      throw new Error(`Failed to select old tickets: ${selectError.message}`);
+      const errorMsg =
+        typeof selectError.message === 'string' ? selectError.message : JSON.stringify(selectError);
+      throw new Error(`Failed to select old tickets: ${errorMsg}`);
     }
 
     if (!oldTickets || oldTickets.length === 0) {
@@ -246,7 +254,9 @@ export class ArchiveService {
     const { error: insertError } = await supabase.from('tickets_archive').insert(ticketsToArchive);
 
     if (insertError) {
-      throw new Error(`Failed to insert tickets into archive: ${insertError.message}`);
+      const errorMsg =
+        typeof insertError.message === 'string' ? insertError.message : JSON.stringify(insertError);
+      throw new Error(`Failed to insert tickets into archive: ${errorMsg}`);
     }
 
     // Delete from main table (INCLUDING deleted ones)
@@ -254,7 +264,9 @@ export class ArchiveService {
     // Note: Deletes ALL archived tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (deleteError) {
-      throw new Error(`Failed to delete archived tickets: ${deleteError.message}`);
+      const errorMsg =
+        typeof deleteError.message === 'string' ? deleteError.message : JSON.stringify(deleteError);
+      throw new Error(`Failed to delete archived tickets: ${errorMsg}`);
     }
 
     return {

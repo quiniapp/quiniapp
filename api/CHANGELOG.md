@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-02-10
 
+#### Archive System - Constraint Mismatch
+- **Problem**: Archive cron failing with check constraint violation
+  - Error: "new row for relation 'bets_archive' violates check constraint 'chk_archive_borratina_number_with_length'"
+  - Root cause: bets_archive table has outdated constraints (expects BORRATINA length=8)
+  - Main bets table was updated June 2025 to require BORRATINA length=10
+  - Archiving fails when trying to move BORRATINA bets from main to archive
+
+- **Solution**: Update archive constraints to match main table
+  - Migration: `api/supabase/migrations/20260210180000_fix_archive_constraints_match_main_table.sql`
+  - Drops old constraints from bets_archive
+  - Updates existing BORRATINA records (LPAD 8-char to 10-char)
+  - Adds new constraints matching main bets table:
+    * Number lengths: 1, 2, 3, 4, 10 (was 1, 2, 3, 4, 8)
+    * BORRATINA: length=10 (was length=8)
+  - Handles both old ('number') and new ('bet_number') column names
+
+#### Archive System - Error Handling
+- **Problem**: Fallback TypeScript implementation showing cryptic errors
+  - Error: "invalid input syntax for type date: '[object Object]'"
+  - Supabase error objects sometimes have non-string message properties
+
+- **Solution**: Robust error formatting in ArchiveService
+  - File: `api/src/archive/service/archive.service.ts`
+  - Check if error.message is string before using it
+  - Use JSON.stringify() as fallback for object messages
+  - Applied to all error handling: select, insert, delete operations
+  - Both archiveOldBetsManual() and archiveOldTicketsManual()
+
+### Fixed - 2026-02-10
+
 #### Generate Winners Timeout
 - **Problem**: `generate_winners_and_calculate_accounts` timing out with error code 57014
   - Issue: Heavy RPC with complex CTEs, JOINs, and UPDATEs exceeding statement timeout
