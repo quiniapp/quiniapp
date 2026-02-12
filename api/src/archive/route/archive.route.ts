@@ -1,79 +1,62 @@
 import { Router } from 'express';
-import { getCronService } from '../../cron/service/cron.service';
-import { ARCHIVE_DAYS_TO_KEEP } from '../../../envs';
+import { ArchiveController } from '../controller/archive.controller';
 import { requireAdmin } from '../../../middlewares/admin-only.middleware';
 
 const router = Router();
+const archiveController = new ArchiveController();
 
 // Apply admin-only middleware to all routes in this router
 // Blocks CASHIER users from accessing archive management endpoints
 router.use(requireAdmin);
 
 /**
- * Manual trigger for archive job (admin only)
- * POST /api/private/archive/trigger
- *
- * IMPORTANT: This should be protected with admin authentication
- * Remove or disable this endpoint in production after testing
- */
-router.post('/trigger', async (req, res) => {
-  try {
-    console.log('[Archive Route] Manual archive trigger requested');
-
-    const cronService = getCronService(ARCHIVE_DAYS_TO_KEEP);
-
-    // Run the archive job
-    await cronService.runArchiveJobManual();
-
-    res.json({
-      success: true,
-      message: 'Archive job completed. Check server logs for details.',
-    });
-  } catch (error) {
-    console.error('[Archive Route] Error:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
-/**
- * Get archive statistics
  * GET /api/private/archive/stats
+ * Get comprehensive archive statistics including:
+ * - Main vs archive table counts
+ * - Active days information
+ * - Cron job status
+ * - Compression ratios
  */
-router.get('/stats', async (req, res) => {
-  try {
-    const { ArchiveService } = await import('../../archive/service/archive.service');
-    const archiveService = new ArchiveService();
-
-    const stats = await archiveService.getArchiveStats();
-
-    res.json({
-      success: true,
-      stats,
-    });
-  } catch (error) {
-    console.error('[Archive Route] Error getting stats:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.get('/stats', (req, res) => archiveController.getStats(req, res));
 
 /**
- * Get cron service status
- * GET /api/private/archive/cron-status
+ * POST /api/private/archive/trigger
+ * Manual trigger for archive job (admin only)
+ * Body: { days_to_keep?: number } (optional, defaults to env ARCHIVE_DAYS_TO_KEEP)
+ *
+ * Uses cron service to run the job (same as scheduled cron)
  */
-router.get('/cron-status', (req, res) => {
-  const cronService = getCronService(ARCHIVE_DAYS_TO_KEEP);
-  const status = cronService.getStatus();
+router.post('/trigger', (req, res) => archiveController.triggerArchive(req, res));
 
-  res.json({
-    success: true,
-    status,
-  });
-});
+/**
+ * POST /api/private/archive/run
+ * Alternative endpoint: Run archive and get detailed results
+ * Body: { days_to_keep?: number } (optional, defaults to env ARCHIVE_DAYS_TO_KEEP)
+ *
+ * Returns detailed results including counts and execution time
+ */
+router.post('/run', (req, res) => archiveController.runArchive(req, res));
+
+/**
+ * GET /api/private/archive/activity-days
+ * Get all activity days with detailed information
+ * Returns both all days and active-only days
+ */
+router.get('/activity-days', (req, res) => archiveController.getActivityDays(req, res));
+
+/**
+ * POST /api/private/archive/update-activity
+ * Update activity counts for a specific date
+ * Body: { date: string } (format: YYYY-MM-DD)
+ *
+ * Recalculates bet and ticket counts for the given date
+ */
+router.post('/update-activity', (req, res) => archiveController.updateActivityForDate(req, res));
+
+/**
+ * GET /api/private/archive/cron-status
+ * Get cron job status (running, last run, next run, etc.)
+ */
+router.get('/cron-status', (req, res) => archiveController.getCronStatus(req, res));
 
 export default router;

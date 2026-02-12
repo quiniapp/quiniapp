@@ -7,6 +7,134 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-02-10
+
+#### Archive System - Architecture Refactoring
+- **Problem**: Code duplication and inconsistent architecture
+  - `/admin/route/archive.route.ts` + `/admin/controller/archive.controller.ts` (not registered, dead code)
+  - `/archive/route/archive.route.ts` (registered but no controller pattern)
+  - Duplicate endpoints: stats, trigger/run, cron-status
+  - Lost functionality: activity-days endpoints only in dead code
+
+- **Solution**: Unified architecture following project patterns
+  - **Created**: `api/src/archive/controller/archive.controller.ts`
+    - Renamed from `ArchiveAdminController` to `ArchiveController`
+    - Updated import paths (relative to archive module)
+    - Added `triggerArchive()` method (uses cron service)
+    - Added `runArchive()` method (returns detailed results)
+    - Merged all 5 endpoints into single controller
+
+  - **Updated**: `api/src/archive/route/archive.route.ts`
+    - Changed from direct service calls to controller pattern
+    - All routes now use `archiveController` methods
+    - Maintains same URL structure: `/api/private/archive/*`
+    - Added documentation for all 6 endpoints
+
+  - **Removed**: `api/src/admin/` directory (dead code)
+    - Deleted `admin/route/archive.route.ts` (never registered)
+    - Deleted `admin/controller/archive.controller.ts` (never used)
+
+  - **New Endpoints Available**:
+    - `GET /api/private/archive/activity-days` - View activity days
+    - `POST /api/private/archive/update-activity` - Update activity counts
+    - `POST /api/private/archive/run` - Get detailed archive results
+
+  - **Architecture Benefits**:
+    - Single source of truth for archive routes
+    - Follows controller pattern like other modules (bet, user, lottery, etc.)
+    - No code duplication
+    - All functionality in one place
+
+### Fixed - 2026-02-10
+
+#### Archive System - Schema Type Mismatch
+- **Problem**: Archive failing with type conversion error
+  - Error: "column 'ticket_number' is of type integer but expression is of type text"
+  - Root cause: bets table has ticket_number as TEXT (updated Jun 2025)
+  - Archive table still has ticket_number as INTEGER (old schema)
+  - Stored procedure fails when trying to INSERT TEXT into INTEGER column
+
+- **Solution**: Align column types between main and archive
+  - Migration: `api/supabase/migrations/20260210190000_fix_archive_schema_mismatch.sql`
+  - ALTER bets_archive.ticket_number: INTEGER → TEXT
+  - ALTER tickets_archive.ticket_number: INTEGER → TEXT (if needed)
+  - Reports any remaining type mismatches between tables
+
+#### Archive System - Date Type Handling
+- **Problem**: cutoffDate sometimes returns Date object instead of string
+  - Error persists: "invalid input syntax for type date: '[object Object]'"
+  - Supabase .lt('date', cutoffDate) expects string, gets object
+  - Causes fallback implementation to fail
+
+- **Solution**: Explicit date string conversion
+  - File: `api/src/archive/service/archive.service.ts`
+  - Convert cutoffDate to string before using in queries
+  - Handle both string and Date object returns from getCutoffDate
+  - Applied to both archiveOldBetsManual() and archiveOldTicketsManual()
+  - Updated ALL uses: SELECT queries, DELETE queries, and return values
+  - Ensures consistent string format (YYYY-MM-DD) throughout
+
+#### Archive System - Constraint Mismatch
+- **Problem**: Archive cron failing with check constraint violation
+  - Error: "new row for relation 'bets_archive' violates check constraint 'chk_archive_borratina_number_with_length'"
+  - Root cause: bets_archive table has outdated constraints (expects BORRATINA length=8)
+  - Main bets table was updated June 2025 to require BORRATINA length=10
+  - Archiving fails when trying to move BORRATINA bets from main to archive
+
+- **Solution**: Update archive constraints to match main table
+  - Migration: `api/supabase/migrations/20260210180000_fix_archive_constraints_match_main_table.sql`
+  - Drops old constraints from bets_archive
+  - Updates existing BORRATINA records (LPAD 8-char to 10-char)
+  - Adds new constraints matching main bets table:
+    * Number lengths: 1, 2, 3, 4, 10 (was 1, 2, 3, 4, 8)
+    * BORRATINA: length=10 (was length=8)
+  - Handles both old ('number') and new ('bet_number') column names
+
+#### Archive System - Error Handling
+- **Problem**: Fallback TypeScript implementation showing cryptic errors
+  - Error: "invalid input syntax for type date: '[object Object]'"
+  - Supabase error objects sometimes have non-string message properties
+
+- **Solution**: Robust error formatting in ArchiveService
+  - File: `api/src/archive/service/archive.service.ts`
+  - Check if error.message is string before using it
+  - Use JSON.stringify() as fallback for object messages
+  - Applied to all error handling: select, insert, delete operations
+  - Both archiveOldBetsManual() and archiveOldTicketsManual()
+
+### Fixed - 2026-02-10
+
+#### Generate Winners Timeout
+- **Problem**: `generate_winners_and_calculate_accounts` timing out with error code 57014
+  - Issue: Heavy RPC with complex CTEs, JOINs, and UPDATEs exceeding statement timeout
+  - Affected users: CAPITALIST, SUPERADMIN when generating winners for 2026-02-09
+
+- **Solution Migration 1**: Increase timeout and add indexes
+  - Migration: `api/supabase/migrations/20260210120000_fix_generate_winners_timeout.sql`
+  - Set statement_timeout to 5 minutes (300 seconds) for generate_winners functions
+  - Added indexes on bets(schedule_id, date, organization_id)
+  - Added indexes on results(lottery_id, schedule_id, date, organization_id)
+  - Added indexes on ticket_prizes_by_turn(date, schedule_id, organization_id)
+  - Added indexes on tickets(date, organization_id)
+  - Added corresponding indexes on archive tables for consistency
+  - Runs ANALYZE on all affected tables to update query planner statistics
+
+- **Solution Migration 2**: Add archive validation
+  - Migration: `api/supabase/migrations/20260210120001_add_archive_validation_generate_winners.sql`
+  - Validates data exists in MAIN tables before processing
+  - Checks ARCHIVE tables if not found in main
+  - Raises `BETS_ARCHIVED` error if data is in archive (read-only, cannot UPDATE)
+  - Raises `NO_BETS_FOUND` error if data doesn't exist anywhere
+  - Prevents silent failures and provides clear error messages
+  - Generate winners only works for active dates (last N days in main tables)
+
+- **Documentation**: Created `GENERATE_WINNERS_TIMEOUT_ANALYSIS.md`
+  - Comprehensive analysis of root cause
+  - Performance bottlenecks identified
+  - Impact of archive system explained
+  - Multiple solution approaches documented
+  - Testing and monitoring guidelines
+
 ### Added - 2026-02-10
 
 #### Archive System - Backfill and Management

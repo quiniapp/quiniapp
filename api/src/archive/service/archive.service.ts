@@ -146,22 +146,27 @@ export class ArchiveService {
       };
     }
 
+    // cutoffDate is already a string after the null check
+    const cutoffDateStr = cutoffDate;
+
     // Get old bets (INCLUDING deleted ones)
     const { data: oldBets, error: selectError } = await supabase
       .from('bets')
       .select('*')
-      .lt('date', cutoffDate);
+      .lt('date', cutoffDateStr);
     // Note: Gets ALL bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (selectError) {
-      throw new Error(`Failed to select old bets: ${selectError.message}`);
+      const errorMsg =
+        typeof selectError.message === 'string' ? selectError.message : JSON.stringify(selectError);
+      throw new Error(`Failed to select old bets: ${errorMsg}`);
     }
 
     if (!oldBets || oldBets.length === 0) {
       return {
         success: true,
         message: 'No bets to archive',
-        cutoff_date: cutoffDate,
+        cutoff_date: cutoffDateStr,
         archived_count: 0,
         deleted_count: 0,
         days_kept: daysToKeep,
@@ -177,21 +182,25 @@ export class ArchiveService {
     const { error: insertError } = await supabase.from('bets_archive').insert(betsToArchive);
 
     if (insertError) {
-      throw new Error(`Failed to insert bets into archive: ${insertError.message}`);
+      const errorMsg =
+        typeof insertError.message === 'string' ? insertError.message : JSON.stringify(insertError);
+      throw new Error(`Failed to insert bets into archive: ${errorMsg}`);
     }
 
     // Delete from main table (INCLUDING deleted ones)
-    const { error: deleteError } = await supabase.from('bets').delete().lt('date', cutoffDate);
+    const { error: deleteError } = await supabase.from('bets').delete().lt('date', cutoffDateStr);
     // Note: Deletes ALL archived bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (deleteError) {
-      throw new Error(`Failed to delete archived bets: ${deleteError.message}`);
+      const errorMsg =
+        typeof deleteError.message === 'string' ? deleteError.message : JSON.stringify(deleteError);
+      throw new Error(`Failed to delete archived bets: ${errorMsg}`);
     }
 
     return {
       success: true,
       message: 'Bets archived successfully',
-      cutoff_date: cutoffDate,
+      cutoff_date: cutoffDateStr,
       archived_count: oldBets.length,
       deleted_count: oldBets.length,
       days_kept: daysToKeep,
@@ -215,22 +224,27 @@ export class ArchiveService {
       };
     }
 
+    // cutoffDate is already a string after the null check
+    const cutoffDateStr = cutoffDate;
+
     // Get old tickets (INCLUDING deleted ones)
     const { data: oldTickets, error: selectError } = await supabase
       .from('tickets')
       .select('*')
-      .lt('date', cutoffDate);
+      .lt('date', cutoffDateStr);
     // Note: Gets ALL tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (selectError) {
-      throw new Error(`Failed to select old tickets: ${selectError.message}`);
+      const errorMsg =
+        typeof selectError.message === 'string' ? selectError.message : JSON.stringify(selectError);
+      throw new Error(`Failed to select old tickets: ${errorMsg}`);
     }
 
     if (!oldTickets || oldTickets.length === 0) {
       return {
         success: true,
         message: 'No tickets to archive',
-        cutoff_date: cutoffDate,
+        cutoff_date: cutoffDateStr,
         archived_count: 0,
         deleted_count: 0,
         days_kept: daysToKeep,
@@ -246,21 +260,28 @@ export class ArchiveService {
     const { error: insertError } = await supabase.from('tickets_archive').insert(ticketsToArchive);
 
     if (insertError) {
-      throw new Error(`Failed to insert tickets into archive: ${insertError.message}`);
+      const errorMsg =
+        typeof insertError.message === 'string' ? insertError.message : JSON.stringify(insertError);
+      throw new Error(`Failed to insert tickets into archive: ${errorMsg}`);
     }
 
     // Delete from main table (INCLUDING deleted ones)
-    const { error: deleteError } = await supabase.from('tickets').delete().lt('date', cutoffDate);
+    const { error: deleteError } = await supabase
+      .from('tickets')
+      .delete()
+      .lt('date', cutoffDateStr);
     // Note: Deletes ALL archived tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (deleteError) {
-      throw new Error(`Failed to delete archived tickets: ${deleteError.message}`);
+      const errorMsg =
+        typeof deleteError.message === 'string' ? deleteError.message : JSON.stringify(deleteError);
+      throw new Error(`Failed to delete archived tickets: ${errorMsg}`);
     }
 
     return {
       success: true,
       message: 'Tickets archived successfully',
-      cutoff_date: cutoffDate,
+      cutoff_date: cutoffDateStr,
       archived_count: oldTickets.length,
       deleted_count: oldTickets.length,
       days_kept: daysToKeep,
