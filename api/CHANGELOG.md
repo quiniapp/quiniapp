@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-02-10
 
+#### Archive System - Schema Type Mismatch
+- **Problem**: Archive failing with type conversion error
+  - Error: "column 'ticket_number' is of type integer but expression is of type text"
+  - Root cause: bets table has ticket_number as TEXT (updated Jun 2025)
+  - Archive table still has ticket_number as INTEGER (old schema)
+  - Stored procedure fails when trying to INSERT TEXT into INTEGER column
+
+- **Solution**: Align column types between main and archive
+  - Migration: `api/supabase/migrations/20260210190000_fix_archive_schema_mismatch.sql`
+  - ALTER bets_archive.ticket_number: INTEGER → TEXT
+  - ALTER tickets_archive.ticket_number: INTEGER → TEXT (if needed)
+  - Reports any remaining type mismatches between tables
+
+#### Archive System - Date Type Handling
+- **Problem**: cutoffDate sometimes returns Date object instead of string
+  - Error persists: "invalid input syntax for type date: '[object Object]'"
+  - Supabase .lt('date', cutoffDate) expects string, gets object
+  - Causes fallback implementation to fail
+
+- **Solution**: Explicit date string conversion
+  - File: `api/src/archive/service/archive.service.ts`
+  - Convert cutoffDate to string before using in queries
+  - Handle both string and Date object returns from getCutoffDate
+  - Applied to both archiveOldBetsManual() and archiveOldTicketsManual()
+
 #### Archive System - Constraint Mismatch
 - **Problem**: Archive cron failing with check constraint violation
   - Error: "new row for relation 'bets_archive' violates check constraint 'chk_archive_borratina_number_with_length'"

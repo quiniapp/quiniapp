@@ -24,9 +24,9 @@ ALTER TABLE bets_archive DROP CONSTRAINT IF EXISTS chk_archive_redouble_requires
 -- Pad existing 8-character borratina numbers to 10 characters
 -- This makes them compatible with the new constraint
 UPDATE bets_archive
-SET bet_number = LPAD(bet_number, 10, '0')
+SET number = LPAD(number, 10, '0')
 WHERE bet_type = 'BORRATINA'
-  AND char_length(bet_number) = 8;
+  AND char_length(number) = 8;
 
 -- Also update 'number' column if it exists (old schema)
 DO $$
@@ -47,14 +47,14 @@ END $$;
 -- 3. Add updated constraints matching main bets table
 -- ============================================================================
 
--- Note: Using bet_number column (current schema) instead of number (old schema)
+-- Note: Using number column (current schema) instead of number (old schema)
 -- The migration handles both cases with conditional logic
 
 -- Check for allowed number lengths (1, 2, 3, 4, 10)
 ALTER TABLE bets_archive
 ADD CONSTRAINT chk_archive_number_allowed_lengths
   CHECK (char_length(
-    COALESCE(bet_number, number)  -- Handle both old and new column names
+    COALESCE(number, number)  -- Handle both old and new column names
   ) IN (1, 2, 3, 4, 10));
 
 -- BORRATINA must have exactly 10 characters
@@ -62,7 +62,7 @@ ALTER TABLE bets_archive
 ADD CONSTRAINT chk_archive_borratina_number_with_length
   CHECK (
     bet_type != 'BORRATINA' OR char_length(
-      COALESCE(bet_number, number)
+      COALESCE(number, number)
     ) = 10
   );
 
@@ -72,7 +72,7 @@ ALTER TABLE bets_archive
 ADD CONSTRAINT chk_archive_redouble_number_with_length
   CHECK (
     bet_type != 'REDOUBLE' OR
-    (char_length(COALESCE(bet_number, number)) = 2 AND char_length("with") = 2)
+    (char_length(COALESCE(number, number)) = 2 AND char_length("with") = 2)
   );
 
 -- Position must be valid for the given place
@@ -119,8 +119,8 @@ BEGIN
 
   -- Count BORRATINA records by length
   SELECT
-    COUNT(*) FILTER (WHERE char_length(COALESCE(bet_number, number)) = 8),
-    COUNT(*) FILTER (WHERE char_length(COALESCE(bet_number, number)) = 10)
+    COUNT(*) FILTER (WHERE char_length(COALESCE(number, number)) = 8),
+    COUNT(*) FILTER (WHERE char_length(COALESCE(number, number)) = 10)
   INTO v_borratina_8_count, v_borratina_10_count
   FROM bets_archive
   WHERE bet_type = 'BORRATINA';

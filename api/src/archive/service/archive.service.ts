@@ -146,11 +146,15 @@ export class ArchiveService {
       };
     }
 
+    // Ensure cutoffDate is a string (convert Date object if needed)
+    const cutoffDateStr =
+      typeof cutoffDate === 'string' ? cutoffDate : cutoffDate.toISOString().split('T')[0];
+
     // Get old bets (INCLUDING deleted ones)
     const { data: oldBets, error: selectError } = await supabase
       .from('bets')
       .select('*')
-      .lt('date', cutoffDate);
+      .lt('date', cutoffDateStr);
     // Note: Gets ALL bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (selectError) {
@@ -185,7 +189,7 @@ export class ArchiveService {
     }
 
     // Delete from main table (INCLUDING deleted ones)
-    const { error: deleteError } = await supabase.from('bets').delete().lt('date', cutoffDate);
+    const { error: deleteError } = await supabase.from('bets').delete().lt('date', cutoffDateStr);
     // Note: Deletes ALL archived bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (deleteError) {
@@ -197,7 +201,7 @@ export class ArchiveService {
     return {
       success: true,
       message: 'Bets archived successfully',
-      cutoff_date: cutoffDate,
+      cutoff_date: cutoffDateStr,
       archived_count: oldBets.length,
       deleted_count: oldBets.length,
       days_kept: daysToKeep,
@@ -221,11 +225,15 @@ export class ArchiveService {
       };
     }
 
+    // Ensure cutoffDate is a string (convert Date object if needed)
+    const cutoffDateStr =
+      typeof cutoffDate === 'string' ? cutoffDate : cutoffDate.toISOString().split('T')[0];
+
     // Get old tickets (INCLUDING deleted ones)
     const { data: oldTickets, error: selectError } = await supabase
       .from('tickets')
       .select('*')
-      .lt('date', cutoffDate);
+      .lt('date', cutoffDateStr);
     // Note: Gets ALL tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (selectError) {
@@ -260,7 +268,10 @@ export class ArchiveService {
     }
 
     // Delete from main table (INCLUDING deleted ones)
-    const { error: deleteError } = await supabase.from('tickets').delete().lt('date', cutoffDate);
+    const { error: deleteError } = await supabase
+      .from('tickets')
+      .delete()
+      .lt('date', cutoffDateStr);
     // Note: Deletes ALL archived tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
 
     if (deleteError) {
@@ -272,7 +283,7 @@ export class ArchiveService {
     return {
       success: true,
       message: 'Tickets archived successfully',
-      cutoff_date: cutoffDate,
+      cutoff_date: cutoffDateStr,
       archived_count: oldTickets.length,
       deleted_count: oldTickets.length,
       days_kept: daysToKeep,
