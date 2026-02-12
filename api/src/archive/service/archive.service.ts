@@ -146,9 +146,8 @@ export class ArchiveService {
       };
     }
 
-    // Ensure cutoffDate is a string (convert Date object if needed)
-    const cutoffDateStr =
-      typeof cutoffDate === 'string' ? cutoffDate : cutoffDate.toISOString().split('T')[0];
+    // cutoffDate is already a string after the null check
+    const cutoffDateStr = cutoffDate;
 
     // Get old bets (INCLUDING deleted ones)
     const { data: oldBets, error: selectError } = await supabase
@@ -167,7 +166,7 @@ export class ArchiveService {
       return {
         success: true,
         message: 'No bets to archive',
-        cutoff_date: cutoffDate,
+        cutoff_date: cutoffDateStr,
         archived_count: 0,
         deleted_count: 0,
         days_kept: daysToKeep,
@@ -225,9 +224,8 @@ export class ArchiveService {
       };
     }
 
-    // Ensure cutoffDate is a string (convert Date object if needed)
-    const cutoffDateStr =
-      typeof cutoffDate === 'string' ? cutoffDate : cutoffDate.toISOString().split('T')[0];
+    // cutoffDate is already a string after the null check
+    const cutoffDateStr = cutoffDate;
 
     // Get old tickets (INCLUDING deleted ones)
     const { data: oldTickets, error: selectError } = await supabase
@@ -246,7 +244,7 @@ export class ArchiveService {
       return {
         success: true,
         message: 'No tickets to archive',
-        cutoff_date: cutoffDate,
+        cutoff_date: cutoffDateStr,
         archived_count: 0,
         deleted_count: 0,
         days_kept: daysToKeep,

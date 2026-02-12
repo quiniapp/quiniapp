@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-02-10
+
+#### Archive System - Architecture Refactoring
+- **Problem**: Code duplication and inconsistent architecture
+  - `/admin/route/archive.route.ts` + `/admin/controller/archive.controller.ts` (not registered, dead code)
+  - `/archive/route/archive.route.ts` (registered but no controller pattern)
+  - Duplicate endpoints: stats, trigger/run, cron-status
+  - Lost functionality: activity-days endpoints only in dead code
+
+- **Solution**: Unified architecture following project patterns
+  - **Created**: `api/src/archive/controller/archive.controller.ts`
+    - Renamed from `ArchiveAdminController` to `ArchiveController`
+    - Updated import paths (relative to archive module)
+    - Added `triggerArchive()` method (uses cron service)
+    - Added `runArchive()` method (returns detailed results)
+    - Merged all 5 endpoints into single controller
+
+  - **Updated**: `api/src/archive/route/archive.route.ts`
+    - Changed from direct service calls to controller pattern
+    - All routes now use `archiveController` methods
+    - Maintains same URL structure: `/api/private/archive/*`
+    - Added documentation for all 6 endpoints
+
+  - **Removed**: `api/src/admin/` directory (dead code)
+    - Deleted `admin/route/archive.route.ts` (never registered)
+    - Deleted `admin/controller/archive.controller.ts` (never used)
+
+  - **New Endpoints Available**:
+    - `GET /api/private/archive/activity-days` - View activity days
+    - `POST /api/private/archive/update-activity` - Update activity counts
+    - `POST /api/private/archive/run` - Get detailed archive results
+
+  - **Architecture Benefits**:
+    - Single source of truth for archive routes
+    - Follows controller pattern like other modules (bet, user, lottery, etc.)
+    - No code duplication
+    - All functionality in one place
+
 ### Fixed - 2026-02-10
 
 #### Archive System - Schema Type Mismatch
@@ -33,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Convert cutoffDate to string before using in queries
   - Handle both string and Date object returns from getCutoffDate
   - Applied to both archiveOldBetsManual() and archiveOldTicketsManual()
+  - Updated ALL uses: SELECT queries, DELETE queries, and return values
+  - Ensures consistent string format (YYYY-MM-DD) throughout
 
 #### Archive System - Constraint Mismatch
 - **Problem**: Archive cron failing with check constraint violation
