@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-02-12
+
+#### Database Performance - Current Accounts Indexes
+- **Problem**: `calculate_current_account` timing out with full table scans
+  - Issue: Missing indexes on `current_accounts` table
+  - Impact: Queries scanning 1M+ rows to find previous balances
+  - Symptoms: Timeout errors when calculating accounts for dates with large history
+  - Root cause: No indexes for common query patterns (date ranges, org filtering, user lookups)
+
+- **Solution**: Added strategic indexes to eliminate full scans
+  - Migration: `api/supabase/migrations/20260212170504_add_current_accounts_indexes.sql`
+  - Uses `CREATE INDEX CONCURRENTLY` to avoid table locks during creation
+
+  **Indexes Added**:
+  1. `idx_current_accounts_org_user_date_desc (organization_id, user_id, date DESC)`
+     - Optimizes `previous_state` query (most expensive)
+     - Pattern: `WHERE date < v_date AND organization_id = X ORDER BY user_id, date DESC`
+     - Before: Full table scan (1M+ rows)
+     - After: Index scan (only relevant rows per user)
+     - Expected improvement: 100x-1000x faster
+
+  2. `idx_current_accounts_date_org (date, organization_id)`
+     - Optimizes `existing_day` query
+     - Pattern: `WHERE date = v_date AND organization_id = X`
+     - Before: Full table scan
+     - After: Index scan (~100 users)
+     - Expected improvement: 100x-1000x faster
+
+  3. `idx_current_accounts_user_date_desc (user_id, date DESC)`
+     - Optimizes user-specific account history queries
+     - Pattern: User balance history in descending order
+     - Useful for frontend account history views
+
+  **Performance Impact**:
+  - `calculate_current_account` should complete in <1 second
+  - `generate_winners_and_calculate_accounts` should no longer timeout
+  - Overall system responsiveness improved for historical data queries
+
+  **Verification**:
+  - Includes statistics update (ANALYZE) after index creation
+  - Logs index count and table size
+  - Reports expected improvements
+
 ### Changed - 2026-02-10
 
 #### Archive System - Architecture Refactoring
