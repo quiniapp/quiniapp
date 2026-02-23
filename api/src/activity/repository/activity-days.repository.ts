@@ -49,7 +49,12 @@ export class ActivityDaysRepository {
       throw new Error(`Failed to get last active days: ${error.message}`);
     }
 
-    return data || [];
+    if (!data) return [];
+
+    // SP returns TABLE(date DATE), so Supabase returns [{date: 'YYYY-MM-DD'}, ...]
+    return data.map((row: { date: string } | string) =>
+      typeof row === 'string' ? row.substring(0, 10) : String(row.date).substring(0, 10)
+    );
   }
 
   /**
