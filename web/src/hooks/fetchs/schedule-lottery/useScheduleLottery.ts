@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const fetchScheduleLottery = async () => {
   const url = BACKEND_ROUTES.schedule_lottery.base;
 
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching results');

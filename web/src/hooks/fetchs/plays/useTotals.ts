@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { FetchBetsProps, betsKey } from './useBets'; // donde definiste FetchBetsProps y betsKey
+import { FetchBetsProps, betsKey } from './useBets';
+import { fetchWithAuth } from '@/lib/fetchWithAuth'; // donde definiste FetchBetsProps y betsKey
 
 // ---------- keys (incluyen TODOS los filtros como en betsKey) ----------
 export const totalAmountKey = (p: FetchBetsProps) =>
@@ -22,9 +23,8 @@ function buildSearchParams(p: FetchBetsProps) {
 }
 
 async function fetchNumberFrom(url: string, params: URLSearchParams): Promise<number> {
-  const res = await fetch(`${url}?${params.toString()}`, {
+  const res = await fetchWithAuth(`${url}?${params.toString()}`, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
   if (!res.ok) throw new Error(`Error fetching ${url}`);
   const json = await res.json();

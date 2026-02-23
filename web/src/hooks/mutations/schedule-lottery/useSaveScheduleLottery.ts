@@ -2,14 +2,14 @@ import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type.ts';
 import { toast } from 'react-hot-toast';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<IScheduleLotteryEntityFront> => {
-  const res = await fetch(BACKEND_ROUTES.schedule_lottery.base, {
+  const res = await fetchWithAuth(BACKEND_ROUTES.schedule_lottery.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({ scheduleLottery: scheduleLottery }),
   });
 

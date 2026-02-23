@@ -2,6 +2,7 @@ import { IUpdateLotteryEntity } from '@helper/request/lottery.request';
 import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { toast } from 'react-hot-toast';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface UpdateLotteryParams {
   lottery_id: string;
@@ -9,12 +10,11 @@ interface UpdateLotteryParams {
 }
 
 const updateLottery = async ({ lottery_id, updateLottery }: UpdateLotteryParams) => {
-  const response = await fetch(`${BACKEND_ROUTES.lottery.base}/${lottery_id}`, {
+  const response = await fetchWithAuth(`${BACKEND_ROUTES.lottery.base}/${lottery_id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({ updateLottery }),
   });
 

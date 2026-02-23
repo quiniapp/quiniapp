@@ -3,6 +3,7 @@ import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IOrganizationEntityFront } from '@helper/types/organization.type.ts';
 import { INewUserEntity } from '@helper/request/user.request.ts';
 import toast from 'react-hot-toast';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface CreateGroupPayload {
   parentOrgId: string;
@@ -11,12 +12,11 @@ interface CreateGroupPayload {
 }
 
 const createGroup = async (payload: CreateGroupPayload): Promise<IOrganizationEntityFront> => {
-  const response = await fetch(BACKEND_ROUTES.organization.createSub(payload.parentOrgId), {
+  const response = await fetchWithAuth(BACKEND_ROUTES.organization.createSub(payload.parentOrgId), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({
       organization: payload.organization,
       superAdmin: payload.superAdmin,

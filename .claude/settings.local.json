@@ -1,22 +1,7 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(find:*)",
-      "Bash(python:*)",
-      "Bash(npx supabase:*)",
-      "Bash(npm:*)",
-      "Bash(ls:*)",
-      "Bash(mv:*)",
-      "Bash(cat:*)",
-      "Bash(grep:*)",
-      "Bash(npx tsc:*)",
-      "Bash(curl:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(npx eslint src/**/*.ts)",
-      "Bash(git rm:*)"
-    ],
-    "deny": [],
-    "ask": []
+    "allow": ["Bash", "Read", "Write", "WebSearch", "Skill(superpowers:*)"],
+    "deny": ["Bash(git push:*)"],
+    "ask": ["Read(.env*)", "Read(.git/**)", "Bash(rm -rf:*)"]
   }
 }

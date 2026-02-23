@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IOrganizationEntityFront } from '@helper/types/organization.type.ts';
 import { USER_TYPE } from '@helper/types/user.type.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const fetchOrganizations = async () => {
-  const response = await fetch(BACKEND_ROUTES.organization.base, {
+  const response = await fetchWithAuth(BACKEND_ROUTES.organization.base, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
   });
 
   if (!response.ok) {

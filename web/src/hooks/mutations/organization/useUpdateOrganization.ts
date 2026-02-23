@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IOrganizationEntityFront } from '@helper/types/organization.type.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface UpdateOrganizationPayload {
   organization_id: string;
@@ -8,12 +9,11 @@ interface UpdateOrganizationPayload {
 }
 
 const updateOrganization = async (payload: UpdateOrganizationPayload): Promise<IOrganizationEntityFront> => {
-  const response = await fetch(BACKEND_ROUTES.organization.id(payload.organization_id), {
+  const response = await fetchWithAuth(BACKEND_ROUTES.organization.id(payload.organization_id), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({ updateOrganization: { name: payload.name } }),
   });
 

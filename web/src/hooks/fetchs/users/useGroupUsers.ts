@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const fetchGroupUsers = async (groupId: string) => {
-  const response = await fetch(`${BACKEND_ROUTES.user.base}?group_id=${encodeURIComponent(groupId)}`, {
+  const response = await fetchWithAuth(`${BACKEND_ROUTES.user.base}?group_id=${encodeURIComponent(groupId)}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
   });
 
   if (!response.ok) {
