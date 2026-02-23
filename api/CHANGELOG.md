@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-02-23
+
+#### Archive Routing: Today's Bets Not Returned
+- **Problem**: `getLastActiveDays` retornaba `[{date: 'YYYY-MM-DD'}, ...]` (objetos) en vez de `['YYYY-MM-DD', ...]` (strings) porque el SP usa `RETURNS TABLE(date DATE)`. Esto hacía que `isArchiveDate` siempre devolviera `true` (cualquier string < `'[object Object]'` en comparación léxica), ruteando **todas** las fechas a `bets_archive`, incluyendo hoy.
+- **Solution**: Mapeado correcto del resultado del RPC en `ActivityDaysRepository.getLastActiveDays`
+  - Archivo: `api/src/activity/repository/activity-days.repository.ts`
+
+#### Archive Table FK Constraints
+- **Problem**: `bets_archive` had no FK constraints to `lotteries` or `schedules`, causing PostgREST to throw `PGRST200` when using `.select('*, lotteries(*), schedules(*)')` on archived dates
+- **Solution**: Added FK constraints matching the main `bets` table
+  - Migration: `api/supabase/migrations/20260223191427_add_fk_constraints_bets_archive.sql`
+  - `fk_bets_archive_lottery`: `lottery_id → lotteries(lottery_id) ON DELETE SET NULL`
+  - `fk_bets_archive_schedule`: `schedule_id → schedules(schedule_id) ON DELETE SET NULL`
+  - `fk_bets_archive_user`: `user_id → users(user_id) ON DELETE SET NULL`
+
 ### Added - 2026-02-12
 
 #### Database Performance - Current Accounts Indexes
