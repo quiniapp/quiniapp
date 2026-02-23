@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { TicketSums } from '@helper/request/bet.request';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 
 
@@ -24,9 +25,8 @@ export async function fetchAmountsByTicketNumber({
   const params = new URLSearchParams({ ticket_number });
 
   const url = `${BACKEND_ROUTES.bet.amounts}?${params.toString()}`;
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching bets');

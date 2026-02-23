@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-02-22
+
+#### Auth Loop on Page Load Without Session
+
+- **Auth expiry no longer calls server logout or causes a loop**: Fixed `web/src/providers/AuthProvider.tsx`
+  - When the `auth:expired` event fired (refresh token missing/invalid), the handler called `logout()` which hit `POST /api/private/auth/logout` → 401 → triggered another refresh → fired `auth:expired` again → infinite loop
+  - Fix 1: `auth:expired` handler now just clears local state (`queryClient.clear()` + `setSession(null)`) without any API call — the token is already gone, no server call needed
+  - Fix 2: explicit `logout()` calls use `{ _skipRefreshRetry: true }` so a 401 on the logout endpoint never triggers a refresh cycle
+
+### Fixed - 2026-02-20
+
+#### Session Management - Bug Fixes
+
+- **validate() no longer disconnects on transient errors**: Fixed `web/src/providers/AuthProvider.tsx`
+  - Previously, ANY error during the periodic validation (network error, 5xx, timeout) would call `setSession(null)` and log the user out
+  - Now only an explicit HTTP 401 clears the session; transient errors are silenced and the next interval will retry
+  - This fixes the bug where users were being randomly logged out during active sessions
+
+- **Auth expiry now triggers automatic logout from anywhere in the app**: Updated `web/src/providers/AuthProvider.tsx`
+  - Added `useEffect` that listens for the global `auth:expired` CustomEvent and calls `logout()`
+  - Ensures that 401s from `apiClient` (token refresh failure) or `fetchWithAuth` (direct 401) are surfaced to the auth system
+
+#### New Infrastructure
+
+- **`web/src/lib/authEvents.ts`** (new): Centralized auth expiry event system
+  - `AUTH_EXPIRED_EVENT = 'auth:expired'` constant
+  - `dispatchAuthExpired()` function to fire the event from anywhere
+
+- **`web/src/lib/fetchWithAuth.ts`** (new): Authenticated fetch wrapper
+  - Wraps `fetch()` with `credentials: 'include'` by default
+  - Detects HTTP 401 responses, dispatches `auth:expired`, and throws `'Sesión expirada'`
+  - Prevents 401s from raw-fetch hooks silently failing without redirecting to login
+
+- **`web/src/lib/apiClient.ts`**: Now dispatches `auth:expired` when token refresh fails definitively
+  - When `refreshAccessToken()` returns `false` in `handleUnauthorized()`, calls `dispatchAuthExpired()` before throwing
+
+#### Hook Migration
+
+Migrated **21 hooks** from raw `fetch()` to `fetchWithAuth()` so that any expired-session 401 triggers login redirect:
+- `web/src/hooks/fetchs/plays/useBets.ts`
+- `web/src/hooks/fetchs/plays/useInfiniteBets.ts`
+- `web/src/hooks/fetchs/plays/useInfiniteBetsByTicketNumber.ts`
+- `web/src/hooks/fetchs/plays/useGetBetysByTicketNumber.ts`
+- `web/src/hooks/fetchs/plays/useGetAmountsByTicketNumber.ts`
+- `web/src/hooks/fetchs/plays/useTotals.ts`
+- `web/src/hooks/fetchs/schedule/useSchedules.ts`
+- `web/src/hooks/fetchs/schedule-lottery/useScheduleLottery.ts`
+- `web/src/hooks/fetchs/results/useResults.ts`
+- `web/src/hooks/fetchs/lottery/useLotteries.ts`
+- `web/src/hooks/fetchs/current-account/useGetCurrentAccount.ts`
+- `web/src/hooks/fetchs/current-account/useGetCurrentAccountByUser.ts`
+- `web/src/hooks/fetchs/settings/useGetUsedStorage.ts`
+- `web/src/hooks/useWinners.ts`
+- `web/src/hooks/useCurrentAccount.ts`
+- `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`
+- `web/src/hooks/mutations/results/useCreateresults.mutation.ts`
+- `web/src/hooks/mutations/results/useUpdateResults.mutation.ts`
+- `web/src/hooks/mutations/results/useDeleteResults.ts`
+- `web/src/hooks/mutations/current-account/useUpdateCurrentAccoutnByUser.ts`
+- `web/src/hooks/mutations/current-account/useLiquidateCurrentAccount.ts`
+- `web/src/hooks/mutations/current-account/useCalculateCurrentAccount.ts`
+- `web/src/hooks/mutations/current-account/useBulkUpdateCurrentAccount.ts`
+- `web/src/hooks/fetchs/organization/useGroups.ts`
+- `web/src/hooks/fetchs/organization/useOrganizations.ts`
+- `web/src/hooks/fetchs/users/useAssignableUsers.ts`
+- `web/src/hooks/fetchs/users/useGroupUsers.ts`
+- `web/src/hooks/mutations/lottery/useCreateLottery.ts`
+- `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+- `web/src/hooks/mutations/lottery/useUpdateLottery.ts`
+- `web/src/hooks/mutations/organization/useCreateGroup.ts`
+- `web/src/hooks/mutations/organization/useCreateOrganization.ts`
+- `web/src/hooks/mutations/organization/useDeleteOrganization.ts`
+- `web/src/hooks/mutations/organization/useUpdateOrganization.ts`
+- `web/src/hooks/mutations/schedule/useCreateSchedule.ts`
+- `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+- `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+- `web/src/hooks/mutations/users/useAssignUserToGroup.ts`
+- `web/src/hooks/mutations/winner/useWinner.ts`
+
 ### Added - 2026-01-15
 
 #### Account Unlock UI

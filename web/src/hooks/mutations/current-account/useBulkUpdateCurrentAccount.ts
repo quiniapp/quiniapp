@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { editPayloadObject } from '@/components/modals/GenerateLiquitationModal';
 
 type BulkVars = {
@@ -23,10 +24,9 @@ async function bulkUpdateCurrentAccount({
   const body = {
     updateCurrentAccount: Object.fromEntries(updateCurrentAccount), // { [id]: {claims, paid, collections} }
   };
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(body),
   });
 

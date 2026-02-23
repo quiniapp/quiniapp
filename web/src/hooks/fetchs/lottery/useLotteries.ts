@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { DayKey } from '@helper/types/schedule-lottery.type';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface UseLotteriesOptions {
   all?: boolean;
@@ -19,9 +20,8 @@ const fetchLotteries = async (options?: UseLotteriesOptions) => {
   const queryString = params.toString();
   const url = `${BACKEND_ROUTES.lottery.base}${queryString ? `?${queryString}` : ''}`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
   if (!res.ok) throw new Error('Error fetching lotteries');
   return await res.json().then((res) => res.data.lottery);

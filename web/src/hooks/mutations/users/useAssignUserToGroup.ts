@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IUserEntityFront } from '@helper/types/user.type';
 import toast from 'react-hot-toast';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface AssignUserPayload {
   user_id: string;
@@ -9,12 +10,11 @@ interface AssignUserPayload {
 }
 
 const assignUserToGroup = async (payload: AssignUserPayload): Promise<IUserEntityFront> => {
-  const response = await fetch(BACKEND_ROUTES.user.assignToGroup, {
+  const response = await fetchWithAuth(BACKEND_ROUTES.user.assignToGroup, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify(payload),
   });
 

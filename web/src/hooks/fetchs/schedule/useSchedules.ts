@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { DayKey } from '@helper/types/schedule-lottery.type';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface UseSchedulesOptions {
   all?: boolean;
@@ -19,9 +20,8 @@ const fetchSchedules = async (options?: UseSchedulesOptions) => {
   const queryString = params.toString();
   const url = `${BACKEND_ROUTES.schedule.base}${queryString ? `?${queryString}` : ''}`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
   if (!res.ok) throw new Error('Error fetching schedules');
   return await res.json().then((res) => res.data.schedule);

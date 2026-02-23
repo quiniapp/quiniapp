@@ -2,6 +2,7 @@ import { IUpdateScheduleEntity } from '@helper/request/schedule.request';
 import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { toast } from 'react-hot-toast';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface UpdateScheduleParams {
   schedule_id: string;
@@ -9,12 +10,11 @@ interface UpdateScheduleParams {
 }
 
 const updateSchedule = async ({ schedule_id, updateSchedule }: UpdateScheduleParams) => {
-  const response = await fetch(`${BACKEND_ROUTES.schedule.base}/${schedule_id}`, {
+  const response = await fetchWithAuth(`${BACKEND_ROUTES.schedule.base}/${schedule_id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({ updateSchedule }),
   });
 

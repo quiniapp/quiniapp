@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 export const CURRENT_ACCOUNT_LATEST = 'latest';
 
@@ -15,9 +16,8 @@ export async function fetchCurrentAccount(date?: string | null): Promise<ICurren
     `${BACKEND_ROUTES.current_account.base}` +
     (date ? `?date=${encodeURIComponent(date)}` : '');
 
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
   if (!res.ok) throw new Error('Error fetching results');
 
