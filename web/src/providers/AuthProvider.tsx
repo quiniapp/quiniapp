@@ -9,6 +9,7 @@ import {
   VISIBILITY_MIN_GAP_MS,
 } from '@helper/config/session.config';
 import { apiClient, ApiError } from '@/lib/apiClient';
+import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
 
 // Auto-refresh access token every 13-14 minutes (random to avoid thundering herd)
 const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
@@ -54,12 +55,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       if (!user) throw new Error('Respuesta inválida del servidor');
       setSession(user);
     } catch (err) {
-      // Si es un error 401, simplemente limpiar la sesión
       if (err instanceof ApiError && err.statusCode === 401) {
         setSession(null);
-      } else {
-        setSession(null);
       }
+      // Otros errores (red, 5xx): no desconectar, el intervalo siguiente reintentará
     } finally {
       setLoading(false);
     }
@@ -75,9 +74,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         );
         if (!user) throw new Error('Respuesta inválida del servidor');
 
-        // seteo inmediato para actualizar UI
-        setSession(user);
-        // una sola validación posterior para asegurar cookies/estado del server
+        // validate establece la sesión con todos los datos (incluyendo organization_id)
         await validate();
       } catch (err) {
         // Re-lanzar el error con el mensaje del servidor para que el componente lo capture
@@ -99,7 +96,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const endpoint = logoutAll
           ? BACKEND_ROUTES.auth.logoutAll
           : BACKEND_ROUTES.auth.logout;
-        await apiClient.post(endpoint);
+        await apiClient.post(endpoint, undefined, { _skipRefreshRetry: true });
       } catch {
         // no-op - even if logout fails on server, clear local session
       } finally {
@@ -123,6 +120,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, [logout]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
+
+  // Escuchar evento auth:expired disparado por apiClient cuando el refresh falla.
+  // En este caso el token ya no existe — no llamamos al server logout, solo limpiamos estado local.
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      queryClient.clear();
+      setSession(null);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, [queryClient, setSession]);
 
   // Primer validate al montar
   useEffect(() => {
