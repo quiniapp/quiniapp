@@ -16,7 +16,7 @@ export class BetController {
     tern,
     quatern,
     ticket_number,
-    organization_id,
+    organization_ids,
     page = 1,
     limit = 100,
   }: {
@@ -29,7 +29,7 @@ export class BetController {
     tern?: boolean;
     quatern?: boolean;
     ticket_number?: string;
-    organization_id: string;
+    organization_ids: string[];
     page?: number;
     limit?: number;
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
@@ -37,7 +37,7 @@ export class BetController {
       if (grouped) {
         // Grouped no tiene paginación por ahora, mantener comportamiento anterior
         const bets = await this.repository.getAllBetsGrouped({
-          organization_id,
+          organization_ids,
           schedule_id,
           date,
           cashier_id,
@@ -60,7 +60,7 @@ export class BetController {
       } else {
         // Con paginación
         const { data: bets, count } = await this.repository.getAllBets({
-          organization_id,
+          organization_ids,
           schedule_id,
           date,
           cashier_id,
@@ -87,13 +87,13 @@ export class BetController {
         if (ticket_number) {
           const ticketSums = await this.repository.getAmountsByTicket({
             ticket_number,
-            organization_id,
+            organization_ids,
           });
           aggregates = {
-            totalAmount: ticketSums.total_amount,
-            totalPrize: ticketSums.total_prize,
-            totalCount: ticketSums.total_count,
-            totalWinnersCount: ticketSums.total_winners_count,
+            totalAmount: ticketSums?.total_amount ?? 0,
+            totalPrize: ticketSums?.total_prize ?? 0,
+            totalCount: ticketSums?.total_count ?? 0,
+            totalWinnersCount: ticketSums?.total_winners_count ?? 0,
           };
         } else {
           // Obtener totales generales en paralelo
@@ -103,14 +103,14 @@ export class BetController {
               schedule_id,
               cashier_id,
               lottery_id,
-              organization_id,
+              organization_ids,
             }),
             this.repository.getTotalPrize({
               date,
               schedule_id,
               cashier_id,
               lottery_id,
-              organization_id,
+              organization_ids,
             }),
           ]);
           aggregates = {
@@ -142,13 +142,13 @@ export class BetController {
     schedule_id,
     cashier_id,
     lottery_id,
-    organization_id,
+    organization_ids,
   }: {
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
-    organization_id: string;
+    organization_ids: string[];
   }) => {
     try {
       const total = await this.repository.getTotalAmount({
@@ -156,7 +156,7 @@ export class BetController {
         schedule_id,
         cashier_id,
         lottery_id,
-        organization_id,
+        organization_ids,
       });
       return total;
     } catch (error) {
@@ -170,13 +170,13 @@ export class BetController {
     schedule_id,
     cashier_id,
     lottery_id,
-    organization_id,
+    organization_ids,
   }: {
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
-    organization_id: string;
+    organization_ids: string[];
   }) => {
     try {
       const total = await this.repository.getTotalPrize({
@@ -184,7 +184,7 @@ export class BetController {
         schedule_id,
         cashier_id,
         lottery_id,
-        organization_id,
+        organization_ids,
       });
       return total;
     } catch (error) {
@@ -195,16 +195,16 @@ export class BetController {
 
   getAmountsByTicket = async ({
     ticket_number,
-    organization_id,
+    organization_ids,
   }: {
     ticket_number: string;
-    organization_id: string;
+    organization_ids: string[];
   }) => {
     try {
       // Repository handles searching in both main and archive tables
       const totals = await this.repository.getAmountsByTicket({
         ticket_number,
-        organization_id,
+        organization_ids,
       });
       return totals;
     } catch (error) {

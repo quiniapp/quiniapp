@@ -5,7 +5,7 @@ import { getTableName, getRpcName } from '../../archive/helper/archive-helper';
 
 export class BetRepository {
   async getAllBets({
-    organization_id,
+    organization_ids,
     schedule_id,
     date,
     cashier_id,
@@ -17,7 +17,7 @@ export class BetRepository {
     page = 1,
     limit = 100,
   }: {
-    organization_id: string;
+    organization_ids: string[];
     schedule_id?: string;
     date: string;
     cashier_id?: string;
@@ -38,7 +38,7 @@ export class BetRepository {
     let query = supabase
       .from(tableName)
       .select('*, lotteries(*), schedules(*)', { count: 'exact' })
-      .eq('organization_id', organization_id)
+      .in('organization_id', organization_ids)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -50,7 +50,7 @@ export class BetRepository {
         .from('tickets')
         .select('ticket_id')
         .eq('ticket_number', ticket_number)
-        .eq('organization_id', organization_id)
+        .in('organization_id', organization_ids)
         .single();
       if (errorTicketNumber) throw errorTicketNumber;
       query = query.eq('ticket_id', ticket?.ticket_id);
@@ -70,7 +70,7 @@ export class BetRepository {
   }
 
   async getAllBetsGrouped({
-    organization_id,
+    organization_ids,
     schedule_id,
     date,
     cashier_id,
@@ -79,7 +79,7 @@ export class BetRepository {
     quatern,
     tern,
   }: {
-    organization_id: string;
+    organization_ids: string[];
     schedule_id?: string;
     date: string;
     cashier_id?: string;
@@ -91,84 +91,131 @@ export class BetRepository {
     // Determine which RPC to use based on date
     const rpcName = getRpcName(date, 'get_grouped_bets_for_parse');
 
-    const { data, error } = await supabase.rpc(rpcName, {
-      p_date: date,
-      p_schedule_id: schedule_id ?? null,
-      p_cashier_id: cashier_id ?? null,
-      p_lottery_id: lottery_id ?? null,
-      p_winners_only: !!winners,
-      p_organization_id: organization_id,
-    });
+    // Call RPC for each org and merge results
+    const orgResults = await Promise.all(
+      organization_ids.map(async (orgId) => {
+        const { data, error } = await supabase.rpc(rpcName, {
+          p_date: date,
+          p_schedule_id: schedule_id ?? null,
+          p_cashier_id: cashier_id ?? null,
+          p_lottery_id: lottery_id ?? null,
+          p_winners_only: !!winners,
+          p_organization_id: orgId,
+        });
+        if (error) throw error;
+        return (data as IBetEntityBack[]) || [];
+      })
+    );
 
-    if (error) throw error;
+    // Merge results by grouping key, summing amount/prize/hits
+    const mergedMap = new Map<string, IBetEntityBack>();
+    for (const orgBets of orgResults) {
+      for (const bet of orgBets) {
+        const key = [
+          bet.number,
+          bet.lottery_id,
+          bet.schedule_id,
+          bet.bet_type,
+          bet.place,
+          bet.with,
+          bet.position,
+        ].join('|');
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key)!;
+          existing.amount = ((existing.amount as number) || 0) + ((bet.amount as number) || 0);
+          existing.prize = ((existing.prize as number) || 0) + ((bet.prize as number) || 0);
+          existing.hits = ((existing.hits as number) || 0) + ((bet.hits as number) || 0);
+        } else {
+          mergedMap.set(key, { ...bet });
+        }
+      }
+    }
+
+    let result = Array.from(mergedMap.values()).sort(
+      (a, b) => ((b.amount as number) || 0) - ((a.amount as number) || 0)
+    );
 
     if (quatern && tern) {
-      return data.filter(
-        (bet: IBetEntityBack) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
+      return result.filter(
+        (bet) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
       );
     }
     if (quatern) {
-      return data.filter((bet: IBetEntityBack) => bet.bet_type === BET_TYPE.QUATERN);
+      return result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
     }
     if (tern) {
-      return data.filter((bet: IBetEntityBack) => bet.bet_type === BET_TYPE.TERN);
+      return result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
     }
 
-    return data;
+    return result;
   }
 
   async getTotalAmount({
-    organization_id,
+    organization_ids,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
   }: {
-    organization_id: string;
+    organization_ids: string[];
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
   }) {
-    // Determine which RPC to use based on date
-    const rpcName = getRpcName(date, 'bets_total_amount');
+    // Use direct query with .in() to support multiple org IDs
+    const tableName = getTableName(date, 'bets');
 
-    const { data, error } = await supabase.rpc(rpcName, {
-      p_date: date,
-      p_schedule_id: schedule_id ?? null,
-      p_cashier_id: cashier_id ?? null,
-      p_lottery_id: lottery_id ?? null,
-      p_organization_id: organization_id,
-    });
+    let query = supabase
+      .from(tableName)
+      .select('amount')
+      .in('organization_id', organization_ids)
+      .eq('date', date)
+      .is('deleted_at', null);
+
+    if (schedule_id) query = query.eq('schedule_id', schedule_id);
+    if (cashier_id) query = query.eq('user_id', cashier_id);
+    if (lottery_id) query = query.eq('lottery_id', lottery_id);
+
+    const { data, error } = await query;
     if (error) throw error;
-    return data as number;
+    return (data || []).reduce(
+      (sum: number, row: { amount: number }) => sum + (row.amount || 0),
+      0
+    );
   }
 
   async getTotalPrize({
-    organization_id,
+    organization_ids,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
   }: {
-    organization_id: string;
+    organization_ids: string[];
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
   }) {
-    // Determine which RPC to use based on date
-    const rpcName = getRpcName(date, 'bets_total_prize');
+    // Use direct query with .in() to support multiple org IDs
+    const tableName = getTableName(date, 'bets');
 
-    const { data, error } = await supabase.rpc(rpcName, {
-      p_date: date,
-      p_schedule_id: schedule_id ?? null,
-      p_cashier_id: cashier_id ?? null,
-      p_lottery_id: lottery_id ?? null,
-      p_organization_id: organization_id,
-    });
+    let query = supabase
+      .from(tableName)
+      .select('prize')
+      .in('organization_id', organization_ids)
+      .eq('date', date)
+      .eq('winner', true)
+      .is('deleted_at', null);
+
+    if (schedule_id) query = query.eq('schedule_id', schedule_id);
+    if (cashier_id) query = query.eq('user_id', cashier_id);
+    if (lottery_id) query = query.eq('lottery_id', lottery_id);
+
+    const { data, error } = await query;
     if (error) throw error;
-    return data as number;
+    return (data || []).reduce((sum: number, row: { prize: number }) => sum + (row.prize || 0), 0);
   }
 
   async getWinnerBets({
@@ -222,36 +269,73 @@ export class BetRepository {
 
   async getAmountsByTicket({
     ticket_number,
-    organization_id,
+    organization_ids,
   }: {
     ticket_number: string;
-    organization_id: string;
+    organization_ids: string[];
   }) {
-    // Try main table first (has more indexes, faster)
-    const { data, error } = await supabase
-      .rpc('get_ticket_sums', {
-        p_ticket: ticket_number,
-        p_organization_id: organization_id,
+    // Aggregate sums across all orgs in the network
+    // (the ticket belongs to exactly one org, but we search all to find it)
+    const results = await Promise.all(
+      organization_ids.map(async (orgId) => {
+        const { data, error } = await supabase
+          .rpc('get_ticket_sums', {
+            p_ticket: ticket_number,
+            p_organization_id: orgId,
+          })
+          .single();
+        if (error) return null;
+        return data as TicketSums | null;
       })
-      .single();
+    );
 
-    // If found in main table, return
-    if (!error && data) {
-      const ticketData = data as TicketSums;
-      if (ticketData.total_count > 0 || ticketData.total_amount > 0) {
-        return ticketData;
-      }
+    const zeroSums: TicketSums = {
+      total_amount: 0,
+      total_prize: 0,
+      total_count: 0,
+      total_winners_count: 0,
+    };
+
+    const mainTotal = results
+      .filter((r): r is TicketSums => r !== null)
+      .reduce(
+        (acc, r) => ({
+          total_amount: acc.total_amount + (r.total_amount || 0),
+          total_prize: acc.total_prize + (r.total_prize || 0),
+          total_count: acc.total_count + (r.total_count || 0),
+          total_winners_count: acc.total_winners_count + (r.total_winners_count || 0),
+        }),
+        { ...zeroSums }
+      );
+
+    if (mainTotal.total_count > 0 || mainTotal.total_amount > 0) {
+      return mainTotal;
     }
 
     // If not found in main table, try archive
-    const { data: archiveData, error: archiveError } = await supabase
-      .rpc('get_ticket_sums_archive', {
-        p_ticket: ticket_number,
-        p_organization_id: organization_id,
+    const archiveResults = await Promise.all(
+      organization_ids.map(async (orgId) => {
+        const { data, error } = await supabase
+          .rpc('get_ticket_sums_archive', {
+            p_ticket: ticket_number,
+            p_organization_id: orgId,
+          })
+          .single();
+        if (error) return null;
+        return data as TicketSums | null;
       })
-      .single();
+    );
 
-    if (archiveError) throw archiveError;
-    return archiveData as TicketSums;
+    return archiveResults
+      .filter((r): r is TicketSums => r !== null)
+      .reduce(
+        (acc, r) => ({
+          total_amount: acc.total_amount + (r.total_amount || 0),
+          total_prize: acc.total_prize + (r.total_prize || 0),
+          total_count: acc.total_count + (r.total_count || 0),
+          total_winners_count: acc.total_winners_count + (r.total_winners_count || 0),
+        }),
+        { ...zeroSums }
+      );
   }
 }

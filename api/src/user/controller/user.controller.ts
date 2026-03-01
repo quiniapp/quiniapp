@@ -52,6 +52,23 @@ export class UserController {
     return parseUser(result);
   };
 
+  /**
+   * Get a user by ID verifying they belong to the admin's network.
+   * Used by CAPITALIST/OWNER to access users across sub-orgs.
+   * Returns the raw entity (including organization_id) for callers that need it.
+   */
+  getByIdFromNetwork = async (
+    userId: string,
+    adminOrgId: string
+  ): Promise<IUserEntityFront & { organization_id: string }> => {
+    const networkOrgIds = await this.getNetworkOrgIds(adminOrgId);
+    const user = await this.repository.getByIdWithoutOrgRestriction(userId);
+    if (!networkOrgIds.includes(user.organization_id)) {
+      throw new ForbiddenError('El usuario no pertenece a tu red');
+    }
+    return { ...parseUser(user), organization_id: user.organization_id };
+  };
+
   async getAll(
     organization_id: string,
     user_type: USER_TYPE,

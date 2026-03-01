@@ -5,6 +5,7 @@ import {
   IUpdateCurrentAccountEntity,
 } from '@helper/request/current_account.request';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
+import { UserRepository } from '../../user/repository/user.repository';
 
 import { parseCurrentAccount } from '../helper/parseCurrentAccount';
 import {
@@ -211,18 +212,27 @@ export class CurrentAccountController {
           user_id: props.user_id,
           date: props.date,
         });
-      } else if (props.include_network && props.user_type === USER_TYPE.CAPITALIST) {
-        // CAPITALIST con include_network ve toda la red
+      } else if ([USER_TYPE.CAPITALIST, USER_TYPE.OWNER].includes(props.user_type)) {
+        // CAPITALIST/OWNER siempre ven toda la red
         currentaccounts = await this.repository.getAllCurrentAccountNetworkHandler({
           organization_id: props.organization_id,
           date: props.date,
         });
       } else {
-        // Otros usuarios ven solo su organización
-        currentaccounts = await this.repository.getAllCurrentAccountHandler({
-          organization_id: props.organization_id,
-          date: props.date,
-        });
+        // SUPERADMIN/ADMIN: si están en org raíz, ven toda la red; si están en sub-org, solo su org
+        const userRepo = new UserRepository();
+        const isSubOrg = await userRepo.isSubOrganization(props.organization_id);
+        if (isSubOrg) {
+          currentaccounts = await this.repository.getAllCurrentAccountHandler({
+            organization_id: props.organization_id,
+            date: props.date,
+          });
+        } else {
+          currentaccounts = await this.repository.getAllCurrentAccountNetworkHandler({
+            organization_id: props.organization_id,
+            date: props.date,
+          });
+        }
       }
 
       return currentaccounts.map((currentaccount) => parseCurrentAccount(currentaccount));
