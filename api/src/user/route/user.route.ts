@@ -41,6 +41,7 @@ export class UserRouter {
 
   private newUserhandler = asyncHandler(async (req: Request, res: Response) => {
     const { newUser }: { newUser: INewUserEntity } = req.body;
+    const { user } = req;
 
     if (!newUser) {
       throw new BadRequestError('Datos del nuevo usuario requeridos');
@@ -50,11 +51,15 @@ export class UserRouter {
       throw new ForbiddenError('No se puede crear un usuario de tipo OWNER');
     }
 
-    const user = await this.controller.create(newUser, req.organization_id!);
+    if ([USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(user!.user.user_type)) {
+      throw new ForbiddenError('No tienes permisos para crear usuarios');
+    }
+
+    const createdUser = await this.controller.create(newUser, req.organization_id!);
 
     const response: APIResponse<IUserEntityFront> = {
       data: {
-        user: user!,
+        user: createdUser!,
       },
     };
 
@@ -73,7 +78,12 @@ export class UserRouter {
       throw new ForbiddenError('Los cajeros no pueden ver otros usuarios');
     }
 
-    const fetchedUser = await this.controller.get({ user_id }, req.organization_id!);
+    let fetchedUser;
+    if ([USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user!.user.user_type)) {
+      fetchedUser = await this.controller.getByIdFromNetwork(user_id, req.organization_id!);
+    } else {
+      fetchedUser = await this.controller.get({ user_id }, req.organization_id!);
+    }
 
     const response: APIResponse<IUserEntityFront> = {
       data: {
@@ -146,7 +156,14 @@ export class UserRouter {
       throw new ForbiddenError('Los cajeros no pueden actualizar usuarios');
     }
 
-    const updatedUser = await this.controller.update(user_id, updateUser, req.organization_id!);
+    // For CAPITALIST/OWNER, resolve the user's real org_id (may be in a sub-org)
+    let targetOrgId = req.organization_id!;
+    if ([USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user!.user.user_type)) {
+      const targetUser = await this.controller.getByIdFromNetwork(user_id, req.organization_id!);
+      targetOrgId = targetUser.organization_id;
+    }
+
+    const updatedUser = await this.controller.update(user_id, updateUser, targetOrgId);
 
     const response: APIResponse<IUserEntityFront> = {
       data: {
@@ -167,7 +184,14 @@ export class UserRouter {
       throw new ForbiddenError('Los cajeros no pueden eliminar usuarios');
     }
 
-    const deletedUser = await this.controller.delete({ user_id }, req.organization_id!);
+    // For CAPITALIST/OWNER, resolve the user's real org_id (may be in a sub-org)
+    let targetOrgId = req.organization_id!;
+    if ([USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user!.user.user_type)) {
+      const targetUser = await this.controller.getByIdFromNetwork(user_id, req.organization_id!);
+      targetOrgId = targetUser.organization_id;
+    }
+
+    const deletedUser = await this.controller.delete({ user_id }, targetOrgId);
 
     const response: APIResponse<IUserEntityFront> = {
       data: {

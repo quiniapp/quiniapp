@@ -4,15 +4,18 @@ import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { TicketSums } from '@helper/request/bet.request';
+import { UserRepository } from '../../user/repository/user.repository';
 
 export class BetRouter {
   public router: Router;
 
   private controller: BetController;
+  private userRepository: UserRepository;
 
   constructor() {
     this.router = Router();
     this.controller = new BetController();
+    this.userRepository = new UserRepository();
     this.setupRoutes();
   }
 
@@ -27,6 +30,22 @@ export class BetRouter {
     // this.router.put('/:id', this.controller.update);
     // this.router.delete('/:id', this.controller.delete);
   }
+
+  /**
+   * Resolve the array of organization IDs to query.
+   * CASHIER always sees only their own org.
+   * All other roles see their org + all sub-orgs (full network).
+   */
+  private getOrgIds = async (req: Request): Promise<string[]> => {
+    const rootOrgId = req.organization_id!;
+    const userType = req.user?.user.user_type;
+
+    if (userType === USER_TYPE.CASHIER) {
+      return [rootOrgId];
+    }
+
+    return this.userRepository.getOrganizationDescendants(rootOrgId);
+  };
 
   private getAllBets: RequestHandler = async (req: Request, res: Response) => {
     const {
@@ -55,6 +74,8 @@ export class BetRouter {
     }
 
     try {
+      const organization_ids = await this.getOrgIds(req);
+
       const result = await this.controller.getAllBets({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
@@ -72,7 +93,7 @@ export class BetRouter {
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
         page: typeof page === 'string' ? parseInt(page, 10) : 1,
         limit: typeof limit === 'string' ? parseInt(limit, 10) : 100,
-        organization_id: req.organization_id!,
+        organization_ids,
       });
       const response: APIResponse<typeof result> = {
         data: {
@@ -119,6 +140,8 @@ export class BetRouter {
     }
 
     try {
+      const organization_ids = await this.getOrgIds(req);
+
       const total = await this.controller.getTotalAmount({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
@@ -129,7 +152,7 @@ export class BetRouter {
               ? cashier_id
               : undefined,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
-        organization_id: req.organization_id!,
+        organization_ids,
       });
       const response: APIResponse<number> = {
         data: {
@@ -176,6 +199,8 @@ export class BetRouter {
     }
 
     try {
+      const organization_ids = await this.getOrgIds(req);
+
       const total = await this.controller.getTotalPrize({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
@@ -186,7 +211,7 @@ export class BetRouter {
               ? cashier_id
               : undefined,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
-        organization_id: req.organization_id!,
+        organization_ids,
       });
       const response: APIResponse<number> = {
         data: {
@@ -220,8 +245,6 @@ export class BetRouter {
 
   private getAmountsByTicket: RequestHandler = async (req: Request, res: Response) => {
     const { ticket_number } = req.query;
-    //TODO : add cashir id to cashier only can see its own ticket
-    // const { user } = req;
 
     if (typeof ticket_number !== 'string') {
       const response: APIResponse<null> = {
@@ -234,9 +257,11 @@ export class BetRouter {
       return;
     }
     try {
+      const organization_ids = await this.getOrgIds(req);
+
       const total = await this.controller.getAmountsByTicket({
         ticket_number,
-        organization_id: req.organization_id!,
+        organization_ids,
       });
       const response: APIResponse<TicketSums> = {
         data: {

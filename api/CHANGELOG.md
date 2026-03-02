@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-03-01
+
+#### Groups Feature – Network-Aware Visibility
+
+Fixed multiple bugs where users with network-wide roles (OWNER, CAPITALIST, ADMIN in root org) could not see users, current accounts, or bets belonging to cashiers assigned to sub-organizations (groups).
+
+**User List (`api/src/user/`)**
+
+- **OWNER in `user.repository.ts`**: Changed from `.eq('organization_id', org_id)` to `getOrganizationDescendants()` + `.in()`, so OWNER now sees users across all sub-orgs in the network.
+- **ADMIN in `user.repository.ts`**: Added `isSubOrganization()` check. ADMIN in root org now uses `getOrganizationDescendants()` + `.in()` to see cashiers in all groups; ADMIN in a sub-org still sees only their group.
+- **`getUserHandler`, `updateUserHandler`, `deleteUserHandler` in `user.route.ts`**: For CAPITALIST/OWNER, these now call `getByIdFromNetwork()` to resolve the target user's real `organization_id` (may be in a sub-org) before getting, updating, or deleting.
+- **`getByIdFromNetwork()` in `user.controller.ts`**: New method that validates the target user belongs to the caller's network and returns the user with their `organization_id`.
+
+**Permissions (`api/src/user/route/user.route.ts`)**
+
+- **ADMIN cannot create users**: Added a `ForbiddenError` check in `newUserhandler` to block ADMIN and CASHIER from creating new users.
+
+**Current Account (`api/src/current-account/controller/current-account.controller.ts`)**
+
+- **`getAllCurrentAccountNetworkHandler`**: Changed condition from `(include_network && user_type === CAPITALIST)` to always use the network query for CAPITALIST and OWNER, and also for SUPERADMIN/ADMIN in root org (uses `isSubOrganization()` to determine). The `include_network` flag is preserved for backward compatibility but no longer controls behavior for CAPITALIST/OWNER.
+
+**Bets (`api/src/bet/`)**
+
+- **`bet.repository.ts`**: Changed all methods (`getAllBets`, `getAllBetsGrouped`, `getTotalAmount`, `getTotalPrize`, `getAmountsByTicket`) to accept `organization_ids: string[]` instead of `organization_id: string`.
+  - `getAllBets`: uses `.in('organization_id', organization_ids)` for direct query.
+  - `getTotalAmount`, `getTotalPrize`: replaced RPC calls with direct Supabase queries using `.in()` (archive-aware via `getTableName`).
+  - `getAllBetsGrouped`: calls the `get_grouped_bets_for_parse` RPC per org, then merges results by grouping key (summing amounts/prizes/hits).
+  - `getAmountsByTicket`: calls `get_ticket_sums` RPC per org and aggregates.
+- **`bet.controller.ts`**: Updated all method signatures to use `organization_ids: string[]`.
+- **`bet.routes.ts`**: Added `getOrgIds()` helper that resolves the full network of org IDs via `UserRepository.getOrganizationDescendants()`. All handlers now call this before invoking the controller. CASHIERs are still restricted to their own org only.
+
 ### Fixed - 2026-02-23
 
 #### Archive Routing: Today's Bets Not Returned
