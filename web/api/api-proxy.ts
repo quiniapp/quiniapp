@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
     const key = k.toLowerCase();
-    if (!['host', 'connection', 'content-length'].includes(key)) {
+    if (!['host', 'connection', 'content-length', 'transfer-encoding'].includes(key)) {
       headers.set(k, Array.isArray(v) ? v.join(', ') : String(v ?? ''));
     }
   }
