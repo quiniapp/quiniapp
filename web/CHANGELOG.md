@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-03-26
+
+#### Imprimir jugadas agrupadas en PDF
+
+- **Función PDF**: `web/src/functions/printGroupedBetsPDF.ts`
+  - Genera PDF landscape A4 con columnas: Jugada, Monto, Tipo, Turno, Quiniela, Aciertos
+  - Encabezado con: título "Jugadas Agrupadas", fecha del filtro, fecha/hora de impresión
+  - Filtros siempre visibles (Pasador, Grupo, Turno, Lotería — "Todos" si no hay seleccionado)
+  - Fila de totales al pie de la tabla (monto total + aciertos totales)
+  - Footer con paginación en cada hoja
+
+- **Botón de impresión**: `web/src/features/plays-and-hits/print-grouped-bets-button.tsx`
+  - Se habilita solo cuando el toggle "Agrupados" está activo (`grouped=true`)
+  - Usa `useBets` para obtener todos los registros agrupados (sin paginación)
+  - Resuelve nombres de turno, quiniela y pasador desde los hooks cacheados
+
+- **Integración en la página**: `web/src/features/plays-and-hits/index.tsx`
+  - Botón "Imprimir" agregado junto al toggle de agrupado
+
 ### Fixed - 2026-02-22
 
 #### Auth Loop on Page Load Without Session
