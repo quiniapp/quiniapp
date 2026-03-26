@@ -461,6 +461,50 @@ export class UserController {
   };
 
   /**
+   * Remove a user from a group (move them back to parent organization)
+   * Only CAPITALIST and OWNER can remove users from groups
+   */
+  removeUserFromGroup = async (
+    userId: string,
+    groupId: string,
+    adminOrgId: string,
+    adminUserType: USER_TYPE
+  ): Promise<IUserEntityFront> => {
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(adminUserType)) {
+      throw new ForbiddenError('Solo OWNER y CAPITALIST pueden eliminar usuarios de grupos');
+    }
+
+    const networkOrgIds = [
+      adminOrgId,
+      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
+    ];
+
+    // Verify group is in the network
+    if (!networkOrgIds.includes(groupId)) {
+      throw new ForbiddenError('El grupo no pertenece a tu red de organizaciones');
+    }
+
+    // Get target user and verify they are in the specified group
+    const targetUser = await this.repository.getByIdWithoutOrgRestriction(userId);
+    if (!targetUser) {
+      throw new BadRequestError('Usuario no encontrado');
+    }
+
+    if (targetUser.organization_id !== groupId) {
+      throw new BadRequestError('El usuario no pertenece a este grupo');
+    }
+
+    // Get the parent org of the group to move the user back
+    const parentOrgId = await this.repository.getParentOrganizationId(groupId);
+    if (!parentOrgId) {
+      throw new BadRequestError('El grupo no tiene organización padre');
+    }
+
+    const result = await this.repository.removeFromGroup(userId, groupId, parentOrgId);
+    return parseUser(result);
+  };
+
+  /**
    * Get users available for assignment to groups
    * Returns users from the network (excluding those already in the target group)
    */

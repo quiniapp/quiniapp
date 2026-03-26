@@ -32,6 +32,7 @@ import { useCreateGroup } from '@/hooks/mutations/organization/useCreateGroup';
 import { useAssignableUsers } from '@/hooks/fetchs/users/useAssignableUsers';
 import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers';
 import { useAssignUserToGroup } from '@/hooks/mutations/users/useAssignUserToGroup';
+import { useRemoveUserFromGroup } from '@/hooks/mutations/users/useRemoveUserFromGroup';
 import { IOrganizationEntityFront } from '@helper/types/organization.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { INewUserEntity } from '@helper/request/user.request';
@@ -55,6 +56,7 @@ const UserGroupsContent = () => {
   const { data: groups, isLoading, refetch } = useGroups(organizationId, role);
   const createGroupMutation = useCreateGroup();
   const assignUserMutation = useAssignUserToGroup();
+  const removeUserMutation = useRemoveUserFromGroup();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [includeSuperAdmin, setIncludeSuperAdmin] = useState(false);
@@ -141,6 +143,19 @@ const UserGroupsContent = () => {
       });
     } catch (error) {
       console.error('Error asignando usuario:', error);
+    }
+  };
+
+  const handleRemoveUser = async (user: IUserEntityFront) => {
+    if (!selectedGroup) return;
+
+    try {
+      await removeUserMutation.mutateAsync({
+        user_id: user.user_id,
+        group_id: selectedGroup.organization_id,
+      });
+    } catch (error) {
+      console.error('Error eliminando usuario del grupo:', error);
     }
   };
 
@@ -268,12 +283,13 @@ const UserGroupsContent = () => {
                         <TableHead className="text-white">Número</TableHead>
                         <TableHead className="text-white">Nombre</TableHead>
                         <TableHead className="text-white">Tipo</TableHead>
+                        <TableHead className="text-white text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoadingGroupUsers ? (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                             Cargando usuarios...
                           </TableCell>
                         </TableRow>
@@ -283,11 +299,22 @@ const UserGroupsContent = () => {
                             <TableCell>{user.number ?? '-'}</TableCell>
                             <TableCell className="font-medium">{user.name} {user.last_name}</TableCell>
                             <TableCell>{userTypeDictionary[user.user_type] ?? user.user_type}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveUser(user)}
+                                disabled={removeUserMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                             No hay usuarios en este grupo
                           </TableCell>
                         </TableRow>

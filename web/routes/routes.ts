@@ -20,6 +20,7 @@ export const BACKEND_ROUTES = {
     assignable: (excludeGroupId?: string) =>
       `${PRIVATE}/user/assignable${excludeGroupId ? `?exclude_group_id=${encodeURIComponent(excludeGroupId)}` : ''}`,
     assignToGroup: `${PRIVATE}/user/assign-to-group`,
+    removeFromGroup: `${PRIVATE}/user/remove-from-group`,
   },
   bet: {
     base: `${PRIVATE}/bet`,
