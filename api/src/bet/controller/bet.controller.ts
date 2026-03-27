@@ -87,16 +87,19 @@ export class BetController {
         } = {};
 
         if (ticket_number) {
-          const ticketSums = await this.repository.getAmountsByTicket({
-            ticket_number,
-            organization_ids,
-          });
-          aggregates = {
-            totalAmount: ticketSums?.total_amount ?? 0,
-            totalPrize: ticketSums?.total_prize ?? 0,
-            totalCount: ticketSums?.total_count ?? 0,
-            totalWinnersCount: ticketSums?.total_winners_count ?? 0,
-          };
+          // Solo calcular sumas del ticket en la primera página
+          if (page === 1) {
+            const ticketSums = await this.repository.getAmountsByTicket({
+              ticket_number,
+              organization_ids,
+            });
+            aggregates = {
+              totalAmount: ticketSums?.total_amount ?? 0,
+              totalPrize: ticketSums?.total_prize ?? 0,
+              totalCount: ticketSums?.total_count ?? 0,
+              totalWinnersCount: ticketSums?.total_winners_count ?? 0,
+            };
+          }
         } else {
           // Solo calcular totales en la primera página — no cambian entre páginas
           if (page === 1) {
