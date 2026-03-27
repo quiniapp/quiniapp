@@ -137,3 +137,8 @@ dist
 
 pnpm-lock.yaml
 bun.lockb
+
+# Claude Code local config (contains secrets)
+.claude/.env
+.claude/settings.local.json
+.mcp.json

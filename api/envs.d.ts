@@ -1,0 +1,17 @@
+import 'dotenv/config';
+export declare const NODE_ENV: string;
+export declare const IS_LOCAL: boolean;
+export declare const IS_PRODUCTION: boolean;
+export declare const JWT_SECRET_ACCESS: string;
+export declare const JWT_SECRET_REFRESH: string;
+export declare const PORT: number;
+export declare const BACKEND_URL: string;
+export declare const SUPABASE_URL: string;
+export declare const SUPABASE_SERVICE_ROLE_KEY: string;
+export declare const JWT_SECRET_SUPABASE: string;
+export declare const FRONT_URL: string;
+export declare const FRONT_URL_DEV: string;
+export declare const ALLOW_VERCEL_PREVIEWS: boolean;
+export declare const CORS_EXTRA_ORIGINS: string[];
+export declare const DEFAULT_ORG_ID: string;
+export declare const ARCHIVE_DAYS_TO_KEEP: number;
