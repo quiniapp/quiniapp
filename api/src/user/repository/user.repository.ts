@@ -18,6 +18,20 @@ export class UserRepository {
   }
 
   /**
+   * Get the parent organization ID of a given organization (group)
+   */
+  async getParentOrganizationId(organizationId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('parent_organization_id')
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data?.parent_organization_id ?? null;
+  }
+
+  /**
    * Check if an organization is a sub-organization (has a parent)
    */
   async isSubOrganization(organizationId: string): Promise<boolean> {
@@ -287,6 +301,27 @@ export class UserRepository {
       .update({ organization_id: targetOrgId, edited_at: timestamp })
       .eq('user_id', userId)
       .eq('organization_id', currentOrgId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.details || error.message);
+    return data;
+  }
+
+  /**
+   * Remove a user from a group by moving them back to the parent organization
+   */
+  async removeFromGroup(
+    userId: string,
+    currentGroupId: string,
+    parentOrgId: string
+  ): Promise<IUserEntityBack> {
+    const timestamp = dayjs().toISOString();
+    const { data, error } = await supabase
+      .from('users')
+      .update({ organization_id: parentOrgId, edited_at: timestamp })
+      .eq('user_id', userId)
+      .eq('organization_id', currentGroupId)
       .select()
       .single();
 

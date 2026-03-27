@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`getAmountsByTicket()` optimization in `api/src/bet/repository/bet.repository.ts`**: Changed to fetch the ticket's organization first, then query bets by that single org. Reduces N RPC calls (one per org) down to 1-2 queries total. Significantly reduces latency when resolving amounts by ticket number.
 
 - **Performance Impact**: Pagination prevents unbounded result sets; direct sum queries and org pre-fetch eliminate repeated RPC overhead during data loading operations.
+### Added - 2026-03-26
+
+#### Eliminar usuarios de grupos
+
+- **`user.repository.ts`**: `getParentOrganizationId(orgId)` — consulta `parent_organization_id` de una organización
+- **`user.repository.ts`**: `removeFromGroup(userId, currentGroupId, parentOrgId)` — mueve al usuario de vuelta a la org padre
+- **`user.controller.ts`**: `removeUserFromGroup(userId, groupId, adminOrgId, adminUserType)` — valida permisos, verifica que el usuario esté en el grupo, obtiene org padre y ejecuta la remoción
+- **`user.route.ts`**: `POST /api/private/user/remove-from-group` — handler con validación de `user_id` y `group_id`
 
 ### Fixed - 2026-03-01
 
