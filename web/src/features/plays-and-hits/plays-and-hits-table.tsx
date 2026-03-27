@@ -311,7 +311,8 @@ const BetRowDesktop = memo<{
     </TableRow>
   );
 }, (prev, next) => {
-  // Solo re-render si el bet_id cambió
+  // Sin bet_id estable, siempre re-renderizar (evita datos stale en modo agrupado)
+  if (!prev.bet.bet_id || !next.bet.bet_id) return false;
   return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
 });
 
@@ -360,7 +361,8 @@ const BetRowMobile = memo<{
     </div>
   );
 }, (prev, next) => {
-  // Solo re-render si el bet_id cambió
+  // Sin bet_id estable, siempre re-renderizar (evita datos stale en modo agrupado)
+  if (!prev.bet.bet_id || !next.bet.bet_id) return false;
   return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
 });
 
