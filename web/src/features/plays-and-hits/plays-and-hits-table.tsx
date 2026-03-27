@@ -134,7 +134,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
           <TableBody>
             {bets?.map((bet: IBetEntityFront, index: number) => (
               <BetRowDesktop
-                key={bet?.bet_id ?? Math.random()}
+                key={bet?.bet_id ?? `row-${index}`}
                 bet={bet}
                 triggerRef={index === triggerIndex ? setTriggerRef : undefined}
               />
@@ -172,7 +172,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
 
         {bets?.map((bet, index) => (
           <BetRowMobile
-            key={bet?.bet_id ?? Math.random()}
+            key={bet?.bet_id ?? `row-mobile-${index}`}
             bet={bet}
             triggerRef={index === triggerIndex ? setTriggerRef : undefined}
           />
@@ -279,7 +279,6 @@ const BetRowDesktop = memo<{
 }>(function BetRowDesktop({ bet, triggerRef }) {
   return (
     <TableRow
-      key={bet?.bet_id ?? Math.random()}
       ref={triggerRef}
     >
       <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
@@ -323,7 +322,6 @@ const BetRowMobile = memo<{
 }>(function BetRowMobile({ bet, triggerRef }) {
   return (
     <div
-      key={bet?.bet_id ?? Math.random()}
       ref={triggerRef}
       className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
     >
