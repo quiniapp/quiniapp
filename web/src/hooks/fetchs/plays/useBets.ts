@@ -13,6 +13,7 @@ export interface FetchBetsProps {
   tern?: string | null;
   quatern?: string | null;
   ticket_number?: string | null;
+  limit?: number;
 }
 
 // ⬇️ Incluir TODOS los filtros en el key (con fallback a '')
@@ -28,6 +29,7 @@ export const betsKey = (p: FetchBetsProps) =>
     p.quatern ?? '',
     p.tern ?? '',
     p.ticket_number ?? '',
+    p.limit ?? '',
   ] as const;
 
 // ⬇️ Exportá el fetch para usarlo fuera del hook
@@ -41,6 +43,7 @@ export async function fetchBets({
   quatern,
   tern,
   ticket_number,
+  limit,
 }: FetchBetsProps): Promise<IBetEntityFront[]> {
   if (!date) return [];
 
@@ -53,6 +56,7 @@ export async function fetchBets({
   if (quatern) params.append('quatern', quatern);
   if (tern) params.append('tern', tern);
   if (ticket_number) params.append('ticket_number', ticket_number);
+  if (limit) params.append('limit', limit.toString());
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
   const res = await fetchWithAuth(url, {

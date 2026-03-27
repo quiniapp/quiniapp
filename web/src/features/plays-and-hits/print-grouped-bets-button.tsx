@@ -32,6 +32,7 @@ const PrintGroupedBetsButton = () => {
     winners,
     tern,
     quatern,
+    limit: 9999,
   });
 
   const { data: lotteries } = useLotteries();
