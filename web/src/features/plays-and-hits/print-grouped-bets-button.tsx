@@ -24,7 +24,7 @@ const PrintGroupedBetsButton = () => {
   const isGrouped = searchParams.get('grouped') === 'true';
 
   const { data: bets } = useBets({
-    date,
+    date: isGrouped ? date : null,
     schedule_id,
     lottery_id,
     cashier_id,
@@ -32,11 +32,12 @@ const PrintGroupedBetsButton = () => {
     winners,
     tern,
     quatern,
+    limit: 9999,
   });
 
   const { data: lotteries } = useLotteries();
   const { data: schedules } = useSchedules();
-  const { data: users } = useUsers(role);
+  const { data: users } = useUsers(isGrouped ? role : undefined);
 
   const handlePrint = async () => {
     if (!bets?.length) return;

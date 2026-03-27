@@ -92,7 +92,7 @@ export class BetRouter {
         quatern: quatern === 'true' ? true : false,
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
         page: typeof page === 'string' ? parseInt(page, 10) : 1,
-        limit: typeof limit === 'string' ? parseInt(limit, 10) : 100,
+        limit: typeof limit === 'string' ? Math.max(1, parseInt(limit, 10) || 100) : 100,
         organization_ids,
       });
       const response: APIResponse<typeof result> = {

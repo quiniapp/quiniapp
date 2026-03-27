@@ -35,8 +35,7 @@ export class BetController {
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
     try {
       if (grouped) {
-        // Grouped no tiene paginación por ahora, mantener comportamiento anterior
-        const bets = await this.repository.getAllBetsGrouped({
+        const { data: groupedBets, count } = await this.repository.getAllBetsGrouped({
           organization_ids,
           schedule_id,
           date,
@@ -45,16 +44,19 @@ export class BetController {
           winners,
           tern,
           quatern,
+          page,
+          limit,
         });
-        const parsedBets = bets.map((bet: IBetEntityBack) => parseBet(bet));
+        const parsedBets = groupedBets.map((bet: IBetEntityBack) => parseBet(bet));
+        const totalPages = Math.ceil(count / limit);
         return {
           data: parsedBets,
           pagination: {
-            currentPage: 1,
-            pageSize: parsedBets.length,
-            totalCount: parsedBets.length,
-            totalPages: 1,
-            hasMore: false,
+            currentPage: page,
+            pageSize: limit,
+            totalCount: count,
+            totalPages,
+            hasMore: page < totalPages,
           },
         };
       } else {
@@ -85,38 +87,44 @@ export class BetController {
         } = {};
 
         if (ticket_number) {
-          const ticketSums = await this.repository.getAmountsByTicket({
-            ticket_number,
-            organization_ids,
-          });
-          aggregates = {
-            totalAmount: ticketSums?.total_amount ?? 0,
-            totalPrize: ticketSums?.total_prize ?? 0,
-            totalCount: ticketSums?.total_count ?? 0,
-            totalWinnersCount: ticketSums?.total_winners_count ?? 0,
-          };
+          // Solo calcular sumas del ticket en la primera página
+          if (page === 1) {
+            const ticketSums = await this.repository.getAmountsByTicket({
+              ticket_number,
+              organization_ids,
+            });
+            aggregates = {
+              totalAmount: ticketSums?.total_amount ?? 0,
+              totalPrize: ticketSums?.total_prize ?? 0,
+              totalCount: ticketSums?.total_count ?? 0,
+              totalWinnersCount: ticketSums?.total_winners_count ?? 0,
+            };
+          }
         } else {
-          // Obtener totales generales en paralelo
-          const [totalAmount, totalPrize] = await Promise.all([
-            this.repository.getTotalAmount({
-              date,
-              schedule_id,
-              cashier_id,
-              lottery_id,
-              organization_ids,
-            }),
-            this.repository.getTotalPrize({
-              date,
-              schedule_id,
-              cashier_id,
-              lottery_id,
-              organization_ids,
-            }),
-          ]);
-          aggregates = {
-            totalAmount,
-            totalPrize,
-          };
+          // Solo calcular totales en la primera página — no cambian entre páginas
+          if (page === 1) {
+            const [totalAmount, totalPrize] = await Promise.all([
+              this.repository.getTotalAmount({
+                date,
+                schedule_id,
+                cashier_id,
+                lottery_id,
+                organization_ids,
+              }),
+              this.repository.getTotalPrize({
+                date,
+                schedule_id,
+                cashier_id,
+                lottery_id,
+                organization_ids,
+              }),
+            ]);
+            aggregates = {
+              totalAmount,
+              totalPrize,
+            };
+          }
+          // Pages 2+ no recalculan — el frontend usa data?.pages?.[0]?.aggregates
         }
 
         return {

@@ -78,6 +78,8 @@ export class BetRepository {
     winners,
     quatern,
     tern,
+    page = 1,
+    limit = 100,
   }: {
     organization_ids: string[];
     schedule_id?: string;
@@ -87,7 +89,9 @@ export class BetRepository {
     winners?: boolean;
     quatern?: boolean;
     tern?: boolean;
-  }) {
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: IBetEntityBack[]; count: number }> {
     // Determine which RPC to use based on date
     const rpcName = getRpcName(date, 'get_grouped_bets_for_parse');
 
@@ -136,18 +140,20 @@ export class BetRepository {
     );
 
     if (quatern && tern) {
-      return result.filter(
+      result = result.filter(
         (bet) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
       );
-    }
-    if (quatern) {
-      return result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
-    }
-    if (tern) {
-      return result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
+    } else if (quatern) {
+      result = result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
+    } else if (tern) {
+      result = result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
     }
 
-    return result;
+    const totalCount = result.length;
+    const from = (page - 1) * limit;
+    const paginatedData = result.slice(from, from + limit);
+
+    return { data: paginatedData, count: totalCount };
   }
 
   async getTotalAmount({
@@ -166,9 +172,8 @@ export class BetRepository {
     // Use direct query with .in() to support multiple org IDs
     const tableName = getTableName(date, 'bets');
 
-    let query = supabase
-      .from(tableName)
-      .select('amount')
+    let query = (supabase.from(tableName) as any)
+      .select('amount.sum()')
       .in('organization_id', organization_ids)
       .eq('date', date)
       .is('deleted_at', null);
@@ -179,10 +184,7 @@ export class BetRepository {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []).reduce(
-      (sum: number, row: { amount: number }) => sum + (row.amount || 0),
-      0
-    );
+    return Number((data as unknown as [{ sum: string | null }])?.[0]?.sum ?? 0);
   }
 
   async getTotalPrize({
@@ -201,9 +203,8 @@ export class BetRepository {
     // Use direct query with .in() to support multiple org IDs
     const tableName = getTableName(date, 'bets');
 
-    let query = supabase
-      .from(tableName)
-      .select('prize')
+    let query = (supabase.from(tableName) as any)
+      .select('prize.sum()')
       .in('organization_id', organization_ids)
       .eq('date', date)
       .eq('winner', true)
@@ -215,7 +216,7 @@ export class BetRepository {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []).reduce((sum: number, row: { prize: number }) => sum + (row.prize || 0), 0);
+    return Number((data as unknown as [{ sum: string | null }])?.[0]?.sum ?? 0);
   }
 
   async getWinnerBets({
@@ -274,21 +275,6 @@ export class BetRepository {
     ticket_number: string;
     organization_ids: string[];
   }) {
-    // Aggregate sums across all orgs in the network
-    // (the ticket belongs to exactly one org, but we search all to find it)
-    const results = await Promise.all(
-      organization_ids.map(async (orgId) => {
-        const { data, error } = await supabase
-          .rpc('get_ticket_sums', {
-            p_ticket: ticket_number,
-            p_organization_id: orgId,
-          })
-          .single();
-        if (error) return null;
-        return data as TicketSums | null;
-      })
-    );
-
     const zeroSums: TicketSums = {
       total_amount: 0,
       total_prize: 0,
@@ -296,46 +282,45 @@ export class BetRepository {
       total_winners_count: 0,
     };
 
-    const mainTotal = results
-      .filter((r): r is TicketSums => r !== null)
-      .reduce(
-        (acc, r) => ({
-          total_amount: acc.total_amount + (r.total_amount || 0),
-          total_prize: acc.total_prize + (r.total_prize || 0),
-          total_count: acc.total_count + (r.total_count || 0),
-          total_winners_count: acc.total_winners_count + (r.total_winners_count || 0),
-        }),
-        { ...zeroSums }
-      );
+    // Paso 1: Encontrar a qué org pertenece el ticket (búsqueda en main table)
+    const { data: ticketRow } = await supabase
+      .from('tickets')
+      .select('organization_id')
+      .eq('ticket_number', ticket_number)
+      .in('organization_id', organization_ids)
+      .maybeSingle();
 
-    if (mainTotal.total_count > 0 || mainTotal.total_amount > 0) {
-      return mainTotal;
+    if (ticketRow?.organization_id != null) {
+      // Ticket encontrado en main — una sola RPC call
+      const { data, error } = await supabase
+        .rpc('get_ticket_sums', {
+          p_ticket: ticket_number,
+          p_organization_id: ticketRow.organization_id,
+        })
+        .single();
+      if (error || !data) return { ...zeroSums };
+      return data as TicketSums;
     }
 
-    // If not found in main table, try archive
-    const archiveResults = await Promise.all(
-      organization_ids.map(async (orgId) => {
-        const { data, error } = await supabase
-          .rpc('get_ticket_sums_archive', {
-            p_ticket: ticket_number,
-            p_organization_id: orgId,
-          })
-          .single();
-        if (error) return null;
-        return data as TicketSums | null;
-      })
-    );
+    // Paso 2: Buscar en archive si no está en main
+    const { data: archiveTicketRow } = await supabase
+      .from('tickets_archive')
+      .select('organization_id')
+      .eq('ticket_number', ticket_number)
+      .in('organization_id', organization_ids)
+      .maybeSingle();
 
-    return archiveResults
-      .filter((r): r is TicketSums => r !== null)
-      .reduce(
-        (acc, r) => ({
-          total_amount: acc.total_amount + (r.total_amount || 0),
-          total_prize: acc.total_prize + (r.total_prize || 0),
-          total_count: acc.total_count + (r.total_count || 0),
-          total_winners_count: acc.total_winners_count + (r.total_winners_count || 0),
-        }),
-        { ...zeroSums }
-      );
+    if (archiveTicketRow?.organization_id != null) {
+      const { data, error } = await supabase
+        .rpc('get_ticket_sums_archive', {
+          p_ticket: ticket_number,
+          p_organization_id: archiveTicketRow.organization_id,
+        })
+        .single();
+      if (error || !data) return { ...zeroSums };
+      return data as TicketSums;
+    }
+
+    return { ...zeroSums };
   }
 }
