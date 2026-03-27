@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2026-03-26
 
+#### Eliminar usuarios de grupos
+
+- **Mutation hook**: `web/src/hooks/mutations/users/useRemoveUserFromGroup.ts`
+  - `POST /api/private/user/remove-from-group` con `{ user_id, group_id }`
+  - Invalida queries: `assignable-users`, `groups`, `users`, `group-users`
+- **UI**: `web/src/features/groups/index.tsx`
+  - Columna "Acciones" en la tabla de usuarios del grupo con botón de eliminar (ícono `Trash2`)
+  - Al eliminar, el usuario vuelve a la lista de asignables disponibles
+- **Route**: `web/routes/routes.ts` — agregada `removeFromGroup: /api/private/user/remove-from-group`
+
 #### Imprimir jugadas agrupadas en PDF
 
 - **Función PDF**: `web/src/functions/printGroupedBetsPDF.ts`

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-03-26
+
+#### Eliminar usuarios de grupos
+
+- **`user.repository.ts`**: `getParentOrganizationId(orgId)` — consulta `parent_organization_id` de una organización
+- **`user.repository.ts`**: `removeFromGroup(userId, currentGroupId, parentOrgId)` — mueve al usuario de vuelta a la org padre
+- **`user.controller.ts`**: `removeUserFromGroup(userId, groupId, adminOrgId, adminUserType)` — valida permisos, verifica que el usuario esté en el grupo, obtiene org padre y ejecuta la remoción
+- **`user.route.ts`**: `POST /api/private/user/remove-from-group` — handler con validación de `user_id` y `group_id`
+
 ### Fixed - 2026-03-01
 
 #### Groups Feature – Network-Aware Visibility

@@ -30,6 +30,7 @@ export class UserRouter {
     // Group assignment routes
     this.router.get('/assignable', this.getAssignableUsersHandler);
     this.router.post('/assign-to-group', this.assignUserToGroupHandler);
+    this.router.post('/remove-from-group', this.removeUserFromGroupHandler);
 
     // Standard CRUD routes
     this.router.get('/:id', this.getUserHandler);
@@ -384,6 +385,40 @@ export class UserRouter {
     const response: APIResponse<IUserEntityFront[]> = {
       data: {
         users,
+      },
+    };
+
+    res.status(200).json(response);
+  });
+
+  /**
+   * POST /api/private/user/remove-from-group
+   * Remove a user from a group (move them back to parent organization)
+   * Only OWNER and CAPITALIST can access
+   * Body: { user_id: string, group_id: string }
+   */
+  private removeUserFromGroupHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user_id, group_id } = req.body;
+    const { user } = req;
+
+    if (!user_id || !group_id) {
+      throw new BadRequestError('user_id y group_id son requeridos');
+    }
+
+    if (!user) {
+      throw new ForbiddenError('No autenticado');
+    }
+
+    const result = await this.controller.removeUserFromGroup(
+      user_id,
+      group_id,
+      req.organization_id!,
+      user.user.user_type
+    );
+
+    const response: APIResponse<IUserEntityFront> = {
+      data: {
+        user: result,
       },
     };
 
