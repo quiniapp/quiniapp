@@ -96,27 +96,30 @@ export class BetController {
             totalWinnersCount: ticketSums?.total_winners_count ?? 0,
           };
         } else {
-          // Obtener totales generales en paralelo
-          const [totalAmount, totalPrize] = await Promise.all([
-            this.repository.getTotalAmount({
-              date,
-              schedule_id,
-              cashier_id,
-              lottery_id,
-              organization_ids,
-            }),
-            this.repository.getTotalPrize({
-              date,
-              schedule_id,
-              cashier_id,
-              lottery_id,
-              organization_ids,
-            }),
-          ]);
-          aggregates = {
-            totalAmount,
-            totalPrize,
-          };
+          // Solo calcular totales en la primera página — no cambian entre páginas
+          if (page === 1) {
+            const [totalAmount, totalPrize] = await Promise.all([
+              this.repository.getTotalAmount({
+                date,
+                schedule_id,
+                cashier_id,
+                lottery_id,
+                organization_ids,
+              }),
+              this.repository.getTotalPrize({
+                date,
+                schedule_id,
+                cashier_id,
+                lottery_id,
+                organization_ids,
+              }),
+            ]);
+            aggregates = {
+              totalAmount,
+              totalPrize,
+            };
+          }
+          // Pages 2+ no recalculan — el frontend usa data?.pages?.[0]?.aggregates
         }
 
         return {
