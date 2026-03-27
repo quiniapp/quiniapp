@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-03-27
+
+#### Bet Aggregates – Pagination Optimization
+- **`getAllBets()` in `api/src/bet/controller/bet.controller.ts`**: Modified to compute `totalAmount` and `totalPrize` aggregates **only on page 1** instead of recalculating on every page load. Pages 2+ omit the `aggregates` field from the response since the values don't change between pagination — frontend retrieves first page aggregates via `data?.pages?.[0]?.aggregates` (TanStack Query infinite query pattern).
+- **Performance Impact**: Eliminates repeated full-table scans (`getTotalAmount`, `getTotalPrize` database queries) during infinite scroll, reducing API latency on subsequent page loads.
+
 ### Fixed - 2026-03-01
 
 #### Groups Feature – Network-Aware Visibility
