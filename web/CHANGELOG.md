@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-03-27
+
+#### Performance Optimizations in Plays & Hits
+
+- **PrintGroupedBetsButton lazy data fetches**: Modified `web/src/features/plays-and-hits/print-grouped-bets-button.tsx`
+  - Now only fetches data when in grouped mode (`isGrouped === true`)
+  - Passes `date: isGrouped ? date : null` to `useBets` to disable fetch when not grouped
+  - Passes `isGrouped ? role : undefined` to `useUsers` to disable fetch when not grouped
+
+- **Stable keys in bet row lists**: Fixed `web/src/features/plays-and-hits/plays-and-hits-table.tsx`
+  - Replaced `Math.random()` fallback with stable index-based keys: `row-${index}` for desktop, `row-mobile-${index}` for mobile
+  - Prevents unnecessary re-renders and DOM node recreation when `bet_id` is undefined
+  - Removed redundant `key` props from internal components (BetRowDesktop, BetRowMobile)
+
+- **Avoid extra render on mount**: Fixed `web/src/features/plays-and-hits/header-play-and-hits.tsx`
+  - Replaced `useEffect` with `useLayoutEffect` for initial date URL param setup
+  - Now checks if date is already in URL before setting it, preventing double render on component mount
+  - Uses `{ replace: true }` to maintain clean browser history
+
 ### Added - 2026-03-26
 
 #### Imprimir jugadas agrupadas en PDF
