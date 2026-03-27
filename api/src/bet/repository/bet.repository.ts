@@ -78,6 +78,8 @@ export class BetRepository {
     winners,
     quatern,
     tern,
+    page = 1,
+    limit = 100,
   }: {
     organization_ids: string[];
     schedule_id?: string;
@@ -87,7 +89,9 @@ export class BetRepository {
     winners?: boolean;
     quatern?: boolean;
     tern?: boolean;
-  }) {
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: IBetEntityBack[]; count: number }> {
     // Determine which RPC to use based on date
     const rpcName = getRpcName(date, 'get_grouped_bets_for_parse');
 
@@ -136,18 +140,20 @@ export class BetRepository {
     );
 
     if (quatern && tern) {
-      return result.filter(
+      result = result.filter(
         (bet) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
       );
-    }
-    if (quatern) {
-      return result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
-    }
-    if (tern) {
-      return result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
+    } else if (quatern) {
+      result = result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
+    } else if (tern) {
+      result = result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
     }
 
-    return result;
+    const totalCount = result.length;
+    const from = (page - 1) * limit;
+    const paginatedData = result.slice(from, from + limit);
+
+    return { data: paginatedData, count: totalCount };
   }
 
   async getTotalAmount({

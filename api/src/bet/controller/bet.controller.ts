@@ -35,8 +35,7 @@ export class BetController {
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
     try {
       if (grouped) {
-        // Grouped no tiene paginación por ahora, mantener comportamiento anterior
-        const bets = await this.repository.getAllBetsGrouped({
+        const { data: groupedBets, count } = await this.repository.getAllBetsGrouped({
           organization_ids,
           schedule_id,
           date,
@@ -45,16 +44,19 @@ export class BetController {
           winners,
           tern,
           quatern,
+          page,
+          limit,
         });
-        const parsedBets = bets.map((bet: IBetEntityBack) => parseBet(bet));
+        const parsedBets = groupedBets.map((bet: IBetEntityBack) => parseBet(bet));
+        const totalPages = Math.ceil(count / limit);
         return {
           data: parsedBets,
           pagination: {
-            currentPage: 1,
-            pageSize: parsedBets.length,
-            totalCount: parsedBets.length,
-            totalPages: 1,
-            hasMore: false,
+            currentPage: page,
+            pageSize: limit,
+            totalCount: count,
+            totalPages,
+            hasMore: page < totalPages,
           },
         };
       } else {
