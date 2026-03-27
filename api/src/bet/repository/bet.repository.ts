@@ -166,9 +166,8 @@ export class BetRepository {
     // Use direct query with .in() to support multiple org IDs
     const tableName = getTableName(date, 'bets');
 
-    let query = supabase
-      .from(tableName)
-      .select('amount')
+    let query = (supabase.from(tableName) as any)
+      .select('amount.sum()')
       .in('organization_id', organization_ids)
       .eq('date', date)
       .is('deleted_at', null);
@@ -179,10 +178,7 @@ export class BetRepository {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []).reduce(
-      (sum: number, row: { amount: number }) => sum + (row.amount || 0),
-      0
-    );
+    return Number((data as unknown as [{ sum: string | null }])?.[0]?.sum ?? 0);
   }
 
   async getTotalPrize({
@@ -201,9 +197,8 @@ export class BetRepository {
     // Use direct query with .in() to support multiple org IDs
     const tableName = getTableName(date, 'bets');
 
-    let query = supabase
-      .from(tableName)
-      .select('prize')
+    let query = (supabase.from(tableName) as any)
+      .select('prize.sum()')
       .in('organization_id', organization_ids)
       .eq('date', date)
       .eq('winner', true)
@@ -215,7 +210,7 @@ export class BetRepository {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []).reduce((sum: number, row: { prize: number }) => sum + (row.prize || 0), 0);
+    return Number((data as unknown as [{ sum: string | null }])?.[0]?.sum ?? 0);
   }
 
   async getWinnerBets({
