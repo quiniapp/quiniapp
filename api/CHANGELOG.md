@@ -9,9 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2026-03-27
 
-#### Bet Aggregates – Pagination Optimization
+#### Bet Aggregates – Pagination & Query Optimization
 - **`getAllBets()` in `api/src/bet/controller/bet.controller.ts`**: Modified to compute `totalAmount` and `totalPrize` aggregates **only on page 1** instead of recalculating on every page load. Pages 2+ omit the `aggregates` field from the response since the values don't change between pagination — frontend retrieves first page aggregates via `data?.pages?.[0]?.aggregates` (TanStack Query infinite query pattern).
-- **Performance Impact**: Eliminates repeated full-table scans (`getTotalAmount`, `getTotalPrize` database queries) during infinite scroll, reducing API latency on subsequent page loads.
+
+- **`getTotalAmount()` and `getTotalPrize()` in `api/src/bet/repository/bet.repository.ts`**: Replaced RPC-based queries with direct Supabase `.select('*.sum()')` queries. Eliminates network overhead and reduces query execution time by avoiding stored procedure overhead. Archive-aware via `getTableName()` helper.
+
+- **`getAllBetsGrouped()` pagination in `api/src/bet/repository/bet.repository.ts` and `api/src/bet/controller/bet.controller.ts`**: Added pagination support (limit/offset) to grouped bets query. Prevents loading all grouped results into memory during frontend grouped view infinite scroll.
+
+- **`getAmountsByTicket()` optimization in `api/src/bet/repository/bet.repository.ts`**: Changed to fetch the ticket's organization first, then query bets by that single org. Reduces N RPC calls (one per org) down to 1-2 queries total. Significantly reduces latency when resolving amounts by ticket number.
+
+- **Performance Impact**: Pagination prevents unbounded result sets; direct sum queries and org pre-fetch eliminate repeated RPC overhead during data loading operations.
 
 ### Fixed - 2026-03-01
 
