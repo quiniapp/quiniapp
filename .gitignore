@@ -142,3 +142,9 @@ bun.lockb
 .claude/.env
 .claude/settings.local.json
 .mcp.json
+
+# TypeScript compiled output (api/ and helper/ compile in-place, no outDir)
+api/**/*.js
+api/**/*.d.ts
+helper/**/*.js
+helper/**/*.d.ts
