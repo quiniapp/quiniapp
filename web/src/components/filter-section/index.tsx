@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups.ts';
+import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers.ts';
 import { USER_TYPE } from '@helper/types/user.type';
 
 const FilterSection = () => {
@@ -33,6 +34,7 @@ const FilterSection = () => {
   const group_id = searchParams.get('group_id') ?? undefined;
 
   const { data: groups } = useGroups(organizationId, role);
+  const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
 
   // No pises otros params al setear la fecha
   const handleDayChange = (newDate?: string) => {
@@ -58,6 +60,11 @@ const FilterSection = () => {
     [userNumber]
   );
   const { data } = useGetUserByNumber(userNumberInt);
+
+  const userNotInGroup = useMemo(() => {
+    if (!group_id || !data || !groupUsers) return false;
+    return !groupUsers.some((u) => u.user_id === data.user_id);
+  }, [group_id, data, groupUsers]);
 
   const showGroupAndCashierFilters = role !== USER_TYPE.CASHIER;
 
@@ -126,6 +133,9 @@ const FilterSection = () => {
               />
               <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
                 {data?.name} {data?.number}
+                {userNotInGroup && (
+                  <span className="text-red-500 text-xs ml-1">No pertenece al grupo</span>
+                )}
               </Label>
             </Flex>
           </>
