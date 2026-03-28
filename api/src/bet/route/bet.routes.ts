@@ -47,6 +47,50 @@ export class BetRouter {
     return this.userRepository.getOrganizationDescendants(rootOrgId);
   };
 
+  /**
+   * Resolve group and cashier filters for bet queries.
+   * Handles validation of group_id against authorized orgs and cashier_id against group users.
+   */
+  private async resolveGroupFilter(
+    req: Request,
+    group_id: unknown,
+    cashier_id: unknown
+  ): Promise<{
+    organization_ids: string[];
+    group_user_ids?: string[];
+    effectiveCashierId?: string;
+  }> {
+    const allOrgIds = await this.getOrgIds(req);
+    const { user } = req;
+
+    let group_user_ids: string[] | undefined;
+    if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+      if (allOrgIds.includes(group_id)) {
+        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      } else {
+        group_user_ids = ['__invalid__'];
+      }
+    }
+
+    let effectiveCashierId =
+      user?.user.user_type === USER_TYPE.CASHIER
+        ? user.user.user_id
+        : typeof cashier_id === 'string'
+          ? cashier_id
+          : undefined;
+
+    if (effectiveCashierId && group_user_ids) {
+      if (!group_user_ids.includes(effectiveCashierId)) {
+        group_user_ids = ['__invalid__'];
+        effectiveCashierId = undefined;
+      } else {
+        group_user_ids = undefined;
+      }
+    }
+
+    return { organization_ids: allOrgIds, group_user_ids, effectiveCashierId };
+  }
+
   private getAllBets: RequestHandler = async (req: Request, res: Response) => {
     const {
       date,
@@ -62,7 +106,6 @@ export class BetRouter {
       limit,
       group_id,
     } = req.query;
-    const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
         error: {
@@ -75,32 +118,8 @@ export class BetRouter {
     }
 
     try {
-      const allOrgIds = await this.getOrgIds(req);
-
-      let group_user_ids: string[] | undefined;
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        if (allOrgIds.includes(group_id)) {
-          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
-        } else {
-          group_user_ids = ['__invalid__'];
-        }
-      }
-
-      let effectiveCashierId =
-        user?.user.user_type === USER_TYPE.CASHIER
-          ? user.user.user_id
-          : typeof cashier_id === 'string'
-            ? cashier_id
-            : undefined;
-
-      if (effectiveCashierId && group_user_ids) {
-        if (!group_user_ids.includes(effectiveCashierId)) {
-          group_user_ids = ['__invalid__'];
-          effectiveCashierId = undefined;
-        } else {
-          group_user_ids = undefined;
-        }
-      }
+      const { organization_ids, group_user_ids, effectiveCashierId } =
+        await this.resolveGroupFilter(req, group_id, cashier_id);
 
       const result = await this.controller.getAllBets({
         date,
@@ -114,7 +133,7 @@ export class BetRouter {
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
         page: typeof page === 'string' ? parseInt(page, 10) : 1,
         limit: typeof limit === 'string' ? Math.max(1, parseInt(limit, 10) || 100) : 100,
-        organization_ids: allOrgIds,
+        organization_ids,
         group_user_ids,
       });
       const response: APIResponse<typeof result> = {
@@ -149,7 +168,6 @@ export class BetRouter {
 
   private getTotalAmount: RequestHandler = async (req: Request, res: Response) => {
     const { date, schedule_id, cashier_id, lottery_id, group_id } = req.query;
-    const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
         error: {
@@ -162,39 +180,15 @@ export class BetRouter {
     }
 
     try {
-      const allOrgIds = await this.getOrgIds(req);
-
-      let group_user_ids: string[] | undefined;
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        if (allOrgIds.includes(group_id)) {
-          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
-        } else {
-          group_user_ids = ['__invalid__'];
-        }
-      }
-
-      let effectiveCashierId =
-        user?.user.user_type === USER_TYPE.CASHIER
-          ? user.user.user_id
-          : typeof cashier_id === 'string'
-            ? cashier_id
-            : undefined;
-
-      if (effectiveCashierId && group_user_ids) {
-        if (!group_user_ids.includes(effectiveCashierId)) {
-          group_user_ids = ['__invalid__'];
-          effectiveCashierId = undefined;
-        } else {
-          group_user_ids = undefined;
-        }
-      }
+      const { organization_ids, group_user_ids, effectiveCashierId } =
+        await this.resolveGroupFilter(req, group_id, cashier_id);
 
       const total = await this.controller.getTotalAmount({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
         cashier_id: effectiveCashierId,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
-        organization_ids: allOrgIds,
+        organization_ids,
         group_user_ids,
       });
       const response: APIResponse<number> = {
@@ -229,7 +223,6 @@ export class BetRouter {
 
   private getTotalPrize: RequestHandler = async (req: Request, res: Response) => {
     const { date, schedule_id, cashier_id, lottery_id, group_id } = req.query;
-    const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
         error: {
@@ -242,39 +235,15 @@ export class BetRouter {
     }
 
     try {
-      const allOrgIds = await this.getOrgIds(req);
-
-      let group_user_ids: string[] | undefined;
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        if (allOrgIds.includes(group_id)) {
-          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
-        } else {
-          group_user_ids = ['__invalid__'];
-        }
-      }
-
-      let effectiveCashierId =
-        user?.user.user_type === USER_TYPE.CASHIER
-          ? user.user.user_id
-          : typeof cashier_id === 'string'
-            ? cashier_id
-            : undefined;
-
-      if (effectiveCashierId && group_user_ids) {
-        if (!group_user_ids.includes(effectiveCashierId)) {
-          group_user_ids = ['__invalid__'];
-          effectiveCashierId = undefined;
-        } else {
-          group_user_ids = undefined;
-        }
-      }
+      const { organization_ids, group_user_ids, effectiveCashierId } =
+        await this.resolveGroupFilter(req, group_id, cashier_id);
 
       const total = await this.controller.getTotalPrize({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
         cashier_id: effectiveCashierId,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
-        organization_ids: allOrgIds,
+        organization_ids,
         group_user_ids,
       });
       const response: APIResponse<number> = {
