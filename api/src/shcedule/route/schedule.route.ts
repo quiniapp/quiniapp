@@ -6,7 +6,11 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { newScheduleSchema, updateScheduleSchema } from '@helper/schemas/schedule.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
-import { getScheduleCacheKey, invalidateScheduleRelated } from 'src/cache/cacheInvalidation';
+import {
+  getScheduleCacheKey,
+  getScheduleDayCacheKey,
+  invalidateScheduleRelated,
+} from 'src/cache/cacheInvalidation';
 import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
 // ====== Cache Manager para Schedules ======
@@ -114,21 +118,25 @@ export class ScheduleRouter {
     }
 
     try {
-      // If day filter is provided, fetch filtered schedules
-      // Note: day-filtered queries are not cached as they're typically used in high-frequency contexts
+      // If day filter is provided, fetch filtered schedules with server-side cache
       if (day !== undefined) {
-        const schedules = await this.controller.getAllByDay(
-          day,
-          allFlag,
-          req.organization_id!,
-          withLotteries
+        const dayKey = getScheduleDayCacheKey(req.organization_id!, day, allFlag, withLotteries);
+        const snap = await globalCacheManager.getOrLoad(
+          dayKey,
+          () => this.controller.getAllByDay(day!, allFlag, req.organization_id!, withLotteries),
+          { ttl: 60_000, etagStrategy: 'counter' }
         );
 
-        const response: APIResponse<IScheduleEntityFront[]> = {
-          data: { schedule: schedules },
-        };
+        const inm = req.headers['if-none-match'];
+        if (inm && inm === snap.etag) {
+          res.status(304).end();
+          return;
+        }
 
-        // Cache-Control for day-filtered queries
+        const response: APIResponse<IScheduleEntityFront[]> = {
+          data: { schedule: snap.payload },
+        };
+        res.setHeader('ETag', snap.etag);
         res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
         res.status(200).json(response);
         return;

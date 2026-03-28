@@ -9,8 +9,21 @@ export function getLotteryCacheKey(organization_id: string, all: boolean): strin
   return `org:${organization_id}:lotteries:all=${all}`;
 }
 
+export function getLotteryDayCacheKey(organization_id: string, day: string, all: boolean): string {
+  return `org:${organization_id}:lotteries:day=${day}:all=${all}`;
+}
+
 export function getScheduleCacheKey(organization_id: string, all: boolean): string {
   return `org:${organization_id}:schedules:all=${all}`;
+}
+
+export function getScheduleDayCacheKey(
+  organization_id: string,
+  day: string,
+  all: boolean,
+  withLotteries: boolean
+): string {
+  return `org:${organization_id}:schedules:day=${day}:all=${all}:wl=${withLotteries}`;
 }
 
 export function getScheduleLotteryCacheKey(organization_id: string): string {
@@ -25,11 +38,13 @@ export function getScheduleLotteryCacheKey(organization_id: string): string {
 export function invalidateLotteriesForOrg(organization_id: string): void {
   globalCacheManager.invalidate(getLotteryCacheKey(organization_id, true));
   globalCacheManager.invalidate(getLotteryCacheKey(organization_id, false));
+  globalCacheManager.invalidateMatching(`^org:${organization_id}:lotteries:day=`);
 }
 
 export function invalidateSchedulesForOrg(organization_id: string): void {
   globalCacheManager.invalidate(getScheduleCacheKey(organization_id, true));
   globalCacheManager.invalidate(getScheduleCacheKey(organization_id, false));
+  globalCacheManager.invalidateMatching(`^org:${organization_id}:schedules:day=`);
 }
 
 export function invalidateScheduleLotteriesForOrg(organization_id: string): void {

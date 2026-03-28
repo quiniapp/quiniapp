@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### API Performance — Medium Impact
 
+**P-10 — Cache `UserRepository.getOrganizationDescendants` + day-filtered query server cache**
+- **`user.repository.ts`**: `getOrganizationDescendants` ahora cachea con `globalCacheManager` (TTL 10 min, key `org:{id}:network-ids`). Compartido con `CurrentAccountRepository.getOrganizationNetworkIds` — el primer llamado llena el cache para ambos repositorios. Elimina el RPC redundante en `getAll` para OWNER/CAPITALIST/SUPERADMIN/ADMIN en cada request de listado de usuarios.
+- **`schedule.route.ts`**: Las queries con `?day=X` ahora usan `globalCacheManager.getOrLoad` (TTL 60 s, ETag con counter). Antes cada request hacía 2 round-trips a DB; ahora solo lo hace el primero en 60 s por combinación `day+all+withLotteries`.
+- **`lottery.route.ts`**: Igual que schedules — day-filtered queries cacheadas server-side (TTL 60 s, ETag). Antes solo tenía `Cache-Control` en HTTP (solo ayuda browser/CDN, no el servidor).
+- **`cacheInvalidation.ts`**: Agrega `getLotteryDayCacheKey`, `getScheduleDayCacheKey`. `invalidateLotteriesForOrg` y `invalidateSchedulesForOrg` ahora también invalidan todas las entradas de day-filtered via `invalidateMatching` — garantiza consistencia cuando se modifica una lotería o schedule.
+
 **P-17 — Cache `getOrganizationDescendants` RPC**
 - **`current-account.repository.ts`**: `getOrganizationNetworkIds` ahora cachea el resultado con `globalCacheManager` (TTL 10 min). El RPC `get_organization_descendants` se llamaba en cada request de usuarios CAPITALIST — ahora solo corre una vez cada 10 minutos por organización.
 - **`cacheInvalidation.ts`**: Agrega `invalidateOrgNetworkIds(org_id)` e integra en `invalidateAllForOrg` para invalidar cuando se crea/elimina una organización.

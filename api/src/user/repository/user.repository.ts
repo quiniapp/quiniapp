@@ -2,6 +2,9 @@ import { IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 import { IUpdateUserEntity } from '@helper/request/user.request';
+import { globalCacheManager } from '../../cache/CacheManager';
+
+const ORG_NETWORK_IDS_TTL = 10 * 60 * 1000; // 10 minutes
 
 export class UserRepository {
   /**
@@ -9,12 +12,19 @@ export class UserRepository {
    * Uses recursive SQL function for efficiency
    */
   async getOrganizationDescendants(organizationId: string): Promise<string[]> {
+    const cacheKey = `org:${organizationId}:network-ids`;
+    const cached = globalCacheManager.get<string[]>(cacheKey);
+    if (cached) return cached.payload;
+
     const { data, error } = await supabase.rpc('get_organization_descendants', {
       p_org_id: organizationId,
     });
 
     if (error) throw new Error(error.message);
-    return data?.map((d: { organization_id: string }) => d.organization_id) || [organizationId];
+    const descendantIds = (data || []).map((d: { organization_id: string }) => d.organization_id);
+    const result = [organizationId, ...descendantIds];
+    globalCacheManager.set(cacheKey, result, { ttl: ORG_NETWORK_IDS_TTL });
+    return result;
   }
 
   async getUserIdsByOrg(organizationId: string): Promise<string[]> {
