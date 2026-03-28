@@ -6,6 +6,7 @@ import { getTableName, getRpcName } from '../../archive/helper/archive-helper';
 export class BetRepository {
   async getAllBets({
     organization_ids,
+    group_user_ids,
     schedule_id,
     date,
     cashier_id,
@@ -18,6 +19,7 @@ export class BetRepository {
     limit = 100,
   }: {
     organization_ids: string[];
+    group_user_ids?: string[];
     schedule_id?: string;
     date: string;
     cashier_id?: string;
@@ -62,6 +64,7 @@ export class BetRepository {
     if (cashier_id) query = query.eq('user_id', cashier_id);
     if (winners) query = query.eq('winner', true);
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
+    if (group_user_ids?.length) query = query.in('user_id', group_user_ids);
 
     const { data, error, count } = await query;
 
@@ -71,6 +74,7 @@ export class BetRepository {
 
   async getAllBetsGrouped({
     organization_ids,
+    group_user_ids,
     schedule_id,
     date,
     cashier_id,
@@ -82,6 +86,7 @@ export class BetRepository {
     limit = 100,
   }: {
     organization_ids: string[];
+    group_user_ids?: string[];
     schedule_id?: string;
     date: string;
     cashier_id?: string;
@@ -95,7 +100,43 @@ export class BetRepository {
     // Determine which RPC to use based on date
     const rpcName = getRpcName(date, 'get_grouped_bets_for_parse');
 
-    // Call RPC for each org and merge results
+    // Helper: apply quatern/tern filter and pagination
+    const applyFiltersAndPaginate = (raw: IBetEntityBack[]) => {
+      let result = [...raw];
+      if (quatern && tern) {
+        result = result.filter(
+          (bet) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
+        );
+      } else if (quatern) {
+        result = result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
+      } else if (tern) {
+        result = result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
+      }
+      const totalCount = result.length;
+      const from = (page - 1) * limit;
+      const paginatedData = result.slice(from, from + limit);
+      return { data: paginatedData, count: totalCount };
+    };
+
+    // Fast path: group_user_ids provided — single RPC call with p_user_ids
+    if (group_user_ids?.length) {
+      const { data: rpcData, error } = await supabase.rpc(rpcName, {
+        p_date: date,
+        p_schedule_id: schedule_id ?? null,
+        p_cashier_id: cashier_id ?? null,
+        p_lottery_id: lottery_id ?? null,
+        p_winners_only: !!winners,
+        p_organization_id: null,
+        p_user_ids: group_user_ids,
+      });
+      if (error) throw new Error(error.message);
+      const allBets: IBetEntityBack[] = rpcData ?? [];
+      return applyFiltersAndPaginate(
+        allBets.sort((a, b) => ((b.amount as number) || 0) - ((a.amount as number) || 0))
+      );
+    }
+
+    // Standard path: Call RPC for each org and merge results
     const orgResults = await Promise.all(
       organization_ids.map(async (orgId) => {
         const { data, error } = await supabase.rpc(rpcName, {
@@ -135,35 +176,23 @@ export class BetRepository {
       }
     }
 
-    let result = Array.from(mergedMap.values()).sort(
+    const sorted = Array.from(mergedMap.values()).sort(
       (a, b) => ((b.amount as number) || 0) - ((a.amount as number) || 0)
     );
 
-    if (quatern && tern) {
-      result = result.filter(
-        (bet) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
-      );
-    } else if (quatern) {
-      result = result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
-    } else if (tern) {
-      result = result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
-    }
-
-    const totalCount = result.length;
-    const from = (page - 1) * limit;
-    const paginatedData = result.slice(from, from + limit);
-
-    return { data: paginatedData, count: totalCount };
+    return applyFiltersAndPaginate(sorted);
   }
 
   async getTotalAmount({
     organization_ids,
+    group_user_ids,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
   }: {
     organization_ids: string[];
+    group_user_ids?: string[];
     date: string;
     schedule_id?: string;
     cashier_id?: string;
@@ -181,6 +210,7 @@ export class BetRepository {
     if (schedule_id) query = query.eq('schedule_id', schedule_id);
     if (cashier_id) query = query.eq('user_id', cashier_id);
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
+    if (group_user_ids?.length) query = query.in('user_id', group_user_ids);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -189,12 +219,14 @@ export class BetRepository {
 
   async getTotalPrize({
     organization_ids,
+    group_user_ids,
     date,
     schedule_id,
     cashier_id,
     lottery_id,
   }: {
     organization_ids: string[];
+    group_user_ids?: string[];
     date: string;
     schedule_id?: string;
     cashier_id?: string;
@@ -213,6 +245,7 @@ export class BetRepository {
     if (schedule_id) query = query.eq('schedule_id', schedule_id);
     if (cashier_id) query = query.eq('user_id', cashier_id);
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
+    if (group_user_ids?.length) query = query.in('user_id', group_user_ids);
 
     const { data, error } = await query;
     if (error) throw error;

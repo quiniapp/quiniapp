@@ -17,6 +17,16 @@ export class UserRepository {
     return data?.map((d: { organization_id: string }) => d.organization_id) || [organizationId];
   }
 
+  async getUserIdsByOrg(organizationId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
+    if (error) throw new Error(error.message);
+    return data?.map((u: { user_id: string }) => u.user_id) ?? [];
+  }
+
   /**
    * Get the parent organization ID of a given organization (group)
    */

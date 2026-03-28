@@ -52,7 +52,6 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       } else {
         params.delete('cashier_id');
       }
-      params.delete('group_id');
       setSearchParams(params);
     },
     [searchParams, setSearchParams]
@@ -80,7 +79,6 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       } else {
         params.set('cashier_id', id);
       }
-      params.delete('group_id');
       setSearchParams(params);
     },
     [cashier_id, searchParams, setSearchParams]

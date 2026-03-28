@@ -17,6 +17,7 @@ export class BetController {
     quatern,
     ticket_number,
     organization_ids,
+    group_user_ids,
     page = 1,
     limit = 100,
   }: {
@@ -30,6 +31,7 @@ export class BetController {
     quatern?: boolean;
     ticket_number?: string;
     organization_ids: string[];
+    group_user_ids?: string[];
     page?: number;
     limit?: number;
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
@@ -37,6 +39,7 @@ export class BetController {
       if (grouped) {
         const { data: groupedBets, count } = await this.repository.getAllBetsGrouped({
           organization_ids,
+          group_user_ids,
           schedule_id,
           date,
           cashier_id,
@@ -63,6 +66,7 @@ export class BetController {
         // Con paginación
         const { data: bets, count } = await this.repository.getAllBets({
           organization_ids,
+          group_user_ids,
           schedule_id,
           date,
           cashier_id,
@@ -110,6 +114,7 @@ export class BetController {
                 cashier_id,
                 lottery_id,
                 organization_ids,
+                group_user_ids,
               }),
               this.repository.getTotalPrize({
                 date,
@@ -117,6 +122,7 @@ export class BetController {
                 cashier_id,
                 lottery_id,
                 organization_ids,
+                group_user_ids,
               }),
             ]);
             aggregates = {
@@ -151,12 +157,14 @@ export class BetController {
     cashier_id,
     lottery_id,
     organization_ids,
+    group_user_ids,
   }: {
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
     organization_ids: string[];
+    group_user_ids?: string[];
   }) => {
     try {
       const total = await this.repository.getTotalAmount({
@@ -165,6 +173,7 @@ export class BetController {
         cashier_id,
         lottery_id,
         organization_ids,
+        group_user_ids,
       });
       return total;
     } catch (error) {
@@ -179,12 +188,14 @@ export class BetController {
     cashier_id,
     lottery_id,
     organization_ids,
+    group_user_ids,
   }: {
     date: string;
     schedule_id?: string;
     cashier_id?: string;
     lottery_id?: string;
     organization_ids: string[];
+    group_user_ids?: string[];
   }) => {
     try {
       const total = await this.repository.getTotalPrize({
@@ -193,6 +204,7 @@ export class BetController {
         cashier_id,
         lottery_id,
         organization_ids,
+        group_user_ids,
       });
       return total;
     } catch (error) {

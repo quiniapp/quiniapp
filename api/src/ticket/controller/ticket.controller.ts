@@ -50,7 +50,7 @@ export class TicketController {
   };
 
   getAll = async (
-    props: IGetAllTicketEntity & { page?: number; limit?: number }
+    props: IGetAllTicketEntity & { page?: number; limit?: number; group_user_ids?: string[] }
   ): Promise<IPaginatedResponse<ITicketEntityFront>> => {
     const page = props.page ?? 1;
     const limit = props.limit ?? 100;
@@ -73,6 +73,7 @@ export class TicketController {
         user_id: props?.cashier_id,
         winner: props?.winner,
         paid: props?.paid,
+        group_user_ids: props?.group_user_ids,
         page,
         limit,
       });
@@ -96,7 +97,7 @@ export class TicketController {
   };
 
   getAllTicketNumber = async (
-    props: IGetAllTicketEntity
+    props: IGetAllTicketEntity & { group_user_ids?: string[] }
   ): Promise<{ ticket_id: string; ticket_number: string }[]> => {
     let tickets;
     if (props.user_type === USER_TYPE.CASHIER) {
@@ -112,6 +113,7 @@ export class TicketController {
         date: props.date ?? '',
         user_id: props?.cashier_id,
         winner: !!props.winner,
+        group_user_ids: props?.group_user_ids,
       });
     }
 

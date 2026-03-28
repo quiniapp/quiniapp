@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-03-27
+
+- **useUsersByNumber.ts**: Added `filter_user_type: USER_TYPE.CASHIER` — make-plays user search now returns cashiers only.
+- **TerminalTicketProvider.tsx**: Group and cashier can now coexist in URL. Selecting a cashier no longer clears group_id. Changing group still resets cashier.
+- **filter-section/index.tsx**: Validates user number against selected group — shows "No pertenece al grupo" error if user is not a group member.
+
 ### Added - 2026-03-27
 
 #### Group-Based Filtering

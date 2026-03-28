@@ -94,6 +94,7 @@ export class TicketRepository {
     date,
     winner,
     paid,
+    group_user_ids,
     page = 1,
     limit = 100,
   }: {
@@ -102,6 +103,7 @@ export class TicketRepository {
     date: string;
     winner?: boolean;
     paid?: boolean;
+    group_user_ids?: string[];
     page?: number;
     limit?: number;
   }) {
@@ -114,15 +116,20 @@ export class TicketRepository {
     let query = supabase
       .from(tableName)
       .select('*', { count: 'exact' })
-      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (user_id !== undefined) {
-      query = query.eq('user_id', user_id);
+    if (group_user_ids?.length) {
+      query = query.in('user_id', group_user_ids);
+    } else {
+      query = query.eq('organization_id', organization_id);
+      if (user_id !== undefined) {
+        query = query.eq('user_id', user_id);
+      }
     }
+
     if (winner) {
       query = query.is('winner', true);
     }
@@ -226,11 +233,13 @@ export class TicketRepository {
     user_id,
     date,
     winner,
+    group_user_ids,
   }: {
     organization_id: string;
     user_id?: string;
     date: string;
     winner: boolean;
+    group_user_ids?: string[];
   }) {
     // Determine which table to query based on date
     const tableName = getTableName(date, 'tickets');
@@ -238,14 +247,19 @@ export class TicketRepository {
     let query = supabase
       .from(tableName)
       .select('ticket_id,ticket_number')
-      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-    if (user_id !== undefined) {
-      query = query.eq('user_id', user_id);
+    if (group_user_ids?.length) {
+      query = query.in('user_id', group_user_ids);
+    } else {
+      query = query.eq('organization_id', organization_id);
+      if (user_id !== undefined) {
+        query = query.eq('user_id', user_id);
+      }
     }
+
     if (winner) {
       query = query.is('winner', true);
     }
