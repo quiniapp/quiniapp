@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-03-28
+
+#### Database Security & Performance
+
+##### Security
+- **20260328160000_enable_rls_all_tables.sql**: Enabled Row Level Security on all 15 public tables (`bets`, `bets_archive`, `tickets`, `tickets_archive`, `users`, `sessions`, `auth_audit_log`, `current_accounts`, `organizations`, `lotteries`, `schedules`, `schedule_lotteries`, `results`, `activity_days`, `ticket_prizes_by_turn`). No impact on API — backend uses `service_role` key which bypasses RLS. Blocks direct PostgREST access via leaked `anon` key.
+- **20260328160100_fix_function_search_paths.sql**: Set `search_path = public` on all public functions via dynamic DO block. Prevents schema injection attacks. No behavior change.
+- **20260328160300_fix_security_definer_views.sql**: Replaced `SECURITY DEFINER` with `SECURITY INVOKER` (default) on `table_weight_view` and `total_storage_view`. Both views only access system catalogs readable by all roles — no permissions regression.
+
+##### Performance
+- **20260328160200_fix_indexes_performance.sql**:
+  - Dropped duplicate index `idx_results_schedule_id_date` on `results` (identical to `idx_results_schedule_date`)
+  - Added missing FK indexes: `schedule_lotteries(lottery_id)`, `schedule_lotteries(schedule_id)`, `ticket_prizes_by_turn(schedule_id)`, `tickets(deleted_by)`, `bets_archive(lottery_id)`, `bets_archive(user_id)`
+  - Dropped 7 unused indexes on `auth_audit_log` (`idx_audit_user_id`, `idx_audit_session_id`, `idx_audit_event_type`, `idx_audit_created_at`, `idx_audit_ip_address`, `idx_audit_username`, `idx_audit_failed_logins`) — reduces INSERT overhead on this write-heavy table
+
 ### Fixed - 2026-03-27
 
 #### Group Filtering via User IDs
