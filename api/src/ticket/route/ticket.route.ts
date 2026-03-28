@@ -61,7 +61,7 @@ export class TicketRouter {
 
   private getAllTicketHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, ticket_number, cashier_id, winner, page, limit, paid } = req.query;
+    const { date, ticket_number, cashier_id, winner, page, limit, paid, group_id } = req.query;
 
     if (typeof ticket_number === 'string') {
       const ticketData = await this.controller.get({ ticket_number }, req.organization_id!);
@@ -78,10 +78,15 @@ export class TicketRouter {
       throw new BadRequestError('Fecha requerida');
     }
 
+    const effectiveOrgId =
+      typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER
+        ? group_id
+        : req.organization_id!;
+
     const result = await this.controller.getAll({
       user_type: user!.user.user_type,
       user_id: user!.user.user_id,
-      organization_id: req.organization_id!,
+      organization_id: effectiveOrgId,
       date: date,
       ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
       ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
@@ -104,16 +109,21 @@ export class TicketRouter {
 
   private getAllTicketNumberHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, cashier_id, winner } = req.query;
+    const { date, cashier_id, winner, group_id } = req.query;
 
     if (typeof date !== 'string') {
       throw new BadRequestError('Fecha requerida');
     }
 
+    const effectiveOrgId =
+      typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER
+        ? group_id
+        : req.organization_id!;
+
     const ticket = await this.controller.getAllTicketNumber({
       user_type: user!.user.user_type,
       user_id: user!.user.user_id,
-      organization_id: req.organization_id!,
+      organization_id: effectiveOrgId,
       date: date,
       ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
       ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),

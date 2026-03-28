@@ -60,6 +60,7 @@ export class BetRouter {
       ticket_number,
       page,
       limit,
+      group_id,
     } = req.query;
     const { user } = req;
     if (typeof date !== 'string') {
@@ -75,6 +76,10 @@ export class BetRouter {
 
     try {
       const organization_ids = await this.getOrgIds(req);
+
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        organization_ids.splice(0, organization_ids.length, group_id);
+      }
 
       const result = await this.controller.getAllBets({
         date,
@@ -126,7 +131,7 @@ export class BetRouter {
   };
 
   private getTotalAmount: RequestHandler = async (req: Request, res: Response) => {
-    const { date, schedule_id, cashier_id, lottery_id } = req.query;
+    const { date, schedule_id, cashier_id, lottery_id, group_id } = req.query;
     const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
@@ -141,6 +146,10 @@ export class BetRouter {
 
     try {
       const organization_ids = await this.getOrgIds(req);
+
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        organization_ids.splice(0, organization_ids.length, group_id);
+      }
 
       const total = await this.controller.getTotalAmount({
         date,
@@ -185,7 +194,7 @@ export class BetRouter {
   };
 
   private getTotalPrize: RequestHandler = async (req: Request, res: Response) => {
-    const { date, schedule_id, cashier_id, lottery_id } = req.query;
+    const { date, schedule_id, cashier_id, lottery_id, group_id } = req.query;
     const { user } = req;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
@@ -200,6 +209,10 @@ export class BetRouter {
 
     try {
       const organization_ids = await this.getOrgIds(req);
+
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        organization_ids.splice(0, organization_ids.length, group_id);
+      }
 
       const total = await this.controller.getTotalPrize({
         date,
@@ -244,7 +257,7 @@ export class BetRouter {
   };
 
   private getAmountsByTicket: RequestHandler = async (req: Request, res: Response) => {
-    const { ticket_number } = req.query;
+    const { ticket_number, group_id } = req.query;
 
     if (typeof ticket_number !== 'string') {
       const response: APIResponse<null> = {
@@ -258,6 +271,10 @@ export class BetRouter {
     }
     try {
       const organization_ids = await this.getOrgIds(req);
+
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        organization_ids.splice(0, organization_ids.length, group_id);
+      }
 
       const total = await this.controller.getAmountsByTicket({
         ticket_number,

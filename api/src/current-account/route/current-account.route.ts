@@ -51,7 +51,7 @@ export class CurrentAccountRouter {
 
   private getAllCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, include_network } = req.query;
+    const { date, include_network, group_id } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -64,11 +64,16 @@ export class CurrentAccountRouter {
     }
 
     try {
+      const effectiveOrgId =
+        typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER
+          ? group_id
+          : req.organization_id!;
+
       const currentAccount = await this.controller.getAllCurrentAccountNetworkHandler({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date as string,
-        organization_id: req.organization_id!,
+        organization_id: effectiveOrgId,
         include_network: toBool(include_network),
       });
 
