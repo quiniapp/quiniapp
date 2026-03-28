@@ -12,8 +12,8 @@ type ApiResponse = { data?: { currentAccount?: ICurrentAccountEntityFront[] } };
 
 export async function fetchCurrentAccount(date?: string | null, group_id?: string | null): Promise<ICurrentAccountEntityFront[]> {
   const params = new URLSearchParams();
-  if (date) params.set('date', encodeURIComponent(date));
-  if (group_id) params.set('group_id', encodeURIComponent(group_id));
+  if (date) params.set('date', date);
+  if (group_id) params.set('group_id', group_id);
   const query = params.toString();
   const url = `${BACKEND_ROUTES.current_account.base}${query ? `?${query}` : ''}`;
 
