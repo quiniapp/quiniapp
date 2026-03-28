@@ -81,22 +81,38 @@ export class TicketRouter {
       throw new BadRequestError('Fecha requerida');
     }
 
-    let effectiveOrgId = req.organization_id!;
+    let group_user_ids: string[] | undefined;
     if (typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER) {
       const descendants = await this.userRepository.getOrganizationDescendants(
         req.organization_id!
       );
       if (descendants.includes(group_id)) {
-        effectiveOrgId = group_id;
+        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      } else {
+        group_user_ids = ['__invalid__'];
       }
     }
+
+    // Validate cashier+group combination
+    let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
+    if (effectiveCashierId && group_user_ids) {
+      if (!group_user_ids.includes(effectiveCashierId)) {
+        group_user_ids = ['__invalid__'];
+        effectiveCashierId = undefined;
+      } else {
+        group_user_ids = undefined;
+      }
+    }
+
+    const effectiveOrgId = req.organization_id!;
 
     const result = await this.controller.getAll({
       user_type: user!.user.user_type,
       user_id: user!.user.user_id,
       organization_id: effectiveOrgId,
       date: date,
-      ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
+      ...(effectiveCashierId !== undefined && { cashier_id: effectiveCashierId }),
+      ...(group_user_ids !== undefined && { group_user_ids }),
       ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
       ...(typeof paid === 'undefined'
         ? paid
@@ -123,22 +139,38 @@ export class TicketRouter {
       throw new BadRequestError('Fecha requerida');
     }
 
-    let effectiveOrgId = req.organization_id!;
+    let group_user_ids: string[] | undefined;
     if (typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER) {
       const descendants = await this.userRepository.getOrganizationDescendants(
         req.organization_id!
       );
       if (descendants.includes(group_id)) {
-        effectiveOrgId = group_id;
+        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      } else {
+        group_user_ids = ['__invalid__'];
       }
     }
+
+    // Validate cashier+group combination
+    let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
+    if (effectiveCashierId && group_user_ids) {
+      if (!group_user_ids.includes(effectiveCashierId)) {
+        group_user_ids = ['__invalid__'];
+        effectiveCashierId = undefined;
+      } else {
+        group_user_ids = undefined;
+      }
+    }
+
+    const effectiveOrgId = req.organization_id!;
 
     const ticket = await this.controller.getAllTicketNumber({
       user_type: user!.user.user_type,
       user_id: user!.user.user_id,
       organization_id: effectiveOrgId,
       date: date,
-      ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
+      ...(effectiveCashierId !== undefined && { cashier_id: effectiveCashierId }),
+      ...(group_user_ids !== undefined && { group_user_ids }),
       ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
     });
 
