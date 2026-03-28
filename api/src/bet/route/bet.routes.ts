@@ -76,22 +76,36 @@ export class BetRouter {
 
     try {
       const allOrgIds = await this.getOrgIds(req);
-      const organization_ids =
+
+      let group_user_ids: string[] | undefined;
+      if (
         typeof group_id === 'string' &&
         req.user?.user.user_type !== USER_TYPE.CASHIER &&
         allOrgIds.includes(group_id)
-          ? [group_id]
-          : allOrgIds;
+      ) {
+        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      }
+
+      let effectiveCashierId =
+        user?.user.user_type === USER_TYPE.CASHIER
+          ? user.user.user_id
+          : typeof cashier_id === 'string'
+            ? cashier_id
+            : undefined;
+
+      if (effectiveCashierId && group_user_ids) {
+        if (!group_user_ids.includes(effectiveCashierId)) {
+          group_user_ids = ['__invalid__'];
+          effectiveCashierId = undefined;
+        } else {
+          group_user_ids = undefined;
+        }
+      }
 
       const result = await this.controller.getAllBets({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
-        cashier_id:
-          user?.user.user_type === USER_TYPE.CASHIER
-            ? user.user.user_id
-            : typeof cashier_id === 'string'
-              ? cashier_id
-              : undefined,
+        cashier_id: effectiveCashierId,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
         winners: winners === 'true' ? true : false,
         grouped: grouped === 'true' ? true : false,
@@ -100,7 +114,8 @@ export class BetRouter {
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
         page: typeof page === 'string' ? parseInt(page, 10) : 1,
         limit: typeof limit === 'string' ? Math.max(1, parseInt(limit, 10) || 100) : 100,
-        organization_ids,
+        organization_ids: allOrgIds,
+        group_user_ids,
       });
       const response: APIResponse<typeof result> = {
         data: {
@@ -148,24 +163,39 @@ export class BetRouter {
 
     try {
       const allOrgIds = await this.getOrgIds(req);
-      const organization_ids =
+
+      let group_user_ids: string[] | undefined;
+      if (
         typeof group_id === 'string' &&
         req.user?.user.user_type !== USER_TYPE.CASHIER &&
         allOrgIds.includes(group_id)
-          ? [group_id]
-          : allOrgIds;
+      ) {
+        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      }
+
+      let effectiveCashierId =
+        user?.user.user_type === USER_TYPE.CASHIER
+          ? user.user.user_id
+          : typeof cashier_id === 'string'
+            ? cashier_id
+            : undefined;
+
+      if (effectiveCashierId && group_user_ids) {
+        if (!group_user_ids.includes(effectiveCashierId)) {
+          group_user_ids = ['__invalid__'];
+          effectiveCashierId = undefined;
+        } else {
+          group_user_ids = undefined;
+        }
+      }
 
       const total = await this.controller.getTotalAmount({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
-        cashier_id:
-          user?.user.user_type === USER_TYPE.CASHIER
-            ? user.user.user_id
-            : typeof cashier_id === 'string'
-              ? cashier_id
-              : undefined,
+        cashier_id: effectiveCashierId,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
-        organization_ids,
+        organization_ids: allOrgIds,
+        group_user_ids,
       });
       const response: APIResponse<number> = {
         data: {
@@ -213,24 +243,39 @@ export class BetRouter {
 
     try {
       const allOrgIds = await this.getOrgIds(req);
-      const organization_ids =
+
+      let group_user_ids: string[] | undefined;
+      if (
         typeof group_id === 'string' &&
         req.user?.user.user_type !== USER_TYPE.CASHIER &&
         allOrgIds.includes(group_id)
-          ? [group_id]
-          : allOrgIds;
+      ) {
+        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      }
+
+      let effectiveCashierId =
+        user?.user.user_type === USER_TYPE.CASHIER
+          ? user.user.user_id
+          : typeof cashier_id === 'string'
+            ? cashier_id
+            : undefined;
+
+      if (effectiveCashierId && group_user_ids) {
+        if (!group_user_ids.includes(effectiveCashierId)) {
+          group_user_ids = ['__invalid__'];
+          effectiveCashierId = undefined;
+        } else {
+          group_user_ids = undefined;
+        }
+      }
 
       const total = await this.controller.getTotalPrize({
         date,
         schedule_id: typeof schedule_id === 'string' ? schedule_id : undefined,
-        cashier_id:
-          user?.user.user_type === USER_TYPE.CASHIER
-            ? user.user.user_id
-            : typeof cashier_id === 'string'
-              ? cashier_id
-              : undefined,
+        cashier_id: effectiveCashierId,
         lottery_id: typeof lottery_id === 'string' ? lottery_id : undefined,
-        organization_ids,
+        organization_ids: allOrgIds,
+        group_user_ids,
       });
       const response: APIResponse<number> = {
         data: {
@@ -263,7 +308,7 @@ export class BetRouter {
   };
 
   private getAmountsByTicket: RequestHandler = async (req: Request, res: Response) => {
-    const { ticket_number, group_id } = req.query;
+    const { ticket_number } = req.query;
 
     if (typeof ticket_number !== 'string') {
       const response: APIResponse<null> = {
@@ -277,16 +322,10 @@ export class BetRouter {
     }
     try {
       const allOrgIds = await this.getOrgIds(req);
-      const organization_ids =
-        typeof group_id === 'string' &&
-        req.user?.user.user_type !== USER_TYPE.CASHIER &&
-        allOrgIds.includes(group_id)
-          ? [group_id]
-          : allOrgIds;
 
       const total = await this.controller.getAmountsByTicket({
         ticket_number,
-        organization_ids,
+        organization_ids: allOrgIds,
       });
       const response: APIResponse<TicketSums> = {
         data: {
