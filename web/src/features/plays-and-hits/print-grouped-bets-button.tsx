@@ -22,6 +22,7 @@ const PrintGroupedBetsButton = () => {
   const tern = searchParams.get('tern');
   const quatern = searchParams.get('quatern');
   const isGrouped = searchParams.get('grouped') === 'true';
+  const group_id = searchParams.get('group_id');
 
   const { data: bets } = useBets({
     date: isGrouped ? date : null,
@@ -33,6 +34,7 @@ const PrintGroupedBetsButton = () => {
     tern,
     quatern,
     limit: 9999,
+    group_id,
   });
 
   const { data: lotteries } = useLotteries();

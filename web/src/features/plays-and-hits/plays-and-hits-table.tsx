@@ -37,6 +37,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   const winners = searchParams.get('winners');
   const quatern = searchParams.get('quatern');
   const tern = searchParams.get('tern');
+  const group_id = searchParams.get('group_id');
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteBets({
     schedule_id,
@@ -48,6 +49,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     tern,
     winners,
     limit: 50,
+    group_id,
   });
 
 

@@ -11,13 +11,17 @@ const HeaderPlayAndHits = () => {
   // Inicializar fecha solo si no está ya en la URL — evita render extra con useEffect
   useLayoutEffect(() => {
     if (!searchParams.get('date')) {
-      setSearchParams({ date: today.format('YYYY-MM-DD') }, { replace: true });
+      const params = new URLSearchParams(searchParams);
+      params.set('date', today.format('YYYY-MM-DD'));
+      setSearchParams(params, { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDayChange = (date?: string) => {
-    setSearchParams({ date: date ?? today.format('YYYY-MM-DD') });
+    const params = new URLSearchParams(searchParams);
+    params.set('date', date ?? today.format('YYYY-MM-DD'));
+    setSearchParams(params);
   };
 
   return (
