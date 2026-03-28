@@ -6,10 +6,12 @@ import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { newTicketSchema } from '@helper/schemas/ticket.schema';
 import { USER_TYPE } from '@helper/types/user.type';
 import { asyncHandler } from '../../middlewares/error.middleware';
+import { UserRepository } from '../../user/repository/user.repository';
 
 export class TicketRouter {
   public router: Router;
   private controller: TicketController;
+  private userRepository = new UserRepository();
   constructor() {
     this.router = Router();
     this.controller = new TicketController();
@@ -64,6 +66,7 @@ export class TicketRouter {
     const { date, ticket_number, cashier_id, winner, page, limit, paid, group_id } = req.query;
 
     if (typeof ticket_number === 'string') {
+      // Ticket lookup by number is scoped to the user's own org; group_id does not apply here
       const ticketData = await this.controller.get({ ticket_number }, req.organization_id!);
       const response: APIResponse<ITicketEntityFront[]> = {
         data: {
@@ -78,10 +81,15 @@ export class TicketRouter {
       throw new BadRequestError('Fecha requerida');
     }
 
-    const effectiveOrgId =
-      typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER
-        ? group_id
-        : req.organization_id!;
+    let effectiveOrgId = req.organization_id!;
+    if (typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER) {
+      const descendants = await this.userRepository.getOrganizationDescendants(
+        req.organization_id!
+      );
+      if (descendants.includes(group_id)) {
+        effectiveOrgId = group_id;
+      }
+    }
 
     const result = await this.controller.getAll({
       user_type: user!.user.user_type,
@@ -115,10 +123,15 @@ export class TicketRouter {
       throw new BadRequestError('Fecha requerida');
     }
 
-    const effectiveOrgId =
-      typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER
-        ? group_id
-        : req.organization_id!;
+    let effectiveOrgId = req.organization_id!;
+    if (typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER) {
+      const descendants = await this.userRepository.getOrganizationDescendants(
+        req.organization_id!
+      );
+      if (descendants.includes(group_id)) {
+        effectiveOrgId = group_id;
+      }
+    }
 
     const ticket = await this.controller.getAllTicketNumber({
       user_type: user!.user.user_type,

@@ -75,11 +75,13 @@ export class BetRouter {
     }
 
     try {
-      const organization_ids = await this.getOrgIds(req);
-
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        organization_ids.splice(0, organization_ids.length, group_id);
-      }
+      const allOrgIds = await this.getOrgIds(req);
+      const organization_ids =
+        typeof group_id === 'string' &&
+        req.user?.user.user_type !== USER_TYPE.CASHIER &&
+        allOrgIds.includes(group_id)
+          ? [group_id]
+          : allOrgIds;
 
       const result = await this.controller.getAllBets({
         date,
@@ -145,11 +147,13 @@ export class BetRouter {
     }
 
     try {
-      const organization_ids = await this.getOrgIds(req);
-
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        organization_ids.splice(0, organization_ids.length, group_id);
-      }
+      const allOrgIds = await this.getOrgIds(req);
+      const organization_ids =
+        typeof group_id === 'string' &&
+        req.user?.user.user_type !== USER_TYPE.CASHIER &&
+        allOrgIds.includes(group_id)
+          ? [group_id]
+          : allOrgIds;
 
       const total = await this.controller.getTotalAmount({
         date,
@@ -208,11 +212,13 @@ export class BetRouter {
     }
 
     try {
-      const organization_ids = await this.getOrgIds(req);
-
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        organization_ids.splice(0, organization_ids.length, group_id);
-      }
+      const allOrgIds = await this.getOrgIds(req);
+      const organization_ids =
+        typeof group_id === 'string' &&
+        req.user?.user.user_type !== USER_TYPE.CASHIER &&
+        allOrgIds.includes(group_id)
+          ? [group_id]
+          : allOrgIds;
 
       const total = await this.controller.getTotalPrize({
         date,
@@ -270,11 +276,13 @@ export class BetRouter {
       return;
     }
     try {
-      const organization_ids = await this.getOrgIds(req);
-
-      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-        organization_ids.splice(0, organization_ids.length, group_id);
-      }
+      const allOrgIds = await this.getOrgIds(req);
+      const organization_ids =
+        typeof group_id === 'string' &&
+        req.user?.user.user_type !== USER_TYPE.CASHIER &&
+        allOrgIds.includes(group_id)
+          ? [group_id]
+          : allOrgIds;
 
       const total = await this.controller.getAmountsByTicket({
         ticket_number,

@@ -4,6 +4,7 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { USER_TYPE } from '@helper/types/user.type';
+import { UserRepository } from '../../user/repository/user.repository';
 // import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
 // Helper opcional para parsear booleanos
@@ -30,6 +31,7 @@ interface INetworkSummary {
 export class CurrentAccountRouter {
   public router: Router;
   private controller: CurrentAccountController;
+  private userRepository = new UserRepository();
   constructor() {
     this.router = Router();
     this.controller = new CurrentAccountController();
@@ -64,10 +66,15 @@ export class CurrentAccountRouter {
     }
 
     try {
-      const effectiveOrgId =
-        typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER
-          ? group_id
-          : req.organization_id!;
+      let effectiveOrgId = req.organization_id!;
+      if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
+        const descendants = await this.userRepository.getOrganizationDescendants(
+          req.organization_id!
+        );
+        if (descendants.includes(group_id)) {
+          effectiveOrgId = group_id;
+        }
+      }
 
       const currentAccount = await this.controller.getAllCurrentAccountNetworkHandler({
         user_type: user.user.user_type,
