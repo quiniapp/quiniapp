@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-03-27
+
+#### Group-Based Filtering
+- **useInfiniteBets.ts**: Added `group_id` param passed to API and included in query key.
+- **useBets.ts**: Added `group_id` to `FetchBetsProps`, `betsKey`, and URL params.
+- **useTotals.ts**: Added `group_id` to `buildSearchParams` helper.
+- **useInfiniteTickets.ts**: Added `group_id` param passed to API and included in query key.
+- **useGetCurrentAccount.ts**: Added `group_id` param to fetch function, URL, and query key.
+- **play-and-hits-select.tsx**: Replaced hardcoded group selector with real `useGroups` data. Selecting a group filters cashier dropdown to group members and sets `group_id` in searchParams.
+- **plays-and-hits-table.tsx**: Reads `group_id` from searchParams and passes to `useInfiniteBets`.
+- **print-grouped-bets-button.tsx**: Passes `group_id` to `useBets` for correct PDF generation when group is selected.
+- **header-play-and-hits.tsx**: Fixed bug where date change wiped all other searchParams (including `group_id`).
+- **TerminalTIcketContext.tsx** / **TerminalTicketProvider.tsx**: Added `group_id` and `setGroupId` to context, managed via searchParams. `setGroupId` clears `cashier_id`; `setCashierId` clears `group_id`.
+- **form-header-filter.tsx**: Added group selector to Revisar Ticket page; cashier dropdown filters to group members when group selected.
+- **table-terminal-ticket.tsx**: Passes `group_id` to `useInfiniteTickets`.
+- **terminal-ticket/index.tsx**: Passes `group_id` from context to `TableTerminalTicket`.
+- **filter-section/index.tsx**: Replaced hardcoded group items with real `useGroups` data; group state now managed via searchParams.
+- **settlement-payroll-table/index.tsx**: Removed local group state; reads `group_id` from searchParams and passes to `useGetCurrentAccount`.
+
 ### Changed - 2026-03-27
 
 #### Performance Optimizations in Plays & Hits

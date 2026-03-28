@@ -14,6 +14,7 @@ interface TableTerminalTicketProps {
   winner?: boolean;
   paid?: boolean | null;
   not_paid?: boolean | null;
+  group_id?: string;
 }
 
 const dedupe = <T, K>(arr: T[], getKey: (x: T) => K) => {
@@ -35,6 +36,7 @@ const TableTerminalTicket = ({
   winner,
   paid,
   not_paid,
+  group_id,
 }: TableTerminalTicketProps) => {
   const { ticket_number, toggleTicketNumber, setPayTicket } = useTerminalTicket();
 
@@ -44,6 +46,7 @@ const TableTerminalTicket = ({
     winner,
     paid,
     not_paid,
+    group_id,
     limit: 50,
   });
 

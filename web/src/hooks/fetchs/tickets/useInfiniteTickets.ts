@@ -12,6 +12,7 @@ interface FetchInfiniteTicketsProps {
   paid?: boolean | null;
   not_paid?: boolean | null;
   limit?: number;
+  group_id?: string | null;
 }
 
 const fetchPaginatedTickets = async (
@@ -34,6 +35,7 @@ const fetchPaginatedTickets = async (
           : props.not_paid
             ? 'false'
             : undefined,
+        group_id: props.group_id || undefined,
       },
     }
   );
@@ -62,6 +64,7 @@ export const useInfiniteTickets = (props: FetchInfiniteTicketsProps) => {
       props.paid ?? null,
       props.not_paid ?? null,
       props.limit ?? 150,
+      props.group_id ?? '',
     ],
     queryFn: ({ pageParam = 1 }) => fetchPaginatedTickets(props, pageParam as number),
     getNextPageParam: (lastPage) => {

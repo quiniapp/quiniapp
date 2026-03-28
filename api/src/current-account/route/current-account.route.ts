@@ -4,6 +4,7 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { USER_TYPE } from '@helper/types/user.type';
+import { UserRepository } from '../../user/repository/user.repository';
 // import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
 // Helper opcional para parsear booleanos
@@ -30,6 +31,7 @@ interface INetworkSummary {
 export class CurrentAccountRouter {
   public router: Router;
   private controller: CurrentAccountController;
+  private userRepository = new UserRepository();
   constructor() {
     this.router = Router();
     this.controller = new CurrentAccountController();
@@ -51,7 +53,7 @@ export class CurrentAccountRouter {
 
   private getAllCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, include_network } = req.query;
+    const { date, include_network, group_id } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -64,11 +66,21 @@ export class CurrentAccountRouter {
     }
 
     try {
+      let effectiveOrgId = req.organization_id!;
+      if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
+        const descendants = await this.userRepository.getOrganizationDescendants(
+          req.organization_id!
+        );
+        if (descendants.includes(group_id)) {
+          effectiveOrgId = group_id;
+        }
+      }
+
       const currentAccount = await this.controller.getAllCurrentAccountNetworkHandler({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date as string,
-        organization_id: req.organization_id!,
+        organization_id: effectiveOrgId,
         include_network: toBool(include_network),
       });
 

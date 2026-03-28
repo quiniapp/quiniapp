@@ -19,6 +19,7 @@ function buildSearchParams(p: FetchBetsProps) {
   if (p.cashier_id) params.set('cashier_id', p.cashier_id);
   if (p.grouped) params.set('grouped', p.grouped);
   if (p.winners) params.set('winners', p.winners); // 'true' | 'false'
+  if (p.group_id) params.set('group_id', p.group_id);
   return params;
 }
 
