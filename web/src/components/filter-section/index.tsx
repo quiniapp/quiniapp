@@ -18,28 +18,39 @@ import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
+import { useGroups } from '@/hooks/fetchs/organization/useGroups.ts';
 import { USER_TYPE } from '@helper/types/user.type';
 
-interface FilterSectionProps {
-  group: string;
-  onGroupChange: (group: string) => void;
-}
+interface FilterSectionProps {}
 
-const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
+const FilterSection = ({}: FilterSectionProps) => {
   const [userNumber, setUserNumber] = useState<string>('');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const isMobile = useIsMobile();
-  const { role } = useAuth();
+  const { role, organizationId } = useAuth();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date') ?? undefined;
+  const group_id = searchParams.get('group_id') ?? undefined;
+
+  const { data: groups } = useGroups(organizationId, role);
 
   // No pises otros params al setear la fecha
   const handleDayChange = (newDate?: string) => {
     if (!newDate) return;
     const params = new URLSearchParams(searchParams);
     params.set('date', newDate);
+    setSearchParams(params);
+  };
+
+  const handleGroupChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === 'Todos') {
+      params.delete('group_id');
+    } else {
+      params.set('group_id', value);
+    }
     setSearchParams(params);
   };
 
@@ -86,14 +97,17 @@ const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
             <Flex className="items-center">
               <Label className="text-sm text-muted-foreground mr-2">Grupo:</Label>
               <Box>
-                <Select value={group} onValueChange={onGroupChange}>
+                <Select value={group_id ?? 'Todos'} onValueChange={handleGroupChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar Grupo" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Todos">Todos</SelectItem>
-                    <SelectItem value="Group 1">Group 1</SelectItem>
-                    <SelectItem value="Group 2">Group 2</SelectItem>
+                    {groups?.map((g) => (
+                      <SelectItem key={g.organization_id} value={g.organization_id}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Box>
