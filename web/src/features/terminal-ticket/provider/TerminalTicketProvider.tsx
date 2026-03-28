@@ -52,6 +52,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       } else {
         params.delete('cashier_id');
       }
+      params.delete('group_id');
       setSearchParams(params);
     },
     [searchParams, setSearchParams]
