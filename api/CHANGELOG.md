@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-03-28
 
+#### API Performance — Medium Impact
+
+**P-17 — Cache `getOrganizationDescendants` RPC**
+- **`current-account.repository.ts`**: `getOrganizationNetworkIds` ahora cachea el resultado con `globalCacheManager` (TTL 10 min). El RPC `get_organization_descendants` se llamaba en cada request de usuarios CAPITALIST — ahora solo corre una vez cada 10 minutos por organización.
+- **`cacheInvalidation.ts`**: Agrega `invalidateOrgNetworkIds(org_id)` e integra en `invalidateAllForOrg` para invalidar cuando se crea/elimina una organización.
+
+**P-06 — `ResultsRepository.getAll` con límite**
+- **`results.repository.ts`**: Agrega `limit` (default 1000) a `getAll` para evitar traer todo el histórico sin cota.
+
 #### API Performance — High Impact
 
 **P-01 / P-20 — Login: parallelización + eliminación de SELECTs redundantes**

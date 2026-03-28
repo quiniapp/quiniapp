@@ -56,10 +56,10 @@ export class ResultsRepository {
     return data;
   }
 
-  async getAll(organization_id: string) {
-    const { data, error } = await this.baseQuery(organization_id).order('date', {
-      ascending: true,
-    });
+  async getAll(organization_id: string, limit = 1000) {
+    const { data, error } = await this.baseQuery(organization_id)
+      .order('date', { ascending: true })
+      .limit(limit);
 
     if (error) throw new Error(error.details ?? error.message);
     return data;

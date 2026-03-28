@@ -71,6 +71,15 @@ export function invalidateScheduleLotteryRelated(organization_id: string): void 
 }
 
 /**
+ * Invalidate org network IDs cache.
+ * Call when an organization is created or deleted.
+ * The ancestor org's cache must be invalidated since its descendants changed.
+ */
+export function invalidateOrgNetworkIds(organization_id: string): void {
+  globalCacheManager.invalidate(`org:${organization_id}:network-ids`);
+}
+
+/**
  * Nuclear option: invalidate all caches for an organization
  * Use when you need to ensure complete cache refresh
  */
@@ -78,6 +87,7 @@ export function invalidateAllForOrg(organization_id: string): void {
   invalidateLotteriesForOrg(organization_id);
   invalidateSchedulesForOrg(organization_id);
   invalidateScheduleLotteriesForOrg(organization_id);
+  invalidateOrgNetworkIds(organization_id);
 }
 
 /**
