@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-03-27
+
+#### Group-Based Filtering
+- **bet.routes.ts**: Accept `group_id` query param in all bet handlers (`getAllBets`, `getTotalAmount`, `getTotalPrize`, `getAmountsByTicket`). When present and user is not CASHIER, overrides `organization_ids` to `[group_id]` to scope queries to that group only. Ownership validated against descendant org list.
+- **ticket.route.ts**: Accept `group_id` query param in `getAllTicketHandler` and `getAllTicketNumberHandler`. When present, overrides `organization_id` to `group_id` after validating it is a descendant of the user's org.
+- **current-account.route.ts**: Accept `group_id` query param in `getAllCurrentAccountHandler`. When present, overrides `organization_id` to `group_id` after validating ownership.
+
 ### Changed - 2026-03-27
 
 #### Bet Aggregates – Pagination & Query Optimization
