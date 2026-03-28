@@ -33,6 +33,7 @@ export async function fetchPaginatedBets(
     tern,
     ticket_number,
     limit = 150,
+    group_id,
   } = props;
 
   if (!date) {
@@ -57,7 +58,7 @@ export async function fetchPaginatedBets(
   if (quatern) params.append('quatern', quatern);
   if (tern) params.append('tern', tern);
   if (ticket_number) params.append('ticket_number', ticket_number);
-  if (props.group_id) params.append('group_id', props.group_id);
+  if (group_id) params.append('group_id', group_id);
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
   const res = await fetchWithAuth(url, {

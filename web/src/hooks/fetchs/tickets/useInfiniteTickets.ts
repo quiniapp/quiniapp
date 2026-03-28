@@ -64,7 +64,7 @@ export const useInfiniteTickets = (props: FetchInfiniteTicketsProps) => {
       props.paid ?? null,
       props.not_paid ?? null,
       props.limit ?? 150,
-      props.group_id ?? null,
+      props.group_id ?? '',
     ],
     queryFn: ({ pageParam = 1 }) => fetchPaginatedTickets(props, pageParam as number),
     getNextPageParam: (lastPage) => {
