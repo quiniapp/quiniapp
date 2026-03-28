@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-03-27
+
+#### Group Filtering via User IDs
+- **user.repository.ts**: Added `getUserIdsByOrg(organizationId)` — returns user_ids for users with matching organization_id.
+- **bet.routes.ts** / **bet.controller.ts** / **bet.repository.ts**: Group filtering now uses `user_id IN group_user_ids` instead of `organization_id IN [group_id]`. Validates cashier belongs to group when both filters provided. Grouped bets RPC called once with `p_user_ids` instead of per-org loop. Extracted `resolveGroupFilter()` helper to remove duplication.
+- **ticket.route.ts** / **ticket.controller.ts** / **ticket.repository.ts**: Same group user_ids pattern. Organization_id filter skipped when group_user_ids is set. Extracted `resolveGroupFilters()` helper.
+- **current-account.route.ts** / **current-account.controller.ts**: Group filtering via post-filter — accounts calculated for full network, then filtered by group user_ids.
+
+#### Migrations
+- **20260328154340_add_user_ids_to_grouped_bets_rpc.sql**: Added `p_user_ids UUID[] DEFAULT NULL` to `get_grouped_bets_for_parse` and `get_grouped_bets_for_parse_archive` RPCs.
+
 ### Added - 2026-03-27
 
 #### Group-Based Filtering
