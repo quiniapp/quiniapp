@@ -21,9 +21,7 @@ import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups.ts';
 import { USER_TYPE } from '@helper/types/user.type';
 
-interface FilterSectionProps {}
-
-const FilterSection = ({}: FilterSectionProps) => {
+const FilterSection = () => {
   const [userNumber, setUserNumber] = useState<string>('');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
