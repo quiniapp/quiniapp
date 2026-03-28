@@ -5,16 +5,17 @@ import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 export const CURRENT_ACCOUNT_LATEST = 'latest';
 
-export const currentAccountKey = (date?: string | null) =>
-  ['getCurrentAccount', date ?? CURRENT_ACCOUNT_LATEST] as const;
+export const currentAccountKey = (date?: string | null, group_id?: string | null) =>
+  ['getCurrentAccount', date ?? CURRENT_ACCOUNT_LATEST, group_id ?? ''] as const;
 
 type ApiResponse = { data?: { currentAccount?: ICurrentAccountEntityFront[] } };
 
-export async function fetchCurrentAccount(date?: string | null): Promise<ICurrentAccountEntityFront[]> {
-  // si hay date, la mandamos; si no, dejamos que el backend devuelva la última
-  const url =
-    `${BACKEND_ROUTES.current_account.base}` +
-    (date ? `?date=${encodeURIComponent(date)}` : '');
+export async function fetchCurrentAccount(date?: string | null, group_id?: string | null): Promise<ICurrentAccountEntityFront[]> {
+  const params = new URLSearchParams();
+  if (date) params.set('date', encodeURIComponent(date));
+  if (group_id) params.set('group_id', encodeURIComponent(group_id));
+  const query = params.toString();
+  const url = `${BACKEND_ROUTES.current_account.base}${query ? `?${query}` : ''}`;
 
   const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
@@ -25,10 +26,10 @@ export async function fetchCurrentAccount(date?: string | null): Promise<ICurren
   return json?.data?.currentAccount ?? [];
 }
 
-export function useGetCurrentAccount(date?: string | null) {
+export function useGetCurrentAccount(date?: string | null, group_id?: string | null) {
   return useQuery<ICurrentAccountEntityFront[]>({
-    queryKey: currentAccountKey(date),
-    queryFn: () => fetchCurrentAccount(date),
-    
+    queryKey: currentAccountKey(date, group_id),
+    queryFn: () => fetchCurrentAccount(date, group_id),
+
   });
 }
