@@ -200,7 +200,7 @@ export class CurrentAccountController {
    * Get all current accounts for network (org + sub-orgs)
    */
   getAllCurrentAccountNetworkHandler = async (
-    props: IGetAllCurrentAccountEntity & { include_network?: boolean }
+    props: IGetAllCurrentAccountEntity & { include_network?: boolean; group_user_ids?: string[] }
   ): Promise<ICurrentAccountEntityFront[]> => {
     try {
       let currentaccounts;
@@ -235,7 +235,13 @@ export class CurrentAccountController {
         }
       }
 
-      return currentaccounts.map((currentaccount) => parseCurrentAccount(currentaccount));
+      let results = currentaccounts.map((currentaccount) => parseCurrentAccount(currentaccount));
+
+      if (props.group_user_ids?.length) {
+        results = results.filter((a) => props.group_user_ids!.includes(a.user_id));
+      }
+
+      return results;
     } catch (error) {
       console.error('getAllCurrentAccountNetworkHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

@@ -66,15 +66,19 @@ export class CurrentAccountRouter {
     }
 
     try {
-      let effectiveOrgId = req.organization_id!;
+      let group_user_ids: string[] | undefined;
       if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
         const descendants = await this.userRepository.getOrganizationDescendants(
           req.organization_id!
         );
         if (descendants.includes(group_id)) {
-          effectiveOrgId = group_id;
+          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+        } else {
+          group_user_ids = ['__invalid__'];
         }
       }
+
+      const effectiveOrgId = req.organization_id!; // always use user's own org
 
       const currentAccount = await this.controller.getAllCurrentAccountNetworkHandler({
         user_type: user.user.user_type,
@@ -82,6 +86,7 @@ export class CurrentAccountRouter {
         date: date as string,
         organization_id: effectiveOrgId,
         include_network: toBool(include_network),
+        group_user_ids,
       });
 
       const response: APIResponse<ICurrentAccountEntityFront[]> = {
