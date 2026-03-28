@@ -78,12 +78,12 @@ export class BetRouter {
       const allOrgIds = await this.getOrgIds(req);
 
       let group_user_ids: string[] | undefined;
-      if (
-        typeof group_id === 'string' &&
-        req.user?.user.user_type !== USER_TYPE.CASHIER &&
-        allOrgIds.includes(group_id)
-      ) {
-        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        if (allOrgIds.includes(group_id)) {
+          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+        } else {
+          group_user_ids = ['__invalid__'];
+        }
       }
 
       let effectiveCashierId =
@@ -165,12 +165,12 @@ export class BetRouter {
       const allOrgIds = await this.getOrgIds(req);
 
       let group_user_ids: string[] | undefined;
-      if (
-        typeof group_id === 'string' &&
-        req.user?.user.user_type !== USER_TYPE.CASHIER &&
-        allOrgIds.includes(group_id)
-      ) {
-        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        if (allOrgIds.includes(group_id)) {
+          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+        } else {
+          group_user_ids = ['__invalid__'];
+        }
       }
 
       let effectiveCashierId =
@@ -245,12 +245,12 @@ export class BetRouter {
       const allOrgIds = await this.getOrgIds(req);
 
       let group_user_ids: string[] | undefined;
-      if (
-        typeof group_id === 'string' &&
-        req.user?.user.user_type !== USER_TYPE.CASHIER &&
-        allOrgIds.includes(group_id)
-      ) {
-        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+      if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
+        if (allOrgIds.includes(group_id)) {
+          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
+        } else {
+          group_user_ids = ['__invalid__'];
+        }
       }
 
       let effectiveCashierId =
