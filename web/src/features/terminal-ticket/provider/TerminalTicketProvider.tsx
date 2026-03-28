@@ -80,6 +80,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       } else {
         params.set('cashier_id', id);
       }
+      params.delete('group_id');
       setSearchParams(params);
     },
     [cashier_id, searchParams, setSearchParams]

@@ -19,7 +19,7 @@ const SettlementPayrollTable = () => {
     } else if (isSuccess) {
       toast.success('Datos obtenidos correctamente');
     }
-  }, [isLoading, isPending]);
+  }, [isError, isSuccess]);
 
   return (
     <Box className="overflow-auto bg-[var(--primary-bg-content)] py-[24px] text-white">
