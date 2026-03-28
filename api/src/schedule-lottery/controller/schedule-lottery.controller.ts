@@ -1,6 +1,10 @@
 import { parseScheduleLottery } from '../helper/parseScheduleLottery';
 import { ScheduleLotteryRepository } from '../repository/schedule-lottery.repositroy';
-import { IScheduleLotteryEntityFront, SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
+import {
+  IScheduleLotteryEntityBack,
+  IScheduleLotteryEntityFront,
+  SCHEDULE_DAY,
+} from '@helper/types/schedule-lottery.type';
 
 export class ScheduleLotteryController {
   private repository = new ScheduleLotteryRepository();
@@ -83,6 +87,18 @@ export class ScheduleLotteryController {
       return await this.getAllScheduleLotteries(organization_id);
     } catch (error) {
       console.error('saveScheduleLottery:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  }
+
+  async getScheduleLotteriesForDay(
+    organization_id: string,
+    day: SCHEDULE_DAY
+  ): Promise<IScheduleLotteryEntityBack[]> {
+    try {
+      return await this.repository.getScheduleLotteriesByDay(organization_id, day);
+    } catch (error) {
+      console.error('getScheduleLotteriesForDay:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   }

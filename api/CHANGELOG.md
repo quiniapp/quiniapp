@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-03-28
 
+#### API Performance — High Impact
+
+**P-01 / P-20 — Login: parallelización + eliminación de SELECTs redundantes**
+- **`auth.controller.ts`**: Los pasos post-login `updateLoginMetadata`, `resetFailedAttempts` y `auditLog` ahora corren en `Promise.all` (3 round-trips secuenciales → 1 paralelo).
+- **`auth.controller.ts`**: En `refreshToken`, `rotateRefreshToken` y `updateActivity` ahora corren en `Promise.all` (secuenciales → paralelo).
+- **`session.repository.ts`**: `rotateRefreshToken` ahora recibe `newVersion` como parámetro — elimina el `getById` interno que se ejecutaba en cada refresh de token.
+- **`session.repository.ts`**: `updateActivity` ahora recibe `createdAt` como parámetro — elimina el `getById` interno que se ejecutaba en cada request autenticado.
+- **`middlewares/auth.middleware.ts`**: Pasa `session.created_at` a `updateActivity` (ya disponible en el middleware).
+
+**P-03 — `getAllByDay` de schedules: de 1+N queries a 2 queries paralelas**
+- **`schedule.controller.ts`**: Reemplaza el flujo `getScheduleIdsForDay` + `getAll` secuenciales + N queries de `getLotteryIdsByScheduleAndDay` por un `Promise.all([getScheduleLotteriesForDay, getAll])`. El merge de schedule_ids y lottery_ids se hace en Node.js sobre los datos ya cargados — sin queries extra.
+- **`schedule-lottery.controller.ts`**: Agrega `getScheduleLotteriesForDay` que expone los registros raw necesarios para el merge.
+
+**P-05 — `getAllWinners` sin límite**
+- **`winners.repository.ts`**: Agrega `limit` (default 200) y filtro opcional por `date` para evitar traer todos los tickets ganadores históricos con JOINs profundos.
+
 #### Database Security & Performance
 
 ##### Security

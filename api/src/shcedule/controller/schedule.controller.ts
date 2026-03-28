@@ -62,39 +62,30 @@ export class ScheduleController {
     withLotteries: boolean = false
   ): Promise<IScheduleEntityFront[]> => {
     try {
-      // Get schedule IDs that have lotteries configured for this day
-      const scheduleIds = await this.scheduleLotteryController.getScheduleIdsForDay(
-        organization_id,
-        day
-      );
+      // Fetch schedule_lotteries for the day and all schedules in parallel (2 queries total)
+      const [slRecords, allSchedules] = await Promise.all([
+        this.scheduleLotteryController.getScheduleLotteriesForDay(organization_id, day),
+        this.repository.getAll(organization_id, all),
+      ]);
 
-      // Get all schedules
-      const allSchedules = await this.repository.getAll(organization_id, all);
+      // Build lookup structures from the already-fetched records — no extra queries needed
+      const scheduleIdSet = new Set(slRecords.map((r) => r.schedule_id));
+      const lotteryIdsBySchedule = new Map<string, string[]>();
+      for (const r of slRecords) {
+        const ids = lotteryIdsBySchedule.get(r.schedule_id) ?? [];
+        ids.push(r.lottery_id);
+        lotteryIdsBySchedule.set(r.schedule_id, ids);
+      }
 
-      // Filter schedules by IDs that have lotteries configured for this day
-      const filteredSchedules = allSchedules.filter((schedule) =>
-        scheduleIds.includes(schedule.schedule_id)
-      );
+      const parsedSchedules = allSchedules
+        .filter((s) => scheduleIdSet.has(s.schedule_id))
+        .map((s) => parseSchedule(s));
 
-      // Parse schedules
-      const parsedSchedules = filteredSchedules.map((schedule) => parseSchedule(schedule));
-
-      // If withLotteries is true, include lottery_ids for each schedule
       if (withLotteries) {
-        const schedulesWithLotteries = await Promise.all(
-          parsedSchedules.map(async (schedule) => {
-            const lotteryIds = await this.scheduleLotteryController.getLotteryIdsByScheduleAndDay(
-              organization_id,
-              schedule.schedule_id,
-              day
-            );
-            return {
-              ...schedule,
-              lottery_ids: lotteryIds,
-            };
-          })
-        );
-        return schedulesWithLotteries;
+        return parsedSchedules.map((schedule) => ({
+          ...schedule,
+          lottery_ids: lotteryIdsBySchedule.get(schedule.schedule_id) ?? [],
+        }));
       }
 
       return parsedSchedules;

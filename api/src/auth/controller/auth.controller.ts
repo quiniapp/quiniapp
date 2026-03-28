@@ -168,25 +168,27 @@ export class AuthController {
 
     // Update session with correct refresh token hash
     const finalRefreshTokenHash = await hashPassword(refreshToken);
-    await this.sessionRepository.rotateRefreshToken(session.session_id, finalRefreshTokenHash);
+    await this.sessionRepository.rotateRefreshToken(
+      session.session_id,
+      finalRefreshTokenHash,
+      session.refresh_token_version + 1
+    );
 
-    // 8. Update user login metadata
-    await this.repository.updateLoginMetadata(userData.user_id, ipAddress || null);
-
-    // 9. Reset failed attempts
-    await this.repository.resetFailedAttempts(userData.user_id);
-
-    // 10. Log successful login
-    await this.auditRepository.log({
-      user_id: userData.user_id,
-      session_id: session.session_id,
-      organization_id: userData.organization_id,
-      username,
-      event_type: 'login_success',
-      success: true,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-    });
+    // 8, 9, 10. Run independent post-login updates in parallel
+    await Promise.all([
+      this.repository.updateLoginMetadata(userData.user_id, ipAddress || null),
+      this.repository.resetFailedAttempts(userData.user_id),
+      this.auditRepository.log({
+        user_id: userData.user_id,
+        session_id: session.session_id,
+        organization_id: userData.organization_id,
+        username,
+        event_type: 'login_success',
+        success: true,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      }),
+    ]);
 
     return {
       user: parseUser(userData),
@@ -291,12 +293,16 @@ export class AuthController {
       session.refresh_token_version + 1
     );
 
-    // 7. Update session with new refresh token hash
+    // 7. Update session: rotate token + update activity in parallel
     const newRefreshTokenHash = await hashPassword(newRefreshToken);
-    await this.sessionRepository.rotateRefreshToken(session.session_id, newRefreshTokenHash);
-
-    // 8. Update activity (sliding window)
-    await this.sessionRepository.updateActivity(session.session_id);
+    await Promise.all([
+      this.sessionRepository.rotateRefreshToken(
+        session.session_id,
+        newRefreshTokenHash,
+        session.refresh_token_version + 1
+      ),
+      this.sessionRepository.updateActivity(session.session_id, session.created_at),
+    ]);
 
     // 9. Log successful refresh
     await this.auditRepository.log({
