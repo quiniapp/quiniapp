@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Performance
 - **schedules-checkbox-list-desktop.tsx**: Fixed Rules of Hooks violation — replaced `Array.from({ length: 10 }, () => useRef())` (hook called inside a loop) with a single `useRef<(HTMLDivElement | null)[]>` and a `useCallback`-stable `setRef` callback ref. No behavior change.
 - **filter-section/index.tsx**: Added `useDebounce(userNumber, 400ms)` before parsing to `userNumberInt`. Previously each keystroke triggered a new API call to `useGetUserByNumber`; now the query fires only after 400ms of inactivity. The `userNotInGroup` group-membership validation also uses the debounced value, which is correct since partial input is not a valid user number.
+- **settlement-payroll-table/index.tsx**: Removed redundant `toast.success` on every successful fetch. The toast was firing on every date/group filter change (each change creates a new query key and re-fetches), which is noisy since the data is already visible in the table. Error toast is kept.
 
 ### Fixed - 2026-03-27
 

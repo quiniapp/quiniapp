@@ -11,15 +11,13 @@ const SettlementPayrollTable = () => {
   const [searchParams] = useSearchParams();
   const date = searchParams.get('date');
   const group_id = searchParams.get('group_id');
-  const { data, isLoading, isPending, isError, isSuccess } = useGetCurrentAccount(date, group_id);
+  const { data, isLoading, isPending, isError } = useGetCurrentAccount(date, group_id);
 
   useEffect(() => {
     if (isError) {
       toast.error('Error al obtener los datos');
-    } else if (isSuccess) {
-      toast.success('Datos obtenidos correctamente');
     }
-  }, [isError, isSuccess]);
+  }, [isError]);
 
   return (
     <Box className="overflow-auto bg-[var(--primary-bg-content)] py-[24px] text-white">
