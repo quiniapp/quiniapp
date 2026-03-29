@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-03-29
+
+#### Performance
+- **schedules-checkbox-list-desktop.tsx**: Fixed Rules of Hooks violation — replaced `Array.from({ length: 10 }, () => useRef())` (hook called inside a loop) with a single `useRef<(HTMLDivElement | null)[]>` and a `useCallback`-stable `setRef` callback ref. No behavior change.
+
 ### Fixed - 2026-03-27
 
 - **useUsersByNumber.ts**: Added `filter_user_type: USER_TYPE.CASHIER` — make-plays user search now returns cashiers only.

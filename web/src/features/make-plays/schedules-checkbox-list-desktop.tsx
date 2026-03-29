@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { ClockIcon } from 'lucide-react';
 import Box from '@/components/box';
 import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
@@ -30,17 +30,21 @@ const SchedulesCheckboxListDesktop = ({
   const { role } = useAuth();
   const { isScheduleAfter, isLessThanTenMinutes } = useClock();
 
-  const refs = Array.from({ length: 10 }, () => useRef<HTMLDivElement>(null));
+  const refs = useRef<(HTMLDivElement | null)[]>([]);
   const keyMap: Record<string, number> = Object.fromEntries(
     Array.from({ length: 10 }, (_, i) => [`F${i + 1}`, i])
   );
 
+  const setRef = useCallback((el: HTMLDivElement | null, index: number) => {
+    refs.current[index] = el;
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const idx = keyMap[e.key];
-      if (idx !== undefined && refs[idx]?.current) {
+      if (idx !== undefined && refs.current[idx]) {
         e.preventDefault();
-        refs[idx]!.current!.click();
+        refs.current[idx]!.click();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -110,7 +114,7 @@ const SchedulesCheckboxListDesktop = ({
           return (
             <CheckboxWithLabel
               key={sch.schedule_id}
-              ref={refs[index]}
+              ref={(el) => setRef(el, index)}
               id={`f${index + 1}`}
               label={
                 <>
