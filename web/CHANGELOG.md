@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **schedules-checkbox-list-desktop.tsx**: Fixed Rules of Hooks violation — replaced `Array.from({ length: 10 }, () => useRef())` (hook called inside a loop) with a single `useRef<(HTMLDivElement | null)[]>` and a `useCallback`-stable `setRef` callback ref. No behavior change.
 - **filter-section/index.tsx**: Added `useDebounce(userNumber, 400ms)` before parsing to `userNumberInt`. Previously each keystroke triggered a new API call to `useGetUserByNumber`; now the query fires only after 400ms of inactivity. The `userNotInGroup` group-membership validation also uses the debounced value, which is correct since partial input is not a valid user number.
 - **settlement-payroll-table/index.tsx**: Removed redundant `toast.success` on every successful fetch. The toast was firing on every date/group filter change (each change creates a new query key and re-fetches), which is noisy since the data is already visible in the table. Error toast is kept.
+- **useResults.ts**: Added `staleTime: 30min`. Results for a given lottery+schedule+date change at most once per day. Mutations (`useCreateResults`, `useUpdateResults`, `useDeleteResults`) already call `invalidateQueries(['results'])`, so cache is refreshed correctly after any change.
+- **useTickets.ts**: Added `staleTime: 30s` while keeping `refetchOnWindowFocus: true`. Prevents re-fetch on quick alt-tabs (< 30s) while still ensuring tickets are fresh when the user returns after a longer absence. All ticket mutations already call `invalidateQueries(['tickets'])`, so freshness after create/edit/delete/pay is unaffected.
 
 ### Fixed - 2026-03-27
 

@@ -22,7 +22,7 @@ export const useResults = (params: IGetResultsEntity) => {
   return useQuery({
     queryKey: ['results', lottery_id, schedule_id, date],
     queryFn: () => fetchResults(params),
-    
-    enabled: Boolean(lottery_id && schedule_id && date), // ⛔ evita que se ejecute con datos incompletos
+    enabled: Boolean(lottery_id && schedule_id && date),
+    staleTime: 30 * 60 * 1000, // 30 min — results change at most once per day; mutations invalidate on create/update/delete
   });
 };
