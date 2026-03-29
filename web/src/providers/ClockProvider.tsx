@@ -29,14 +29,28 @@ type ClockContext = {
   tz: string;
   /** true si el horario HH:mm es > ahora (mismo día), false si es <= */
   isScheduleAfter: (hhmm: string) => boolean;
-  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean; // <---
-  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean; // <---
+  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean;
+  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean;
 
   /** forzar resincronización manual */
   refresh: () => Promise<void>;
 };
 
+/**
+ * Stable context: only changes when offsetMs/tz change (every ~30 min on server sync).
+ * Components that only need schedule-check functions should subscribe to this
+ * via useClockFunctions() to avoid re-rendering every second.
+ */
+type ClockFunctions = {
+  tz: string;
+  isScheduleAfter: (hhmm: string) => boolean;
+  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean;
+  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean;
+  refresh: () => Promise<void>;
+};
+
 const ClockContext = createContext<ClockContext | null>(null);
+const ClockFunctionsCtx = createContext<ClockFunctions | null>(null);
 
 type ClockProviderProps = {
   children: React.ReactNode;
@@ -218,14 +232,24 @@ export function ClockProvider({
       now,
       tz,
       isScheduleAfter,
-      isLessThanTenMinutes, // <---
-      isScheduleEnabled, // <---
+      isLessThanTenMinutes,
+      isScheduleEnabled,
       refresh: sync,
     }),
     [time, date, now, tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, sync]
   );
 
-  return <ClockContext.Provider value={value}>{children}</ClockContext.Provider>;
+  // Stable context: these callbacks only change when offsetMs/tz change (every ~30 min)
+  const functionsValue = useMemo<ClockFunctions>(
+    () => ({ tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, refresh: sync }),
+    [tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, sync]
+  );
+
+  return (
+    <ClockFunctionsCtx.Provider value={functionsValue}>
+      <ClockContext.Provider value={value}>{children}</ClockContext.Provider>
+    </ClockFunctionsCtx.Provider>
+  );
 }
 
 export function useClock() {
@@ -238,6 +262,29 @@ export function useClock() {
       time: now.format('HH:mm:ss'),
       date: now.format('dddd, D [de] MMMM [de] YYYY'),
       now,
+      tz: 'America/Argentina/Buenos_Aires',
+      isScheduleAfter: () => false,
+      isLessThanTenMinutes: () => false,
+      isScheduleEnabled: () => false,
+      refresh: async () => {},
+    };
+  }
+
+  return ctx;
+}
+
+/**
+ * Subscribe only to stable clock functions (isScheduleAfter, isLessThanTenMinutes,
+ * isScheduleEnabled). This context only changes when the server sync runs (~30 min),
+ * so components using this hook do NOT re-render every second.
+ *
+ * Use instead of useClock() when you do NOT need time/date/now for display.
+ */
+export function useClockFunctions(): ClockFunctions {
+  const ctx = useContext(ClockFunctionsCtx);
+
+  if (!ctx) {
+    return {
       tz: 'America/Argentina/Buenos_Aires',
       isScheduleAfter: () => false,
       isLessThanTenMinutes: () => false,

@@ -3,7 +3,7 @@ import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { useClock } from '@/providers/ClockProvider';
+import { useClockFunctions } from '@/providers/ClockProvider';
 import { useEffect, useMemo } from 'react';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,7 +48,7 @@ const GameTurns = () => {
       return newMap;
     });
   };
-  const { now, isLessThanTenMinutes } = useClock();
+  const { isLessThanTenMinutes } = useClockFunctions();
   const { role } = useAuth();
 
   const todayKey: DayKey = useMemo(() => dayParseToString[today], [today]);
@@ -84,11 +84,19 @@ const GameTurns = () => {
   }, [checkedSchedules, scheduleLotteryPerDate, todayKey, allLotteries]);
 
   useEffect(() => {
-    const status = schedulesData?.some((sch: IScheduleEntityFront) =>
-      isLessThanTenMinutes(sch.time)
-    );
-    setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
-  }, [now, schedulesData]);
+    const check = () => {
+      const status = schedulesData?.some((sch: IScheduleEntityFront) =>
+        isLessThanTenMinutes(sch.time)
+      );
+      setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
+    };
+    check();
+    // Re-check every 10s — more than enough for a 10-minute threshold.
+    // isLessThanTenMinutes is stable (only changes on server sync), so this
+    // replaces the previous now-dependency that fired the effect every second.
+    const id = window.setInterval(check, 10_000);
+    return () => clearInterval(id);
+  }, [schedulesData, isLessThanTenMinutes, role, setIsEnabledCreateBet]);
 
   // Limpiar loterías seleccionadas que ya no están disponibles
   useEffect(() => {

@@ -13,11 +13,11 @@ import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
-import { useClock } from '@/providers/ClockProvider';
+import { useClockFunctions } from '@/providers/ClockProvider';
 
 export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
-  const { isScheduleEnabled } = useClock();
+  const { isScheduleEnabled } = useClockFunctions();
 
   // ---- state
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);

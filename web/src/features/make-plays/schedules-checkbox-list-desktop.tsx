@@ -4,7 +4,7 @@ import Box from '@/components/box';
 import CheckboxSection from '@/features/make-plays/components/CheckboxSection';
 import { CheckboxWithLabel } from '@/components/button/CheckboxWithLabel';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { useClock } from '@/providers/ClockProvider';
+import { useClockFunctions } from '@/providers/ClockProvider';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
 import { Text } from '@/components/atoms/Text';
@@ -28,7 +28,7 @@ const SchedulesCheckboxListDesktop = ({
   checkedSchedules,
 }: SchedulesCheckboxListDesktopProps) => {
   const { role } = useAuth();
-  const { isScheduleAfter, isLessThanTenMinutes } = useClock();
+  const { isScheduleAfter, isLessThanTenMinutes } = useClockFunctions();
 
   const refs = useRef<(HTMLDivElement | null)[]>([]);
   const keyMap: Record<string, number> = Object.fromEntries(
