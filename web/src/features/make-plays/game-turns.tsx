@@ -48,7 +48,7 @@ const GameTurns = () => {
       return newMap;
     });
   };
-  const { isLessThanTenMinutes } = useClockFunctions();
+  const { isScheduleAfter, isLessThanTenMinutes } = useClockFunctions();
   const { role } = useAuth();
 
   const todayKey: DayKey = useMemo(() => dayParseToString[today], [today]);
@@ -85,18 +85,36 @@ const GameTurns = () => {
 
   useEffect(() => {
     const check = () => {
-      const status = schedulesData?.some((sch: IScheduleEntityFront) =>
-        isLessThanTenMinutes(sch.time)
-      );
-      setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
+      // Auto-deselect closed schedules for CASHIERs
+      if (role === USER_TYPE.CASHIER) {
+        setSchedules((prev) => {
+          let changed = false;
+          const newMap = new Map(prev);
+          prev.forEach((sch) => {
+            const stillOpen = isScheduleAfter(sch.time) && !isLessThanTenMinutes(sch.time);
+            if (!stillOpen) {
+              newMap.delete(sch.schedule_id);
+              changed = true;
+            }
+          });
+          return changed ? newMap : prev;
+        });
+      }
+
+      // isLessThanTenMinutes returns false for past times (diffSec < 0), so
+      // we also need isScheduleAfter to properly detect closed schedules.
+      const hasOpenSchedule =
+        schedulesData?.some(
+          (sch: IScheduleEntityFront) =>
+            isScheduleAfter(sch.time) && !isLessThanTenMinutes(sch.time)
+        ) ?? false;
+      setIsEnabledCreateBet(role !== USER_TYPE.CASHIER || hasOpenSchedule);
     };
     check();
     // Re-check every 10s — more than enough for a 10-minute threshold.
-    // isLessThanTenMinutes is stable (only changes on server sync), so this
-    // replaces the previous now-dependency that fired the effect every second.
     const id = window.setInterval(check, 10_000);
     return () => clearInterval(id);
-  }, [schedulesData, isLessThanTenMinutes, role, setIsEnabledCreateBet]);
+  }, [schedulesData, isScheduleAfter, isLessThanTenMinutes, role, setIsEnabledCreateBet, setSchedules]);
 
   // Limpiar loterías seleccionadas que ya no están disponibles
   useEffect(() => {

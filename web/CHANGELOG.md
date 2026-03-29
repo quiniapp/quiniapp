@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-03-29
 
+#### Bug Fix
+- **game-turns.tsx**: Fixed closed-schedule enforcement for CASHIERs. Two issues were present:
+  1. `isLessThanTenMinutes(time)` returns `false` when the schedule has already passed (diffSec < 0), so the "Agregar" button would re-enable after a schedule closed. Fix: `isScheduleAfter(time) && !isLessThanTenMinutes(time)` now correctly identifies only open schedules.
+  2. Closed schedules were not auto-deselected from `checkedSchedules`, allowing a CASHIER to keep a passed turno selected and add bets against it. Fix: added a `setSchedules` functional update inside the `setInterval` check that removes any selected schedule that is no longer open (CASHIER only).
+
 #### Performance
 - **ClockProvider.tsx**: Added `ClockFunctionsCtx` — a second context whose value only changes when the server sync runs (~30 min, when `offsetMs`/`tz` change). The `isScheduleAfter`, `isLessThanTenMinutes`, and `isScheduleEnabled` callbacks are `useCallback` with `[computeNow]` deps which do NOT depend on `tick`, making them stable between ticks. Added `useClockFunctions()` hook that subscribes only to this stable context.
 - **schedules-checkbox-list-desktop.tsx**, **schedules-checkbox-list-mobile.tsx**, **MakePlaysProvider.tsx**: Migrated from `useClock()` to `useClockFunctions()`. These components only needed schedule-check functions, not `time`/`date`/`now` for display. They now re-render only on server sync (~30 min) instead of every second.
