@@ -1,3 +1,5 @@
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
+
 import { globalCacheManager } from './CacheManager';
 
 /**
@@ -9,7 +11,11 @@ export function getLotteryCacheKey(organization_id: string, all: boolean): strin
   return `org:${organization_id}:lotteries:all=${all}`;
 }
 
-export function getLotteryDayCacheKey(organization_id: string, day: string, all: boolean): string {
+export function getLotteryDayCacheKey(
+  organization_id: string,
+  day: SCHEDULE_DAY,
+  all: boolean
+): string {
   return `org:${organization_id}:lotteries:day=${day}:all=${all}`;
 }
 
@@ -19,7 +25,7 @@ export function getScheduleCacheKey(organization_id: string, all: boolean): stri
 
 export function getScheduleDayCacheKey(
   organization_id: string,
-  day: string,
+  day: SCHEDULE_DAY,
   all: boolean,
   withLotteries: boolean
 ): string {
