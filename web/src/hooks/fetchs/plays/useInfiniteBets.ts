@@ -16,6 +16,7 @@ export interface FetchInfiniteBetsProps {
   ticket_number?: string | null;
   limit?: number;
   group_id?: string | null;
+  min_amount?: number | null;
 }
 
 export async function fetchPaginatedBets(
@@ -34,6 +35,7 @@ export async function fetchPaginatedBets(
     ticket_number,
     limit = 150,
     group_id,
+    min_amount,
   } = props;
 
   if (!date) {
@@ -59,6 +61,7 @@ export async function fetchPaginatedBets(
   if (tern) params.append('tern', tern);
   if (ticket_number) params.append('ticket_number', ticket_number);
   if (group_id) params.append('group_id', group_id);
+  if (min_amount != null && min_amount > 0) params.append('min_amount', String(min_amount));
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
   const res = await fetchWithAuth(url, {
@@ -95,6 +98,7 @@ export const useInfiniteBets = (props: FetchInfiniteBetsProps) => {
       props.ticket_number ?? '',
       props.limit ?? 100,
       props.group_id ?? '',
+      props.min_amount ?? 0,
     ],
     queryFn: ({ pageParam = 1 }) => fetchPaginatedBets(props, pageParam as number),
     getNextPageParam: (lastPage) => {

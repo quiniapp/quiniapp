@@ -105,6 +105,7 @@ export class BetRouter {
       page,
       limit,
       group_id,
+      min_amount,
     } = req.query;
     if (typeof date !== 'string') {
       const response: APIResponse<null> = {
@@ -133,6 +134,7 @@ export class BetRouter {
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
         page: typeof page === 'string' ? parseInt(page, 10) : 1,
         limit: typeof limit === 'string' ? Math.max(1, parseInt(limit, 10) || 100) : 100,
+        min_amount: typeof min_amount === 'string' ? Math.max(0, parseFloat(min_amount) || 0) : 0,
         organization_ids,
         group_user_ids,
       });
