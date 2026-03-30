@@ -60,6 +60,8 @@ export function useTotalAmount(p: FetchBetsProps) {
     queryKey: totalAmountKey(p),
     queryFn: () => fetchTotalAmount(p),
     enabled: Boolean(p.date),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -68,5 +70,7 @@ export function useTotalPrize(p: FetchBetsProps) {
     queryKey: totalPrizeKey(p),
     queryFn: () => fetchTotalPrize(p),
     enabled: Boolean(p.date),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
