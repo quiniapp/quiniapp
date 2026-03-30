@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - 2026-03-29
 
 #### Bug Fix
+- **MakePlaysProvider.tsx**: Added a `setInterval(10s)` heartbeat for CASHIERs that auto-removes bets whose `scheduleLottery` entries belong to a closed schedule. Uses `betsRef` to read latest bets without adding `bets` as a dependency (avoids restarting the interval on every bet change). Updates `totalAmount` and `partialAmount` to reflect the cleaned list.
 - **game-turns.tsx**: Fixed closed-schedule enforcement for CASHIERs. Two issues were present:
   1. `isLessThanTenMinutes(time)` returns `false` when the schedule has already passed (diffSec < 0), so the "Agregar" button would re-enable after a schedule closed. Fix: `isScheduleAfter(time) && !isLessThanTenMinutes(time)` now correctly identifies only open schedules.
   2. Closed schedules were not auto-deselected from `checkedSchedules`, allowing a CASHIER to keep a passed turno selected and add bets against it. Fix: added a `setSchedules` functional update inside the `setInterval` check that removes any selected schedule that is no longer open (CASHIER only).
