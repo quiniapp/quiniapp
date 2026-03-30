@@ -1,11 +1,8 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-// @Components
 import { Flex } from '@/components/flex';
-
-// @types
 import type { MENU_ITEM } from '@/types/menu-item';
 
 type SidebarItemProps = {
@@ -33,7 +30,7 @@ const SidebarItem = ({ data }: SidebarItemProps) => {
     if (hasChildren && isChildRouteActive) {
       setOpen(true);
     }
-  }, [location.pathname]);
+  }, [hasChildren, isChildRouteActive]);
 
   const parentIsActive = useMemo(
     () => isRouteActive(data.route) || isChildRouteActive,
@@ -44,7 +41,7 @@ const SidebarItem = ({ data }: SidebarItemProps) => {
     navigate(data.route);
   }, [navigate, data.route]);
 
-  const toggleOpen = useCallback((e: React.MouseEvent) => {
+  const toggleOpen = useCallback((e: MouseEvent) => {
     e.stopPropagation();
     setOpen((prev) => !prev);
   }, []);

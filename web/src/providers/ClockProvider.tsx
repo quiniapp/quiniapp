@@ -1,5 +1,9 @@
 'use client';
 
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import React, {
   createContext,
   useCallback,
@@ -9,16 +13,12 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.locale('es');
 
-type ClockContext = {
+type ClockContextValue = {
   /** "HH:mm:ss" en 24hs */
   time: string;
   /** "martes, 12 de agosto de 2025" */
@@ -28,9 +28,9 @@ type ClockContext = {
   /** zona horaria aplicada (por defecto America/Argentina/Buenos_Aires) */
   tz: string;
   /** true si el horario HH:mm es > ahora (mismo día), false si es <= */
-  isScheduleAfter: (hhmm: string) => boolean;
-  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean;
-  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean;
+  isScheduleAfter: (_: string) => boolean;
+  isLessThanTenMinutes: (_: string, __?: number) => boolean;
+  isScheduleEnabled: (_: string, __?: number) => boolean;
 
   /** forzar resincronización manual */
   refresh: () => Promise<void>;
@@ -43,13 +43,13 @@ type ClockContext = {
  */
 type ClockFunctions = {
   tz: string;
-  isScheduleAfter: (hhmm: string) => boolean;
-  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean;
-  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean;
+  isScheduleAfter: (_: string) => boolean;
+  isLessThanTenMinutes: (_: string, __?: number) => boolean;
+  isScheduleEnabled: (_: string, __?: number) => boolean;
   refresh: () => Promise<void>;
 };
 
-const ClockContext = createContext<ClockContext | null>(null);
+const ClockContext = createContext<ClockContextValue | null>(null);
 const ClockFunctionsCtx = createContext<ClockFunctions | null>(null);
 
 type ClockProviderProps = {
@@ -225,7 +225,7 @@ export function ClockProvider({
     [toTodayAt, computeNow]
   );
 
-  const value = useMemo<ClockContext>(
+  const value = useMemo<ClockContextValue>(
     () => ({
       time,
       date,

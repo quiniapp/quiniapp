@@ -1,19 +1,23 @@
-import { Flex } from '@/components/flex';
-import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
-import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list';
-import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { useClockFunctions } from '@/providers/ClockProvider';
-import { useEffect, useMemo } from 'react';
-import { USER_TYPE } from '@helper/types/user.type';
-import { useAuth } from '@/contexts/AuthContext';
-import LotteriesCheckboxList from './lotteries-checkbox-list';
-import { usePlayDetails } from './context/MakePlaysContext';
-import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
-import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { DayKey } from '@helper/types/schedule-lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
+import { useEffect, useMemo } from 'react';
+
+import { Flex } from '@/components/flex';
+import { useAuth } from '@/contexts/AuthContext';
+import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
+import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+import { useClockFunctions } from '@/providers/ClockProvider';
+
+import { usePlayDetails } from './context/MakePlaysContext';
+import LotteriesCheckboxList from './lotteries-checkbox-list';
+
+
 
 const GameTurns = () => {
   const {

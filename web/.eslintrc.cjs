@@ -1,6 +1,11 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['import', 'react-hooks', 'react-refresh'],
+  env: {
+    browser: true,
+    es2021: true,
+    node: true,
+  },
   extends: [
     'eslint:recommended',
     'plugin:import/errors',
@@ -10,6 +15,7 @@ module.exports = {
   ],
   rules: {
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    'no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
     'import/order': [
       'error',
       {
