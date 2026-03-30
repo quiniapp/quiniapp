@@ -33,7 +33,6 @@ export const useGetTicketsNumber = ({
         }
       );
     },
-    staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
 };

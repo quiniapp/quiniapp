@@ -18,6 +18,4 @@ export const getTicketByNumber = (ticket_number: string | null) =>
     queryKey: ['ticket_number', ticket_number],
     queryFn: () => fetchTicketsByNumber(ticket_number),
     enabled: !!ticket_number && ticket_number?.length === 17,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
