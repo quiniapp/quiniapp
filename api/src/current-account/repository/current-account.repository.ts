@@ -4,6 +4,9 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { ICurrentAccountEntityBack } from '@helper/types/current_account.type';
+import { globalCacheManager } from '../../cache/CacheManager';
+
+const ORG_NETWORK_IDS_TTL = 10 * 60 * 1000; // 10 minutes
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -150,6 +153,10 @@ export class CurrentAccountRepository {
    * Get all organization IDs in the network (parent + all descendants)
    */
   async getOrganizationNetworkIds(organization_id: string): Promise<string[]> {
+    const cacheKey = `org:${organization_id}:network-ids`;
+    const cached = globalCacheManager.get<string[]>(cacheKey);
+    if (cached) return cached.payload;
+
     const { data, error } = await supabase.rpc('get_organization_descendants', {
       p_org_id: organization_id,
     });
@@ -158,7 +165,9 @@ export class CurrentAccountRepository {
     const descendantIds = (data || []).map(
       (row: { organization_id: string }) => row.organization_id
     );
-    return [organization_id, ...descendantIds];
+    const result = [organization_id, ...descendantIds];
+    globalCacheManager.set(cacheKey, result, { ttl: ORG_NETWORK_IDS_TTL });
+    return result;
   }
 
   /**

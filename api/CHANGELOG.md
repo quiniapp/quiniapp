@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-03-28
 
+#### API Performance — Medium Impact
+
+**P-10 — Cache `UserRepository.getOrganizationDescendants` + day-filtered query server cache**
+- **`user.repository.ts`**: `getOrganizationDescendants` ahora cachea con `globalCacheManager` (TTL 10 min, key `org:{id}:network-ids`). Compartido con `CurrentAccountRepository.getOrganizationNetworkIds` — el primer llamado llena el cache para ambos repositorios. Elimina el RPC redundante en `getAll` para OWNER/CAPITALIST/SUPERADMIN/ADMIN en cada request de listado de usuarios.
+- **`schedule.route.ts`**: Las queries con `?day=X` ahora usan `globalCacheManager.getOrLoad` (TTL 60 s, ETag con counter). Antes cada request hacía 2 round-trips a DB; ahora solo lo hace el primero en 60 s por combinación `day+all+withLotteries`.
+- **`lottery.route.ts`**: Igual que schedules — day-filtered queries cacheadas server-side (TTL 60 s, ETag). Antes solo tenía `Cache-Control` en HTTP (solo ayuda browser/CDN, no el servidor).
+- **`cacheInvalidation.ts`**: Agrega `getLotteryDayCacheKey`, `getScheduleDayCacheKey`. `invalidateLotteriesForOrg` y `invalidateSchedulesForOrg` ahora también invalidan todas las entradas de day-filtered via `invalidateMatching` — garantiza consistencia cuando se modifica una lotería o schedule.
+
+**P-17 — Cache `getOrganizationDescendants` RPC**
+- **`current-account.repository.ts`**: `getOrganizationNetworkIds` ahora cachea el resultado con `globalCacheManager` (TTL 10 min). El RPC `get_organization_descendants` se llamaba en cada request de usuarios CAPITALIST — ahora solo corre una vez cada 10 minutos por organización.
+- **`cacheInvalidation.ts`**: Agrega `invalidateOrgNetworkIds(org_id)` e integra en `invalidateAllForOrg` para invalidar cuando se crea/elimina una organización.
+
+**P-06 — `ResultsRepository.getAll` con límite**
+- **`results.repository.ts`**: Agrega `limit` (default 1000) a `getAll` para evitar traer todo el histórico sin cota.
+
+#### API Performance — High Impact
+
+**P-01 / P-20 — Login: parallelización + eliminación de SELECTs redundantes**
+- **`auth.controller.ts`**: Los pasos post-login `updateLoginMetadata`, `resetFailedAttempts` y `auditLog` ahora corren en `Promise.all` (3 round-trips secuenciales → 1 paralelo).
+- **`auth.controller.ts`**: En `refreshToken`, `rotateRefreshToken` y `updateActivity` ahora corren en `Promise.all` (secuenciales → paralelo).
+- **`session.repository.ts`**: `rotateRefreshToken` ahora recibe `newVersion` como parámetro — elimina el `getById` interno que se ejecutaba en cada refresh de token.
+- **`session.repository.ts`**: `updateActivity` ahora recibe `createdAt` como parámetro — elimina el `getById` interno que se ejecutaba en cada request autenticado.
+- **`middlewares/auth.middleware.ts`**: Pasa `session.created_at` a `updateActivity` (ya disponible en el middleware).
+
+**P-03 — `getAllByDay` de schedules: de 1+N queries a 2 queries paralelas**
+- **`schedule.controller.ts`**: Reemplaza el flujo `getScheduleIdsForDay` + `getAll` secuenciales + N queries de `getLotteryIdsByScheduleAndDay` por un `Promise.all([getScheduleLotteriesForDay, getAll])`. El merge de schedule_ids y lottery_ids se hace en Node.js sobre los datos ya cargados — sin queries extra.
+- **`schedule-lottery.controller.ts`**: Agrega `getScheduleLotteriesForDay` que expone los registros raw necesarios para el merge.
+
+**P-05 — `getAllWinners` sin límite**
+- **`winners.repository.ts`**: Agrega `limit` (default 200) y filtro opcional por `date` para evitar traer todos los tickets ganadores históricos con JOINs profundos.
+
 #### Database Security & Performance
 
 ##### Security

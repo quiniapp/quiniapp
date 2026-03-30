@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
@@ -13,11 +13,11 @@ import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
-import { useClock } from '@/providers/ClockProvider';
+import { useClockFunctions } from '@/providers/ClockProvider';
 
 export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
-  const { isScheduleEnabled } = useClock();
+  const { isScheduleEnabled } = useClockFunctions();
 
   // ---- state
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);
@@ -124,6 +124,28 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
 
     return cleanedBets;
   }, [isScheduleEnabled]);
+
+  // Keep a ref to latest bets so the interval below doesn't need bets as a dep
+  const betsRef = useRef(bets);
+  useEffect(() => { betsRef.current = bets; }, [bets]);
+
+  // Auto-clean closed-schedule bets every 10s for CASHIERs
+  useEffect(() => {
+    if (user?.user_type !== USER_TYPE.CASHIER) return;
+
+    const id = window.setInterval(() => {
+      const prev = betsRef.current;
+      if (prev.length === 0) return;
+      const cleaned = cleanClosedSchedulesFromBets(prev);
+      if (cleaned.length === prev.length) return;
+      const newTotal = computeTotal(cleaned);
+      setBets(cleaned);
+      setTotalAmount(newTotal);
+      setPartialAmount(newTotal);
+    }, 10_000);
+
+    return () => clearInterval(id);
+  }, [user?.user_type, cleanClosedSchedulesFromBets, computeTotal]);
 
   const handleRecreateBet = useCallback(
     (values: IBetTable[]) => {

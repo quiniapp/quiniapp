@@ -66,7 +66,7 @@ export const isAuthenticated = asyncHandler(
     // 4. Update session activity (sliding window)
     // This extends the session expiration by INACTIVITY_TIMEOUT (4 hours)
     // respecting the ABSOLUTE_TIMEOUT (30 days) limit
-    await sessionRepository.updateActivity(session.session_id);
+    await sessionRepository.updateActivity(session.session_id, session.created_at);
 
     // 5. Get fresh user data from database
     const userData = await authRepository.getUserById(decoded.user_id);

@@ -21,18 +21,28 @@ export class WinnerRepository {
     return data;
   }
 
-  async getAllWinners({ organization_id, user_id }: { organization_id: string; user_id?: string }) {
+  async getAllWinners({
+    organization_id,
+    user_id,
+    date,
+    limit = 200,
+  }: {
+    organization_id: string;
+    user_id?: string;
+    date?: string;
+    limit?: number;
+  }) {
     let query = supabase
       .from('tickets')
       .select('*, bets(*, lotteries(*), schedules(*))')
       .eq('organization_id', organization_id)
       .is('winner', true)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    if (user_id !== undefined) {
-      query = query.eq('user_id', user_id);
-    }
+    if (user_id !== undefined) query = query.eq('user_id', user_id);
+    if (date !== undefined) query = query.eq('date', date);
 
     const { data, error } = await query;
     if (error) throw error;

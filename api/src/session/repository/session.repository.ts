@@ -1,5 +1,5 @@
 import { supabase } from '@database/db.connection';
-import { InternalServerError, UnauthorizedError } from '@helper/errors';
+import { InternalServerError } from '@helper/errors';
 import { SESSION_CONFIG } from '../../config/session.config';
 
 export interface ISession {
@@ -80,17 +80,14 @@ export class SessionRepository {
   /**
    * Update session activity (sliding window)
    */
-  async updateActivity(sessionId: string): Promise<void> {
-    const session = await this.getById(sessionId);
-    if (!session) throw new UnauthorizedError('Invalid session');
-
+  async updateActivity(sessionId: string, createdAt: Date): Promise<void> {
     const now = new Date();
 
     // Calculate new expiration with sliding window
     const newExpiry = new Date(now.getTime() + SESSION_CONFIG.INACTIVITY_TIMEOUT);
 
     // Respect absolute timeout
-    const absoluteEnd = new Date(session.created_at.getTime() + SESSION_CONFIG.ABSOLUTE_TIMEOUT);
+    const absoluteEnd = new Date(createdAt.getTime() + SESSION_CONFIG.ABSOLUTE_TIMEOUT);
 
     const finalExpiry = newExpiry > absoluteEnd ? absoluteEnd : newExpiry;
 
@@ -186,15 +183,16 @@ export class SessionRepository {
   /**
    * Rotate refresh token (for security)
    */
-  async rotateRefreshToken(sessionId: string, newRefreshTokenHash: string): Promise<void> {
-    const session = await this.getById(sessionId);
-    if (!session) throw new UnauthorizedError('Invalid session');
-
+  async rotateRefreshToken(
+    sessionId: string,
+    newRefreshTokenHash: string,
+    newVersion: number
+  ): Promise<void> {
     const { error } = await supabase
       .from('sessions')
       .update({
         refresh_token_hash: newRefreshTokenHash,
-        refresh_token_version: session.refresh_token_version + 1,
+        refresh_token_version: newVersion,
       })
       .eq('session_id', sessionId);
 

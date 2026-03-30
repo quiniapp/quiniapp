@@ -42,5 +42,6 @@ export const useTickets = ({
       return data?.data ?? [];
     },
     refetchOnWindowFocus: true,
+    staleTime: 30_000, // 30s — refetch on focus only if data is older than 30s; mutations invalidate immediately
   });
 };

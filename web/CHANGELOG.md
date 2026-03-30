@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-03-29
+
+#### Bug Fix
+- **MakePlaysProvider.tsx**: Added a `setInterval(10s)` heartbeat for CASHIERs that auto-removes bets whose `scheduleLottery` entries belong to a closed schedule. Uses `betsRef` to read latest bets without adding `bets` as a dependency (avoids restarting the interval on every bet change). Updates `totalAmount` and `partialAmount` to reflect the cleaned list.
+- **game-turns.tsx**: Fixed closed-schedule enforcement for CASHIERs. Two issues were present:
+  1. `isLessThanTenMinutes(time)` returns `false` when the schedule has already passed (diffSec < 0), so the "Agregar" button would re-enable after a schedule closed. Fix: `isScheduleAfter(time) && !isLessThanTenMinutes(time)` now correctly identifies only open schedules.
+  2. Closed schedules were not auto-deselected from `checkedSchedules`, allowing a CASHIER to keep a passed turno selected and add bets against it. Fix: added a `setSchedules` functional update inside the `setInterval` check that removes any selected schedule that is no longer open (CASHIER only).
+
+#### Performance
+- **ClockProvider.tsx**: Added `ClockFunctionsCtx` — a second context whose value only changes when the server sync runs (~30 min, when `offsetMs`/`tz` change). The `isScheduleAfter`, `isLessThanTenMinutes`, and `isScheduleEnabled` callbacks are `useCallback` with `[computeNow]` deps which do NOT depend on `tick`, making them stable between ticks. Added `useClockFunctions()` hook that subscribes only to this stable context.
+- **schedules-checkbox-list-desktop.tsx**, **schedules-checkbox-list-mobile.tsx**, **MakePlaysProvider.tsx**: Migrated from `useClock()` to `useClockFunctions()`. These components only needed schedule-check functions, not `time`/`date`/`now` for display. They now re-render only on server sync (~30 min) instead of every second.
+- **game-turns.tsx**: Migrated to `useClockFunctions()` and replaced `useEffect([now, schedulesData])` with a `setInterval(check, 10_000)` inside the effect. Previously `now` (a new dayjs object every second) forced the effect to call `setIsEnabledCreateBet` 60 times/minute; now it runs every 10 seconds — more than sufficient for a 10-minute threshold window.
+- **schedules-checkbox-list-desktop.tsx**: Fixed Rules of Hooks violation — replaced `Array.from({ length: 10 }, () => useRef())` (hook called inside a loop) with a single `useRef<(HTMLDivElement | null)[]>` and a `useCallback`-stable `setRef` callback ref. No behavior change.
+- **filter-section/index.tsx**: Added `useDebounce(userNumber, 400ms)` before parsing to `userNumberInt`. Previously each keystroke triggered a new API call to `useGetUserByNumber`; now the query fires only after 400ms of inactivity. The `userNotInGroup` group-membership validation also uses the debounced value, which is correct since partial input is not a valid user number.
+- **settlement-payroll-table/index.tsx**: Removed redundant `toast.success` on every successful fetch. The toast was firing on every date/group filter change (each change creates a new query key and re-fetches), which is noisy since the data is already visible in the table. Error toast is kept.
+- **sidebar-item.tsx**: Memoized `isChildRouteActive` (now `useMemo`), `parentIsActive` (`useMemo`), `handleParentClick` and `toggleOpen` (`useCallback`), and `isRouteActive` (`useCallback`). Re-renders on navigation are still required since the component subscribes to `useLocation()`, but internal recomputation is skipped when `pathname` hasn't changed.
+- **play-detail-game-table.tsx**: Replaced `key={index}` with `key={bet.bet_order ?? compound}` in both mobile cards and desktop table rows. When editing an existing ticket, `bet_order` is already populated and is stable. For new bets (no `bet_order`), falls back to `number-place-amount-index` which is more descriptive than bare index and avoids React treating all rows as "the same element" when number/amount differ.
+- **useResults.ts**: Added `staleTime: 30min`. Results for a given lottery+schedule+date change at most once per day. Mutations (`useCreateResults`, `useUpdateResults`, `useDeleteResults`) already call `invalidateQueries(['results'])`, so cache is refreshed correctly after any change.
+- **useTickets.ts**: Added `staleTime: 30s` while keeping `refetchOnWindowFocus: true`. Prevents re-fetch on quick alt-tabs (< 30s) while still ensuring tickets are fresh when the user returns after a longer absence. All ticket mutations already call `invalidateQueries(['tickets'])`, so freshness after create/edit/delete/pay is unaffected.
+
 ### Fixed - 2026-03-27
 
 - **useUsersByNumber.ts**: Added `filter_user_type: USER_TYPE.CASHIER` — make-plays user search now returns cashiers only.

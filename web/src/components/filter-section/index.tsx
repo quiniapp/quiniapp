@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Filter } from 'lucide-react';
 
 import Box from '@/components/box';
@@ -54,10 +55,10 @@ const FilterSection = () => {
     setSearchParams(params);
   };
 
-  // Si tu hook admite "enabled", mejor: pero por compatibilidad dejamos el parseo acá
+  const debouncedUserNumber = useDebounce(userNumber, 400);
   const userNumberInt = useMemo(
-    () => (userNumber.trim() === '' ? 0 : Number.parseInt(userNumber, 10) || 0),
-    [userNumber]
+    () => (debouncedUserNumber.trim() === '' ? 0 : Number.parseInt(debouncedUserNumber, 10) || 0),
+    [debouncedUserNumber]
   );
   const { data } = useGetUserByNumber(userNumberInt);
 
