@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
-import { useDebounce } from '@/hooks/useDebounce';
+import { USER_TYPE } from '@helper/types/user.type';
+import dayjs from 'dayjs';
 import { Filter } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import Box from '@/components/box';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import { Flex } from '@/components/flex';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,15 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useSearchParams } from 'react-router-dom';
-import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext.tsx';
-import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups.ts';
 import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers.ts';
-import { USER_TYPE } from '@helper/types/user.type';
+import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useDebounce } from '@/hooks/useDebounce';
+
 
 const FilterSection = () => {
   const [userNumber, setUserNumber] = useState<string>('');

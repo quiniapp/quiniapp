@@ -1,19 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
-import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
-import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
-import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
+import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
+import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
+import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
 import { useClockFunctions } from '@/providers/ClockProvider';
+
+import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
+
 
 export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
