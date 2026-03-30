@@ -32,6 +32,9 @@ export const useGenerateWinners = ({
       // Refetch forzado de ganadores y cuenta corriente para garantizar datos frescos
       await queryClient.refetchQueries({ queryKey: ['winners'] });
       queryClient.invalidateQueries({ queryKey: ['winners'] });
+      // Premios y cuenta corriente cambian cuando se calculan ganadores
+      queryClient.invalidateQueries({ queryKey: ['bets-total-prize'] });
+      queryClient.invalidateQueries({ queryKey: ['getCurrentAccount'] });
     },
   });
 };

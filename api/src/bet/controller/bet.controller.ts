@@ -18,6 +18,7 @@ export class BetController {
     ticket_number,
     organization_ids,
     group_user_ids,
+    min_amount = 0,
     page = 1,
     limit = 100,
   }: {
@@ -32,6 +33,7 @@ export class BetController {
     ticket_number?: string;
     organization_ids: string[];
     group_user_ids?: string[];
+    min_amount?: number;
     page?: number;
     limit?: number;
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
@@ -47,6 +49,7 @@ export class BetController {
           winners,
           tern,
           quatern,
+          min_amount,
           page,
           limit,
         });

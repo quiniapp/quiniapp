@@ -82,6 +82,7 @@ export class BetRepository {
     winners,
     quatern,
     tern,
+    min_amount = 0,
     page = 1,
     limit = 100,
   }: {
@@ -94,6 +95,7 @@ export class BetRepository {
     winners?: boolean;
     quatern?: boolean;
     tern?: boolean;
+    min_amount?: number;
     page?: number;
     limit?: number;
   }): Promise<{ data: IBetEntityBack[]; count: number }> {
@@ -128,6 +130,7 @@ export class BetRepository {
         p_winners_only: !!winners,
         p_organization_id: null,
         p_user_ids: group_user_ids,
+        p_min_amount: min_amount,
       });
       if (error) throw new Error(error.message);
       const allBets: IBetEntityBack[] = rpcData ?? [];
@@ -146,6 +149,7 @@ export class BetRepository {
           p_lottery_id: lottery_id ?? null,
           p_winners_only: !!winners,
           p_organization_id: orgId,
+          p_min_amount: min_amount,
         });
         if (error) throw error;
         return (data as IBetEntityBack[]) || [];
