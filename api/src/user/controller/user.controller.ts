@@ -518,13 +518,9 @@ export class UserController {
       throw new ForbiddenError('Solo OWNER y CAPITALIST pueden ver usuarios asignables');
     }
 
-    // Get the network of organizations
-    const networkOrgIds = [
-      adminOrgId,
-      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
-    ];
-
-    const users = await this.repository.getUsersForGroupAssignment(networkOrgIds, excludeGroupId);
+    // Only users in the parent org are assignable — those already in a group
+    // have organization_id pointing to a sub-org, so they must be excluded.
+    const users = await this.repository.getUsersForGroupAssignment([adminOrgId], excludeGroupId);
     return users.map((user) => parseUser(user));
   };
 }

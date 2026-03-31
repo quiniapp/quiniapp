@@ -1,4 +1,5 @@
 import { IOrganizationEntityBack } from '@helper/types/organization.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import { supabase } from '@database/db.connection';
 import dayjs from 'dayjs';
 import { DEFAULT_ORG_ID } from 'envs';
@@ -23,13 +24,20 @@ export class OrganizationRepository {
   async getAll(): Promise<IOrganizationEntityBack[]> {
     const { data, error } = await supabase
       .from('organizations')
-      .select('*')
+      .select(
+        'organization_id, name, parent_organization_id, created_at, edited_at, deleted_at, users!inner(user_type)'
+      )
+      .eq('users.user_type', USER_TYPE.CAPITALIST)
+      .is('users.deleted_at', null)
       .is('deleted_at', null)
-      .neq('organization_id', DEFAULT_ORG_ID)
       .order('created_at', { ascending: true });
 
     if (error) throw new Error(error.details);
-    return data;
+    return (data ?? []).map((row) => {
+      const { users, ...org } = row;
+      void users;
+      return org as IOrganizationEntityBack;
+    });
   }
 
   /**
