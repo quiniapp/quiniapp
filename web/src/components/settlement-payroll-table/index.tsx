@@ -8,9 +8,18 @@ import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
 const SettlementPayrollTable = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date');
   const group_id = searchParams.get('group_id');
+
+  useEffect(() => {
+    if (!date) {
+      setSearchParams((prev) => {
+        prev.set('date', dayjs().format('YYYY-MM-DD'));
+        return prev;
+      }, { replace: true });
+    }
+  }, [date, setSearchParams]);
   const { data, isLoading, isPending, isError } = useGetCurrentAccount(date, group_id);
 
   useEffect(() => {
