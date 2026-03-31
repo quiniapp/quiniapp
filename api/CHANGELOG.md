@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-03-31
 
+#### Groups — lista de usuarios asignables excluye usuarios ya en un grupo
+- **`user.controller.ts`**: `getUsersForGroupAssignment` ya no incluye los descendientes del org del CAPITALIST en la query. Antes pasaba `[adminOrgId, ...descendants]` al repositorio, devolviendo usuarios ya asignados a otros grupos. Ahora solo pasa `[adminOrgId]`, de modo que únicamente aparecen usuarios que todavía pertenecen al org padre (sin grupo asignado).
+
 #### Organizations list — solo muestra orgs de CAPITALISTs
 - **`organization.repository.ts`**: `getAll()` ahora usa un `!inner` JOIN con la tabla `users` filtrando `user_type = CAPITALIST` y `deleted_at IS NULL`. Antes devolvía todas las organizaciones activas (incluidos grupos), ahora solo devuelve las orgs que pertenecen a un usuario CAPITALIST, que es exactamente lo que debe mostrar la pantalla `/organizations`.
 
