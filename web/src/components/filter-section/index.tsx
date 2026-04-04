@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Box from '@/components/box';
+import { IconButton } from '@/components/button/IconButton';
 import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import { Flex } from '@/components/flex';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers.ts';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDebounce } from '@/hooks/useDebounce';
+import { SearchIcon, XIcon } from 'lucide-react';
 
 
 const FilterSection = () => {
@@ -34,6 +36,7 @@ const FilterSection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date') ?? undefined;
   const group_id = searchParams.get('group_id') ?? undefined;
+  const activeUserId = searchParams.get('user_id') ?? undefined;
 
   // ADMIN with group: auto-scope to their group
   const adminHasGroup = role === USER_TYPE.ADMIN && !!groupId && groupId !== organizationId;
@@ -78,6 +81,20 @@ const FilterSection = () => {
     if (!group_id || !data || !groupUsers) return false;
     return !groupUsers.some((u) => u.user_id === data.user_id);
   }, [group_id, data, groupUsers]);
+
+  const handleSearchUser = () => {
+    if (!data) return;
+    const params = new URLSearchParams(searchParams);
+    params.set('user_id', data.user_id);
+    setSearchParams(params);
+  };
+
+  const handleClearUser = () => {
+    setUserNumber('');
+    const params = new URLSearchParams(searchParams);
+    params.delete('user_id');
+    setSearchParams(params);
+  };
 
   const showGroupAndCashierFilters = role !== USER_TYPE.CASHIER;
 
@@ -132,7 +149,7 @@ const FilterSection = () => {
             </Flex>
 
             <Flex className="items-center gap-1 sm:gap-3">
-              <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
+              <Label htmlFor="employee_number" className="text-sm text-muted-foreground">
                 Pasador:
               </Label>
               <Input
@@ -142,14 +159,33 @@ const FilterSection = () => {
                 inputMode="numeric"
                 value={userNumber}
                 onChange={(e) => setUserNumber(e.currentTarget.value)}
-                // Si querés solo dígitos: onChange={(e)=> setUserNumber(e.currentTarget.value.replace(/\D/g,''))}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
               />
-              <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
-                {data?.name} {data?.number}
-                {userNotInGroup && (
-                  <span className="text-red-500 text-xs ml-1">No pertenece al grupo</span>
-                )}
-              </Label>
+              <IconButton
+                type="button"
+                label="Buscar"
+                icon={<SearchIcon />}
+                onClick={handleSearchUser}
+                disabled={!data}
+              />
+              {activeUserId && (
+                <Flex className="items-center gap-1">
+                  <span className="text-sm text-muted-foreground">
+                    {data?.name ?? activeUserId}
+                  </span>
+                  <IconButton
+                    type="button"
+                    label="Limpiar"
+                    icon={<XIcon />}
+                    variant="outline"
+                    onClick={handleClearUser}
+                    className="!px-2"
+                  />
+                </Flex>
+              )}
+              {userNotInGroup && (
+                <span className="text-red-500 text-xs">No pertenece al grupo</span>
+              )}
             </Flex>
           </>
         )}

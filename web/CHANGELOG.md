@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-04
+
+#### filter-section — botón Buscar para filtrar por pasador
+- **`components/filter-section/index.tsx`**: Reemplaza la búsqueda automática por debounce con un botón "Buscar" explícito. Al hacer click (o Enter), almacena el `user_id` del pasador encontrado en el URL param `user_id`. Agrega botón "Limpiar" (X) cuando hay un filtro activo.
+- **`components/settlement-payroll-table/index.tsx`**: Lee el param `user_id` y filtra el array de cuentas corrientes client-side. Si no hay `user_id`, muestra todos.
+
+### Removed - 2026-04-04
+
+#### groups — eliminado formulario de creación de SUPERADMIN en grupo
+- **`features/groups/index.tsx`**: Quitados el checkbox "Crear SUPERADMIN para este grupo", el fieldset con los campos de datos del SUPERADMIN, el estado `includeSuperAdmin`, y la lógica de payload asociada. La migración `20260402202646` estableció que los SUPERADMINs no son asignables a grupos; se crean desde el flujo de usuarios.
+
 ### Fixed - 2026-04-04
 
 #### make-plays — layout shift al seleccionar un turno
