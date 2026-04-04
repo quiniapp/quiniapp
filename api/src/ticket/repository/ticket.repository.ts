@@ -45,13 +45,21 @@ export class TicketRepository {
   }
 
   async getByNumber(ticket_number: string, organization_id: string) {
-    // Try main table first (has more indexes, faster)
-    const { data: ticket } = await supabase
-      .from('tickets')
-      .select('ticket_id')
-      .eq('ticket_number', ticket_number)
-      .eq('organization_id', organization_id)
-      .maybeSingle();
+    // Query both tables in parallel to avoid sequential round-trips
+    const [{ data: ticket }, { data: archiveTicket, error: error_archive }] = await Promise.all([
+      supabase
+        .from('tickets')
+        .select('ticket_id')
+        .eq('ticket_number', ticket_number)
+        .eq('organization_id', organization_id)
+        .maybeSingle(),
+      supabase
+        .from('tickets_archive')
+        .select('ticket_id')
+        .eq('ticket_number', ticket_number)
+        .eq('organization_id', organization_id)
+        .maybeSingle(),
+    ]);
 
     if (ticket?.ticket_id) {
       const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
@@ -63,16 +71,7 @@ export class TicketRepository {
       }
     }
 
-    // If not found in main table, try archive
-    const { data: archiveTicket, error: error_archive } = await supabase
-      .from('tickets_archive')
-      .select('ticket_id')
-      .eq('ticket_number', ticket_number)
-      .eq('organization_id', organization_id)
-      .maybeSingle();
-
     if (!archiveTicket || error_archive) {
-      console.error({ archiveTicket, error_archive });
       return null;
     }
 
