@@ -41,11 +41,11 @@ export const useSaveScheduleLottery = (
       // Update cache synchronously with server response
       queryClient.setQueryData(['schedule-lottery'], data);
 
-      // Still invalidate lotteries since active status may have changed
-      await queryClient.invalidateQueries({
-        queryKey: ['lotteries'],
-        exact: false,
-      });
+      // Invalidate lotteries and schedules since active status and day assignments may have changed
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['lotteries'], exact: false }),
+        queryClient.invalidateQueries({ queryKey: ['schedules'], exact: false }),
+      ]);
 
       toast.success('Guardado correctamente');
       onSuccess?.(data, variables, context);

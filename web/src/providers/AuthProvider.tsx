@@ -17,6 +17,7 @@ const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
 // Extended user type with organization_id from validate endpoint
 interface UserWithOrg extends IUserEntityFront {
   organization_id: string;
+  group_id: string;
 }
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -24,6 +25,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [user, setUser] = useState<IUserEntityFront | null>(null);
   const [role, setRole] = useState<USER_TYPE | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -36,11 +38,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setUser(u);
       setRole(u.user_type);
       setOrganizationId(u.organization_id);
+      setGroupId(u.group_id ?? null);
       setIsAuth(true);
     } else {
       setUser(null);
       setRole(null);
       setOrganizationId(null);
+      setGroupId(null);
       setIsAuth(false);
     }
   }, []);
@@ -205,12 +209,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       user,
       role,
       organizationId,
+      groupId,
       login,
       logout,
       validate,
       hasRole,
     }),
-    [isAuth, loading, user, role, organizationId, login, logout, validate, hasRole]
+    [isAuth, loading, user, role, organizationId, groupId, login, logout, validate, hasRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

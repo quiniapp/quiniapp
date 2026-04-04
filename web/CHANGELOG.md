@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-04-03
+
+#### Auth — groupId expuesto en contexto
+- **`AuthContext.tsx`**: Agrega `groupId: string | null` a `AuthContextValue`.
+- **`AuthProvider.tsx`**: Agrega estado `groupId`, se setea desde `u.group_id` en `setSession`. Expuesto en el `value` useMemo.
+
+#### Sidebar — filtrado de ítems por rol
+- **`types/menu-item.tsx`**: Agrega campo opcional `roles?: USER_TYPE[]` al tipo `MENU_ITEM`.
+- **`constants/SidebarMenu.tsx`**: Agrega restricciones de rol: Quinielas/Turnos, Usuarios y Cuenta Corriente solo para non-CASHIER; Organizaciones, Reportes y Configuración solo para OWNER.
+- **`components/sidebar/index.tsx`**: Filtra `MENU_ITEMS` según el rol del usuario autenticado.
+
+#### Groups page — editar y eliminar grupos
+- **`hooks/mutations/organization/useDeleteGroup.ts`** (NUEVO): Mutación para eliminar grupo. Invalida `groups`, `users` y `assignable-users`.
+- **`hooks/mutations/organization/useUpdateGroup.ts`** (NUEVO): Mutación para renombrar grupo. Invalida `groups`.
+- **`features/groups/index.tsx`**: Botones Editar (lápiz) y Eliminar (trash) con handlers. Dialog de edición de nombre. Dialog de confirmación de eliminación con aviso de que los usuarios vuelven a la organización. ADMIN/SUPERADMIN agregados como roles con acceso de lectura; solo MANAGE_ROLES (OWNER/CAPITALIST/SUPERADMIN) ven los controles de escritura. ADMIN con grupo auto-selecciona su grupo.
+
+### Fixed - 2026-04-03
+
+#### plays-and-hits — infinite scroll no disparaba el observer cuando había datos en caché
+- **`features/plays-and-hits/plays-and-hits-table.tsx`**: Cambia `scrollRootRef` de `useRef` a `useState` (`setScrollRoot`). Con `useRef`, si TanStack Query tenía datos en caché al montar el componente, el `IntersectionObserver` se creaba antes de que el ref fuera asignado (`root=null`), usando el viewport en lugar del contenedor scrolleable interno. Con `useState`, la asignación del elemento dispara un re-render que garantiza que el observer se crea con el `root` correcto.
+
+#### useInfiniteScroll — dedup impedía disparar al cambiar filtros con misma cantidad de items
+- **`hooks/useInfiniteScroll.ts`**: Agrega reset de `lastTriggerIndexRef.current = -1` en el efecto de cleanup por `triggerIndex`. Sin esto, si dos queries distintas (cambio de filtros) producían el mismo `triggerIndex`, el check dedup `lastTriggerIndexRef !== triggerIndex` devolvía `false` y el observer nunca disparaba `fetchNextPage()`.
+
+#### useSaveScheduleLottery — schedules no se invalidaban tras guardar
+- **`hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`**: Agrega `invalidateQueries(['schedules'])` junto a `invalidateQueries(['lotteries'])` en el `onSuccess`. Sin esto, la query `useSchedules({ day })` en make-plays devolvía datos stale (vacíos) hasta que expiraba el `staleTime` de 5 minutos.
+
+### Changed - 2026-04-03
+
+#### Filter section — auto-scoping para ADMIN con grupo
+- **`components/filter-section/index.tsx`**: ADMIN con grupo setea automáticamente `group_id` en los search params y deshabilita el dropdown de grupo.
+
+#### Current account page — ADMIN puede Actualizar pero no Generar Liquidación
+- **`features/current-account/index.tsx`**: ADMIN ve botones Exportar Diario, Exportar Liquidación y Actualizar. Botón "Generar Liquidación" oculto para ADMIN.
+- **`components/modals/GenerateLiquitationModal.tsx`**: Pasa `group_id` de search params a `useGetCurrentAccount` para filtrar liquidación por grupo seleccionado.
+
+#### Master data — ADMIN solo lectura
+- **`features/lotteries/index.tsx`**: ADMIN no ve botones crear/editar/eliminar/reordenar.
+- **`features/results/index.tsx`**: ADMIN no ve botones generar ganadores/editar/guardar/borrar resultado.
+- **`features/shifts/index.tsx`**: ADMIN no ve botones crear/editar/eliminar turnos.
+- **`features/upcoming-lotteries/index.tsx`**: ADMIN no puede modificar quinielas a jugarse (onChange deshabilitado, botón Guardar oculto).
+
+#### User list — ADMIN no puede crear ni eliminar usuarios
+- **`features/user-list/header-user-list.tsx`**: Botón "Crear nuevo" oculto para ADMIN y CASHIER. CAPITALIST agregado a las opciones de filtro de tipo de usuario.
+- **`features/user-list/user-table.tsx`**: Columna "Eliminar" oculta para ADMIN.
+
+### Fixed - 2026-03-31
+
+#### Current account — fetch sin fecha devuelve última CC disponible
+- **`useGetCurrentAccount.ts`**: Eliminado el guard `enabled: Boolean(date)` que bloqueaba el fetch cuando no había fecha en la URL. El hook ahora siempre lanza la query; el backend devuelve la última CC disponible por cashier cuando no se pasa `date`.
+- **`settlement-payroll-table/index.tsx`**: Eliminado `useEffect` que hacía default de `date` a hoy via `setSearchParams`. El componente ahora lee `date` y `group_id` directamente de `useSearchParams` sin modificarlos.
+
+#### Groups — filtro habilitado para ADMIN/SUPERADMIN
+- **`useGroups.ts`**: `enabled` ahora incluye `USER_TYPE.SUPERADMIN` y `USER_TYPE.ADMIN` además de OWNER/CAPITALIST, permitiendo que estos roles vean y filtren por grupos en la UI.
+
 ### Fixed - 2026-03-29
 
 #### Bug Fix

@@ -150,8 +150,22 @@ export class OrganizationRouter {
     const { id: parentOrgId } = req.params;
     const user = req.user;
 
-    // Solo OWNER y CAPITALIST pueden ver sub-organizaciones
-    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user?.user.user_type as USER_TYPE)) {
+    const allowedRoles = [
+      USER_TYPE.OWNER,
+      USER_TYPE.CAPITALIST,
+      USER_TYPE.SUPERADMIN,
+      USER_TYPE.ADMIN,
+    ];
+    if (!allowedRoles.includes(user?.user.user_type as USER_TYPE)) {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    // Non-OWNER users can only see children of their own organization
+    if (user?.user.user_type !== USER_TYPE.OWNER && parentOrgId !== req.organization_id) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -160,7 +174,17 @@ export class OrganizationRouter {
     }
 
     try {
-      const children = await this.controller.getChildren(parentOrgId);
+      let children = await this.controller.getChildren(parentOrgId);
+
+      // ADMIN with group: only show their own group
+      if (
+        user?.user.user_type === USER_TYPE.ADMIN &&
+        user.user.group_id &&
+        user.user.group_id !== req.organization_id
+      ) {
+        children = children.filter((child) => child.organization_id === user.user.group_id);
+      }
+
       const response: APIResponse<IOrganizationEntityFront[]> = {
         data: { organizations: children },
       };
@@ -251,18 +275,39 @@ export class OrganizationRouter {
     }
   };
 
-  // Solo OWNER puede actualizar organizaciones
+  // OWNER puede actualizar cualquier org; CAPITALIST/SUPERADMIN solo grupos de su org
   private updateHandler: RequestHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name } = req.body;
     const user = req.user;
+    const userType = user?.user.user_type;
 
-    if (user?.user.user_type !== USER_TYPE.OWNER) {
+    const canManage =
+      userType === USER_TYPE.OWNER ||
+      userType === USER_TYPE.CAPITALIST ||
+      userType === USER_TYPE.SUPERADMIN;
+
+    if (!canManage) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
       res.status(403).json(response);
       return;
+    }
+
+    // Non-OWNER can only update sub-orgs (groups) of their own org
+    if (userType !== USER_TYPE.OWNER) {
+      const org = await this.controller.get(id).catch(() => null);
+      if (!org || org.parent_organization_id !== req.organization_id) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.FORBIDDEN,
+            message: 'Solo puedes editar grupos de tu organización',
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
     }
 
     // No se puede actualizar la organización por defecto
@@ -295,11 +340,18 @@ export class OrganizationRouter {
     }
   };
 
-  // Solo OWNER puede eliminar organizaciones
+  // OWNER puede eliminar cualquier org; CAPITALIST/SUPERADMIN solo grupos de su org
   private deleteHandler: RequestHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = req.user;
-    if (user?.user.user_type !== USER_TYPE.OWNER) {
+    const userType = user?.user.user_type;
+
+    const canManage =
+      userType === USER_TYPE.OWNER ||
+      userType === USER_TYPE.CAPITALIST ||
+      userType === USER_TYPE.SUPERADMIN;
+
+    if (!canManage) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -317,6 +369,21 @@ export class OrganizationRouter {
       };
       res.status(403).json(response);
       return;
+    }
+
+    // Non-OWNER can only delete sub-orgs (groups) of their own org
+    if (userType !== USER_TYPE.OWNER) {
+      const org = await this.controller.get(id).catch(() => null);
+      if (!org || org.parent_organization_id !== req.organization_id) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.FORBIDDEN,
+            message: 'Solo puedes eliminar grupos de tu organización',
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
     }
 
     try {

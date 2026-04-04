@@ -54,15 +54,19 @@ export class BetController {
           limit,
         });
         const parsedBets = groupedBets.map((bet: IBetEntityBack) => parseBet(bet));
-        const totalPages = Math.ceil(count / limit);
+        // Page 1: real count from DB. Pages 2+: count is 0 (not fetched to save a query).
+        // Use length heuristic for hasMore on pages 2+: full page → maybe more rows exist.
+        const totalCount = page === 1 ? count : 0;
+        const totalPages = page === 1 ? Math.ceil(count / limit) : 0;
+        const hasMore = page === 1 ? page < totalPages : parsedBets.length >= limit;
         return {
           data: parsedBets,
           pagination: {
             currentPage: page,
             pageSize: limit,
-            totalCount: count,
+            totalCount,
             totalPages,
-            hasMore: page < totalPages,
+            hasMore,
           },
         };
       } else {
@@ -83,7 +87,14 @@ export class BetController {
         });
 
         const parsedBets = bets.map((bet) => parseBet(bet));
-        const totalPages = Math.ceil(count / limit);
+        // count is 0 when PostgREST can't return it; fall back to length heuristic in that case
+        const effectiveCount =
+          count > 0
+            ? count
+            : parsedBets.length >= limit
+              ? page * limit + 1 // full page → assume at least one more page exists
+              : (page - 1) * limit + parsedBets.length; // partial page → this is the last
+        const totalPages = Math.ceil(effectiveCount / limit);
 
         // Si hay ticket_number, obtener totales por ticket
         let aggregates: {
@@ -141,7 +152,7 @@ export class BetController {
           pagination: {
             currentPage: page,
             pageSize: limit,
-            totalCount: count,
+            totalCount: effectiveCount,
             totalPages,
             hasMore: page < totalPages,
           },

@@ -1,7 +1,7 @@
 import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { Filter } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Box from '@/components/box';
@@ -29,11 +29,22 @@ const FilterSection = () => {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const isMobile = useIsMobile();
-  const { role, organizationId } = useAuth();
+  const { role, organizationId, groupId } = useAuth();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date') ?? undefined;
   const group_id = searchParams.get('group_id') ?? undefined;
+
+  // ADMIN with group: auto-scope to their group
+  const adminHasGroup = role === USER_TYPE.ADMIN && !!groupId && groupId !== organizationId;
+
+  useEffect(() => {
+    if (adminHasGroup && group_id !== groupId) {
+      const params = new URLSearchParams(searchParams);
+      params.set('group_id', groupId!);
+      setSearchParams(params);
+    }
+  }, [adminHasGroup, groupId, group_id, searchParams, setSearchParams]);
 
   const { data: groups } = useGroups(organizationId, role);
   const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
@@ -104,7 +115,7 @@ const FilterSection = () => {
             <Flex className="items-center">
               <Label className="text-sm text-muted-foreground mr-2">Grupo:</Label>
               <Box>
-                <Select value={group_id ?? 'Todos'} onValueChange={handleGroupChange}>
+                <Select value={group_id ?? 'Todos'} onValueChange={handleGroupChange} disabled={adminHasGroup}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar Grupo" />
                   </SelectTrigger>

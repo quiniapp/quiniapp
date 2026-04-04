@@ -41,7 +41,7 @@ export class ScheduleRouter {
     const { user, organization_id } = req;
     const { newSchedule } = req.body;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -137,7 +137,7 @@ export class ScheduleRouter {
           data: { schedule: snap.payload },
         };
         res.setHeader('ETag', snap.etag);
-        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        res.setHeader('Cache-Control', 'private, no-cache');
         res.status(200).json(response);
         return;
       }
@@ -185,7 +185,7 @@ export class ScheduleRouter {
     const { id: schedule_id } = req.params;
     const { updateSchedule } = req.body;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -232,7 +232,7 @@ export class ScheduleRouter {
     const { user } = req;
     const { id: schedule_id } = req.params;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };

@@ -30,7 +30,7 @@ const HeaderUserList = () => {
         { value: USER_TYPE.ADMIN, label: 'ADMIN' },
         { value: USER_TYPE.SUPERADMIN, label: 'SUPERADMIN' },
       ];
-    } else if (role === USER_TYPE.SUPERADMIN) {
+    } else if (role === USER_TYPE.CAPITALIST || role === USER_TYPE.SUPERADMIN) {
       return [
         { value: 'TODOS', label: 'TODOS' },
         { value: USER_TYPE.CASHIER, label: 'PASADORES' },
@@ -75,14 +75,16 @@ const HeaderUserList = () => {
           </SelectContent>
         </Select>
       </Flex>
-      <Button
-        className={'!hover:cursor-pointer bg-[--primary-800]'}
-        type={'button'}
-        variant={'outline'}
-        onClick={() => navigate(ROUTES.NEW_USER)}
-      >
-        Crear nuevo
-      </Button>
+      {role !== USER_TYPE.ADMIN && role !== USER_TYPE.CASHIER && (
+        <Button
+          className={'!hover:cursor-pointer bg-[--primary-800]'}
+          type={'button'}
+          variant={'outline'}
+          onClick={() => navigate(ROUTES.NEW_USER)}
+        >
+          Crear nuevo
+        </Button>
+      )}
     </Flex>
   );
 };

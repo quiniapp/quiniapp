@@ -44,7 +44,7 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
   const [calcLeave, setCalcLeave] = useState<boolean>(false);
   const [editPayload, setEditPayload] = useState<Map<string, editPayloadObject>>(new Map());
   const [searchParams] = useSearchParams();
-  const { data, isLoading, isPending } = useGetCurrentAccount(searchParams.get('date'));
+  const { data, isLoading, isPending } = useGetCurrentAccount(searchParams.get('date'), searchParams.get('group_id'));
   const { mutate } = useBulkUpdateCurrentAccount();
   const handleChange = ({ key, value, id }: HandleChangeProps) => {
     setEditPayload((prev) => {

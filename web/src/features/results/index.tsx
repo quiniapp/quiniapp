@@ -60,7 +60,7 @@ const ResultsContent = () => {
               setSelectedDate(dayjs(date).format('YYYY-MM-DD'));
             }}
           />
-          {role !== USER_TYPE.CASHIER && (
+          {role !== USER_TYPE.CASHIER && role !== USER_TYPE.ADMIN && (
             <Flex className={'gap-6'}>
               <IconButton
                 variant="success"
@@ -90,7 +90,7 @@ const ResultsContent = () => {
                 />
               ))}
             </Box>
-            {role !== USER_TYPE.CASHIER && (
+            {role !== USER_TYPE.CASHIER && role !== USER_TYPE.ADMIN && (
               <Box className=" grid grid-cols-1 sm:grid-cols-3 p-1   gap-2 w-full sm:w-auto ">
                 <IconButton
                   variant="destructive"

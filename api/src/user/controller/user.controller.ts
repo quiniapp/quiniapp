@@ -72,21 +72,22 @@ export class UserController {
   async getAll(
     organization_id: string,
     user_type: USER_TYPE,
+    requesting_user_group_id: string,
     cashier_number?: number,
     filter_user_type?: USER_TYPE,
+    filter_group_id?: string,
     include_session?: boolean
   ): Promise<IUserEntityFront[] | IUserWithSessionFront[]> {
-    // OWNER can see all users from all organizations (for password reset)
-    // Others only see users from their own organization
     const result = await this.repository.getAll(
       organization_id,
       user_type,
+      requesting_user_group_id,
       cashier_number,
       filter_user_type,
+      filter_group_id,
       include_session
     );
 
-    // parseUser now automatically preserves sessions if they exist
     return result.map((user) => parseUser(user));
   }
 
@@ -423,39 +424,33 @@ export class UserController {
       throw new ForbiddenError('Solo OWNER y CAPITALIST pueden asignar usuarios a grupos');
     }
 
-    // Get the network of organizations (parent + all descendants)
-    const networkOrgIds = [
-      adminOrgId,
-      ...(await this.repository.getOrganizationDescendants(adminOrgId)),
-    ];
-
     // Get target user
     const targetUser = await this.repository.getByIdWithoutOrgRestriction(userId);
     if (!targetUser) {
       throw new BadRequestError('Usuario no encontrado');
     }
 
-    // Verify user is in the network
-    if (!networkOrgIds.includes(targetUser.organization_id)) {
-      throw new ForbiddenError('El usuario no pertenece a tu red de organizaciones');
+    // Verify user belongs to admin's organization
+    if (targetUser.organization_id !== adminOrgId) {
+      throw new ForbiddenError('El usuario no pertenece a tu organización');
     }
 
-    // Verify target group is in the network
-    if (!networkOrgIds.includes(targetGroupId)) {
-      throw new ForbiddenError('El grupo destino no pertenece a tu red de organizaciones');
-    }
-
-    // Cannot assign CAPITALIST to a group
-    if (targetUser.user_type === USER_TYPE.CAPITALIST) {
-      throw new ForbiddenError('No se puede reasignar un CAPITALIST');
-    }
-
-    // Perform the assignment
-    const result = await this.repository.assignToGroup(
-      userId,
-      targetUser.organization_id,
-      targetGroupId
+    // Verify target group is a direct sub-org of admin's organization (no cache — new groups must be found)
+    const groupBelongsToOrg = await this.repository.isGroupInOrganization(
+      targetGroupId,
+      adminOrgId
     );
+    if (!groupBelongsToOrg) {
+      throw new ForbiddenError('El grupo destino no pertenece a tu organización');
+    }
+
+    // Only ADMIN and CASHIER can be assigned to groups
+    if (![USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(targetUser.user_type)) {
+      throw new ForbiddenError('Solo se pueden asignar ADMIN y CASHIER a grupos');
+    }
+
+    // Perform the assignment (organization_id stays unchanged; only group_id is set)
+    const result = await this.repository.assignToGroup(userId, adminOrgId, targetGroupId);
 
     return parseUser(result);
   };
@@ -490,17 +485,11 @@ export class UserController {
       throw new BadRequestError('Usuario no encontrado');
     }
 
-    if (targetUser.organization_id !== groupId) {
+    if (targetUser.group_id !== groupId) {
       throw new BadRequestError('El usuario no pertenece a este grupo');
     }
 
-    // Get the parent org of the group to move the user back
-    const parentOrgId = await this.repository.getParentOrganizationId(groupId);
-    if (!parentOrgId) {
-      throw new BadRequestError('El grupo no tiene organización padre');
-    }
-
-    const result = await this.repository.removeFromGroup(userId, groupId, parentOrgId);
+    const result = await this.repository.removeFromGroup(userId, groupId, adminOrgId);
     return parseUser(result);
   };
 
@@ -510,17 +499,13 @@ export class UserController {
    */
   getUsersForGroupAssignment = async (
     adminOrgId: string,
-    adminUserType: USER_TYPE,
-    excludeGroupId?: string
+    adminUserType: USER_TYPE
   ): Promise<IUserEntityFront[]> => {
-    // Only CAPITALIST and OWNER can see assignable users
     if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(adminUserType)) {
       throw new ForbiddenError('Solo OWNER y CAPITALIST pueden ver usuarios asignables');
     }
 
-    // Only users in the parent org are assignable — those already in a group
-    // have organization_id pointing to a sub-org, so they must be excluded.
-    const users = await this.repository.getUsersForGroupAssignment([adminOrgId], excludeGroupId);
+    const users = await this.repository.getUsersForGroupAssignment(adminOrgId);
     return users.map((user) => parseUser(user));
   };
 }

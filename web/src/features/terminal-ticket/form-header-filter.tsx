@@ -26,7 +26,7 @@ import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 const FormHeaderFilter = () => {
   const { role, organizationId } = useAuth();
-  const { cashier_id, group_id, setDate, toggleCashier, setGroupId, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
+  const { cashier_id, group_id, setDate, toggleCashier, setCashierId, setGroupId, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
   const { data: allCashiers } = useUsers(role);
   const { data: groups } = useGroups(organizationId, role);
   const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
@@ -44,7 +44,11 @@ const FormHeaderFilter = () => {
   };
 
   const handleSelectCashier = (id: string) => {
-    toggleCashier(id);
+    if (id === '__all__') {
+      setCashierId(undefined);
+    } else {
+      toggleCashier(id);
+    }
   };
 
   const handleSelectDate = (date?: string) => {
@@ -84,23 +88,19 @@ const FormHeaderFilter = () => {
                 </SelectContent>
               </Select>
               <Select
-                defaultValue={undefined}
-                value={cashier_id}
-                onValueChange={(value) => {
-                  handleSelectCashier(value);
-                }}
+                value={cashier_id ?? '__all__'}
+                onValueChange={handleSelectCashier}
               >
                 <SelectTrigger className={'border w-full '}>
-                  <SelectValue placeholder="Todos" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {cashiers?.map((cashier) => {
-                    return (
-                      <SelectItem key={cashier.user_id} value={cashier.user_id}>
-                        {cashier.name} - {cashier.number}
-                      </SelectItem>
-                    );
-                  })}
+                  <SelectItem value="__all__">Todos</SelectItem>
+                  {cashiers?.map((cashier) => (
+                    <SelectItem key={cashier.user_id} value={cashier.user_id}>
+                      {cashier.name} - {cashier.number}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Flex>

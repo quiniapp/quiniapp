@@ -11,6 +11,23 @@ export class UserRepository {
    * Get all descendant organization IDs (including the org itself)
    * Uses recursive SQL function for efficiency
    */
+  /**
+   * Check if a group (sub-org) belongs to the given root organization.
+   * Queries the DB directly — no cache — so newly created groups are always found.
+   */
+  async isGroupInOrganization(groupId: string, organizationId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('organization_id')
+      .eq('organization_id', groupId)
+      .eq('parent_organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data !== null;
+  }
+
   async getOrganizationDescendants(organizationId: string): Promise<string[]> {
     const cacheKey = `org:${organizationId}:network-ids`;
     const cached = globalCacheManager.get<string[]>(cacheKey);
@@ -77,6 +94,7 @@ export class UserRepository {
     username,
     disabled,
     organization_id,
+    group_id,
     created_at,
     edited_at,
     deleted_at,
@@ -141,19 +159,22 @@ export class UserRepository {
   async getAll(
     organization_id: string,
     user_type: USER_TYPE,
+    requesting_user_group_id: string,
     cashier_number?: number,
     filter_user_type?: USER_TYPE,
+    filter_group_id?: string,
     include_session?: boolean
   ): Promise<IUserEntityBack[]> {
-    // Include only the most recent session's last_activity_at if requested
-    // Uses left join so users without sessions are still included
     const selectFields = include_session
       ? `${this.allUserFields}, sessions(last_activity_at)`
       : this.allUserFields;
 
-    let query = supabase.from('users').select(selectFields).is('deleted_at', null);
+    let query = supabase
+      .from('users')
+      .select(selectFields)
+      .eq('organization_id', organization_id)
+      .is('deleted_at', null);
 
-    // If including session, filter for active sessions and get the most recent one
     if (include_session) {
       query = query
         .eq('sessions.is_active', true)
@@ -161,93 +182,30 @@ export class UserRepository {
         .limit(1, { foreignTable: 'sessions' });
     }
 
-    // Hierarchical permission filtering
-    // Hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER
-    if (user_type === USER_TYPE.OWNER) {
-      // OWNER can see all users in their network (org + all sub-orgs)
-      const descendantOrgs = await this.getOrganizationDescendants(organization_id);
-      query = query.in('organization_id', descendantOrgs);
-
-      if (filter_user_type) {
-        query = query.eq('user_type', filter_user_type);
-      } else {
-        // Default: show all except OWNER
-        query = query.in('user_type', [
-          USER_TYPE.CAPITALIST,
-          USER_TYPE.SUPERADMIN,
-          USER_TYPE.ADMIN,
-          USER_TYPE.CASHIER,
-        ]);
-      }
-
-      query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
-    } else if (user_type === USER_TYPE.CAPITALIST) {
-      // CAPITALIST can see all users in their org + all sub-orgs
-      const descendantOrgs = await this.getOrganizationDescendants(organization_id);
-      query = query.in('organization_id', descendantOrgs);
-
-      if (filter_user_type) {
-        // CAPITALIST can see SUPERADMIN, ADMIN, CASHIER
-        if ([USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(filter_user_type)) {
-          query = query.eq('user_type', filter_user_type);
-        } else {
-          query = query.in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
-        }
-      } else {
-        query = query.in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
-      }
-
-      query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
-    } else if (user_type === USER_TYPE.SUPERADMIN) {
-      // SUPERADMIN visibility depends on whether they're in a sub-org or main org
-      const isSubOrg = await this.isSubOrganization(organization_id);
-
-      if (isSubOrg) {
-        // SUPERADMIN in sub-org: only see users in their sub-org
-        query = query.eq('organization_id', organization_id);
-      } else {
-        // SUPERADMIN in main org: see all like CAPITALIST (their org + sub-orgs)
-        const descendantOrgs = await this.getOrganizationDescendants(organization_id);
-        query = query.in('organization_id', descendantOrgs);
-      }
-
-      if (filter_user_type) {
-        if ([USER_TYPE.ADMIN, USER_TYPE.CASHIER].includes(filter_user_type)) {
-          query = query.eq('user_type', filter_user_type);
-        } else {
-          query = query.in('user_type', [USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
-        }
-      } else {
-        query = query.in('user_type', [USER_TYPE.ADMIN, USER_TYPE.CASHIER]);
-      }
-
-      query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
-    } else if (user_type === USER_TYPE.ADMIN) {
-      // ADMIN visibility depends on whether they're in a sub-org or main org
-      const isSubOrg = await this.isSubOrganization(organization_id);
-
-      if (isSubOrg) {
-        // ADMIN in sub-org: only see users in their sub-org
-        query = query.eq('organization_id', organization_id);
-      } else {
-        // ADMIN in main org: see all cashiers in their org + sub-orgs
-        const descendantOrgs = await this.getOrganizationDescendants(organization_id);
-        query = query.in('organization_id', descendantOrgs);
-      }
-
-      query = query.eq('user_type', USER_TYPE.CASHIER).order('number', { ascending: true });
+    // 1) user_type determines WHAT types are visible
+    const visibleTypes = this.getVisibleUserTypes(user_type, filter_user_type);
+    if (visibleTypes.length === 1) {
+      query = query.eq('user_type', visibleTypes[0]);
     } else {
-      // CASHIER or others - no access (handled in route)
-      query = query
-        .eq('organization_id', organization_id)
-        .eq('user_type', USER_TYPE.CASHIER)
-        .order('number', { ascending: true });
+      query = query.in('user_type', visibleTypes);
     }
 
-    // Filter by number if provided
+    // 2) group_id determines SCOPE
+    const hasGroup = requesting_user_group_id !== organization_id;
+    if (hasGroup) {
+      // User is in a specific group: only see users in their group
+      query = query.eq('group_id', requesting_user_group_id);
+    } else if (filter_group_id) {
+      // No group restriction but UI requested a group filter
+      query = query.eq('group_id', filter_group_id);
+    }
+
+    // Filter by cashier number if provided
     if (cashier_number !== undefined && cashier_number !== null) {
       query = query.eq('number', cashier_number);
     }
+
+    query = query.order('user_type', { ascending: true }).order('number', { ascending: true });
 
     const { data, error } = await query;
 
@@ -255,6 +213,36 @@ export class UserRepository {
       throw new Error(error.details || error.message || JSON.stringify(error));
     }
     return (data as unknown as IUserEntityBack[]) || [];
+  }
+
+  /**
+   * Get the visible user types for a given requesting user_type.
+   * Respects filter_user_type if within the allowed set.
+   */
+  private getVisibleUserTypes(user_type: USER_TYPE, filter_user_type?: USER_TYPE): USER_TYPE[] {
+    let allowed: USER_TYPE[];
+    switch (user_type) {
+      case USER_TYPE.OWNER:
+        allowed = [USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER];
+        break;
+      case USER_TYPE.CAPITALIST:
+        allowed = [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER];
+        break;
+      case USER_TYPE.SUPERADMIN:
+        allowed = [USER_TYPE.ADMIN, USER_TYPE.CASHIER];
+        break;
+      case USER_TYPE.ADMIN:
+        allowed = [USER_TYPE.CASHIER];
+        break;
+      default:
+        allowed = [USER_TYPE.CASHIER];
+        break;
+    }
+
+    if (filter_user_type && allowed.includes(filter_user_type)) {
+      return [filter_user_type];
+    }
+    return allowed;
   }
 
   async create(newUser: IUserEntityBack): Promise<IUserEntityBack> {
@@ -307,20 +295,20 @@ export class UserRepository {
   }
 
   /**
-   * Assign a user to a group by changing their organization_id
-   * Used by CAPITALIST to move users between their organization and sub-orgs
+   * Assign a user to a group by setting their group_id field.
+   * organization_id is NOT changed — it always stays as the root org.
    */
   async assignToGroup(
     userId: string,
-    currentOrgId: string,
-    targetOrgId: string
+    orgId: string,
+    targetGroupId: string
   ): Promise<IUserEntityBack> {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')
-      .update({ organization_id: targetOrgId, edited_at: timestamp })
+      .update({ group_id: targetGroupId, edited_at: timestamp })
       .eq('user_id', userId)
-      .eq('organization_id', currentOrgId)
+      .eq('organization_id', orgId)
       .select()
       .single();
 
@@ -329,19 +317,20 @@ export class UserRepository {
   }
 
   /**
-   * Remove a user from a group by moving them back to the parent organization
+   * Remove a user from a group by setting group_id = organization_id (no group).
+   * organization_id is NOT changed.
    */
   async removeFromGroup(
     userId: string,
-    currentGroupId: string,
-    parentOrgId: string
+    groupId: string,
+    organizationId: string
   ): Promise<IUserEntityBack> {
     const timestamp = dayjs().toISOString();
     const { data, error } = await supabase
       .from('users')
-      .update({ organization_id: parentOrgId, edited_at: timestamp })
+      .update({ group_id: organizationId, edited_at: timestamp })
       .eq('user_id', userId)
-      .eq('organization_id', currentGroupId)
+      .eq('group_id', groupId)
       .select()
       .single();
 
@@ -350,27 +339,36 @@ export class UserRepository {
   }
 
   /**
-   * Get users that can be assigned to groups (users in parent org or sibling groups)
-   * Returns users from the network that are not in the target group
+   * Get users available for group assignment.
+   * Unassigned = group_id equals organization_id.
+   * Only ADMIN and CASHIER are assignable to groups.
    */
-  async getUsersForGroupAssignment(
-    networkOrgIds: string[],
-    excludeOrgId?: string
-  ): Promise<IUserEntityBack[]> {
-    let query = supabase
+  async getUsersForGroupAssignment(orgId: string): Promise<IUserEntityBack[]> {
+    const { data, error } = await supabase
       .from('users')
       .select('*')
-      .in('organization_id', networkOrgIds)
+      .eq('organization_id', orgId)
+      .eq('group_id', orgId)
       .is('deleted_at', null)
-      .in('user_type', [USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN, USER_TYPE.CASHIER])
+      .in('user_type', [USER_TYPE.ADMIN, USER_TYPE.CASHIER])
       .order('number', { ascending: true });
 
-    if (excludeOrgId) {
-      query = query.neq('organization_id', excludeOrgId);
-    }
-
-    const { data, error } = await query;
     if (error) throw new Error(error.details || error.message);
     return data || [];
+  }
+
+  /**
+   * Get user IDs belonging to a specific group within an organization.
+   */
+  async getUserIdsByGroupId(groupId: string, orgId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('group_id', groupId)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null);
+
+    if (error) throw new Error(error.details || error.message);
+    return data?.map((u: { user_id: string }) => u.user_id) ?? [];
   }
 }

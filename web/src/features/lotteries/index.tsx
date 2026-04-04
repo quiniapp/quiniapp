@@ -3,6 +3,8 @@ import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit2, Trash2, ArrowUpDown } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
 import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
 import { useScheduleMap } from '@/hooks/useScheduleMap';
@@ -16,6 +18,7 @@ interface LotteryCardProps {
   onDelete: (lottery: ILotteryEntityFront) => void;
   scheduleLotteries?: IScheduleLotteryEntityFront;
   scheduleMap: Map<string, { schedule_id: string; name: string; time: string }>;
+  canEdit?: boolean;
 }
 
 function LotteryCard({
@@ -24,6 +27,7 @@ function LotteryCard({
   onDelete,
   scheduleLotteries,
   scheduleMap,
+  canEdit = true,
 }: LotteryCardProps) {
   // Get schedules for this lottery
   const scheduleIds = useMemo(() => {
@@ -83,30 +87,35 @@ function LotteryCard({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(lottery)}
-            className="hover:text-cyan"
-          >
-            <Edit2 size={18} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(lottery)}
-            className="hover:text-destructive"
-          >
-            <Trash2 size={18} />
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(lottery)}
+              className="hover:text-cyan"
+            >
+              <Edit2 size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(lottery)}
+              className="hover:text-destructive"
+            >
+              <Trash2 size={18} />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 const LotteriesContent = () => {
+  const { role } = useAuth();
+  const canEdit = role !== USER_TYPE.ADMIN;
+
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -146,26 +155,30 @@ const LotteriesContent = () => {
   return (
     <Box className="grid grid-rows-[auto_1fr] h-full">
       <HeaderSection title="Loterías">
-        <div className="flex gap-2">
-          <Button onClick={() => setReorderModalOpen(true)} variant="outline" className="gap-2">
-            <ArrowUpDown size={18} />
-            Cambiar orden
-          </Button>
-          <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
-            <Plus size={20} />
-            Nueva Lotería
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-2">
+            <Button onClick={() => setReorderModalOpen(true)} variant="outline" className="gap-2">
+              <ArrowUpDown size={18} />
+              Cambiar orden
+            </Button>
+            <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
+              <Plus size={20} />
+              Nueva Lotería
+            </Button>
+          </div>
+        )}
       </HeaderSection>
 
       <div className="overflow-y-auto px-6 py-4">
         {lotteries?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground text-center mb-4">No hay loterías creadas</p>
-            <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
-              <Plus size={20} />
-              Crear Primera Lotería
-            </Button>
+            {canEdit && (
+              <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
+                <Plus size={20} />
+                Crear Primera Lotería
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -177,6 +190,7 @@ const LotteriesContent = () => {
                 onDelete={handleDelete}
                 scheduleLotteries={scheduleLotteries}
                 scheduleMap={scheduleMap}
+                canEdit={canEdit}
               />
             ))}
             <div className="mt-4 text-xs text-muted-foreground text-center">

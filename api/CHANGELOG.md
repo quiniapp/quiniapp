@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-04-03
+
+#### Bet pagination — infinite scroll no cargaba página 2+
+- **`bet.repository.ts`**: Revierte `count: 'planned'` → `count: 'exact'` en `getAllBets`. `count=planned` puede retornar NULL en algunas versiones de Supabase (PostgREST sin soporte completo), lo que hacía `totalPages=0` y `hasMore=false`. `count=exact` no dispara `PGRST123` (usa el header `Prefer: count=exact`, no una función de agregación en SELECT).
+- **`bet.controller.ts`**: Agrega fallback en el path no-grouped: si `count = 0` (PostgREST no pudo calcularlo) pero se recibió una página completa de datos, usa heurística de longitud para `effectiveCount` en lugar de asumir que no hay más páginas.
+
+#### Grouped bets — paginación en DB (LIMIT/OFFSET en RPC)
+- **`api/supabase/migrations/20260403130000_add_pagination_to_grouped_bets_rpc.sql`** (NUEVO): Agrega `p_bet_types`, `p_limit`, `p_offset` a `get_grouped_bets_for_parse` y `get_grouped_bets_for_parse_archive`. Crea `get_grouped_bets_count` y `get_grouped_bets_count_archive` para obtener el total de grupos con los mismos filtros. Mueve tern/quatern filtering y paginación del JS al SQL.
+- **`bet.repository.ts`**: `getAllBetsGrouped` reemplaza la fetch-all + paginate-in-JS por llamadas a RPC con LIMIT/OFFSET. Página 1: data + count en paralelo. Páginas 2+: solo data (sin count query extra).
+- **`bet.controller.ts`**: Para grouped path, páginas 2+ usan heurística `parsedBets.length >= limit` para `hasMore` (evita llamada extra al count en cada página).
+
+#### Bet repository — PGRST123 aggregate functions not allowed
+- **`api/supabase/migrations/20260403120000_rpc_get_bets_totals.sql`** (NUEVO): Crea `get_bets_total_amount`, `get_bets_total_prize` (y variantes `_archive`) como funciones SQL que calculan totales en el servidor sin requerir `db-aggregates-enabled`.
+- **`bet.repository.ts`**: `getTotalAmount` y `getTotalPrize` reemplazan `.select('amount.sum()')` / `.select('prize.sum()')` (que disparan `PGRST123`) por llamadas a las nuevas RPCs. `getAllBets` cambia `count: 'exact'` a `count: 'planned'` (estimate via planner, no usa funciones de agregación).
+
+#### Lottery/Schedule day-filter — browser cache devolvía datos vacíos
+- **`lottery.route.ts`** y **`schedule.route.ts`**: Cambia `Cache-Control` de las respuestas filtradas por día de `public, max-age=60, must-revalidate` a `private, no-cache`. El header anterior permitía al browser cachear respuestas vacías por 60 segundos; con `private, no-cache` el browser siempre revalida via ETag pero sigue usando la caché del servidor (sin costo de DB extra).
+
+### Changed - 2026-04-03
+
+#### Modelo de permisos: group_id = organization_id cuando sin grupo (nunca null)
+- **`api/supabase/migrations/20260402202646_migrate_remaining_users_and_default_group_id.sql`** (NUEVO): Migra ADMIN/SUPERADMIN de sub-orgs, setea `group_id = organization_id` para todos los users con `group_id NULL`, y hace `ALTER COLUMN group_id SET NOT NULL`.
+- **`api/supabase/migrations/20260402202745_update_hard_delete_group_id_to_org_id.sql`** (NUEVO): Actualiza `hard_delete_organization` RPC — cuando se elimina un grupo, setea `group_id = organization_id` en los users afectados (en lugar de NULL).
+
+#### User repository — `group_id` en allUserFields + scoping simplificado
+- **`user.repository.ts`**: Agrega `group_id` a `allUserFields` (bug crítico: siempre era `undefined`). Reescribe `getAll()` con scoping basado en `group_id`: si `requesting_user_group_id === organization_id` → ve todo (con filtro opcional); si es distinto → `eq('group_id', requesting_user_group_id)`. Actualiza `removeFromGroup()` para setear `group_id = organizationId`. Actualiza `getUsersForGroupAssignment()` para filtrar `group_id = orgId` (solo sin grupo) y `user_type IN (ADMIN, CASHIER)`.
+- **`user.helper/userBase.ts`**: `group_id` se inicializa a `organization_id` en lugar de `null`.
+- **`user.helper/parseUser.ts`**: `group_id: user.group_id` (sin `?? null`).
+
+#### User route + controller — scoping por group_id
+- **`user.route.ts`**: `getAllUserHandler` pasa `user.group_id ?? organization_id` como `requestingGroupId`. `deleteUserHandler` bloquea ADMIN. `getAssignableUsersHandler` elimina parámetro `exclude_group_id`.
+- **`user.controller.ts`**: `getAll` recibe `requesting_user_group_id`. `assignUserToGroup` rechaza non-ADMIN/CASHIER. `removeUserFromGroup` pasa `adminOrgId`.
+
+#### Rutas master data — ADMIN bloqueado de escritura
+- **`results.route.ts`**, **`lottery.route.ts`**, **`schedule.route.ts`**, **`schedule-lottery.route.ts`**: Bloqueos de escritura extendidos de `CASHIER` a `[CASHIER, ADMIN]`.
+
+#### Current-account route — ADMIN puede calcular pero no liquidar
+- **`current-account.route.ts`**: ADMIN removido del bloqueo de `calculateCurrentAccountHandler` (puede "Actualizar"). Sigue bloqueado en `liquidateCurrentAccountHandler` y `bulkUpdateCurrentAccountHandler`. `getAllCurrentAccountHandler` auto-scopea ADMIN con grupo vía `getUserIdsByGroupId`.
+
+#### Bet + Ticket routes — auto-scoping ADMIN con grupo
+- **`bet.routes.ts`**, **`ticket.route.ts`**: `resolveGroupFilter()` auto-scopea ADMIN con grupo; ignora el parámetro de query para ADMIN con grupo (previene escape de scope).
+
+#### Organization route + repository — permisos expandidos
+- **`organization.route.ts`**: `getChildrenHandler` filtra grupos para ADMIN con grupo (solo ve el suyo). `updateHandler` y `deleteHandler` permiten CAPITALIST/SUPERADMIN para sub-orgs de su propia org (además de OWNER que puede todo).
+- **`organization.repository.ts`**: `getAll()` reemplaza join con `users!fk_users_organization` (fallaba por ambigüedad de dos FKs a organizations) con filtro directo `parent_organization_id IS NULL`.
+
+### Fixed - 2026-04-03
+
+#### user.route.ts — group_id null causa error UUID en Supabase
+- **`user.route.ts`**: `getAllUserHandler` usa `user.group_id ?? req.organization_id` en lugar de `user.group_id!` para evitar `invalid input syntax for type uuid: "null"` en usuarios sin migración aplicada.
+
+### Changed - 2026-03-31
+
+#### Arquitectura de grupos: `users.group_id` en lugar de `organization_id`
+- **`api/supabase/migrations/20260331195910_add_fk_users_group_id.sql`** (NUEVO): Agrega FK `fk_users_group` en `users.group_id → organizations.organization_id` con `ON DELETE SET NULL` e índice `idx_users_group_id`.
+- **`api/supabase/migrations/20260331195920_migrate_cashiers_org_to_group_id.sql`** (NUEVO): Migra cashiers que están en sub-orgs — mueve `organization_id` a `group_id` y restaura `organization_id` al org padre. También actualiza `current_accounts.organization_id` para que apunte al org raíz.
+- **`user.repository.ts`**: `assignToGroup` ahora actualiza `group_id` en lugar de `organization_id`. `removeFromGroup` ahora setea `group_id = null` (simplificada, sin `parentOrgId`). `getUsersForGroupAssignment` filtra por `organization_id = orgId` y excluye por `group_id`. Nuevo método `getUserIdsByGroupId(groupId, orgId)` que filtra users por `group_id`.
+- **`user.controller.ts`**: `assignUserToGroup` pasa `adminOrgId` al repositorio. `removeUserFromGroup` valida por `group_id` (no `organization_id`) y elimina la llamada a `getParentOrganizationId`.
+- **`current-account/route/current-account.route.ts`**: Cambió `getUserIdsByOrg(group_id)` → `getUserIdsByGroupId(group_id, req.organization_id!)`.
+- **`bet/route/bet.routes.ts`**: Cambió `getUserIdsByOrg(group_id)` → `getUserIdsByGroupId(group_id, req.organization_id!)`.
+- **`ticket/route/ticket.route.ts`**: Cambió `getUserIdsByOrg(group_id)` → `getUserIdsByGroupId(group_id, req.organization_id!)`.
+- **`current-account/repository/current-account.repository.ts`**: Ambos handlers (`getAllCurrentAccountHandler` y `getAllCurrentAccountNetworkHandler`) aplanan `group_id` desde el join con `users` (`row.users?.group_id ?? null`).
+- **`current-account/helper/parseCurrentAccount.ts`**: Agrega mapeo de `group_id`.
+
+#### Fix PostgREST FK ambiguity en `organization.repository.ts`
+- **`organization.repository.ts`**: `getAll()` ahora usa `users!fk_users_organization(user_type)` en lugar de `users!inner(user_type)`. La FK `fk_users_group` (añadida en esta misma sesión) creó dos paths entre `users` y `organizations`; PostgREST requería el hint de FK explícito para resolver la ambigüedad.
+
+#### Organization route — grupos visibles para ADMIN/SUPERADMIN
+- **`organization.route.ts`**: `getChildrenHandler` ahora acepta ADMIN y SUPERADMIN además de OWNER/CAPITALIST. Non-OWNER solo puede ver children de su propio org.
+
 ### Fixed - 2026-03-31
 
 #### Groups — lista de usuarios asignables excluye usuarios ya en un grupo

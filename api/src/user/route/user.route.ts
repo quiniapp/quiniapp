@@ -106,35 +106,27 @@ export class UserRouter {
       parsedCashierNumber = parseInt(cashier_number, 10);
     }
 
-    // Parse filter_user_type from query parameter
     let filterUserType: USER_TYPE | undefined = undefined;
     if (typeof filter_user_type === 'string' && filter_user_type in USER_TYPE) {
       filterUserType = filter_user_type as USER_TYPE;
     }
 
-    // Parse include_session from query parameter
     const includeSession = include_session === 'true';
 
-    // Determine which organization to query
-    let targetOrgId = req.organization_id!;
+    // group_id from query is a filter, not a target org
+    const filterGroupId = typeof group_id === 'string' ? group_id : undefined;
 
-    // CAPITALIST and OWNER can query users from a specific group in their network
-    if (group_id && typeof group_id === 'string') {
-      if ([USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user!.user.user_type)) {
-        // Verify group is in their network
-        const networkOrgIds = await this.controller.getNetworkOrgIds(req.organization_id!);
-        if (!networkOrgIds.includes(group_id)) {
-          throw new ForbiddenError('El grupo no pertenece a tu red de organizaciones');
-        }
-        targetOrgId = group_id;
-      }
-    }
+    // Null-safe: if group_id is null (pre-migration), treat as organization_id (= no group)
+    const requestingGroupId = user!.user.group_id ?? req.organization_id!;
 
     const users = await this.controller.getAll(
-      targetOrgId,
+      req.organization_id!,
       user!.user.user_type,
+      // user!.user.group_id!,
+      requestingGroupId,
       parsedCashierNumber,
       filterUserType,
+      filterGroupId,
       includeSession
     );
     const response: APIResponse<IUserEntityFront[]> = {
@@ -181,8 +173,8 @@ export class UserRouter {
       throw new BadRequestError('ID de usuario requerido');
     }
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
-      throw new ForbiddenError('Los cajeros no pueden eliminar usuarios');
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
+      throw new ForbiddenError('No tienes permisos para eliminar usuarios');
     }
 
     // For CAPITALIST/OWNER, resolve the user's real org_id (may be in a sub-org)
@@ -369,7 +361,6 @@ export class UserRouter {
    * Only OWNER and CAPITALIST can access
    */
   private getAssignableUsersHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { exclude_group_id } = req.query;
     const { user } = req;
 
     if (!user) {
@@ -378,8 +369,7 @@ export class UserRouter {
 
     const users = await this.controller.getUsersForGroupAssignment(
       req.organization_id!,
-      user.user.user_type,
-      exclude_group_id as string | undefined
+      user.user.user_type
     );
 
     const response: APIResponse<IUserEntityFront[]> = {

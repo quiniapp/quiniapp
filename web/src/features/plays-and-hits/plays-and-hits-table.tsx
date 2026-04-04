@@ -11,7 +11,7 @@ import {
 import { IBetEntityFront } from '@helper/types/bet.type';
 import toast from 'react-hot-toast';
 import { Copy, Check, Loader2 } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect, memo, useCallback } from 'react';
+import { useState, useMemo, useEffect, memo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
@@ -65,15 +65,16 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     return Number.isFinite(n) ? n : def;
   };
 
-  // Contenedor scrolleable
-  const scrollRootRef = useRef<HTMLDivElement | null>(null);
+  // Contenedor scrolleable — useState (no useRef) para que el re-render
+  // dispare la creación del IntersectionObserver con el elemento correcto
+  const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
 
   // Hook centralizado de infinite scroll - carga cuando faltan 15 filas para el final
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    root: scrollRootRef.current,
+    root: scrollRoot,
     offsetFromEnd: 30,
     totalItems: bets.length,
   });
@@ -95,7 +96,7 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   return (
     // 👇 Este es el root del scroll + el ref usado en el IO
     <div
-      ref={scrollRootRef}
+      ref={setScrollRoot}
       className="flex-1 min-h-40 max-h-full overflow-y-auto overflow-x-hidden w-full"
     >
       {/* ===== DESKTOP/TABLET ===== */}
