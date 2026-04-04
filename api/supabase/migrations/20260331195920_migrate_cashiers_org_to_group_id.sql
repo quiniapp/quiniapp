@@ -11,14 +11,14 @@ FROM organizations o
 WHERE u.organization_id = o.organization_id
   AND o.parent_organization_id IS NOT NULL
   AND u.user_type = 'CASHIER'
-  AND u.deleted_at IS NULL
+  AND u.deleted_at IS NULL;
+
 -- Update current_accounts so their organization_id matches the parent org
 -- (aligns with the new model where all accounts belong to the root org)
-
 UPDATE current_accounts ca
 SET
   organization_id = o.parent_organization_id,
   edited_at       = now()
 FROM organizations o
 WHERE ca.organization_id = o.organization_id
-  AND o.parent_organization_id IS NOT NULL
+  AND o.parent_organization_id IS NOT NULL;
