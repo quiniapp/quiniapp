@@ -62,18 +62,26 @@ const LotteriesCheckboxListDesktop = ({
       icon={<TicketIcon size="16px" />}
       headerAction={selectAllCheckbox}
     >
-      <Box className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
-        {lotteries.map((lot) => (
-          <CheckboxWithLabel
-            key={lot.lottery_id}
-            id={lot.lottery_id}
-            label={lot.name}
-            checked={checkedLotteries.has(lot.lottery_id)}
-            onClick={() => setLotteries(lot)}
-            labelClassName="min-w-[90px]"
-          />
-        ))}
-      </Box>
+      {lotteries.length > 0 ? (
+        <Box className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-2 w-fit">
+          {lotteries.map((lot) => (
+            <CheckboxWithLabel
+              key={lot.lottery_id}
+              id={lot.lottery_id}
+              label={lot.name}
+              checked={checkedLotteries.has(lot.lottery_id)}
+              onClick={() => setLotteries(lot)}
+              labelClassName="min-w-[90px]"
+            />
+          ))}
+        </Box>
+      ) : (
+        <div className="min-h-[68px] flex items-center">
+          <Text size="sm" className="text-muted-foreground">
+            Seleccioná un turno para ver las loterías
+          </Text>
+        </div>
+      )}
     </CheckboxSection>
   );
 };
