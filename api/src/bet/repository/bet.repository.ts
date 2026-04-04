@@ -1,7 +1,7 @@
 import { supabase } from '@database/db.connection';
 import { TicketSums } from '@helper/request/bet.request';
 import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
-import { getTableName, getRpcName } from '../../archive/helper/archive-helper';
+import { getTableName } from '../../archive/helper/archive-helper';
 
 export class BetRepository {
   async getAllBets({
@@ -99,92 +99,55 @@ export class BetRepository {
     page?: number;
     limit?: number;
   }): Promise<{ data: IBetEntityBack[]; count: number }> {
-    // Determine which RPC to use based on date
-    const rpcName = getRpcName(date, 'get_grouped_bets_for_parse');
+    const isArchived = getTableName(date, 'bets') === 'bets_archive';
+    const rpcName = isArchived
+      ? 'get_grouped_bets_for_parse_archive'
+      : 'get_grouped_bets_for_parse';
+    const countRpcName = isArchived ? 'get_grouped_bets_count_archive' : 'get_grouped_bets_count';
 
-    // Helper: apply quatern/tern filter and pagination
-    const applyFiltersAndPaginate = (raw: IBetEntityBack[]) => {
-      let result = [...raw];
-      if (quatern && tern) {
-        result = result.filter(
-          (bet) => bet.bet_type === BET_TYPE.QUATERN || bet.bet_type === BET_TYPE.TERN
-        );
-      } else if (quatern) {
-        result = result.filter((bet) => bet.bet_type === BET_TYPE.QUATERN);
-      } else if (tern) {
-        result = result.filter((bet) => bet.bet_type === BET_TYPE.TERN);
-      }
-      const totalCount = result.length;
-      const from = (page - 1) * limit;
-      const paginatedData = result.slice(from, from + limit);
-      return { data: paginatedData, count: totalCount };
+    // Build bet_types filter (replaces JS-side tern/quatern filtering)
+    let betTypes: BET_TYPE[] | null = null;
+    if (quatern && tern) betTypes = [BET_TYPE.QUATERN, BET_TYPE.TERN];
+    else if (quatern) betTypes = [BET_TYPE.QUATERN];
+    else if (tern) betTypes = [BET_TYPE.TERN];
+
+    const orgId = organization_ids[0];
+    const offset = (page - 1) * limit;
+
+    const baseParams = {
+      p_date: date,
+      p_schedule_id: schedule_id ?? null,
+      p_cashier_id: cashier_id ?? null,
+      p_lottery_id: lottery_id ?? null,
+      p_winners_only: !!winners,
+      p_organization_id: group_user_ids?.length ? null : orgId,
+      p_user_ids: group_user_ids?.length ? group_user_ids : null,
+      p_min_amount: min_amount,
+      p_bet_types: betTypes,
     };
 
-    // Fast path: group_user_ids provided — single RPC call with p_user_ids
-    if (group_user_ids?.length) {
-      const { data: rpcData, error } = await supabase.rpc(rpcName, {
-        p_date: date,
-        p_schedule_id: schedule_id ?? null,
-        p_cashier_id: cashier_id ?? null,
-        p_lottery_id: lottery_id ?? null,
-        p_winners_only: !!winners,
-        p_organization_id: null,
-        p_user_ids: group_user_ids,
-        p_min_amount: min_amount,
-      });
-      if (error) throw new Error(error.message);
-      const allBets: IBetEntityBack[] = rpcData ?? [];
-      return applyFiltersAndPaginate(
-        allBets.sort((a, b) => ((b.amount as number) || 0) - ((a.amount as number) || 0))
-      );
+    if (page === 1) {
+      // Page 1: fetch data + count in parallel
+      const [dataResult, countResult] = await Promise.all([
+        supabase.rpc(rpcName, { ...baseParams, p_limit: limit, p_offset: offset }),
+        supabase.rpc(countRpcName, baseParams),
+      ]);
+      if (dataResult.error) throw new Error(dataResult.error.message);
+      if (countResult.error) throw new Error(countResult.error.message);
+      return {
+        data: (dataResult.data as IBetEntityBack[]) ?? [],
+        count: Number(countResult.data ?? 0),
+      };
     }
 
-    // Standard path: Call RPC for each org and merge results
-    const orgResults = await Promise.all(
-      organization_ids.map(async (orgId) => {
-        const { data, error } = await supabase.rpc(rpcName, {
-          p_date: date,
-          p_schedule_id: schedule_id ?? null,
-          p_cashier_id: cashier_id ?? null,
-          p_lottery_id: lottery_id ?? null,
-          p_winners_only: !!winners,
-          p_organization_id: orgId,
-          p_min_amount: min_amount,
-        });
-        if (error) throw error;
-        return (data as IBetEntityBack[]) || [];
-      })
-    );
-
-    // Merge results by grouping key, summing amount/prize/hits
-    const mergedMap = new Map<string, IBetEntityBack>();
-    for (const orgBets of orgResults) {
-      for (const bet of orgBets) {
-        const key = [
-          bet.number,
-          bet.lottery_id,
-          bet.schedule_id,
-          bet.bet_type,
-          bet.place,
-          bet.with,
-          bet.position,
-        ].join('|');
-        if (mergedMap.has(key)) {
-          const existing = mergedMap.get(key)!;
-          existing.amount = ((existing.amount as number) || 0) + ((bet.amount as number) || 0);
-          existing.prize = ((existing.prize as number) || 0) + ((bet.prize as number) || 0);
-          existing.hits = ((existing.hits as number) || 0) + ((bet.hits as number) || 0);
-        } else {
-          mergedMap.set(key, { ...bet });
-        }
-      }
-    }
-
-    const sorted = Array.from(mergedMap.values()).sort(
-      (a, b) => ((b.amount as number) || 0) - ((a.amount as number) || 0)
-    );
-
-    return applyFiltersAndPaginate(sorted);
+    // Pages 2+: data only (count cached by frontend from page 1)
+    const { data, error } = await supabase.rpc(rpcName, {
+      ...baseParams,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new Error(error.message);
+    return { data: (data as IBetEntityBack[]) ?? [], count: 0 };
   }
 
   async getTotalAmount({
@@ -202,23 +165,20 @@ export class BetRepository {
     cashier_id?: string;
     lottery_id?: string;
   }) {
-    // Use direct query with .in() to support multiple org IDs
-    const tableName = getTableName(date, 'bets');
+    const isArchived = getTableName(date, 'bets') === 'bets_archive';
+    const rpcName = isArchived ? 'get_bets_total_amount_archive' : 'get_bets_total_amount';
 
-    let query = (supabase.from(tableName) as any)
-      .select('amount.sum()')
-      .in('organization_id', organization_ids)
-      .eq('date', date)
-      .is('deleted_at', null);
+    const { data, error } = await supabase.rpc(rpcName, {
+      p_organization_ids: organization_ids,
+      p_date: date,
+      p_schedule_id: schedule_id ?? null,
+      p_cashier_id: cashier_id ?? null,
+      p_lottery_id: lottery_id ?? null,
+      p_user_ids: group_user_ids?.length ? group_user_ids : null,
+    });
 
-    if (schedule_id) query = query.eq('schedule_id', schedule_id);
-    if (cashier_id) query = query.eq('user_id', cashier_id);
-    if (lottery_id) query = query.eq('lottery_id', lottery_id);
-    if (group_user_ids?.length) query = query.in('user_id', group_user_ids);
-
-    const { data, error } = await query;
     if (error) throw error;
-    return Number((data as unknown as [{ sum: string | null }])?.[0]?.sum ?? 0);
+    return Number(data ?? 0);
   }
 
   async getTotalPrize({
@@ -236,24 +196,20 @@ export class BetRepository {
     cashier_id?: string;
     lottery_id?: string;
   }) {
-    // Use direct query with .in() to support multiple org IDs
-    const tableName = getTableName(date, 'bets');
+    const isArchived = getTableName(date, 'bets') === 'bets_archive';
+    const rpcName = isArchived ? 'get_bets_total_prize_archive' : 'get_bets_total_prize';
 
-    let query = (supabase.from(tableName) as any)
-      .select('prize.sum()')
-      .in('organization_id', organization_ids)
-      .eq('date', date)
-      .eq('winner', true)
-      .is('deleted_at', null);
+    const { data, error } = await supabase.rpc(rpcName, {
+      p_organization_ids: organization_ids,
+      p_date: date,
+      p_schedule_id: schedule_id ?? null,
+      p_cashier_id: cashier_id ?? null,
+      p_lottery_id: lottery_id ?? null,
+      p_user_ids: group_user_ids?.length ? group_user_ids : null,
+    });
 
-    if (schedule_id) query = query.eq('schedule_id', schedule_id);
-    if (cashier_id) query = query.eq('user_id', cashier_id);
-    if (lottery_id) query = query.eq('lottery_id', lottery_id);
-    if (group_user_ids?.length) query = query.in('user_id', group_user_ids);
-
-    const { data, error } = await query;
     if (error) throw error;
-    return Number((data as unknown as [{ sum: string | null }])?.[0]?.sum ?? 0);
+    return Number(data ?? 0);
   }
 
   async getWinnerBets({

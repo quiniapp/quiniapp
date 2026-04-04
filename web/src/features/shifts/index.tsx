@@ -3,6 +3,8 @@ import Box from '@/components/box';
 import HeaderSection from '@/components/header-section';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
 import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import CreateScheduleModal from '@/components/modals/CreateScheduleModal';
@@ -19,6 +21,9 @@ import {
 import { LoadingState } from '@/components/molecules/LoadingState';
 
 const ShiftsContent = () => {
+  const { role } = useAuth();
+  const canEdit = role !== USER_TYPE.ADMIN;
+
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -50,20 +55,24 @@ const ShiftsContent = () => {
   return (
     <Box className="grid grid-rows-[auto_1fr] h-full">
       <HeaderSection title="Turnos">
-        <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
-          <Plus size={20} />
-          Nuevo Turno
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
+            <Plus size={20} />
+            Nuevo Turno
+          </Button>
+        )}
       </HeaderSection>
 
       <div className="overflow-y-auto px-6 py-4">
         {!schedules || schedules.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground text-center mb-4">No hay turnos creados</p>
-            <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
-              <Plus size={20} />
-              Crear Primer Turno
-            </Button>
+            {canEdit && (
+              <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
+                <Plus size={20} />
+                Crear Primer Turno
+              </Button>
+            )}
           </div>
         ) : (
           <div className="border border-dark-lighter rounded-lg overflow-hidden">
@@ -73,8 +82,8 @@ const ShiftsContent = () => {
                   <TableHead className="text-white">Nombre</TableHead>
                   <TableHead className="text-white">Hora</TableHead>
                   <TableHead className="text-white">Estado</TableHead>
-                  <TableHead className="text-white">Editar</TableHead>
-                  <TableHead className="text-white">Eliminar</TableHead>
+                  {canEdit && <TableHead className="text-white">Editar</TableHead>}
+                  {canEdit && <TableHead className="text-white">Eliminar</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,26 +102,30 @@ const ShiftsContent = () => {
                         {schedule.active ? 'Activo' : 'Inactivo'}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(schedule)}
-                        className="hover:text-cyan"
-                      >
-                        <Edit2 size={18} />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(schedule)}
-                        className="hover:text-destructive"
-                      >
-                        <Trash2 size={18} />
-                      </Button>
-                    </TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(schedule)}
+                          className="hover:text-cyan"
+                        >
+                          <Edit2 size={18} />
+                        </Button>
+                      </TableCell>
+                    )}
+                    {canEdit && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(schedule)}
+                          className="hover:text-destructive"
+                        >
+                          <Trash2 size={18} />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

@@ -76,11 +76,18 @@ export class CurrentAccountRepository {
     if (error) {
       throw error;
     }
+
+    const flatten = (rows: typeof data) =>
+      (rows ?? []).map((row) => ({
+        ...row,
+        group_id: (row as any).users?.group_id ?? null,
+      }));
+
     if (date || user_id) {
-      return data;
+      return flatten(data);
     }
-    const byUser: Record<string, (typeof data)[number]> = {};
-    for (const row of data ?? []) {
+    const byUser: Record<string, ReturnType<typeof flatten>[number]> = {};
+    for (const row of flatten(data)) {
       if (!byUser[row.user_id]) {
         byUser[row.user_id] = row;
       }
@@ -229,13 +236,19 @@ export class CurrentAccountRepository {
     const { data, error } = await query;
     if (error) throw error;
 
+    const flatten = (rows: typeof data) =>
+      (rows ?? []).map((row) => ({
+        ...row,
+        group_id: (row as any).users?.group_id ?? null,
+      }));
+
     if (date || user_id) {
-      return data;
+      return flatten(data);
     }
 
     // Group by user (latest entry per user)
-    const byUser: Record<string, (typeof data)[number]> = {};
-    for (const row of data ?? []) {
+    const byUser: Record<string, ReturnType<typeof flatten>[number]> = {};
+    for (const row of flatten(data)) {
       if (!byUser[row.user_id]) {
         byUser[row.user_id] = row;
       }

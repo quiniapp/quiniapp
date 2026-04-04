@@ -22,7 +22,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserListContext } from './UserListContext';
 
 const UsersTable = () => {
-  const {role} = useAuth()
+  const {role} = useAuth();
+  const canDelete = role !== USER_TYPE.ADMIN;
   const { filterUserType } = useUserListContext();
   const [open, setOpen] = useState<boolean>(false);
   const [update, setUpdate] = useState<boolean>(false);
@@ -71,7 +72,7 @@ const UsersTable = () => {
               <TableHead className="text-white bg-dark-light">Estado</TableHead>
               <TableHead className="text-white bg-dark-light">Editar</TableHead>
               <TableHead className="text-white bg-dark-light">Contraseña</TableHead>
-              <TableHead className="text-white bg-dark-light">Eliminar</TableHead>
+              {canDelete && <TableHead className="text-white bg-dark-light">Eliminar</TableHead>}
             </TableRow>
           </thead>
         <TableBody>
@@ -144,19 +145,21 @@ const UsersTable = () => {
                   <KeyRound />
                 </Button>
               </TableCell>
-              <TableCell className={'flex justify-center items-center'}>
-                <Button
-                  variant="ghost"
-                  className="hover:text-destructive"
-                  size={'icon'}
-                  onClick={() => {
-                    setUser(user);
-                    setOpen(true);
-                  }}
-                >
-                  <TrashIcon />
-                </Button>
-              </TableCell>
+              {canDelete && (
+                <TableCell className={'flex justify-center items-center'}>
+                  <Button
+                    variant="ghost"
+                    className="hover:text-destructive"
+                    size={'icon'}
+                    onClick={() => {
+                      setUser(user);
+                      setOpen(true);
+                    }}
+                  >
+                    <TrashIcon />
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           )))}
         </TableBody>

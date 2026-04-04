@@ -35,20 +35,36 @@ export class TicketRouter {
     cashier_id: unknown
   ): Promise<{ group_user_ids?: string[]; effectiveCashierId?: string }> {
     const user = req.user!;
-    let group_user_ids: string[] | undefined;
 
-    if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
-      const descendants = await this.userRepository.getOrganizationDescendants(
+    // ADMIN with group (group_id !== organization_id): auto-scope, ignore query param
+    if (
+      user.user.user_type === USER_TYPE.ADMIN &&
+      user.user.group_id &&
+      user.user.group_id !== req.organization_id
+    ) {
+      const adminGroupUserIds = await this.userRepository.getUserIdsByGroupId(
+        user.user.group_id,
         req.organization_id!
       );
-      if (descendants.includes(group_id)) {
-        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
-      } else {
-        group_user_ids = ['__invalid__'];
+
+      let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
+      if (effectiveCashierId && !adminGroupUserIds.includes(effectiveCashierId)) {
+        return { group_user_ids: ['__invalid__'] };
       }
+      if (effectiveCashierId) {
+        return { effectiveCashierId };
+      }
+      return { group_user_ids: adminGroupUserIds };
     }
 
-    // Validate cashier+group combination
+    let group_user_ids: string[] | undefined;
+    if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
+      group_user_ids = await this.userRepository.getUserIdsByGroupId(
+        group_id,
+        req.organization_id!
+      );
+    }
+
     let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
     if (effectiveCashierId && group_user_ids) {
       if (!group_user_ids.includes(effectiveCashierId)) {

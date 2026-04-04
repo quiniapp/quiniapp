@@ -21,6 +21,7 @@ const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
     user_type: user.user_type,
     name: user.name,
     organization_id,
+    group_id: organization_id, // Default: no group = same as organization_id
     last_name: user.last_name ?? null,
     address: user.address ?? null,
     phone: user.phone ?? null,

@@ -23,7 +23,7 @@ export const useGroups = (organizationId: string | null, role: USER_TYPE | null)
   return useQuery<IOrganizationEntityFront[]>({
     queryKey: ['groups', organizationId],
     queryFn: () => fetchGroups(organizationId!),
-    enabled: !!organizationId && !!role && [USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(role),
+    enabled: !!organizationId && !!role && [USER_TYPE.OWNER, USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN].includes(role),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: true,

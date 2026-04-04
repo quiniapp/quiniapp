@@ -24,6 +24,7 @@ export const parseUser = (
     email: user.email,
     username: user.username,
     disabled: user.disabled,
+    group_id: user.group_id,
     // Phase 5 fields (safe to send to frontend)
     failed_login_attempts: user.failed_login_attempts,
     locked_until: user.locked_until,

@@ -32,19 +32,11 @@ export class BetRouter {
   }
 
   /**
-   * Resolve the array of organization IDs to query.
-   * CASHIER always sees only their own org.
-   * All other roles see their org + all sub-orgs (full network).
+   * All users now share the root organization_id.
+   * Group scoping is handled via group_user_ids in resolveGroupFilter.
    */
-  private getOrgIds = async (req: Request): Promise<string[]> => {
-    const rootOrgId = req.organization_id!;
-    const userType = req.user?.user.user_type;
-
-    if (userType === USER_TYPE.CASHIER) {
-      return [rootOrgId];
-    }
-
-    return this.userRepository.getOrganizationDescendants(rootOrgId);
+  private getOrgIds = (req: Request): string[] => {
+    return [req.organization_id!];
   };
 
   /**
@@ -60,16 +52,36 @@ export class BetRouter {
     group_user_ids?: string[];
     effectiveCashierId?: string;
   }> {
-    const allOrgIds = await this.getOrgIds(req);
+    const organization_ids = [req.organization_id!];
     const { user } = req;
 
-    let group_user_ids: string[] | undefined;
-    if (typeof group_id === 'string' && req.user?.user.user_type !== USER_TYPE.CASHIER) {
-      if (allOrgIds.includes(group_id)) {
-        group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
-      } else {
-        group_user_ids = ['__invalid__'];
+    // ADMIN with group (group_id !== organization_id): auto-scope, ignore query param
+    if (
+      user?.user.user_type === USER_TYPE.ADMIN &&
+      user.user.group_id &&
+      user.user.group_id !== req.organization_id
+    ) {
+      const adminGroupUserIds = await this.userRepository.getUserIdsByGroupId(
+        user.user.group_id,
+        req.organization_id!
+      );
+
+      let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
+      if (effectiveCashierId && !adminGroupUserIds.includes(effectiveCashierId)) {
+        return { organization_ids, group_user_ids: ['__invalid__'] };
       }
+      if (effectiveCashierId) {
+        return { organization_ids, effectiveCashierId };
+      }
+      return { organization_ids, group_user_ids: adminGroupUserIds };
+    }
+
+    let group_user_ids: string[] | undefined;
+    if (typeof group_id === 'string' && user?.user.user_type !== USER_TYPE.CASHIER) {
+      group_user_ids = await this.userRepository.getUserIdsByGroupId(
+        group_id,
+        req.organization_id!
+      );
     }
 
     let effectiveCashierId =
@@ -88,7 +100,7 @@ export class BetRouter {
       }
     }
 
-    return { organization_ids: allOrgIds, group_user_ids, effectiveCashierId };
+    return { organization_ids, group_user_ids, effectiveCashierId };
   }
 
   private getAllBets: RequestHandler = async (req: Request, res: Response) => {

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-03
+
+#### `user.type.ts` — group_id nunca null después de migración
+- **`helper/types/user.type.ts`**: `group_id: string | null` se mantiene como tipo (null es válido pre-migración), pero la convención es `group_id = organization_id` cuando sin grupo (nunca null en producción).
+
+### Changed - 2026-03-31
+
+#### Tipos actualizados para soporte de `group_id` en usuarios y cuentas corrientes
+- **`helper/types/user.type.ts`**: Agregado `group_id: string | null` a `BaseUserEntityBack`. Indica el grupo (child org) al que pertenece un cashier; `null` si no tiene grupo asignado.
+- **`helper/types/current_account.type.ts`**: Descomentado `group_id: string | null` en `ICurrentAccountEntityBack`. El campo ya existía comentado; ahora es activo y se expone en `ICurrentAccountEntityFront`.
+
 ### Added - 2026-01-27
 
 #### Database Migration Guidelines in CLAUDE.md

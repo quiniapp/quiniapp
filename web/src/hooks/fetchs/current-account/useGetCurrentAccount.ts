@@ -30,7 +30,6 @@ export function useGetCurrentAccount(date?: string | null, group_id?: string | n
   return useQuery<ICurrentAccountEntityFront[]>({
     queryKey: currentAccountKey(date, group_id),
     queryFn: () => fetchCurrentAccount(date, group_id),
-    enabled: Boolean(date),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

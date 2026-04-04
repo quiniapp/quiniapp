@@ -67,24 +67,30 @@ export class CurrentAccountRouter {
 
     try {
       let group_user_ids: string[] | undefined;
-      if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
-        const descendants = await this.userRepository.getOrganizationDescendants(
+
+      // ADMIN with group (group_id !== organization_id): auto-scope to their group
+      if (
+        user.user.user_type === USER_TYPE.ADMIN &&
+        user.user.group_id &&
+        user.user.group_id !== req.organization_id
+      ) {
+        group_user_ids = await this.userRepository.getUserIdsByGroupId(
+          user.user.group_id,
           req.organization_id!
         );
-        if (descendants.includes(group_id)) {
-          group_user_ids = await this.userRepository.getUserIdsByOrg(group_id);
-        } else {
-          group_user_ids = ['__invalid__'];
-        }
+      } else if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
+        // Non-admin roles: use group_id from query params
+        group_user_ids = await this.userRepository.getUserIdsByGroupId(
+          group_id,
+          req.organization_id!
+        );
       }
-
-      const effectiveOrgId = req.organization_id!; // always use user's own org
 
       const currentAccount = await this.controller.getAllCurrentAccountNetworkHandler({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date as string,
-        organization_id: effectiveOrgId,
+        organization_id: req.organization_id!,
         include_network: toBool(include_network),
         group_user_ids,
       });
@@ -134,12 +140,12 @@ export class CurrentAccountRouter {
       return;
     }
 
-    // Validar que el usuario no sea CASHIER ni ADMIN
-    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+    // CASHIER cannot calculate
+    if (user.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.AUTH_ERROR,
-          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+          message: 'Access denied: CASHIER users cannot perform this action',
         },
       };
       res.status(403).json(response);

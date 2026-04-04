@@ -19,6 +19,7 @@ interface BaseUserEntityBack {
   user_type: USER_TYPE;
   name: string;
   organization_id: string;
+  group_id: string | null;
   username?: string | null;
   last_name?: string | null;
   address?: string | null;

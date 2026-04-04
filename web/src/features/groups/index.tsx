@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { UsersIcon, Users2Icon, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { UsersIcon, Users2Icon, Plus, Trash2, RefreshCw, Pencil } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 import Box from '@/components/box';
 import { Flex, FlexCol } from '@/components/flex';
@@ -29,6 +30,8 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 import { useCreateGroup } from '@/hooks/mutations/organization/useCreateGroup';
+import { useDeleteGroup } from '@/hooks/mutations/organization/useDeleteGroup';
+import { useUpdateGroup } from '@/hooks/mutations/organization/useUpdateGroup';
 import { useAssignableUsers } from '@/hooks/fetchs/users/useAssignableUsers';
 import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers';
 import { useAssignUserToGroup } from '@/hooks/mutations/users/useAssignUserToGroup';
@@ -51,10 +54,14 @@ interface CreateGroupForm {
   };
 }
 
+const MANAGE_ROLES = [USER_TYPE.OWNER, USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN];
+
 const UserGroupsContent = () => {
-  const { role, organizationId } = useAuth();
+  const { role, organizationId, groupId } = useAuth();
   const { data: groups, isLoading, refetch } = useGroups(organizationId, role);
   const createGroupMutation = useCreateGroup();
+  const deleteGroupMutation = useDeleteGroup(organizationId);
+  const updateGroupMutation = useUpdateGroup(organizationId);
   const assignUserMutation = useAssignUserToGroup();
   const removeUserMutation = useRemoveUserFromGroup();
 
@@ -62,6 +69,11 @@ const UserGroupsContent = () => {
   const [includeSuperAdmin, setIncludeSuperAdmin] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<IOrganizationEntityFront | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<IOrganizationEntityFront | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [groupToEdit, setGroupToEdit] = useState<IOrganizationEntityFront | null>(null);
+  const [editName, setEditName] = useState('');
 
   // Get assignable users (excluding those already in the selected group)
   const { data: assignableUsers, isLoading: isLoadingUsers } = useAssignableUsers(
@@ -159,14 +171,66 @@ const UserGroupsContent = () => {
     }
   };
 
-  // Solo OWNER y CAPITALIST pueden ver grupos
-  if (!role || ![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(role)) {
+  const handleDeleteGroup = (group: IOrganizationEntityFront) => {
+    setGroupToDelete(group);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!groupToDelete) return;
+    try {
+      await deleteGroupMutation.mutateAsync(groupToDelete.organization_id);
+      toast.success('Grupo eliminado. Los usuarios fueron devueltos a la organización.');
+      if (selectedGroup?.organization_id === groupToDelete.organization_id) {
+        setSelectedGroup(null);
+      }
+      setIsDeleteDialogOpen(false);
+      setGroupToDelete(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar grupo');
+    }
+  };
+
+  const handleEditGroup = (group: IOrganizationEntityFront) => {
+    setGroupToEdit(group);
+    setEditName(group.name);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!groupToEdit || !editName.trim()) return;
+    try {
+      await updateGroupMutation.mutateAsync({
+        group_id: groupToEdit.organization_id,
+        name: editName.trim(),
+      });
+      toast.success('Grupo actualizado.');
+      setIsEditDialogOpen(false);
+      setGroupToEdit(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al actualizar grupo');
+    }
+  };
+
+  const canManage = !!role && MANAGE_ROLES.includes(role);
+  const adminHasGroup = role === USER_TYPE.ADMIN && !!groupId && groupId !== organizationId;
+
+  // ADMIN with group: auto-select their group when groups load
+  useEffect(() => {
+    if (adminHasGroup && groups?.length) {
+      const myGroup = groups.find((g) => g.organization_id === groupId);
+      if (myGroup) setSelectedGroup(myGroup);
+    }
+  }, [adminHasGroup, groupId, groups]);
+
+  const allowedRoles = [...MANAGE_ROLES, USER_TYPE.ADMIN];
+  if (!role || !allowedRoles.includes(role)) {
     return (
       <Box className="grid place-items-center h-full">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Acceso Denegado</h2>
           <p className="text-muted-foreground">
-            Solo los usuarios OWNER y CAPITALIST pueden gestionar grupos.
+            No tienes permisos para ver esta página.
           </p>
         </div>
       </Box>
@@ -177,10 +241,12 @@ const UserGroupsContent = () => {
     <Box className={'grid grid-rows-[auto_1fr_auto] h-full'}>
       <HeaderSection title={'Lista de Grupos'}>
         <Flex className={'justify-end gap-4'}>
-          <Button variant={'outline'} onClick={handleCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nuevo Grupo
-          </Button>
+          {canManage && (
+            <Button variant={'outline'} onClick={handleCreate} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nuevo Grupo
+            </Button>
+          )}
           <Button variant={'outline'} onClick={() => refetch()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Actualizar
@@ -202,7 +268,7 @@ const UserGroupsContent = () => {
                   <TableRow>
                     <TableHead className="text-white">Nombre</TableHead>
                     <TableHead className="text-white">ID</TableHead>
-                    <TableHead className="text-white text-right">Acciones</TableHead>
+                    {canManage && <TableHead className="text-white text-right">Acciones</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -219,25 +285,36 @@ const UserGroupsContent = () => {
                         className={`hover:bg-dark-lighter/50 ${selectedGroup?.organization_id === group.organization_id ? 'bg-dark-lighter/30' : ''}`}
                       >
                         <TableCell
-                          className="font-medium cursor-pointer hover:text-primary"
-                          onClick={() => setSelectedGroup(group)}
+                          className={`font-medium ${!adminHasGroup ? 'cursor-pointer hover:text-primary' : ''}`}
+                          onClick={() => !adminHasGroup && setSelectedGroup(group)}
                         >
                           {group.name}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {group.organization_id.slice(0, 8)}...
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {canManage && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:text-cyan"
+                                onClick={() => handleEditGroup(group)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteGroup(group)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
@@ -259,7 +336,7 @@ const UserGroupsContent = () => {
                 icon={<UsersIcon size="24px" />}
                 className={'!mb-0'}
               />
-              {selectedGroup && (
+              {selectedGroup && canManage && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -283,7 +360,7 @@ const UserGroupsContent = () => {
                         <TableHead className="text-white">Número</TableHead>
                         <TableHead className="text-white">Nombre</TableHead>
                         <TableHead className="text-white">Tipo</TableHead>
-                        <TableHead className="text-white text-right">Acciones</TableHead>
+                        {canManage && <TableHead className="text-white text-right">Acciones</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -299,17 +376,19 @@ const UserGroupsContent = () => {
                             <TableCell>{user.number ?? '-'}</TableCell>
                             <TableCell className="font-medium">{user.name} {user.last_name}</TableCell>
                             <TableCell>{userTypeDictionary[user.user_type] ?? user.user_type}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="gap-1 text-destructive hover:text-destructive"
-                                onClick={() => handleRemoveUser(user)}
-                                disabled={removeUserMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
+                            {canManage && (
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="gap-1 text-destructive hover:text-destructive"
+                                  onClick={() => handleRemoveUser(user)}
+                                  disabled={removeUserMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))
                       ) : (
@@ -486,6 +565,55 @@ const UserGroupsContent = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Grupo */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Grupo</DialogTitle>
+            <DialogDescription>Cambia el nombre del grupo.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-4">
+            <Label htmlFor="edit-group-name">Nombre</Label>
+            <Input
+              id="edit-group-name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleConfirmEdit()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={updateGroupMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmEdit} disabled={!editName.trim() || updateGroupMutation.isPending}>
+              {updateGroupMutation.isPending ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Confirmar Eliminar Grupo */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar Grupo</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar el grupo <strong>{groupToDelete?.name}</strong>?
+              Los usuarios del grupo volverán a pertenecer a la organización.
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={deleteGroupMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={deleteGroupMutation.isPending}>
+              {deleteGroupMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -4,7 +4,7 @@ export interface ICurrentAccountEntityBack {
   user_id: string;
   user_name: string;
   user_number: number;
-  // group_id: string;
+  group_id: string | null;
   pass: number; //sp
   successes: number; // sp
   claims: number; // sp
