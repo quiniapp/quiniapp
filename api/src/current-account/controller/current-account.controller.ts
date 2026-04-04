@@ -237,7 +237,8 @@ export class CurrentAccountController {
 
       let results = currentaccounts.map((currentaccount) => parseCurrentAccount(currentaccount));
 
-      if (props.group_user_ids?.length) {
+      // undefined = no group filter; [] = group selected but empty (return nothing)
+      if (props.group_user_ids !== undefined) {
         results = results.filter((a) => props.group_user_ids!.includes(a.user_id));
       }
 

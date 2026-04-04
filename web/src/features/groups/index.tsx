@@ -38,20 +38,10 @@ import { useAssignUserToGroup } from '@/hooks/mutations/users/useAssignUserToGro
 import { useRemoveUserFromGroup } from '@/hooks/mutations/users/useRemoveUserFromGroup';
 import { IOrganizationEntityFront } from '@helper/types/organization.type';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { INewUserEntity } from '@helper/request/user.request';
 import { userTypeDictionary } from '@helper/functions/userTypeDictionary';
 
 interface CreateGroupForm {
   organization: { name: string };
-  superAdmin?: {
-    name: string;
-    username: string;
-    password: string;
-    last_name?: string;
-    email?: string;
-    phone?: number;
-    address?: string;
-  };
 }
 
 const MANAGE_ROLES = [USER_TYPE.OWNER, USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN];
@@ -66,7 +56,6 @@ const UserGroupsContent = () => {
   const removeUserMutation = useRemoveUserFromGroup();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [includeSuperAdmin, setIncludeSuperAdmin] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<IOrganizationEntityFront | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -96,20 +85,11 @@ const UserGroupsContent = () => {
     mode: 'onBlur',
     defaultValues: {
       organization: { name: '' },
-      superAdmin: {
-        name: '',
-        username: '',
-        password: '',
-        last_name: '',
-        email: '',
-        address: '',
-      },
     },
   });
 
   const handleCreate = () => {
     reset();
-    setIncludeSuperAdmin(false);
     setIsCreateDialogOpen(true);
   };
 
@@ -117,27 +97,10 @@ const UserGroupsContent = () => {
     if (!organizationId) return;
 
     try {
-      const payload: {
-        parentOrgId: string;
-        organization: { name: string };
-        superAdmin?: INewUserEntity;
-      } = {
+      await createGroupMutation.mutateAsync({
         parentOrgId: organizationId,
         organization: data.organization,
-      };
-
-      if (includeSuperAdmin && data.superAdmin) {
-        payload.superAdmin = {
-          ...data.superAdmin,
-          number: null,
-          user_type: USER_TYPE.SUPERADMIN,
-          cashier_type: null,
-          fee: null,
-          fee_plus: null,
-        } as INewUserEntity;
-      }
-
-      await createGroupMutation.mutateAsync(payload);
+      });
       setIsCreateDialogOpen(false);
       reset();
     } catch (error) {
@@ -442,114 +405,6 @@ const UserGroupsContent = () => {
                 </div>
               </div>
             </fieldset>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="include-superadmin"
-                checked={includeSuperAdmin}
-                onChange={(e) => setIncludeSuperAdmin(e.target.checked)}
-                className="rounded"
-              />
-              <Label htmlFor="include-superadmin" className="cursor-pointer">
-                Crear SUPERADMIN para este grupo
-              </Label>
-            </div>
-
-            {includeSuperAdmin && (
-              <fieldset className="border px-4 py-4 rounded-md">
-                <legend className="px-2 text-sm font-semibold">Datos del SUPERADMIN</legend>
-                <div className="grid gap-4 pt-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="sa-username">Usuario</Label>
-                      <Controller
-                        name="superAdmin.username"
-                        control={control}
-                        rules={{ required: includeSuperAdmin ? 'El usuario es requerido' : false }}
-                        render={({ field }) => <Input id="sa-username" {...field} />}
-                      />
-                      {errors.superAdmin?.username && (
-                        <p className="text-sm text-destructive">
-                          {errors.superAdmin.username.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sa-password">Contraseña</Label>
-                      <Controller
-                        name="superAdmin.password"
-                        control={control}
-                        rules={{
-                          required: includeSuperAdmin ? 'La contraseña es requerida' : false,
-                        }}
-                        render={({ field }) => (
-                          <Input id="sa-password" type="password" {...field} />
-                        )}
-                      />
-                      {errors.superAdmin?.password && (
-                        <p className="text-sm text-destructive">
-                          {errors.superAdmin.password.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="sa-name">Nombre</Label>
-                      <Controller
-                        name="superAdmin.name"
-                        control={control}
-                        rules={{ required: includeSuperAdmin ? 'El nombre es requerido' : false }}
-                        render={({ field }) => <Input id="sa-name" {...field} />}
-                      />
-                      {errors.superAdmin?.name && (
-                        <p className="text-sm text-destructive">{errors.superAdmin.name.message}</p>
-                      )}
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sa-last_name">Apellido</Label>
-                      <Controller
-                        name="superAdmin.last_name"
-                        control={control}
-                        render={({ field }) => (
-                          <Input id="sa-last_name" {...field} value={field.value ?? ''} />
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="sa-email">Email</Label>
-                      <Controller
-                        name="superAdmin.email"
-                        control={control}
-                        render={({ field }) => (
-                          <Input
-                            id="sa-email"
-                            type="email"
-                            {...field}
-                            value={field.value ?? ''}
-                          />
-                        )}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sa-address">Dirección</Label>
-                      <Controller
-                        name="superAdmin.address"
-                        control={control}
-                        render={({ field }) => (
-                          <Input id="sa-address"  {...field} value={field.value ?? ''}/>
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </fieldset>
-            )}
 
             <DialogFooter>
               <Button

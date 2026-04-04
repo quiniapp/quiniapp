@@ -11,7 +11,9 @@ const SettlementPayrollTable = () => {
   const [searchParams] = useSearchParams();
   const date = searchParams.get('date');
   const group_id = searchParams.get('group_id');
-  const { data, isLoading, isPending, isError } = useGetCurrentAccount(date, group_id);
+  const user_id = searchParams.get('user_id');
+  const { data: rawData, isLoading, isPending, isError } = useGetCurrentAccount(date, group_id);
+  const data = user_id ? rawData?.filter((acc) => acc.user_id === user_id) : rawData;
 
   useEffect(() => {
     if (isError) {
