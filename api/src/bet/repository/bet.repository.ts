@@ -275,16 +275,23 @@ export class BetRepository {
       total_winners_count: 0,
     };
 
-    // Paso 1: Encontrar a qué org pertenece el ticket (búsqueda en main table)
-    const { data: ticketRow } = await supabase
-      .from('tickets')
-      .select('organization_id')
-      .eq('ticket_number', ticket_number)
-      .in('organization_id', organization_ids)
-      .maybeSingle();
+    // Query both tables in parallel to avoid sequential round-trips
+    const [{ data: ticketRow }, { data: archiveTicketRow }] = await Promise.all([
+      supabase
+        .from('tickets')
+        .select('organization_id')
+        .eq('ticket_number', ticket_number)
+        .in('organization_id', organization_ids)
+        .maybeSingle(),
+      supabase
+        .from('tickets_archive')
+        .select('organization_id')
+        .eq('ticket_number', ticket_number)
+        .in('organization_id', organization_ids)
+        .maybeSingle(),
+    ]);
 
     if (ticketRow?.organization_id != null) {
-      // Ticket encontrado en main — una sola RPC call
       const { data, error } = await supabase
         .rpc('get_ticket_sums', {
           p_ticket: ticket_number,
@@ -294,14 +301,6 @@ export class BetRepository {
       if (error || !data) return { ...zeroSums };
       return data as TicketSums;
     }
-
-    // Paso 2: Buscar en archive si no está en main
-    const { data: archiveTicketRow } = await supabase
-      .from('tickets_archive')
-      .select('organization_id')
-      .eq('ticket_number', ticket_number)
-      .in('organization_id', organization_ids)
-      .maybeSingle();
 
     if (archiveTicketRow?.organization_id != null) {
       const { data, error } = await supabase

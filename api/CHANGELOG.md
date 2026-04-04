@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-04-04
+
+#### Búsqueda de ticket por número — latencia reducida
+- **`api/supabase/migrations/20260404120000_add_ticket_number_indexes.sql`** (NUEVO): Agrega índices faltantes en `tickets_archive(ticket_number, organization_id)`, `bets(ticket_number)` y `bets_archive(ticket_number)`. Sin estos índices, las búsquedas por número hacían full table scan en tablas de archivo y en `bets`.
+- **`ticket.repository.ts`** — `getByNumber`: reemplaza búsqueda secuencial main→archive por `Promise.all` paralelo. Reduce el peor caso (ticket archivado) de 2 round-trips a 1.
+- **`bet.repository.ts`** — `getAmountsByTicket`: ídem, paralela la búsqueda en `tickets` y `tickets_archive` con `Promise.all`.
+
 ### Fixed - 2026-04-03
 
 #### Bet pagination — infinite scroll no cargaba página 2+
