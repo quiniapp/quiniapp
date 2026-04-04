@@ -55,7 +55,6 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     min_amount,
   });
 
-
   const bets = useMemo(() => {
     return data?.pages.flatMap((p) => p.data) ?? [];
   }, [data]);
@@ -81,9 +80,11 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
 
   // Actualizar totales cuando cambian los datos
   useEffect(() => {
-    const agg = data?.pages?.[0]?.aggregates;
-    onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
-  }, [data, onTotalsUpdate]);
+    if (grouped === 'false' || !grouped) {
+      const agg = data?.pages?.[0]?.aggregates;
+      onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
+    }
+  }, [data, grouped, onTotalsUpdate]);
 
   if (isLoading) {
     return (
@@ -282,94 +283,102 @@ const CopyableTicket = memo<{
 const BetRowDesktop = memo<{
   bet: IBetEntityFront;
   triggerRef?: (node: HTMLTableRowElement | null) => void;
-}>(function BetRowDesktop({ bet, triggerRef }) {
-  return (
-    <TableRow
-      ref={triggerRef}
-    >
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
-        {bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-        {currency(bet.amount)}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-        {betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-        {bet.schedule?.name}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-        {bet.lottery?.name}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-        {bet.hits}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
-        {currency(bet.prize)}
-      </TableCell>
-      <TableCell className="px-2 sm:px-3">
-        <CopyableTicket ticketNumber={bet.ticket_number} />
-      </TableCell>
-      <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg max-w-[150px] truncate">
-        {bet.cashier_name}
-      </TableCell>
-    </TableRow>
-  );
-}, (prev, next) => {
-  // Sin bet_id estable, siempre re-renderizar (evita datos stale en modo agrupado)
-  if (!prev.bet.bet_id || !next.bet.bet_id) return false;
-  return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
-});
+}>(
+  function BetRowDesktop({ bet, triggerRef }) {
+    return (
+      <TableRow ref={triggerRef}>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
+          {bet.number}
+          {`${bet?.with ? ` - ${bet.with}` : ''}`}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+          {currency(bet.amount)}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+          {betTypeAndPlaceLabel(bet.bet_type, bet.place, bet.position)}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+          {bet.schedule?.name}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+          {bet.lottery?.name}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+          {bet.hits}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
+          {currency(bet.prize)}
+        </TableCell>
+        <TableCell className="px-2 sm:px-3">
+          <CopyableTicket ticketNumber={bet.ticket_number} />
+        </TableCell>
+        <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg max-w-[150px] truncate">
+          {bet.cashier_name}
+        </TableCell>
+      </TableRow>
+    );
+  },
+  (prev, next) => {
+    // Sin bet_id estable, siempre re-renderizar (evita datos stale en modo agrupado)
+    if (!prev.bet.bet_id || !next.bet.bet_id) return false;
+    return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
+  }
+);
 
 /** Fila mobile memoizada */
 const BetRowMobile = memo<{
   bet: IBetEntityFront;
   triggerRef?: (node: HTMLDivElement | null) => void;
-}>(function BetRowMobile({ bet, triggerRef }) {
-  return (
-    <div
-      ref={triggerRef}
-      className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
-    >
-      <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
-        <div>
-          <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
-            Jugada
-          </span>
-          <p className="text-lg font-bold text-white">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</p>
+}>(
+  function BetRowMobile({ bet, triggerRef }) {
+    return (
+      <div
+        ref={triggerRef}
+        className="rounded-xl border border-white/10 bg-[#0d1124] p-4 text-white shadow-sm"
+      >
+        <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
+          <div>
+            <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
+              Jugada
+            </span>
+            <p className="text-lg font-bold text-white">
+              {bet.number}
+              {`${bet?.with ? ` - ${bet.with}` : ''}`}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
+              Monto
+            </span>
+            <p className="text-lg font-bold text-primary">{currency(bet.amount)}</p>
+          </div>
         </div>
-        <div className="text-right">
-          <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide">
-            Monto
+
+        {/* Grid de información */}
+        <div className="grid grid-cols-3 gap-x-4 gap-y-3 mb-3">
+          <Field label="Tipo" value={betTypeAndPlaceLabel(bet.bet_type, bet.place, bet.position)} />
+          <Field label="Aciertos" value={String(bet.hits ?? 0)} />
+          <Field label="Turno" value={bet.schedule?.name} />
+          <Field label="Quiniela" value={bet.lottery?.name} />
+          <Field label="Premio" value={currency(bet.prize)} />
+          <Field label="Usuario" value={bet.cashier_name} />
+        </div>
+
+        {/* Ticket destacado y clickeable */}
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide block mb-2">
+            Número de Ticket
           </span>
-          <p className="text-lg font-bold text-primary">{currency(bet.amount)}</p>
+          <CopyableTicket ticketNumber={bet.ticket_number} isMobile />
         </div>
       </div>
-
-      {/* Grid de información */}
-      <div className="grid grid-cols-3 gap-x-4 gap-y-3 mb-3">
-        <Field label="Tipo" value={betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)} />
-        <Field label="Aciertos" value={String(bet.hits ?? 0)} />
-        <Field label="Turno" value={bet.schedule?.name} />
-        <Field label="Quiniela" value={bet.lottery?.name} />
-        <Field label="Premio" value={currency(bet.prize)} />
-        <Field label="Usuario" value={bet.cashier_name} />
-      </div>
-
-      {/* Ticket destacado y clickeable */}
-      <div className="mt-3 pt-3 border-t border-white/10">
-        <span className="text-xs font-medium text-blue-200/80 uppercase tracking-wide block mb-2">
-          Número de Ticket
-        </span>
-        <CopyableTicket ticketNumber={bet.ticket_number} isMobile />
-      </div>
-    </div>
-  );
-}, (prev, next) => {
-  // Sin bet_id estable, siempre re-renderizar (evita datos stale en modo agrupado)
-  if (!prev.bet.bet_id || !next.bet.bet_id) return false;
-  return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
-});
+    );
+  },
+  (prev, next) => {
+    // Sin bet_id estable, siempre re-renderizar (evita datos stale en modo agrupado)
+    if (!prev.bet.bet_id || !next.bet.bet_id) return false;
+    return prev.bet.bet_id === next.bet.bet_id && prev.triggerRef === next.triggerRef;
+  }
+);
 
 export default PlaysAndHitsTable;

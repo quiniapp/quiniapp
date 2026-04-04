@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-04-04
+
+#### make-plays — layout shift al seleccionar un turno
+- **`features/make-plays/lotteries-checkbox-list-desktop.tsx`**: La sección "Quiniela" ahora siempre renderiza el `CheckboxSection` independientemente de si hay loterías disponibles. Cuando no hay loterías, muestra un placeholder con `min-h-[68px]` en lugar de no renderizar nada. Esto evita que al seleccionar un turno la sección crezca desde cero y empuje la tabla de jugadas hacia abajo.
+
+#### groups — layout shift al seleccionar un grupo
+- **`features/groups/index.tsx`**: El placeholder "Selecciona un grupo para ver sus usuarios" ahora tiene `min-h-[160px]` y centra su contenido verticalmente (`flex items-center justify-center`). Esto estabiliza la altura del panel derecho antes y después de seleccionar un grupo.
+
+#### plays-and-hits — totales no se recalculan en modo agrupado
+- **`features/plays-and-hits/plays-and-hits-table.tsx`**: El `useEffect` que llama a `onTotalsUpdate` ahora solo se ejecuta cuando `grouped` es `false` o no está presente. Cuando `grouped=true` los agregados no existen en la respuesta y no tiene sentido recalcular los totales.
+
 ### Added - 2026-04-03
 
 #### Auth — groupId expuesto en contexto

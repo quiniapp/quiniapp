@@ -403,7 +403,7 @@ const UserGroupsContent = () => {
                 </Flex>
               </div>
             ) : (
-              <div className="border border-dark-lighter rounded-lg p-4 text-center text-muted-foreground">
+              <div className="border border-dark-lighter rounded-lg p-4 text-center text-muted-foreground min-h-[160px] flex items-center justify-center">
                 Selecciona un grupo para ver sus usuarios
               </div>
             )}
