@@ -336,6 +336,7 @@ Migrated **21 hooks** from raw `fetch()` to `fetchWithAuth()` so that any expire
 - Initial bundle reduced by ~370KB (jsPDF lazy-loaded)
 - Better caching with smaller, granular vendor chunks
 - Reduced network requests with TanStack Query defaults
+
 ### Added - 2026-02-03
 
 #### Make Plays - Closed Schedule Validation for Cashiers
@@ -418,6 +419,7 @@ When a cashier has selected multiple schedules and lotteries, if any schedule cl
 6. **Removed TODO comment** from `web/src/features/make-plays/lotteries-checkbox-list.tsx`
 
 **Why:** Improves user experience by allowing quick selection of all available options, especially useful when users want to bet on all schedules or lotteries. Mobile-first design places the option prominently at the top of the list.
+
 ### Added - 2026-01-06
 
 #### User Creation Form - SuperAdmin Support with Role-Based Hierarchy

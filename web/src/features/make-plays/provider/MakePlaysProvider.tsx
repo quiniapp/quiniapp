@@ -149,6 +149,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     return () => clearInterval(id);
   }, [user?.user_type, cleanClosedSchedulesFromBets, computeTotal]);
 
+
   const handleRecreateBet = useCallback(
     (values: IBetTable[]) => {
       setBets(values);
@@ -286,6 +287,123 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     setTotalAmount((prev) => prev - reduction);
     setSelectedIndexes([]);
   }, [bets, selectedIndexes]);
+
+  // Maneja la confirmación del modal de schedules cerrados
+  const handleConfirmClosedSchedules = useCallback(() => {
+    // Limpiar schedules cerrados de las bets
+    const cleanedBets = cleanClosedSchedulesFromBets(bets);
+
+    // Calcular el nuevo total
+    const newTotal = computeTotal(cleanedBets);
+
+    // Actualizar estados
+    setBets(cleanedBets);
+    setTotalAmount(newTotal);
+    setPartialAmount(newTotal);
+
+    // Cerrar el modal
+    setOpenClosedSchedulesModal(false);
+    setClosedSchedules([]);
+
+    // Si no quedan bets después de limpiar, mostrar mensaje
+    if (cleanedBets.length === 0) {
+      toast.error('No quedan jugadas válidas después de eliminar los turnos cerrados');
+      return;
+    }
+
+    // Proceder con el cierre del ticket
+    setIsEnabledCreateBet(false);
+    const today = dayjs().format('YYYY-MM-DD');
+
+    const payload = {
+      date: today,
+      user_id: cashier?.user_id ?? user!.user_id,
+      user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
+      bets: cleanedBets,
+    };
+
+    if (!ticketId) {
+      createTicket(payload, {
+        onSuccess: async (res) => {
+          const lastTicket = {
+            bets: [...cleanedBets].reverse(),
+            ticket: res,
+            cashier_number: user?.number,
+          };
+
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const { blob, fileName } = makeTicketPdf(lastTicket);
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            try {
+              if (isMobile) {
+                await sharePdfBlob(blob, fileName, {
+                  text: `Ticket ${res.ticket_number}`,
+                });
+              } else {
+                printPdfBlob(blob);
+              }
+            } catch {
+              printPdfBlob(blob);
+            }
+          }
+
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+          setBets([]);
+          setPartialAmount(0);
+          setTotalAmount(0);
+          setCashier(undefined);
+          setLotteries(new Map());
+          setSchedules(new Map());
+          setUserNumber(undefined);
+          setSelectedIndexes([]);
+          setTicketId(undefined);
+          toast.success('Ticket creado correctamente');
+        },
+        onError: (err) => {
+          console.error(err);
+          toast.error('Ocurrió un error, intente de nuevo');
+        },
+        onSettled: () => {
+          setIsEnabledCreateBet(true);
+        },
+      });
+    } else {
+      editTicket(
+        { ticket_id: ticketId, bets: payload.bets },
+        {
+          onSuccess: () => {
+            setBets([]);
+            setPartialAmount(0);
+            setTotalAmount(0);
+            setCashier(undefined);
+            setLotteries(new Map());
+            setSchedules(new Map());
+            setUserNumber(undefined);
+            setSelectedIndexes([]);
+            setTicketId(undefined);
+            toast.success('Ticket modificado correctamente');
+          },
+          onError: (err) => {
+            console.error(err);
+            toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
+          },
+          onSettled: () => {
+            setIsEnabledCreateBet(true);
+          },
+        }
+      );
+    }
+  }, [
+    bets,
+    cashier,
+    user,
+    ticketId,
+    cleanClosedSchedulesFromBets,
+    computeTotal,
+    createTicket,
+    editTicket,
+  ]);
 
   // Maneja la confirmación del modal de schedules cerrados
   const handleConfirmClosedSchedules = useCallback(() => {
