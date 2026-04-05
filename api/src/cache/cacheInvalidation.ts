@@ -1,3 +1,5 @@
+import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
+
 import { globalCacheManager } from './CacheManager';
 
 /**
@@ -9,8 +11,25 @@ export function getLotteryCacheKey(organization_id: string, all: boolean): strin
   return `org:${organization_id}:lotteries:all=${all}`;
 }
 
+export function getLotteryDayCacheKey(
+  organization_id: string,
+  day: SCHEDULE_DAY,
+  all: boolean
+): string {
+  return `org:${organization_id}:lotteries:day=${day}:all=${all}`;
+}
+
 export function getScheduleCacheKey(organization_id: string, all: boolean): string {
   return `org:${organization_id}:schedules:all=${all}`;
+}
+
+export function getScheduleDayCacheKey(
+  organization_id: string,
+  day: SCHEDULE_DAY,
+  all: boolean,
+  withLotteries: boolean
+): string {
+  return `org:${organization_id}:schedules:day=${day}:all=${all}:wl=${withLotteries}`;
 }
 
 export function getScheduleLotteryCacheKey(organization_id: string): string {
@@ -25,11 +44,13 @@ export function getScheduleLotteryCacheKey(organization_id: string): string {
 export function invalidateLotteriesForOrg(organization_id: string): void {
   globalCacheManager.invalidate(getLotteryCacheKey(organization_id, true));
   globalCacheManager.invalidate(getLotteryCacheKey(organization_id, false));
+  globalCacheManager.invalidateMatching(`^org:${organization_id}:lotteries:day=`);
 }
 
 export function invalidateSchedulesForOrg(organization_id: string): void {
   globalCacheManager.invalidate(getScheduleCacheKey(organization_id, true));
   globalCacheManager.invalidate(getScheduleCacheKey(organization_id, false));
+  globalCacheManager.invalidateMatching(`^org:${organization_id}:schedules:day=`);
 }
 
 export function invalidateScheduleLotteriesForOrg(organization_id: string): void {
@@ -71,6 +92,15 @@ export function invalidateScheduleLotteryRelated(organization_id: string): void 
 }
 
 /**
+ * Invalidate org network IDs cache.
+ * Call when an organization is created or deleted.
+ * The ancestor org's cache must be invalidated since its descendants changed.
+ */
+export function invalidateOrgNetworkIds(organization_id: string): void {
+  globalCacheManager.invalidate(`org:${organization_id}:network-ids`);
+}
+
+/**
  * Nuclear option: invalidate all caches for an organization
  * Use when you need to ensure complete cache refresh
  */
@@ -78,6 +108,7 @@ export function invalidateAllForOrg(organization_id: string): void {
   invalidateLotteriesForOrg(organization_id);
   invalidateSchedulesForOrg(organization_id);
   invalidateScheduleLotteriesForOrg(organization_id);
+  invalidateOrgNetworkIds(organization_id);
 }
 
 /**

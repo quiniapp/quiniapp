@@ -4,5 +4,6 @@ export const parseOrganization = (org: IOrganizationEntityBack): IOrganizationEn
   return {
     name: org.name,
     organization_id: org.organization_id,
+    parent_organization_id: org.parent_organization_id,
   };
 };

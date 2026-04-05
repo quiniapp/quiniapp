@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 export interface FetchBetsProps {
   lottery_id?: string | null;
@@ -12,6 +13,8 @@ export interface FetchBetsProps {
   tern?: string | null;
   quatern?: string | null;
   ticket_number?: string | null;
+  limit?: number;
+  group_id?: string | null;
 }
 
 // ⬇️ Incluir TODOS los filtros en el key (con fallback a '')
@@ -27,6 +30,8 @@ export const betsKey = (p: FetchBetsProps) =>
     p.quatern ?? '',
     p.tern ?? '',
     p.ticket_number ?? '',
+    p.limit ?? '',
+    p.group_id ?? '',
   ] as const;
 
 // ⬇️ Exportá el fetch para usarlo fuera del hook
@@ -40,6 +45,8 @@ export async function fetchBets({
   quatern,
   tern,
   ticket_number,
+  limit,
+  group_id,
 }: FetchBetsProps): Promise<IBetEntityFront[]> {
   if (!date) return [];
 
@@ -52,11 +59,12 @@ export async function fetchBets({
   if (quatern) params.append('quatern', quatern);
   if (tern) params.append('tern', tern);
   if (ticket_number) params.append('ticket_number', ticket_number);
+  if (limit) params.append('limit', limit.toString());
+  if (group_id) params.append('group_id', group_id);
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching bets');

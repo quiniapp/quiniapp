@@ -68,7 +68,7 @@ export class AuthController {
         user_agent: userAgent,
       });
       throw new UnauthorizedError(
-        `Cuenta bloqueada. Intenta nuevamente después de ${new Date(userData.locked_until).toLocaleTimeString()}`
+        'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
       );
     }
 
@@ -93,6 +93,7 @@ export class AuthController {
       await this.repository.incrementFailedAttempts(userData.user_id);
 
       const newFailedAttempts = (userData?.failed_login_attempts ?? 0) + 1;
+      const remainingAttempts = SESSION_CONFIG.MAX_FAILED_ATTEMPTS - newFailedAttempts;
 
       // Lock account if max attempts reached
       if (newFailedAttempts >= SESSION_CONFIG.MAX_FAILED_ATTEMPTS) {
@@ -104,27 +105,30 @@ export class AuthController {
           username,
           event_type: 'account_locked',
           success: false,
-          error_message: `Max failed attempts reached (${newFailedAttempts})`,
+          error_message: 'Account locked due to multiple failed attempts',
           ip_address: ipAddress,
           user_agent: userAgent,
         });
 
         throw new UnauthorizedError(
-          `Cuenta bloqueada por múltiples intentos fallidos. Intenta nuevamente después de ${lockUntil.toLocaleTimeString()}`
+          'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
         );
       }
 
+      // Log failed login
       await this.auditRepository.log({
         user_id: userData.user_id,
         username,
         event_type: 'login_failed',
         success: false,
-        error_message: `Invalid password (attempt ${newFailedAttempts}/${SESSION_CONFIG.MAX_FAILED_ATTEMPTS})`,
+        error_message: 'Invalid password',
         ip_address: ipAddress,
         user_agent: userAgent,
       });
 
-      throw new UnauthorizedError('Usuario o contraseña incorrectos');
+      throw new UnauthorizedError(
+        `Contraseña incorrecta. Te quedan ${remainingAttempts} ${remainingAttempts === 1 ? 'intento' : 'intentos'}.`
+      );
     }
 
     // 5. Check concurrent sessions limit
@@ -164,25 +168,27 @@ export class AuthController {
 
     // Update session with correct refresh token hash
     const finalRefreshTokenHash = await hashPassword(refreshToken);
-    await this.sessionRepository.rotateRefreshToken(session.session_id, finalRefreshTokenHash);
+    await this.sessionRepository.rotateRefreshToken(
+      session.session_id,
+      finalRefreshTokenHash,
+      session.refresh_token_version + 1
+    );
 
-    // 8. Update user login metadata
-    await this.repository.updateLoginMetadata(userData.user_id, ipAddress || null);
-
-    // 9. Reset failed attempts
-    await this.repository.resetFailedAttempts(userData.user_id);
-
-    // 10. Log successful login
-    await this.auditRepository.log({
-      user_id: userData.user_id,
-      session_id: session.session_id,
-      organization_id: userData.organization_id,
-      username,
-      event_type: 'login_success',
-      success: true,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-    });
+    // 8, 9, 10. Run independent post-login updates in parallel
+    await Promise.all([
+      this.repository.updateLoginMetadata(userData.user_id, ipAddress || null),
+      this.repository.resetFailedAttempts(userData.user_id),
+      this.auditRepository.log({
+        user_id: userData.user_id,
+        session_id: session.session_id,
+        organization_id: userData.organization_id,
+        username,
+        event_type: 'login_success',
+        success: true,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      }),
+    ]);
 
     return {
       user: parseUser(userData),
@@ -287,12 +293,16 @@ export class AuthController {
       session.refresh_token_version + 1
     );
 
-    // 7. Update session with new refresh token hash
+    // 7. Update session: rotate token + update activity in parallel
     const newRefreshTokenHash = await hashPassword(newRefreshToken);
-    await this.sessionRepository.rotateRefreshToken(session.session_id, newRefreshTokenHash);
-
-    // 8. Update activity (sliding window)
-    await this.sessionRepository.updateActivity(session.session_id);
+    await Promise.all([
+      this.sessionRepository.rotateRefreshToken(
+        session.session_id,
+        newRefreshTokenHash,
+        session.refresh_token_version + 1
+      ),
+      this.sessionRepository.updateActivity(session.session_id, session.created_at),
+    ]);
 
     // 9. Log successful refresh
     await this.auditRepository.log({

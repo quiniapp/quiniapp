@@ -7,6 +7,336 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-04
+
+#### filter-section — botón Buscar para filtrar por pasador
+- **`components/filter-section/index.tsx`**: Reemplaza la búsqueda automática por debounce con un botón "Buscar" explícito. Al hacer click (o Enter), almacena el `user_id` del pasador encontrado en el URL param `user_id`. Agrega botón "Limpiar" (X) cuando hay un filtro activo.
+- **`components/settlement-payroll-table/index.tsx`**: Lee el param `user_id` y filtra el array de cuentas corrientes client-side. Si no hay `user_id`, muestra todos.
+
+### Removed - 2026-04-04
+
+#### groups — eliminado formulario de creación de SUPERADMIN en grupo
+- **`features/groups/index.tsx`**: Quitados el checkbox "Crear SUPERADMIN para este grupo", el fieldset con los campos de datos del SUPERADMIN, el estado `includeSuperAdmin`, y la lógica de payload asociada. La migración `20260402202646` estableció que los SUPERADMINs no son asignables a grupos; se crean desde el flujo de usuarios.
+
+### Fixed - 2026-04-04
+
+#### make-plays — layout shift al seleccionar un turno
+- **`features/make-plays/lotteries-checkbox-list-desktop.tsx`**: La sección "Quiniela" ahora siempre renderiza el `CheckboxSection` independientemente de si hay loterías disponibles. Cuando no hay loterías, muestra un placeholder con `min-h-[68px]` en lugar de no renderizar nada. Esto evita que al seleccionar un turno la sección crezca desde cero y empuje la tabla de jugadas hacia abajo.
+
+#### groups — layout shift al seleccionar un grupo
+- **`features/groups/index.tsx`**: El placeholder "Selecciona un grupo para ver sus usuarios" ahora tiene `min-h-[160px]` y centra su contenido verticalmente (`flex items-center justify-center`). Esto estabiliza la altura del panel derecho antes y después de seleccionar un grupo.
+
+#### plays-and-hits — totales no se recalculan en modo agrupado
+- **`features/plays-and-hits/plays-and-hits-table.tsx`**: El `useEffect` que llama a `onTotalsUpdate` ahora solo se ejecuta cuando `grouped` es `false` o no está presente. Cuando `grouped=true` los agregados no existen en la respuesta y no tiene sentido recalcular los totales.
+
+### Added - 2026-04-03
+
+#### Auth — groupId expuesto en contexto
+- **`AuthContext.tsx`**: Agrega `groupId: string | null` a `AuthContextValue`.
+- **`AuthProvider.tsx`**: Agrega estado `groupId`, se setea desde `u.group_id` en `setSession`. Expuesto en el `value` useMemo.
+
+#### Sidebar — filtrado de ítems por rol
+- **`types/menu-item.tsx`**: Agrega campo opcional `roles?: USER_TYPE[]` al tipo `MENU_ITEM`.
+- **`constants/SidebarMenu.tsx`**: Agrega restricciones de rol: Quinielas/Turnos, Usuarios y Cuenta Corriente solo para non-CASHIER; Organizaciones, Reportes y Configuración solo para OWNER.
+- **`components/sidebar/index.tsx`**: Filtra `MENU_ITEMS` según el rol del usuario autenticado.
+
+#### Groups page — editar y eliminar grupos
+- **`hooks/mutations/organization/useDeleteGroup.ts`** (NUEVO): Mutación para eliminar grupo. Invalida `groups`, `users` y `assignable-users`.
+- **`hooks/mutations/organization/useUpdateGroup.ts`** (NUEVO): Mutación para renombrar grupo. Invalida `groups`.
+- **`features/groups/index.tsx`**: Botones Editar (lápiz) y Eliminar (trash) con handlers. Dialog de edición de nombre. Dialog de confirmación de eliminación con aviso de que los usuarios vuelven a la organización. ADMIN/SUPERADMIN agregados como roles con acceso de lectura; solo MANAGE_ROLES (OWNER/CAPITALIST/SUPERADMIN) ven los controles de escritura. ADMIN con grupo auto-selecciona su grupo.
+
+### Fixed - 2026-04-03
+
+#### plays-and-hits — infinite scroll no disparaba el observer cuando había datos en caché
+- **`features/plays-and-hits/plays-and-hits-table.tsx`**: Cambia `scrollRootRef` de `useRef` a `useState` (`setScrollRoot`). Con `useRef`, si TanStack Query tenía datos en caché al montar el componente, el `IntersectionObserver` se creaba antes de que el ref fuera asignado (`root=null`), usando el viewport en lugar del contenedor scrolleable interno. Con `useState`, la asignación del elemento dispara un re-render que garantiza que el observer se crea con el `root` correcto.
+
+#### useInfiniteScroll — dedup impedía disparar al cambiar filtros con misma cantidad de items
+- **`hooks/useInfiniteScroll.ts`**: Agrega reset de `lastTriggerIndexRef.current = -1` en el efecto de cleanup por `triggerIndex`. Sin esto, si dos queries distintas (cambio de filtros) producían el mismo `triggerIndex`, el check dedup `lastTriggerIndexRef !== triggerIndex` devolvía `false` y el observer nunca disparaba `fetchNextPage()`.
+
+#### useSaveScheduleLottery — schedules no se invalidaban tras guardar
+- **`hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`**: Agrega `invalidateQueries(['schedules'])` junto a `invalidateQueries(['lotteries'])` en el `onSuccess`. Sin esto, la query `useSchedules({ day })` en make-plays devolvía datos stale (vacíos) hasta que expiraba el `staleTime` de 5 minutos.
+
+### Changed - 2026-04-03
+
+#### Filter section — auto-scoping para ADMIN con grupo
+- **`components/filter-section/index.tsx`**: ADMIN con grupo setea automáticamente `group_id` en los search params y deshabilita el dropdown de grupo.
+
+#### Current account page — ADMIN puede Actualizar pero no Generar Liquidación
+- **`features/current-account/index.tsx`**: ADMIN ve botones Exportar Diario, Exportar Liquidación y Actualizar. Botón "Generar Liquidación" oculto para ADMIN.
+- **`components/modals/GenerateLiquitationModal.tsx`**: Pasa `group_id` de search params a `useGetCurrentAccount` para filtrar liquidación por grupo seleccionado.
+
+#### Master data — ADMIN solo lectura
+- **`features/lotteries/index.tsx`**: ADMIN no ve botones crear/editar/eliminar/reordenar.
+- **`features/results/index.tsx`**: ADMIN no ve botones generar ganadores/editar/guardar/borrar resultado.
+- **`features/shifts/index.tsx`**: ADMIN no ve botones crear/editar/eliminar turnos.
+- **`features/upcoming-lotteries/index.tsx`**: ADMIN no puede modificar quinielas a jugarse (onChange deshabilitado, botón Guardar oculto).
+
+#### User list — ADMIN no puede crear ni eliminar usuarios
+- **`features/user-list/header-user-list.tsx`**: Botón "Crear nuevo" oculto para ADMIN y CASHIER. CAPITALIST agregado a las opciones de filtro de tipo de usuario.
+- **`features/user-list/user-table.tsx`**: Columna "Eliminar" oculta para ADMIN.
+
+### Fixed - 2026-03-31
+
+#### Current account — fetch sin fecha devuelve última CC disponible
+- **`useGetCurrentAccount.ts`**: Eliminado el guard `enabled: Boolean(date)` que bloqueaba el fetch cuando no había fecha en la URL. El hook ahora siempre lanza la query; el backend devuelve la última CC disponible por cashier cuando no se pasa `date`.
+- **`settlement-payroll-table/index.tsx`**: Eliminado `useEffect` que hacía default de `date` a hoy via `setSearchParams`. El componente ahora lee `date` y `group_id` directamente de `useSearchParams` sin modificarlos.
+
+#### Groups — filtro habilitado para ADMIN/SUPERADMIN
+- **`useGroups.ts`**: `enabled` ahora incluye `USER_TYPE.SUPERADMIN` y `USER_TYPE.ADMIN` además de OWNER/CAPITALIST, permitiendo que estos roles vean y filtren por grupos en la UI.
+
+### Fixed - 2026-03-29
+
+#### Bug Fix
+- **MakePlaysProvider.tsx**: Added a `setInterval(10s)` heartbeat for CASHIERs that auto-removes bets whose `scheduleLottery` entries belong to a closed schedule. Uses `betsRef` to read latest bets without adding `bets` as a dependency (avoids restarting the interval on every bet change). Updates `totalAmount` and `partialAmount` to reflect the cleaned list.
+- **game-turns.tsx**: Fixed closed-schedule enforcement for CASHIERs. Two issues were present:
+  1. `isLessThanTenMinutes(time)` returns `false` when the schedule has already passed (diffSec < 0), so the "Agregar" button would re-enable after a schedule closed. Fix: `isScheduleAfter(time) && !isLessThanTenMinutes(time)` now correctly identifies only open schedules.
+  2. Closed schedules were not auto-deselected from `checkedSchedules`, allowing a CASHIER to keep a passed turno selected and add bets against it. Fix: added a `setSchedules` functional update inside the `setInterval` check that removes any selected schedule that is no longer open (CASHIER only).
+
+#### Performance
+- **ClockProvider.tsx**: Added `ClockFunctionsCtx` — a second context whose value only changes when the server sync runs (~30 min, when `offsetMs`/`tz` change). The `isScheduleAfter`, `isLessThanTenMinutes`, and `isScheduleEnabled` callbacks are `useCallback` with `[computeNow]` deps which do NOT depend on `tick`, making them stable between ticks. Added `useClockFunctions()` hook that subscribes only to this stable context.
+- **schedules-checkbox-list-desktop.tsx**, **schedules-checkbox-list-mobile.tsx**, **MakePlaysProvider.tsx**: Migrated from `useClock()` to `useClockFunctions()`. These components only needed schedule-check functions, not `time`/`date`/`now` for display. They now re-render only on server sync (~30 min) instead of every second.
+- **game-turns.tsx**: Migrated to `useClockFunctions()` and replaced `useEffect([now, schedulesData])` with a `setInterval(check, 10_000)` inside the effect. Previously `now` (a new dayjs object every second) forced the effect to call `setIsEnabledCreateBet` 60 times/minute; now it runs every 10 seconds — more than sufficient for a 10-minute threshold window.
+- **schedules-checkbox-list-desktop.tsx**: Fixed Rules of Hooks violation — replaced `Array.from({ length: 10 }, () => useRef())` (hook called inside a loop) with a single `useRef<(HTMLDivElement | null)[]>` and a `useCallback`-stable `setRef` callback ref. No behavior change.
+- **filter-section/index.tsx**: Added `useDebounce(userNumber, 400ms)` before parsing to `userNumberInt`. Previously each keystroke triggered a new API call to `useGetUserByNumber`; now the query fires only after 400ms of inactivity. The `userNotInGroup` group-membership validation also uses the debounced value, which is correct since partial input is not a valid user number.
+- **settlement-payroll-table/index.tsx**: Removed redundant `toast.success` on every successful fetch. The toast was firing on every date/group filter change (each change creates a new query key and re-fetches), which is noisy since the data is already visible in the table. Error toast is kept.
+- **sidebar-item.tsx**: Memoized `isChildRouteActive` (now `useMemo`), `parentIsActive` (`useMemo`), `handleParentClick` and `toggleOpen` (`useCallback`), and `isRouteActive` (`useCallback`). Re-renders on navigation are still required since the component subscribes to `useLocation()`, but internal recomputation is skipped when `pathname` hasn't changed.
+- **play-detail-game-table.tsx**: Replaced `key={index}` with `key={bet.bet_order ?? compound}` in both mobile cards and desktop table rows. When editing an existing ticket, `bet_order` is already populated and is stable. For new bets (no `bet_order`), falls back to `number-place-amount-index` which is more descriptive than bare index and avoids React treating all rows as "the same element" when number/amount differ.
+- **useResults.ts**: Added `staleTime: 30min`. Results for a given lottery+schedule+date change at most once per day. Mutations (`useCreateResults`, `useUpdateResults`, `useDeleteResults`) already call `invalidateQueries(['results'])`, so cache is refreshed correctly after any change.
+- **useTickets.ts**: Added `staleTime: 30s` while keeping `refetchOnWindowFocus: true`. Prevents re-fetch on quick alt-tabs (< 30s) while still ensuring tickets are fresh when the user returns after a longer absence. All ticket mutations already call `invalidateQueries(['tickets'])`, so freshness after create/edit/delete/pay is unaffected.
+
+### Fixed - 2026-03-27
+
+- **useUsersByNumber.ts**: Added `filter_user_type: USER_TYPE.CASHIER` — make-plays user search now returns cashiers only.
+- **TerminalTicketProvider.tsx**: Group and cashier can now coexist in URL. Selecting a cashier no longer clears group_id. Changing group still resets cashier.
+- **filter-section/index.tsx**: Validates user number against selected group — shows "No pertenece al grupo" error if user is not a group member.
+
+### Added - 2026-03-27
+
+#### Group-Based Filtering
+- **useInfiniteBets.ts**: Added `group_id` param passed to API and included in query key.
+- **useBets.ts**: Added `group_id` to `FetchBetsProps`, `betsKey`, and URL params.
+- **useTotals.ts**: Added `group_id` to `buildSearchParams` helper.
+- **useInfiniteTickets.ts**: Added `group_id` param passed to API and included in query key.
+- **useGetCurrentAccount.ts**: Added `group_id` param to fetch function, URL, and query key.
+- **play-and-hits-select.tsx**: Replaced hardcoded group selector with real `useGroups` data. Selecting a group filters cashier dropdown to group members and sets `group_id` in searchParams.
+- **plays-and-hits-table.tsx**: Reads `group_id` from searchParams and passes to `useInfiniteBets`.
+- **print-grouped-bets-button.tsx**: Passes `group_id` to `useBets` for correct PDF generation when group is selected.
+- **header-play-and-hits.tsx**: Fixed bug where date change wiped all other searchParams (including `group_id`).
+- **TerminalTIcketContext.tsx** / **TerminalTicketProvider.tsx**: Added `group_id` and `setGroupId` to context, managed via searchParams. `setGroupId` clears `cashier_id`; `setCashierId` clears `group_id`.
+- **form-header-filter.tsx**: Added group selector to Revisar Ticket page; cashier dropdown filters to group members when group selected.
+- **table-terminal-ticket.tsx**: Passes `group_id` to `useInfiniteTickets`.
+- **terminal-ticket/index.tsx**: Passes `group_id` from context to `TableTerminalTicket`.
+- **filter-section/index.tsx**: Replaced hardcoded group items with real `useGroups` data; group state now managed via searchParams.
+- **settlement-payroll-table/index.tsx**: Removed local group state; reads `group_id` from searchParams and passes to `useGetCurrentAccount`.
+
+### Changed - 2026-03-27
+
+#### Performance Optimizations in Plays & Hits
+
+- **PrintGroupedBetsButton lazy data fetches**: Modified `web/src/features/plays-and-hits/print-grouped-bets-button.tsx`
+  - Now only fetches data when in grouped mode (`isGrouped === true`)
+  - Passes `date: isGrouped ? date : null` to `useBets` to disable fetch when not grouped
+  - Passes `isGrouped ? role : undefined` to `useUsers` to disable fetch when not grouped
+
+- **Stable keys in bet row lists**: Fixed `web/src/features/plays-and-hits/plays-and-hits-table.tsx`
+  - Replaced `Math.random()` fallback with stable index-based keys: `row-${index}` for desktop, `row-mobile-${index}` for mobile
+  - Prevents unnecessary re-renders and DOM node recreation when `bet_id` is undefined
+  - Removed redundant `key` props from internal components (BetRowDesktop, BetRowMobile)
+
+- **Avoid extra render on mount**: Fixed `web/src/features/plays-and-hits/header-play-and-hits.tsx`
+  - Replaced `useEffect` with `useLayoutEffect` for initial date URL param setup
+  - Now checks if date is already in URL before setting it, preventing double render on component mount
+  - Uses `{ replace: true }` to maintain clean browser history
+
+### Added - 2026-03-26
+
+#### Eliminar usuarios de grupos
+
+- **Mutation hook**: `web/src/hooks/mutations/users/useRemoveUserFromGroup.ts`
+  - `POST /api/private/user/remove-from-group` con `{ user_id, group_id }`
+  - Invalida queries: `assignable-users`, `groups`, `users`, `group-users`
+- **UI**: `web/src/features/groups/index.tsx`
+  - Columna "Acciones" en la tabla de usuarios del grupo con botón de eliminar (ícono `Trash2`)
+  - Al eliminar, el usuario vuelve a la lista de asignables disponibles
+- **Route**: `web/routes/routes.ts` — agregada `removeFromGroup: /api/private/user/remove-from-group`
+
+#### Imprimir jugadas agrupadas en PDF
+
+- **Función PDF**: `web/src/functions/printGroupedBetsPDF.ts`
+  - Genera PDF landscape A4 con columnas: Jugada, Monto, Tipo, Turno, Quiniela, Aciertos
+  - Encabezado con: título "Jugadas Agrupadas", fecha del filtro, fecha/hora de impresión
+  - Filtros siempre visibles (Pasador, Grupo, Turno, Lotería — "Todos" si no hay seleccionado)
+  - Fila de totales al pie de la tabla (monto total + aciertos totales)
+  - Footer con paginación en cada hoja
+
+- **Botón de impresión**: `web/src/features/plays-and-hits/print-grouped-bets-button.tsx`
+  - Se habilita solo cuando el toggle "Agrupados" está activo (`grouped=true`)
+  - Usa `useBets` para obtener todos los registros agrupados (sin paginación)
+  - Resuelve nombres de turno, quiniela y pasador desde los hooks cacheados
+
+- **Integración en la página**: `web/src/features/plays-and-hits/index.tsx`
+  - Botón "Imprimir" agregado junto al toggle de agrupado
+
+### Fixed - 2026-02-22
+
+#### Auth Loop on Page Load Without Session
+
+- **Auth expiry no longer calls server logout or causes a loop**: Fixed `web/src/providers/AuthProvider.tsx`
+  - When the `auth:expired` event fired (refresh token missing/invalid), the handler called `logout()` which hit `POST /api/private/auth/logout` → 401 → triggered another refresh → fired `auth:expired` again → infinite loop
+  - Fix 1: `auth:expired` handler now just clears local state (`queryClient.clear()` + `setSession(null)`) without any API call — the token is already gone, no server call needed
+  - Fix 2: explicit `logout()` calls use `{ _skipRefreshRetry: true }` so a 401 on the logout endpoint never triggers a refresh cycle
+
+### Fixed - 2026-02-20
+
+#### Session Management - Bug Fixes
+
+- **validate() no longer disconnects on transient errors**: Fixed `web/src/providers/AuthProvider.tsx`
+  - Previously, ANY error during the periodic validation (network error, 5xx, timeout) would call `setSession(null)` and log the user out
+  - Now only an explicit HTTP 401 clears the session; transient errors are silenced and the next interval will retry
+  - This fixes the bug where users were being randomly logged out during active sessions
+
+- **Auth expiry now triggers automatic logout from anywhere in the app**: Updated `web/src/providers/AuthProvider.tsx`
+  - Added `useEffect` that listens for the global `auth:expired` CustomEvent and calls `logout()`
+  - Ensures that 401s from `apiClient` (token refresh failure) or `fetchWithAuth` (direct 401) are surfaced to the auth system
+
+#### New Infrastructure
+
+- **`web/src/lib/authEvents.ts`** (new): Centralized auth expiry event system
+  - `AUTH_EXPIRED_EVENT = 'auth:expired'` constant
+  - `dispatchAuthExpired()` function to fire the event from anywhere
+
+- **`web/src/lib/fetchWithAuth.ts`** (new): Authenticated fetch wrapper
+  - Wraps `fetch()` with `credentials: 'include'` by default
+  - Detects HTTP 401 responses, dispatches `auth:expired`, and throws `'Sesión expirada'`
+  - Prevents 401s from raw-fetch hooks silently failing without redirecting to login
+
+- **`web/src/lib/apiClient.ts`**: Now dispatches `auth:expired` when token refresh fails definitively
+  - When `refreshAccessToken()` returns `false` in `handleUnauthorized()`, calls `dispatchAuthExpired()` before throwing
+
+#### Hook Migration
+
+Migrated **21 hooks** from raw `fetch()` to `fetchWithAuth()` so that any expired-session 401 triggers login redirect:
+- `web/src/hooks/fetchs/plays/useBets.ts`
+- `web/src/hooks/fetchs/plays/useInfiniteBets.ts`
+- `web/src/hooks/fetchs/plays/useInfiniteBetsByTicketNumber.ts`
+- `web/src/hooks/fetchs/plays/useGetBetysByTicketNumber.ts`
+- `web/src/hooks/fetchs/plays/useGetAmountsByTicketNumber.ts`
+- `web/src/hooks/fetchs/plays/useTotals.ts`
+- `web/src/hooks/fetchs/schedule/useSchedules.ts`
+- `web/src/hooks/fetchs/schedule-lottery/useScheduleLottery.ts`
+- `web/src/hooks/fetchs/results/useResults.ts`
+- `web/src/hooks/fetchs/lottery/useLotteries.ts`
+- `web/src/hooks/fetchs/current-account/useGetCurrentAccount.ts`
+- `web/src/hooks/fetchs/current-account/useGetCurrentAccountByUser.ts`
+- `web/src/hooks/fetchs/settings/useGetUsedStorage.ts`
+- `web/src/hooks/useWinners.ts`
+- `web/src/hooks/useCurrentAccount.ts`
+- `web/src/hooks/mutations/schedule-lottery/useSaveScheduleLottery.ts`
+- `web/src/hooks/mutations/results/useCreateresults.mutation.ts`
+- `web/src/hooks/mutations/results/useUpdateResults.mutation.ts`
+- `web/src/hooks/mutations/results/useDeleteResults.ts`
+- `web/src/hooks/mutations/current-account/useUpdateCurrentAccoutnByUser.ts`
+- `web/src/hooks/mutations/current-account/useLiquidateCurrentAccount.ts`
+- `web/src/hooks/mutations/current-account/useCalculateCurrentAccount.ts`
+- `web/src/hooks/mutations/current-account/useBulkUpdateCurrentAccount.ts`
+- `web/src/hooks/fetchs/organization/useGroups.ts`
+- `web/src/hooks/fetchs/organization/useOrganizations.ts`
+- `web/src/hooks/fetchs/users/useAssignableUsers.ts`
+- `web/src/hooks/fetchs/users/useGroupUsers.ts`
+- `web/src/hooks/mutations/lottery/useCreateLottery.ts`
+- `web/src/hooks/mutations/lottery/useDeleteLottery.ts`
+- `web/src/hooks/mutations/lottery/useUpdateLottery.ts`
+- `web/src/hooks/mutations/organization/useCreateGroup.ts`
+- `web/src/hooks/mutations/organization/useCreateOrganization.ts`
+- `web/src/hooks/mutations/organization/useDeleteOrganization.ts`
+- `web/src/hooks/mutations/organization/useUpdateOrganization.ts`
+- `web/src/hooks/mutations/schedule/useCreateSchedule.ts`
+- `web/src/hooks/mutations/schedule/useDeleteSchedule.ts`
+- `web/src/hooks/mutations/schedule/useUpdateSchedule.ts`
+- `web/src/hooks/mutations/users/useAssignUserToGroup.ts`
+- `web/src/hooks/mutations/winner/useWinner.ts`
+
+### Added - 2026-01-15
+
+#### Account Unlock UI
+- **Unlock User Hook**: Created `web/src/hooks/mutations/users/useUnlockUser.ts`
+  - React Query mutation for unlocking user accounts
+  - Invalidates user list on success
+  - Toast notifications for success/error states
+
+- **Unlock User Modal**: Created `web/src/components/modals/UnlockUserModal.tsx`
+  - Confirmation dialog for unlocking accounts
+  - Shows user name and explains action
+  - Loading state during unlock operation
+  - LockOpen icon for visual clarity
+
+#### User List Improvements
+- **Lock Status Column**: Updated `web/src/features/user-list/user-table.tsx`
+  - Added "Estado" column showing account lock status
+  - Shows LockOpen button (green hover) for locked accounts
+  - Shows "Activo" text for active accounts
+  - Only non-cashier users see unlock button
+
+- **Last Connection Display**: Fixed "Conexion" column in `web/src/features/user-list/user-table.tsx`
+  - Changed from showing `user.address` to `user.last_login_at`
+  - Displays date/time in Spanish format: "15/01/2026, 14:30"
+  - Shows "Nunca" for users who never logged in
+
+**Use case**: Provides administrators with visibility into account lock status and last login times, plus ability to unlock accounts directly from the UI.
+
+### Changed - 2026-01-15
+
+#### Enhanced Login Messages
+- **Login Page**: Error messages in `web/src/features/login/index.tsx` now display:
+  - Countdown of remaining attempts before lockout
+  - Clear instructions to contact administrator when locked
+  - Improved user experience during authentication failures
+
+### Changed - 2026-01-15
+
+#### Performance Optimizations - Bundle Size & Core Web Vitals
+**Goal:** Improve LCP (2.37s → < 2.0s) and FCP (1.04s → < 0.8s)
+
+**Changes:**
+
+1. **Dynamic Import for jsPDF** (`web/src/functions/makeTicket.ts`):
+   - Changed static `import { jsPDF } from 'jspdf'` to dynamic `await import('jspdf')`
+   - Function `makeTicketPdf` is now async
+   - Removes 368KB from initial bundle (loaded only when generating PDFs)
+
+2. **Updated MakePlaysProvider** (`web/src/features/make-plays/provider/MakePlaysProvider.tsx`):
+   - Added `await` to `makeTicketPdf` call to support async function
+
+3. **Improved Vendor Chunk Splitting** (`web/vite.config.ts`):
+   - Split monolithic vendor chunk (~1MB) into smaller, parallel-loaded chunks:
+     - `react-dom-vendor` (131KB): React DOM
+     - `radix-vendor` (78KB): Radix UI components
+     - `router-vendor` (76KB): React Router
+     - `icons-vendor` (12KB): Lucide React icons
+     - `query-vendor` (2.6KB): TanStack Query
+     - `utils-vendor` (26KB): clsx, tailwind-merge, cva
+   - Improved browser caching (unchanged chunks stay cached)
+
+4. **Migrated date-fns to dayjs** (`web/src/components/button/SelectDayToSearch.tsx`, `web/src/features/plays-and-hits/select-day-to-search.tsx`):
+   - Replaced `parseISO` and `format` functions with dayjs equivalents
+   - Kept `date-fns` locale only for react-day-picker Calendar
+   - Reduced redundant code, dayjs already loaded by ClockProvider
+
+5. **QueryClient Default Configuration** (`web/src/pages/App.tsx`):
+   - Added default `staleTime: 5 minutes`
+   - Added default `gcTime: 30 minutes`
+   - Disabled `refetchOnWindowFocus`
+   - Set `retry: 1` to reduce failed request overhead
+
+6. **ClockProvider Optimization** (`web/src/providers/ClockProvider.tsx`):
+   - Consolidated `now`, `time`, `date` calculation into single `useMemo`
+   - Reduced object recreation on each tick
+
+**Expected Impact:**
+- Initial bundle reduced by ~370KB (jsPDF lazy-loaded)
+- Better caching with smaller, granular vendor chunks
+- Reduced network requests with TanStack Query defaults
+
 ### Added - 2026-02-03
 
 #### Make Plays - Closed Schedule Validation for Cashiers
@@ -90,7 +420,51 @@ When a cashier has selected multiple schedules and lotteries, if any schedule cl
 
 **Why:** Improves user experience by allowing quick selection of all available options, especially useful when users want to bet on all schedules or lotteries. Mobile-first design places the option prominently at the top of the list.
 
+### Added - 2026-01-06
+
+#### User Creation Form - SuperAdmin Support with Role-Based Hierarchy
+**Feature:** Added ability to create SUPERADMIN users with role-based hierarchy restrictions
+
+**Changes in `web/src/features/user-list/user-list-form.tsx`:**
+- Imported `useAuth` from `@/contexts/AuthContext` to access current user's role
+- Added `availableUserTypes` logic that determines which user types can be created based on hierarchy:
+  - OWNER can create: SUPERADMIN, ADMIN, CASHIER
+  - SUPERADMIN can create: ADMIN, CASHIER
+  - ADMIN can create: CASHIER
+- Added SUPERADMIN option to user type Select dropdown with 🔱 icon
+- Updated `shouldShowCashierType` to only display for CASHIER users (hidden for SUPERADMIN and ADMIN)
+- Updated `shouldShowCommissionFields` to only display for CASHIER users (hidden for SUPERADMIN and ADMIN)
+- Updated `isAvailable` logic to show login credentials for SUPERADMIN and ADMIN always, CASHIER only when not STREET type
+- Conditional rendering: "Tipo de pasador" field only shows when user type is CASHIER
+- Conditional rendering: Commission fields (fee, fee_plus) only show when user type is CASHIER
+- **Why:** Enforces proper user hierarchy (OWNER → SUPERADMIN → ADMIN → CASHIER) where higher roles can create lower roles but not vice versa. SUPERADMIN users don't need cashier-specific fields like commissions or cashier type.
+
+**User Experience:**
+- Form adapts based on logged-in user's role - only shows user types they're authorized to create
+- Fields automatically show/hide based on selected user type (SUPERADMIN/ADMIN don't see cashier fields)
+- SUPERADMIN and ADMIN always get login credentials, while CASHIER credentials depend on cashier type
+
 ### Fixed - 2026-01-06
+
+#### User List Filter - Select Value Binding and Initial State
+**Fix:** User type filter select now correctly reflects selected value and shows all users by default
+
+**Changes in `web/src/features/user-list/header-user-list.tsx`:**
+- Added `filterUserType` to destructuring from `useUserListContext()` (was only getting `setFilterUserType`)
+- Changed Select `value` from hardcoded `USER_TYPE.CASHIER` to `selectValue` variable
+- Added `selectValue` computed value that converts `filterUserType` to select value (`undefined` → `'TODOS'`)
+- Reordered options to show "TODOS" first, matching the default initial state
+- **Why:** Select was hardcoded to always show CASHIER, preventing UI from reflecting actual filter state. Now select value is bound to context state.
+
+**Changes in `web/src/features/user-list/UserListContext.tsx`:**
+- Changed initial `filterUserType` state from `USER_TYPE.CASHIER` to `undefined`
+- **Why:** Initial state should show all users (undefined filter) rather than filtering to CASHIER only.
+
+**User Experience:**
+- On page load, "TODOS" is selected and all users in the organization are displayed
+- Selecting "PASADORES" filters to show only CASHIER users
+- Selecting "ADMIN" or "SUPERADMIN" filters to those types accordingly
+- Select dropdown visually reflects the current active filter
 
 #### User List Table - Sticky Header Fixed
 **Fix:** Table headers now remain visible while scrolling, preventing headers from scrolling away with content
@@ -114,8 +488,57 @@ When a cashier has selected multiple schedules and lotteries, if any schedule cl
 - Added `sticky top-0 z-10` to `TableHeader` to keep headers visible while scrolling
 - Users can now see all users in the list by scrolling while column headers remain fixed at the top
 
+### Added - 2026-01-03
+
+#### Groups Feature - User Assignment and Display
+**Feature:** Enhanced groups page with user assignment functionality and improved UX
+
+**Files Created:**
+1. **`web/src/hooks/fetchs/users/useGroupUsers.ts`**
+   - New hook to fetch users belonging to a specific group
+   - Uses `group_id` query parameter to filter users
+   - Only enabled for OWNER and CAPITALIST roles
+
+**Files Modified:**
+1. **`web/src/features/groups/index.tsx`**
+   - Made group names clickable to select (cursor pointer, hover effect)
+   - Added visual highlight for selected group row
+   - Moved "Asignar Usuario" button next to "Usuarios del Grupo" header
+   - Added table to display users in selected group (number, name, type)
+   - Replaced incorrect useAssignableUsers with useGroupUsers for group members
+
+2. **`web/src/hooks/mutations/users/useAssignUserToGroup.ts`**
+   - Added `group-users` query invalidation on success
+
 ### Changed - 2026-01-02
 
+#### Frontend Updates for Groups/Sub-Organizations Feature
+**Feature:** Updated frontend components to support CAPITALIST user type and hierarchical organizations
+
+**Files Modified:**
+
+1. **`web/routes/routes.ts`**
+   - Renamed `validateSuperAdmin` to `validateCapitalist`
+   - Route now points to `/validate-capitalist`
+
+2. **`web/src/components/modals/ResetSuperAdminPasswordModal.tsx`**
+   - Updated to use `validateCapitalist` route
+   - UI text already referenced "Capitalista"
+
+3. **`web/src/features/organizations/index.tsx`**
+   - Changed default user_type from `SUPERADMIN` to `CAPITALIST` in create form
+   - Removed `group_id` from form default values (field doesn't exist)
+
+4. **`web/src/features/user-list/user-table.tsx`**
+   - Removed "Grupo" column header (group_id not in types)
+   - Renamed "Cuenta" column to "Tipo"
+   - Moved user type display to "Tipo" column
+   - Reduced colSpan from 10 to 9
+
+**No New Components Required:**
+- The existing organization page creates CAPITALIST users (UI already says "Capitalista")
+- User table displays user types correctly using `userTypeDictionary`
+- CAPITALIST label from dictionary: "CAPITALISTA"
 #### Repeat Ticket Modal - Custom Amount and Bet Order Grouping
 **Feature:** Enhanced repeat ticket modal with custom amount input and proper bet grouping by `bet_order`
 

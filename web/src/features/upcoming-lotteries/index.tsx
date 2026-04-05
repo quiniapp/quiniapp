@@ -18,6 +18,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.tsx';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { USER_TYPE } from '@helper/types/user.type';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { LotteryCheckboxList } from '@/features/upcoming-lotteries/lottery-checkbox-list';
 import { ScheduleRadioList } from '@/features/upcoming-lotteries/schedules-list.tsx';
@@ -82,6 +84,9 @@ const hasUnsavedChanges = (current: DayMap, server: DayMap): boolean => {
 };
 
 const UpcomingLotteriesContent = () => {
+  const { role } = useAuth();
+  const canEdit = role !== USER_TYPE.ADMIN;
+
   const [savedData, setSavedData] = useState<DayMap>({});
   const [serverData, setServerData] = useState<DayMap>({});
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -232,21 +237,23 @@ const UpcomingLotteriesContent = () => {
                       ? (savedData?.[selectedDay]?.[selectedSchedule] ?? [])
                       : []
                     }
-                    onChange={handleLotteries}
+                    onChange={canEdit ? handleLotteries : () => {}}
                     />
                 </div>
-                <Flex>
-                  <Button
-                    type="submit"
-                    variant={'default'}
-                    className=" w-[200px]   hover:bg-dark text-white"
-                    onClick={handleSave}
-                    disabled={isPendingSave}
-                    >
-                    <SaveIcon />
-                    {isPendingSave ? 'Guardando...' : 'Guardar'}
-                  </Button>
-                </Flex>
+                {canEdit && (
+                  <Flex>
+                    <Button
+                      type="submit"
+                      variant={'default'}
+                      className=" w-[200px]   hover:bg-dark text-white"
+                      onClick={handleSave}
+                      disabled={isPendingSave}
+                      >
+                      <SaveIcon />
+                      {isPendingSave ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                  </Flex>
+                )}
                     {hasChanges && (
                       <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2">
                         <div className="flex items-center gap-2">

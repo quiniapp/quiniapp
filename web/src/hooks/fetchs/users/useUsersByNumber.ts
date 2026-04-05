@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { IUserEntityFront } from '@helper/types/user.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { apiClient } from '@/lib/apiClient';
 
 const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityFront | undefined> => {
@@ -8,6 +8,7 @@ const fetchUsersByNumber = async (cashier_number?: number): Promise<IUserEntityF
   const users = await apiClient.get<IUserEntityFront[]>(BACKEND_ROUTES.user.base, {
     params: {
       cashier_number: cashier_number.toString(),
+      filter_user_type: USER_TYPE.CASHIER,
     },
   });
   return users[0] ?? null;

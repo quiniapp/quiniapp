@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const generateWinners = async ({ schedule_id, date }: { schedule_id?: string; date: string }) => {
   if (!schedule_id) return;
-  const response = await fetch(`${BACKEND_ROUTES.winners.base}/${schedule_id}?date=${date}`, {
+  const response = await fetchWithAuth(`${BACKEND_ROUTES.winners.base}/${schedule_id}?date=${date}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // si usás auth por cookie
   });
 
   if (!response.ok) {
@@ -32,6 +32,9 @@ export const useGenerateWinners = ({
       // Refetch forzado de ganadores y cuenta corriente para garantizar datos frescos
       await queryClient.refetchQueries({ queryKey: ['winners'] });
       queryClient.invalidateQueries({ queryKey: ['winners'] });
+      // Premios y cuenta corriente cambian cuando se calculan ganadores
+      queryClient.invalidateQueries({ queryKey: ['bets-total-prize'] });
+      queryClient.invalidateQueries({ queryKey: ['getCurrentAccount'] });
     },
   });
 };

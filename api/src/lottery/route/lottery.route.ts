@@ -7,7 +7,11 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { updateLotterySchema } from '@helper/schemas/lottery.schema';
 import { globalCacheManager } from 'src/cache/CacheManager';
-import { getLotteryCacheKey, invalidateLotteryRelated } from 'src/cache/cacheInvalidation';
+import {
+  getLotteryCacheKey,
+  getLotteryDayCacheKey,
+  invalidateLotteryRelated,
+} from 'src/cache/cacheInvalidation';
 import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 
 // ====== Cache Manager para Lotteries ======
@@ -43,7 +47,7 @@ export class LotteryRouter {
       res.status(400).json(response);
       return;
     }
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -107,17 +111,26 @@ export class LotteryRouter {
     }
 
     try {
-      // If day filter is provided, fetch filtered lotteries
-      // Note: day-filtered queries are not cached as they're typically used in high-frequency contexts
+      // If day filter is provided, fetch filtered lotteries with server-side cache
       if (day !== undefined) {
-        const lotteries = await this.controller.getAllByDay(day, allFlag, req.organization_id!);
+        const dayKey = getLotteryDayCacheKey(req.organization_id!, day, allFlag);
+        const snap = await globalCacheManager.getOrLoad(
+          dayKey,
+          () => this.controller.getAllByDay(day!, allFlag, req.organization_id!),
+          { ttl: 60_000, etagStrategy: 'counter' }
+        );
+
+        const inm = req.headers['if-none-match'];
+        if (inm && inm === snap.etag) {
+          res.status(304).end();
+          return;
+        }
 
         const response: APIResponse<ILotteryEntityFront[]> = {
-          data: { lottery: lotteries },
+          data: { lottery: snap.payload },
         };
-
-        // Cache-Control for day-filtered queries
-        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        res.setHeader('ETag', snap.etag);
+        res.setHeader('Cache-Control', 'private, no-cache');
         res.status(200).json(response);
         return;
       }
@@ -172,7 +185,7 @@ export class LotteryRouter {
     const { id: lottery_id } = req.params;
     const { updateLottery } = req.body;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -218,7 +231,7 @@ export class LotteryRouter {
     const { user } = req;
     const { id: lottery_id } = req.params;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };

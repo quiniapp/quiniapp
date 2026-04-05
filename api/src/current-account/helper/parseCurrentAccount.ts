@@ -27,5 +27,6 @@ export const parseCurrentAccount = (
     previous_drag: currentAccount.previous_drag,
     revenue: currentAccount.revenue,
     is_liquidated: currentAccount.is_liquidated,
+    group_id: currentAccount.group_id ?? null,
   };
 };

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
@@ -7,6 +7,14 @@ import { isAuthenticated } from '../middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
 import { startSessionCleanupJob } from './utils/session-cleanup.job';
+import { getCronService } from './cron/service/cron.service';
+import { initializeActiveDaysCache } from './archive/helper/archive-helper';
+import {
+  loginRateLimiter,
+  authRateLimiter,
+  publicApiRateLimiter,
+  privateApiRateLimiter,
+} from './middlewares/rate-limit.middleware';
 
 import {
   PORT,
@@ -20,6 +28,7 @@ import {
   CORS_EXTRA_ORIGINS,
 } from 'api/envs';
 import { URL } from 'url';
+import { ARCHIVE_DAYS_TO_KEEP } from 'api/envs';
 
 const app = express();
 
@@ -70,19 +79,61 @@ app.use(corsMiddleware);
 app.options('*', corsMiddleware); // preflight
 
 // ---- Middlewares globales ----
-app.use(morgan(IS_LOCAL ? 'dev' : 'combined'));
+// Custom Morgan token para mostrar info de errores en logs
+morgan.token('error-info', (req, res) => {
+  // Type assertion: Morgan usa tipos de http nativo, pero Express agrega locals
+  const expressRes = res as unknown as Response;
+  if (expressRes.locals?.errorInfo && expressRes.statusCode >= 400) {
+    const { code, message } = expressRes.locals.errorInfo;
+    // Truncar mensaje a 100 chars para logs limpios
+    const truncatedMsg = message.length > 100 ? message.substring(0, 97) + '...' : message;
+    return `[${code}: ${truncatedMsg}]`;
+  }
+  return '';
+});
+
+// Formato custom que incluye error-info para producción
+const morganFormat = IS_LOCAL
+  ? 'dev'
+  : ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] :error-info ":referrer" ":user-agent"';
+
+app.use(morgan(morganFormat));
+
+// CSRF Protection Note:
+// We use sameSite='lax' cookie policy (configured in config/session.config.ts) which provides
+// automatic CSRF protection for cookie-based authentication. This is sufficient for our architecture
+// where the frontend uses a Vercel proxy, making all requests same-origin from the browser's perspective.
+// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
+// lgtm[js/missing-token-validation]
 app.use(cookieParser());
 
-// ---- Body parsers por ruta ----
-app.use('/api/private', express.json({ limit: '5mb' }), isAuthenticated, router);
-app.use('/api', express.json({ limit: '200kb' }), publicRouter);
+// ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
+app.use('/api/auth/login', loginRateLimiter); // Login (más estricto)
+app.use('/api/auth', authRateLimiter); // Otros endpoints de auth
+
+// ---- Body parsers por ruta (con rate limiters) ----
+app.use(
+  '/api/private',
+  privateApiRateLimiter,
+  express.json({ limit: '5mb' }),
+  isAuthenticated,
+  router
+);
+app.use('/api', publicApiRateLimiter, express.json({ limit: '200kb' }), publicRouter);
 
 // ---- 404 Handler ----
 app.use((req, res) => {
+  const errorMessage = `Ruta ${req.path} no encontrada`;
+  // Guardar info para Morgan custom token
+  res.locals.errorInfo = {
+    code: 'NOT_FOUND',
+    message: errorMessage,
+    statusCode: 404,
+  };
   res.status(404).json({
     error: {
       code: 'NOT_FOUND',
-      message: `Ruta ${req.path} no encontrada`,
+      message: errorMessage,
     },
   });
 });
@@ -91,11 +142,25 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ---- Arranque ----
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
-  console.log('[CORS] allowed origins:', baseAllowedOrigins);
-  if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
+// Solo iniciar servidor si no estamos en entorno de test
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, async () => {
+    console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
+    console.log('[CORS] allowed origins:', baseAllowedOrigins);
+    if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
 
-  // Start session cleanup job (runs every hour)
-  startSessionCleanupJob();
-});
+    // Start session cleanup job (runs every hour)
+    startSessionCleanupJob();
+
+    // Initialize active days cache (for query routing)
+    await initializeActiveDaysCache();
+
+    // Start archive cron job (runs daily at 3:00 AM Argentina Time)
+    const cronService = getCronService(ARCHIVE_DAYS_TO_KEEP);
+    cronService.startArchiveCron();
+    console.log('[Archive] Cron job initialized - Daily archiving of old bets/tickets');
+  });
+}
+
+// Exportar app para tests
+export default app;

@@ -15,8 +15,12 @@ export const BACKEND_ROUTES = {
     id: (id: string) => `${PRIVATE}/user/${id}`,
     resetPassword: (id: string) => `${PRIVATE}/user/reset-password/${id}`,
     changePassword: `${PRIVATE}/user/change-password`,
-    validateSuperAdmin: (username: string, organizationId: string) =>
-      `${PRIVATE}/user/validate-superadmin?username=${encodeURIComponent(username)}&organization_id=${encodeURIComponent(organizationId)}`,
+    validateCapitalist: (username: string, organizationId: string) =>
+      `${PRIVATE}/user/validate-capitalist?username=${encodeURIComponent(username)}&organization_id=${encodeURIComponent(organizationId)}`,
+    assignable: (excludeGroupId?: string) =>
+      `${PRIVATE}/user/assignable${excludeGroupId ? `?exclude_group_id=${encodeURIComponent(excludeGroupId)}` : ''}`,
+    assignToGroup: `${PRIVATE}/user/assign-to-group`,
+    removeFromGroup: `${PRIVATE}/user/remove-from-group`,
   },
   bet: {
     base: `${PRIVATE}/bet`,
@@ -63,5 +67,7 @@ export const BACKEND_ROUTES = {
   organization: {
     base: `${PRIVATE}/organization`,
     id: (id: string) => `${PRIVATE}/organization/${id}`,
+    children: (id: string) => `${PRIVATE}/organization/${id}/children`,
+    createSub: (id: string) => `${PRIVATE}/organization/${id}/sub`,
   },
 };

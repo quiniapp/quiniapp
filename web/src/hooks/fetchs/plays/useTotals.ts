@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
-import { FetchBetsProps, betsKey } from './useBets'; // donde definiste FetchBetsProps y betsKey
+import { FetchBetsProps, betsKey } from './useBets';
+import { fetchWithAuth } from '@/lib/fetchWithAuth'; // donde definiste FetchBetsProps y betsKey
 
 // ---------- keys (incluyen TODOS los filtros como en betsKey) ----------
 export const totalAmountKey = (p: FetchBetsProps) =>
@@ -18,13 +19,13 @@ function buildSearchParams(p: FetchBetsProps) {
   if (p.cashier_id) params.set('cashier_id', p.cashier_id);
   if (p.grouped) params.set('grouped', p.grouped);
   if (p.winners) params.set('winners', p.winners); // 'true' | 'false'
+  if (p.group_id) params.set('group_id', p.group_id);
   return params;
 }
 
 async function fetchNumberFrom(url: string, params: URLSearchParams): Promise<number> {
-  const res = await fetch(`${url}?${params.toString()}`, {
+  const res = await fetchWithAuth(`${url}?${params.toString()}`, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
   if (!res.ok) throw new Error(`Error fetching ${url}`);
   const json = await res.json();
@@ -67,5 +68,7 @@ export function useTotalPrize(p: FetchBetsProps) {
     queryKey: totalPrizeKey(p),
     queryFn: () => fetchTotalPrize(p),
     enabled: Boolean(p.date),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }

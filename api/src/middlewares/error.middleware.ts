@@ -41,6 +41,12 @@ export const errorHandler = (
         })),
       },
     };
+    // Guardar info para Morgan custom token
+    res.locals.errorInfo = {
+      code: 'VALIDATION_ERROR',
+      message: 'Error de validación en los datos enviados',
+      statusCode: 400,
+    };
     res.status(400).json(response);
     return;
   }
@@ -54,6 +60,12 @@ export const errorHandler = (
         ...(err.details !== undefined && { details: err.details }),
       },
     };
+    // Guardar info para Morgan custom token
+    res.locals.errorInfo = {
+      code: err.errorCode,
+      message: err.message,
+      statusCode: err.statusCode,
+    };
     res.status(err.statusCode).json(response);
     return;
   }
@@ -62,12 +74,19 @@ export const errorHandler = (
   const errWithCode = err as unknown as { code?: string };
   if (err.name === 'PostgrestError' || errWithCode.code?.startsWith('PGRST')) {
     logger.error('Database error:', err);
+    const errorMessage = IS_PRODUCTION ? 'Error en la base de datos' : err.message;
     const response: APIResponse<null> = {
       error: {
         code: 'DATABASE_ERROR',
-        message: IS_PRODUCTION ? 'Error en la base de datos' : err.message,
+        message: errorMessage,
         ...(!IS_PRODUCTION && { details: err }),
       },
+    };
+    // Guardar info para Morgan custom token
+    res.locals.errorInfo = {
+      code: 'DATABASE_ERROR',
+      message: errorMessage,
+      statusCode: 500,
     };
     res.status(500).json(response);
     return;
@@ -75,12 +94,19 @@ export const errorHandler = (
 
   // Error inesperado (programming error)
   logger.error('Unexpected error:', err);
+  const errorMessage = IS_PRODUCTION ? 'Ocurrió un error inesperado' : err.message;
   const response: APIResponse<null> = {
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: IS_PRODUCTION ? 'Ocurrió un error inesperado' : err.message,
+      message: errorMessage,
       ...(!IS_PRODUCTION && { details: { stack: err.stack } }),
     },
+  };
+  // Guardar info para Morgan custom token
+  res.locals.errorInfo = {
+    code: 'INTERNAL_SERVER_ERROR',
+    message: errorMessage,
+    statusCode: 500,
   };
   res.status(500).json(response);
 };

@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const deleteOrganization = async (organization_id: string): Promise<void> => {
-  const response = await fetch(BACKEND_ROUTES.organization.id(organization_id), {
+  const response = await fetchWithAuth(BACKEND_ROUTES.organization.id(organization_id), {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
   });
 
   if (!response.ok) {

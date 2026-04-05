@@ -5,6 +5,7 @@ import TotalAmountPlayAndHits from '@/features/plays-and-hits/total-amount-play-
 import SelectBetType from './select-bet-type';
 import PlayAndHitsToggleSelect from './play-and-hits-toggle-select';
 import PlayAndHitsSelect from './play-and-hits-select';
+import PrintGroupedBetsButton from './print-grouped-bets-button';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
 import { useState, useCallback } from 'react';
 
@@ -21,7 +22,10 @@ const PlaysAndHitsContent = () => {
     <PageWrapper>
       <HeaderPlayAndHits />
       <FlexCol className={'p-1 sm:p-2 gap-2 '}>
-        <PlayAndHitsToggleSelect />
+        <Flex className="items-center gap-2">
+          <PlayAndHitsToggleSelect />
+          <PrintGroupedBetsButton />
+        </Flex>
         <Flex className="flex-col sm:flex-row w-full">
           <SelectBetType />
           <PlayAndHitsSelect />

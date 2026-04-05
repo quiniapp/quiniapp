@@ -1,5 +1,9 @@
 'use client';
 
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import React, {
   createContext,
   useCallback,
@@ -9,16 +13,12 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.locale('es');
 
-type ClockContext = {
+type ClockContextValue = {
   /** "HH:mm:ss" en 24hs */
   time: string;
   /** "martes, 12 de agosto de 2025" */
@@ -28,15 +28,29 @@ type ClockContext = {
   /** zona horaria aplicada (por defecto America/Argentina/Buenos_Aires) */
   tz: string;
   /** true si el horario HH:mm es > ahora (mismo día), false si es <= */
-  isScheduleAfter: (hhmm: string) => boolean;
-  isLessThanTenMinutes: (hhmmss: string, windowMin?: number) => boolean; // <---
-  isScheduleEnabled: (hhmmss: string, windowMin?: number) => boolean; // <---
+  isScheduleAfter: (_: string) => boolean;
+  isLessThanTenMinutes: (_: string, __?: number) => boolean;
+  isScheduleEnabled: (_: string, __?: number) => boolean;
 
   /** forzar resincronización manual */
   refresh: () => Promise<void>;
 };
 
-const ClockContext = createContext<ClockContext | null>(null);
+/**
+ * Stable context: only changes when offsetMs/tz change (every ~30 min on server sync).
+ * Components that only need schedule-check functions should subscribe to this
+ * via useClockFunctions() to avoid re-rendering every second.
+ */
+type ClockFunctions = {
+  tz: string;
+  isScheduleAfter: (_: string) => boolean;
+  isLessThanTenMinutes: (_: string, __?: number) => boolean;
+  isScheduleEnabled: (_: string, __?: number) => boolean;
+  refresh: () => Promise<void>;
+};
+
+const ClockContext = createContext<ClockContextValue | null>(null);
+const ClockFunctionsCtx = createContext<ClockFunctions | null>(null);
 
 type ClockProviderProps = {
   children: React.ReactNode;
@@ -62,14 +76,22 @@ export function ClockProvider({
   // offset contra el reloj del cliente, en ms. Se calcula con tiempo de red del servidor.
   const [offsetMs, setOffsetMs] = useState(0);
 
-  // ‘tick’ para re-renderizar cada segundo
-  const [, setTick] = useState(0);
+  // 'tick' para re-renderizar cada segundo
+  const [tick, setTick] = useState(0);
 
   const computeNow = useCallback(() => dayjs.utc(Date.now() + offsetMs).tz(tz), [offsetMs, tz]);
 
-  const now = computeNow();
-  const time = useMemo(() => now.format('HH:mm:ss'), [now]);
-  const date = useMemo(() => now.format('dddd, D [de] MMMM [de] YYYY'), [now]);
+  // Calcular now, time y date en un solo useMemo para reducir re-renders
+  const { now, time, date } = useMemo(() => {
+    const currentNow = dayjs.utc(Date.now() + offsetMs).tz(tz);
+    return {
+      now: currentNow,
+      time: currentNow.format('HH:mm:ss'),
+      date: currentNow.format('dddd, D [de] MMMM [de] YYYY'),
+    };
+  // El tick fuerza recálculo cada segundo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offsetMs, tz, tick]);
 
   // Obtiene hora de red y devuelve offset (serverUTC - clientUTCmedio)
   const fetchNetworkOffset = useCallback(
@@ -203,21 +225,31 @@ export function ClockProvider({
     [toTodayAt, computeNow]
   );
 
-  const value = useMemo<ClockContext>(
+  const value = useMemo<ClockContextValue>(
     () => ({
       time,
       date,
       now,
       tz,
       isScheduleAfter,
-      isLessThanTenMinutes, // <---
-      isScheduleEnabled, // <---
+      isLessThanTenMinutes,
+      isScheduleEnabled,
       refresh: sync,
     }),
     [time, date, now, tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, sync]
   );
 
-  return <ClockContext.Provider value={value}>{children}</ClockContext.Provider>;
+  // Stable context: these callbacks only change when offsetMs/tz change (every ~30 min)
+  const functionsValue = useMemo<ClockFunctions>(
+    () => ({ tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, refresh: sync }),
+    [tz, isScheduleAfter, isLessThanTenMinutes, isScheduleEnabled, sync]
+  );
+
+  return (
+    <ClockFunctionsCtx.Provider value={functionsValue}>
+      <ClockContext.Provider value={value}>{children}</ClockContext.Provider>
+    </ClockFunctionsCtx.Provider>
+  );
 }
 
 export function useClock() {
@@ -230,6 +262,29 @@ export function useClock() {
       time: now.format('HH:mm:ss'),
       date: now.format('dddd, D [de] MMMM [de] YYYY'),
       now,
+      tz: 'America/Argentina/Buenos_Aires',
+      isScheduleAfter: () => false,
+      isLessThanTenMinutes: () => false,
+      isScheduleEnabled: () => false,
+      refresh: async () => {},
+    };
+  }
+
+  return ctx;
+}
+
+/**
+ * Subscribe only to stable clock functions (isScheduleAfter, isLessThanTenMinutes,
+ * isScheduleEnabled). This context only changes when the server sync runs (~30 min),
+ * so components using this hook do NOT re-render every second.
+ *
+ * Use instead of useClock() when you do NOT need time/date/now for display.
+ */
+export function useClockFunctions(): ClockFunctions {
+  const ctx = useContext(ClockFunctionsCtx);
+
+  if (!ctx) {
+    return {
       tz: 'America/Argentina/Buenos_Aires',
       isScheduleAfter: () => false,
       isLessThanTenMinutes: () => false,

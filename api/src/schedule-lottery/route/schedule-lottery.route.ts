@@ -41,7 +41,7 @@ export class ScheduleLotteryRouter {
     const { user } = req;
     const { scheduleLottery } = req.body;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };

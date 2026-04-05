@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-03
+
+#### `user.type.ts` — group_id nunca null después de migración
+- **`helper/types/user.type.ts`**: `group_id: string | null` se mantiene como tipo (null es válido pre-migración), pero la convención es `group_id = organization_id` cuando sin grupo (nunca null en producción).
+
+### Changed - 2026-03-31
+
+#### Tipos actualizados para soporte de `group_id` en usuarios y cuentas corrientes
+- **`helper/types/user.type.ts`**: Agregado `group_id: string | null` a `BaseUserEntityBack`. Indica el grupo (child org) al que pertenece un cashier; `null` si no tiene grupo asignado.
+- **`helper/types/current_account.type.ts`**: Descomentado `group_id: string | null` en `ICurrentAccountEntityBack`. El campo ya existía comentado; ahora es activo y se expone en `ICurrentAccountEntityFront`.
+
+### Added - 2026-01-27
+
+#### Database Migration Guidelines in CLAUDE.md
+- **Migration Best Practices**: Added comprehensive Database Migrations section to root `CLAUDE.md`
+  - Critical rule: NEVER edit existing migration files that have been applied to the database
+  - Always create NEW migration files for schema, function, or data changes
+  - Migration file naming convention: `YYYYMMDDHHmmss_description.sql`
+  - Includes migration workflow, example file structure, and reasoning
+  - Why: Ensures database consistency across environments, maintains migration history integrity, enables safe rollbacks
+  - Location: Added between "Development Workflow" and "Documentation & Change Management" sections
+
+### Added - 2026-01-02
+
+#### CAPITALIST User Type and Organization Hierarchy Types
+**Feature:** New types and functions to support hierarchical organizations
+
+**Files Modified:**
+
+1. **`helper/types/user.type.ts`**
+   - Added `CAPITALIST` to `USER_TYPE` enum
+   - Updated `OwnerOrAdminUserEntityBack` interface to include `USER_TYPE.CAPITALIST`
+   - Updated `OwnerOrAdminUserEntityFront` interface to include `USER_TYPE.CAPITALIST`
+   - New hierarchy: OWNER → CAPITALIST → SUPERADMIN → ADMIN → CASHIER
+
+2. **`helper/types/organization.type.ts`**
+   - Added `parent_organization_id: string | null` to `IOrganizationEntityBack`
+   - NULL = root organization, non-NULL = sub-organization/group
+   - `IOrganizationEntityFront` now includes `parent_organization_id`
+
+3. **`helper/functions/userTypeDictionary.ts`**
+   - Added CAPITALIST entry: `[USER_TYPE.CAPITALIST]: 'CAPITALISTA'`
+
+4. **`helper/schemas/user.schema.ts`**
+   - Added `capitalistSchema` for CAPITALIST user validation
+
+**Use Cases:**
+- CAPITALIST is the new "organization owner" level, below OWNER but above SUPERADMIN
+- Sub-organizations (groups) reference their parent via `parent_organization_id`
+- CAPITALIST sees entire organization + all sub-organizations
+- SUPERADMIN with assigned group sees only that group
 ### Changed - 2026-01-02
 
 #### IBetTable Type - Added bet_order Field

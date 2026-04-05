@@ -5,6 +5,7 @@ import {
   IUpdateCurrentAccountEntity,
 } from '@helper/request/current_account.request';
 import { CurrentAccountRepository } from '../repository/current-account.repository';
+import { UserRepository } from '../../user/repository/user.repository';
 
 import { parseCurrentAccount } from '../helper/parseCurrentAccount';
 import {
@@ -12,6 +13,20 @@ import {
   ICurrentAccountEntityFront,
 } from '@helper/types/current_account.type';
 import { ERROR_MESSAGE } from '@helper/types/errors.type';
+
+interface INetworkSummary {
+  organization_id: string;
+  organization_name: string;
+  total_pass: number;
+  total_successes: number;
+  total_claims: number;
+  total_collections: number;
+  total_paid: number;
+  total_balance: number;
+  total_leave: number;
+  total_drag: number;
+  cashier_count: number;
+}
 
 type AllowedManualKeys =
   | 'claims'
@@ -151,6 +166,100 @@ export class CurrentAccountController {
       );
     } catch (error) {
       console.error('updateCurrentAccountByUserHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  // Network-aware methods for CAPITALIST users
+
+  /**
+   * Calculate current accounts for entire network (org + sub-orgs)
+   */
+  calculateCurrentAccountNetworkHandler = async (
+    organization_id: string,
+    date?: string,
+    leave?: boolean,
+    liquidated?: boolean
+  ) => {
+    try {
+      const results = await this.repository.calculateCurrentAccountNetworkHandler(
+        organization_id,
+        date,
+        leave,
+        liquidated
+      );
+
+      return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
+    } catch (error) {
+      console.error('calculateCurrentAccountNetworkHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  /**
+   * Get all current accounts for network (org + sub-orgs)
+   */
+  getAllCurrentAccountNetworkHandler = async (
+    props: IGetAllCurrentAccountEntity & { include_network?: boolean; group_user_ids?: string[] }
+  ): Promise<ICurrentAccountEntityFront[]> => {
+    try {
+      let currentaccounts;
+
+      if (props.user_type === USER_TYPE.CASHIER) {
+        // CASHIER solo ve su propia cuenta
+        currentaccounts = await this.repository.getAllCurrentAccountHandler({
+          organization_id: props.organization_id,
+          user_id: props.user_id,
+          date: props.date,
+        });
+      } else if ([USER_TYPE.CAPITALIST, USER_TYPE.OWNER].includes(props.user_type)) {
+        // CAPITALIST/OWNER siempre ven toda la red
+        currentaccounts = await this.repository.getAllCurrentAccountNetworkHandler({
+          organization_id: props.organization_id,
+          date: props.date,
+        });
+      } else {
+        // SUPERADMIN/ADMIN: si están en org raíz, ven toda la red; si están en sub-org, solo su org
+        const userRepo = new UserRepository();
+        const isSubOrg = await userRepo.isSubOrganization(props.organization_id);
+        if (isSubOrg) {
+          currentaccounts = await this.repository.getAllCurrentAccountHandler({
+            organization_id: props.organization_id,
+            date: props.date,
+          });
+        } else {
+          currentaccounts = await this.repository.getAllCurrentAccountNetworkHandler({
+            organization_id: props.organization_id,
+            date: props.date,
+          });
+        }
+      }
+
+      let results = currentaccounts.map((currentaccount) => parseCurrentAccount(currentaccount));
+
+      // undefined = no group filter; [] = group selected but empty (return nothing)
+      if (props.group_user_ids !== undefined) {
+        results = results.filter((a) => props.group_user_ids!.includes(a.user_id));
+      }
+
+      return results;
+    } catch (error) {
+      console.error('getAllCurrentAccountNetworkHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  /**
+   * Get network summary (aggregated totals per organization)
+   */
+  getNetworkSummaryHandler = async (
+    organization_id: string,
+    date?: string
+  ): Promise<INetworkSummary[]> => {
+    try {
+      return await this.repository.getNetworkSummaryHandler(organization_id, date);
+    } catch (error) {
+      console.error('getNetworkSummaryHandler error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IUpdateCurrentAccountEntity } from '@helper/request/current_account.request.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 type UpdateVars = {
   date: string;
@@ -21,10 +22,9 @@ const updateCurrentAccountByUser = async ({
 
   const url = `${BACKEND_ROUTES.current_account.id(current_account_id)}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ updateCurrentAccount }),
   });
 

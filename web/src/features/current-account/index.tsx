@@ -124,7 +124,7 @@ const CurrentAccountContent = () => {
   return (
     <PageWrapper>
       <HeaderSection title={'Cuenta Corriente'}>
-        {role !== USER_TYPE.ADMIN &&<IsRoleCashier role={role}>
+        <IsRoleCashier role={role}>
           <Box className={'grid grid-cols-2 gap-4'}>
             <Button onClick={handlePrintDiaryLiquidation} disabled={printing}>
               Exportar Diario
@@ -135,11 +135,13 @@ const CurrentAccountContent = () => {
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
             </Button>
-            <Button variant={'outline'} onClick={handleGenerateLiquidation}>
-              Generar Liquidación
-            </Button>
+            {role !== USER_TYPE.ADMIN && (
+              <Button variant={'outline'} onClick={handleGenerateLiquidation}>
+                Generar Liquidación
+              </Button>
+            )}
           </Box>
-        </IsRoleCashier>}
+        </IsRoleCashier>
       </HeaderSection>
       <SettlementPayrollTable />
       <Suspense>

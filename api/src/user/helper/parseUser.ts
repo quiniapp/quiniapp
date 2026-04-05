@@ -1,6 +1,19 @@
-import { IUserEntityBack, IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
+import {
+  IUserEntityBack,
+  IUserEntityFront,
+  IUserWithSessionFront,
+  ILastSessionInfo,
+  USER_TYPE,
+} from '@helper/types/user.type';
 
-export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
+// Extended type to handle users with sessions from Supabase joins
+type UserWithPossibleSessions = IUserEntityBack & {
+  sessions?: Array<{ last_activity_at: string | Date }>; // Supabase returns sessions as array
+};
+
+export const parseUser = (
+  user: UserWithPossibleSessions
+): IUserEntityFront | IUserWithSessionFront => {
   const base = {
     user_id: user.user_id,
     number: user.number,
@@ -11,23 +24,39 @@ export const parseUser = (user: IUserEntityBack): IUserEntityFront => {
     email: user.email,
     username: user.username,
     disabled: user.disabled,
+    group_id: user.group_id,
+    // Phase 5 fields (safe to send to frontend)
+    failed_login_attempts: user.failed_login_attempts,
+    locked_until: user.locked_until,
+    last_login_at: user.last_login_at,
+    last_login_ip: user.last_login_ip,
+    // NOTE: password_hash, password_changed_at, password_reset_required are intentionally omitted for security
   };
 
+  // Parse last session if exists (Supabase returns array, we take the first one which is already ordered)
+  const last_session: ILastSessionInfo | undefined = user.sessions?.[0]
+    ? { last_activity_at: user.sessions[0].last_activity_at }
+    : undefined;
+
   if (user.user_type === USER_TYPE.CASHIER) {
-    return {
+    const cashierUser = {
       ...base,
-      group_id: user.group_id,
       user_type: USER_TYPE.CASHIER,
       cashier_type: user.cashier_type,
       fee: user.fee,
       fee_plus: user.fee_plus,
     };
+
+    // Add last session if exists
+    return last_session ? { ...cashierUser, last_session } : cashierUser;
   }
 
-  // Para OWNER o ADMIN
-  return {
+  // Para OWNER, CAPITALIST, SUPERADMIN o ADMIN
+  const adminUser = {
     ...base,
     user_type: user.user_type,
-    group_id: user.group_id,
   };
+
+  // Add last session if exists
+  return last_session ? { ...adminUser, last_session } : adminUser;
 };

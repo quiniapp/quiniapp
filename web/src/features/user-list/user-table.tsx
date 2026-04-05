@@ -1,4 +1,4 @@
-import { EditIcon, TrashIcon, KeyRound } from 'lucide-react';
+import { EditIcon, TrashIcon, KeyRound, LockOpen } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import SkeletonList from '@/components/skeletons/skeleton-list.tsx';
 import { useDeleteUsers } from '@/hooks/mutations/users/useDeleteUser';
 import { useResetPassword } from '@/hooks/mutations/users/useResetPassword';
+import { useUnlockUser } from '@/hooks/mutations/users/useUnlockUser';
 import { toast } from 'react-hot-toast';
 import React, { Suspense, useState } from 'react';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
@@ -21,15 +22,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserListContext } from './UserListContext';
 
 const UsersTable = () => {
-  const {role} = useAuth()
+  const {role} = useAuth();
+  const canDelete = role !== USER_TYPE.ADMIN;
   const { filterUserType } = useUserListContext();
   const [open, setOpen] = useState<boolean>(false);
   const [update, setUpdate] = useState<boolean>(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState<boolean>(false);
+  const [unlockUserOpen, setUnlockUserOpen] = useState<boolean>(false);
   const { data, isLoading, error } = useUsers(role, filterUserType);
   const [user, setUser] = useState<IUserEntityFront | undefined>(undefined);
   const { mutate: deleteUser, isPending } = useDeleteUsers();
   const { mutateAsync: resetPassword, isPending: isResettingPassword } = useResetPassword();
+  const { mutateAsync: unlockUser, isPending: isUnlockingUser } = useUnlockUser();
   const handleDeleteUser = (id: string) => {
     deleteUser(id, {
       onSuccess: () => {
@@ -44,6 +48,10 @@ const UsersTable = () => {
 
   const handleResetPassword = async (userId: string, newPassword: string) => {
     await resetPassword({ userId, newPassword });
+  };
+
+  const handleUnlockUser = async (userId: string) => {
+    await unlockUser({ userId });
   };
 
   if (isLoading) return <SkeletonList />;
@@ -61,16 +69,16 @@ const UsersTable = () => {
               <TableHead className="text-white bg-dark-light">Comision</TableHead>
               <TableHead className="text-white bg-dark-light">Deje</TableHead>
               <TableHead className="text-white bg-dark-light">Conexion</TableHead>
-              <TableHead className="text-white bg-dark-light">Cuenta</TableHead>
+              <TableHead className="text-white bg-dark-light">Estado</TableHead>
               <TableHead className="text-white bg-dark-light">Editar</TableHead>
               <TableHead className="text-white bg-dark-light">Contraseña</TableHead>
-              <TableHead className="text-white bg-dark-light">Eliminar</TableHead>
+              {canDelete && <TableHead className="text-white bg-dark-light">Eliminar</TableHead>}
             </TableRow>
           </thead>
         <TableBody>
           {data && data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                 No hay usuarios disponibles
               </TableCell>
             </TableRow>
@@ -79,11 +87,38 @@ const UsersTable = () => {
             <TableRow key={user.number} className="hover:bg-dark-lighter/50">
               <TableCell>{user.number}</TableCell>
               <TableCell>{user.name}</TableCell>
-              <TableCell>{user.group_id}</TableCell>
+              <TableCell>{`${userTypeDictionary[user.user_type] ?? ''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee : '-'}</TableCell>
               <TableCell>{user.user_type === USER_TYPE.CASHIER ? user.fee_plus : '-'}</TableCell>
-              <TableCell>{user.address}</TableCell>
-              <TableCell>{`${userTypeDictionary[user.user_type] ?? ''}${user.user_type === USER_TYPE.CASHIER ? ` - ${cashierTypeDictionary[user.cashier_type]}` : ''}`}</TableCell>
+              <TableCell>
+                {user.last_login_at
+                  ? new Date(user.last_login_at).toLocaleString('es-AR', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'Nunca'}
+              </TableCell>
+              <TableCell>
+                {user.locked_until && new Date(user.locked_until) > new Date() ? (
+                  <Button
+                    variant="ghost"
+                    className="hover:text-green-500"
+                    size={'icon'}
+                    onClick={() => {
+                      setUser(user);
+                      setUnlockUserOpen(true);
+                    }}
+                    title="Desbloquear cuenta"
+                  >
+                    <LockOpen />
+                  </Button>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Activo</span>
+                )}
+              </TableCell>
               <TableCell>
                 <Button
                   variant="ghost"
@@ -110,19 +145,21 @@ const UsersTable = () => {
                   <KeyRound />
                 </Button>
               </TableCell>
-              <TableCell className={'flex justify-center items-center'}>
-                <Button
-                  variant="ghost"
-                  className="hover:text-destructive"
-                  size={'icon'}
-                  onClick={() => {
-                    setUser(user);
-                    setOpen(true);
-                  }}
-                >
-                  <TrashIcon />
-                </Button>
-              </TableCell>
+              {canDelete && (
+                <TableCell className={'flex justify-center items-center'}>
+                  <Button
+                    variant="ghost"
+                    className="hover:text-destructive"
+                    size={'icon'}
+                    onClick={() => {
+                      setUser(user);
+                      setOpen(true);
+                    }}
+                  >
+                    <TrashIcon />
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           )))}
         </TableBody>
@@ -149,6 +186,15 @@ const UsersTable = () => {
           isPending={isResettingPassword}
         />
       </Suspense>
+      <Suspense fallback={<div>Cargando...</div>}>
+        <UnlockUserModal
+          isOpen={unlockUserOpen}
+          onClose={() => setUnlockUserOpen(false)}
+          user={user}
+          onConfirm={handleUnlockUser}
+          isPending={isUnlockingUser}
+        />
+      </Suspense>
     </div>
   );
 };
@@ -159,3 +205,4 @@ const DeleteUsersModal = React.lazy(
 );
 const UpdateUserModal = React.lazy(() => import('../../../src/components/modals/UpdateUserModal'));
 const ResetPasswordModal = React.lazy(() => import('../../../src/components/modals/ResetPasswordModal'));
+const UnlockUserModal = React.lazy(() => import('../../../src/components/modals/UnlockUserModal'));

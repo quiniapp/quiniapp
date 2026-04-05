@@ -4,6 +4,7 @@ import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { CurrentAccountController } from '../controller/current-account.controller';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { USER_TYPE } from '@helper/types/user.type';
+import { UserRepository } from '../../user/repository/user.repository';
 // import { updateCurrentAccountSchema } from '@helper/schemas/current_account.schema';
 
 // Helper opcional para parsear booleanos
@@ -12,9 +13,25 @@ const toBool = (v: unknown) => {
   const s = v.trim().toLowerCase();
   return s === 'true' || s === '1' || s === 'yes';
 };
+
+interface INetworkSummary {
+  organization_id: string;
+  organization_name: string;
+  total_pass: number;
+  total_successes: number;
+  total_claims: number;
+  total_collections: number;
+  total_paid: number;
+  total_balance: number;
+  total_leave: number;
+  total_drag: number;
+  cashier_count: number;
+}
+
 export class CurrentAccountRouter {
   public router: Router;
   private controller: CurrentAccountController;
+  private userRepository = new UserRepository();
   constructor() {
     this.router = Router();
     this.controller = new CurrentAccountController();
@@ -22,10 +39,13 @@ export class CurrentAccountRouter {
   }
 
   private setupRoutes() {
+    this.router.get('/network/summary', this.getNetworkSummaryHandler);
     this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
     this.router.post('/calculate', this.calculateCurrentAccountHandler);
+    this.router.post('/calculate/network', this.calculateNetworkCurrentAccountHandler);
     this.router.post('/liquidate', this.liquidateCurrentAccountHandler);
+    this.router.post('/liquidate/network', this.liquidateNetworkCurrentAccountHandler);
     this.router.post('/', this.calculateCurrentAccountHandler); // Mantener por compatibilidad
     this.router.put('/bulk', this.bulkUpdateCurrentAccountHandler);
     this.router.put('/:id', this.updateCurrentAccountHandler);
@@ -33,7 +53,7 @@ export class CurrentAccountRouter {
 
   private getAllCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date } = req.query;
+    const { date, include_network, group_id } = req.query;
     if (!user?.user) {
       const response: APIResponse<null> = {
         error: {
@@ -46,11 +66,33 @@ export class CurrentAccountRouter {
     }
 
     try {
-      const currentAccount = await this.controller.getAllCurrentAccountHandler({
+      let group_user_ids: string[] | undefined;
+
+      // ADMIN with group (group_id !== organization_id): auto-scope to their group
+      if (
+        user.user.user_type === USER_TYPE.ADMIN &&
+        user.user.group_id &&
+        user.user.group_id !== req.organization_id
+      ) {
+        group_user_ids = await this.userRepository.getUserIdsByGroupId(
+          user.user.group_id,
+          req.organization_id!
+        );
+      } else if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
+        // Non-admin roles: use group_id from query params
+        group_user_ids = await this.userRepository.getUserIdsByGroupId(
+          group_id,
+          req.organization_id!
+        );
+      }
+
+      const currentAccount = await this.controller.getAllCurrentAccountNetworkHandler({
         user_type: user.user.user_type,
         user_id: user.user.user_id,
         date: date as string,
         organization_id: req.organization_id!,
+        include_network: toBool(include_network),
+        group_user_ids,
       });
 
       const response: APIResponse<ICurrentAccountEntityFront[]> = {
@@ -98,12 +140,12 @@ export class CurrentAccountRouter {
       return;
     }
 
-    // Validar que el usuario no sea CASHIER ni ADMIN
-    if (user.user.user_type === USER_TYPE.CASHIER || user.user.user_type === USER_TYPE.ADMIN) {
+    // CASHIER cannot calculate
+    if (user.user.user_type === USER_TYPE.CASHIER) {
       const response: APIResponse<null> = {
         error: {
           error: ERROR_TYPE.AUTH_ERROR,
-          message: 'Access denied: CASHIER and ADMIN users cannot perform this action',
+          message: 'Access denied: CASHIER users cannot perform this action',
         },
       };
       res.status(403).json(response);
@@ -449,6 +491,177 @@ export class CurrentAccountRouter {
       };
       res.status(statusCode).json(response);
       return;
+    }
+  };
+
+  // Network handlers for CAPITALIST users
+
+  private calculateNetworkCurrentAccountHandler: RequestHandler = async (
+    req: Request,
+    res: Response
+  ) => {
+    const { user } = req;
+    const { date } = req.query;
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Only CAPITALIST and OWNER can calculate network
+    if (user.user.user_type !== USER_TYPE.CAPITALIST && user.user.user_type !== USER_TYPE.OWNER) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: Only CAPITALIST and OWNER can calculate network accounts',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const currentaccount = await this.controller.calculateCurrentAccountNetworkHandler(
+        req.organization_id!,
+        date as string,
+        false,
+        false
+      );
+      const response: APIResponse<ICurrentAccountEntityFront> = {
+        data: {
+          currentaccount: currentaccount,
+        },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(500).json(response);
+        return;
+      }
+    }
+  };
+
+  private liquidateNetworkCurrentAccountHandler: RequestHandler = async (
+    req: Request,
+    res: Response
+  ) => {
+    const { user } = req;
+    const { date, leave } = req.query;
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Only CAPITALIST and OWNER can liquidate network
+    if (user.user.user_type !== USER_TYPE.CAPITALIST && user.user.user_type !== USER_TYPE.OWNER) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: Only CAPITALIST and OWNER can liquidate network accounts',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const currentaccount = await this.controller.calculateCurrentAccountNetworkHandler(
+        req.organization_id!,
+        date as string,
+        typeof leave === 'string' && leave === 'true',
+        true
+      );
+      const response: APIResponse<ICurrentAccountEntityFront> = {
+        data: {
+          currentaccount: currentaccount,
+        },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(500).json(response);
+        return;
+      }
+    }
+  };
+
+  private getNetworkSummaryHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    const { date } = req.query;
+
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Only CAPITALIST and OWNER can view network summary
+    if (user.user.user_type !== USER_TYPE.CAPITALIST && user.user.user_type !== USER_TYPE.OWNER) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: 'Access denied: Only CAPITALIST and OWNER can view network summary',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const summary = await this.controller.getNetworkSummaryHandler(
+        req.organization_id!,
+        date as string
+      );
+      const response: APIResponse<INetworkSummary[]> = {
+        data: {
+          summary,
+        },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        const response: APIResponse<null> = {
+          error: {
+            error: ERROR_TYPE.AUTH_ERROR,
+            message: error.message,
+          },
+        };
+        res.status(500).json(response);
+        return;
+      }
     }
   };
 }

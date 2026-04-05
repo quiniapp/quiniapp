@@ -3,6 +3,7 @@ import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IOrganizationEntityFront } from '@helper/types/organization.type.ts';
 import { INewOrganizationEntity } from '@helper/request/organization.request.ts';
 import { INewUserEntity } from '@helper/request/user.request.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 interface CreateOrganizationWithSuperAdminPayload {
   organization: INewOrganizationEntity;
@@ -10,12 +11,11 @@ interface CreateOrganizationWithSuperAdminPayload {
 }
 
 const createOrganization = async (payload: CreateOrganizationWithSuperAdminPayload): Promise<IOrganizationEntityFront> => {
-  const response = await fetch(BACKEND_ROUTES.organization.base, {
+  const response = await fetchWithAuth(BACKEND_ROUTES.organization.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify(payload),
   });
 

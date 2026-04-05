@@ -1,18 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IUpdateResultsEntity } from '@helper/request/results.request.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 
 const performUpdateResults = async (
   id: string,
   updateResults: IUpdateResultsEntity
 ): Promise<void> => {
-  const res = await fetch(BACKEND_ROUTES.results.id(id), {
+  const res = await fetchWithAuth(BACKEND_ROUTES.results.id(id), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({ updateResults }),
   });
 

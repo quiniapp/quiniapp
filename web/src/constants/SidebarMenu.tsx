@@ -11,6 +11,10 @@ import {
 
 import { MENU_ITEM } from '@/types/menu-item.tsx';
 import { ROUTES } from '@/types/routes.type';
+import { USER_TYPE } from '@helper/types/user.type';
+
+const ALL_EXCEPT_CASHIER = [USER_TYPE.OWNER, USER_TYPE.CAPITALIST, USER_TYPE.SUPERADMIN, USER_TYPE.ADMIN];
+const OWNER_ONLY = [USER_TYPE.OWNER];
 
 export const MENU_ITEMS: MENU_ITEM[] = [
   {
@@ -46,12 +50,12 @@ export const MENU_ITEMS: MENU_ITEM[] = [
     route: ROUTES.RESULTS,
     icon: <FileTextIcon size={20} />,
   },
-  // Admin ve Qunielas
   {
     id: 'LoteriesAndSchedules',
     name: 'Qunielas y Turnos',
     route: ROUTES.UPCOMING_LOTTERIES,
     icon: <UserIcon size={20} />,
+    roles: ALL_EXCEPT_CASHIER,
     children: [
       {
         id: 'UpcomingLotteries',
@@ -79,6 +83,7 @@ export const MENU_ITEMS: MENU_ITEM[] = [
     name: 'Usuarios',
     route: ROUTES.USERS,
     icon: <UserIcon size={20} />,
+    roles: ALL_EXCEPT_CASHIER,
     children: [
       {
         id: 'UsersLIst',
@@ -99,25 +104,28 @@ export const MENU_ITEMS: MENU_ITEM[] = [
     name: 'Cuenta Corriente',
     route: ROUTES.CURRENT_ACCOUNT,
     icon: <FileTextIcon size={20} />,
+    roles: ALL_EXCEPT_CASHIER,
   },
   {
     id: 'Organizations',
     name: 'Organizaciones',
     route: ROUTES.ORGANIZATIONS,
     icon: <Building2 size={20} />,
+    roles: OWNER_ONLY,
   },
-
   {
     id: 'Reports',
     name: 'Reportes',
     route: ROUTES.REPORTS,
     icon: <FileTextIcon size={20} />,
+    roles: OWNER_ONLY,
   },
   {
     id: 'Settings',
     name: 'Configuración',
     route: ROUTES.SETTINGS,
     icon: <SettingsIcon size={20} />,
+    roles: OWNER_ONLY,
   },
 ];
 

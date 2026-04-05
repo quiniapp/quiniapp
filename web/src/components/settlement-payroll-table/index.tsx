@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Box from '@/components/box';
 import FilterSection from '@/components/filter-section';
 import CurrentAccountTable from '@/features/current-account/current-account-table';
@@ -8,26 +8,22 @@ import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
 const SettlementPayrollTable = () => {
-  const [group, setGroup] = useState<string>('Todos');
   const [searchParams] = useSearchParams();
-  const { data, isLoading, isPending, isError, isSuccess } = useGetCurrentAccount(
-    searchParams.get('date')
-  );
+  const date = searchParams.get('date');
+  const group_id = searchParams.get('group_id');
+  const user_id = searchParams.get('user_id');
+  const { data: rawData, isLoading, isPending, isError } = useGetCurrentAccount(date, group_id);
+  const data = user_id ? rawData?.filter((acc) => acc.user_id === user_id) : rawData;
 
   useEffect(() => {
     if (isError) {
       toast.error('Error al obtener los datos');
-    } else if (isSuccess) {
-      toast.success('Datos obtenidos correctamente');
     }
-  }, [isLoading, isPending]);
+  }, [isError]);
 
   return (
     <Box className="overflow-auto bg-[var(--primary-bg-content)] py-[24px] text-white">
-      <FilterSection
-        group={group}
-        onGroupChange={setGroup}
-      />
+      <FilterSection />
       <>
         Fecha de la Liquidación : {data?.[0]?.date && dayjs(data?.[0]?.date).format('DD/MM/YYYY')}
       </>

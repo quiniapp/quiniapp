@@ -9,14 +9,23 @@ import {
   VISIBILITY_MIN_GAP_MS,
 } from '@helper/config/session.config';
 import { apiClient, ApiError } from '@/lib/apiClient';
+import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
 
 // Auto-refresh access token every 13-14 minutes (random to avoid thundering herd)
 const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
+
+// Extended user type with organization_id from validate endpoint
+interface UserWithOrg extends IUserEntityFront {
+  organization_id: string;
+  group_id: string;
+}
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<IUserEntityFront | null>(null);
   const [role, setRole] = useState<USER_TYPE | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -24,14 +33,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const refreshIntervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
 
-  const setSession = useCallback((u: IUserEntityFront | null) => {
+  const setSession = useCallback((u: UserWithOrg | null) => {
     if (u) {
       setUser(u);
       setRole(u.user_type);
+      setOrganizationId(u.organization_id);
+      setGroupId(u.group_id ?? null);
       setIsAuth(true);
     } else {
       setUser(null);
       setRole(null);
+      setOrganizationId(null);
+      setGroupId(null);
       setIsAuth(false);
     }
   }, []);
@@ -42,16 +55,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     lastValidateRef.current = now;
 
     try {
-      const user = await apiClient.get<IUserEntityFront>(BACKEND_ROUTES.auth.validate);
+      const user = await apiClient.get<UserWithOrg>(BACKEND_ROUTES.auth.validate);
       if (!user) throw new Error('Respuesta inválida del servidor');
       setSession(user);
     } catch (err) {
-      // Si es un error 401, simplemente limpiar la sesión
       if (err instanceof ApiError && err.statusCode === 401) {
         setSession(null);
-      } else {
-        setSession(null);
       }
+      // Otros errores (red, 5xx): no desconectar, el intervalo siguiente reintentará
     } finally {
       setLoading(false);
     }
@@ -67,9 +78,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         );
         if (!user) throw new Error('Respuesta inválida del servidor');
 
-        // seteo inmediato para actualizar UI
-        setSession(user);
-        // una sola validación posterior para asegurar cookies/estado del server
+        // validate establece la sesión con todos los datos (incluyendo organization_id)
         await validate();
       } catch (err) {
         // Re-lanzar el error con el mensaje del servidor para que el componente lo capture
@@ -91,7 +100,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const endpoint = logoutAll
           ? BACKEND_ROUTES.auth.logoutAll
           : BACKEND_ROUTES.auth.logout;
-        await apiClient.post(endpoint);
+        await apiClient.post(endpoint, undefined, { _skipRefreshRetry: true });
       } catch {
         // no-op - even if logout fails on server, clear local session
       } finally {
@@ -115,6 +124,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, [logout]);
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
+
+  // Escuchar evento auth:expired disparado por apiClient cuando el refresh falla.
+  // En este caso el token ya no existe — no llamamos al server logout, solo limpiamos estado local.
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      queryClient.clear();
+      setSession(null);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, [queryClient, setSession]);
 
   // Primer validate al montar
   useEffect(() => {
@@ -188,12 +208,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       loading,
       user,
       role,
+      organizationId,
+      groupId,
       login,
       logout,
       validate,
       hasRole,
     }),
-    [isAuth, loading, user, role, login, logout, validate, hasRole]
+    [isAuth, loading, user, role, organizationId, groupId, login, logout, validate, hasRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

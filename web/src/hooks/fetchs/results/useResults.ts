@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IGetResultsEntity } from '@helper/request/results.request.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const fetchResults = async ({ lottery_id, schedule_id, date }: IGetResultsEntity) => {
   const url = `${BACKEND_ROUTES.results.base}?date=${date}&schedule_id=${schedule_id}&lottery_id=${lottery_id}`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching results');
@@ -22,7 +22,7 @@ export const useResults = (params: IGetResultsEntity) => {
   return useQuery({
     queryKey: ['results', lottery_id, schedule_id, date],
     queryFn: () => fetchResults(params),
-    
-    enabled: Boolean(lottery_id && schedule_id && date), // ⛔ evita que se ejecute con datos incompletos
+    enabled: Boolean(lottery_id && schedule_id && date),
+    staleTime: 30 * 60 * 1000, // 30 min — results change at most once per day; mutations invalidate on create/update/delete
   });
 };

@@ -20,14 +20,23 @@ export class OrganizationRouter {
   private setupRoutes() {
     this.router.get('/', this.getAllHandler);
     this.router.get('/:id', this.getByIdHandler);
+    this.router.get('/:id/children', this.getChildrenHandler); // Get sub-organizations
     this.router.post('/', this.createHandler);
+    this.router.post('/:id/sub', this.createSubOrganizationHandler); // Create sub-organization
     this.router.put('/:id', this.updateHandler);
     this.router.delete('/:id', this.deleteHandler);
   }
 
-  // Solo OWNER puede crear organizaciones
+  /**
+   * POST /api/private/organization
+   * Create a new organization with a CAPITALIST user
+   * Only OWNER can create organizations
+   * NOTE: New organizations do NOT inherit configuration
+   */
   private createHandler: RequestHandler = async (req: Request, res: Response) => {
-    const { organization, superAdmin } = req.body;
+    const { organization, capitalist, superAdmin } = req.body;
+    // Accept both "capitalist" and "superAdmin" for backwards compatibility
+    const capitalistData = capitalist || superAdmin;
     const user = req.user;
 
     // Validar que se reciban los datos de la organización
@@ -39,12 +48,12 @@ export class OrganizationRouter {
       return;
     }
 
-    // Validar que se reciban los datos del super admin
-    if (!superAdmin) {
+    // Validar que se reciban los datos del capitalista
+    if (!capitalistData) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.BAD_REQUEST,
-          message: 'Los datos del Super Admin son requeridos',
+          message: 'Los datos del Capitalista son requeridos',
         },
       };
       res.status(400).json(response);
@@ -61,11 +70,125 @@ export class OrganizationRouter {
     }
 
     try {
-      const createdOrganization = await this.controller.create(organization, superAdmin);
+      const createdOrganization = await this.controller.create(organization, capitalistData);
       const response: APIResponse<IOrganizationEntityFront> = {
         data: { organization: createdOrganization },
       };
       res.status(201).json(response);
+    } catch (error) {
+      console.error(error);
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * POST /api/private/organization/:id/sub
+   * Create a sub-organization (group) under a parent organization
+   * Only OWNER and CAPITALIST can create sub-organizations
+   * NOTE: Sub-organizations INHERIT configuration from parent
+   */
+  private createSubOrganizationHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: parentOrgId } = req.params;
+    const { organization, superAdmin } = req.body;
+    const user = req.user;
+
+    // Validar que se reciban los datos de la organización
+    if (!organization || !organization.name || typeof organization.name !== 'string') {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.NAME_IS_REQUIRED, message: ERROR_MESSAGE.NAME_IS_REQUIRED },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Solo OWNER y CAPITALIST pueden crear sub-organizaciones
+    if (![USER_TYPE.OWNER, USER_TYPE.CAPITALIST].includes(user?.user.user_type as USER_TYPE)) {
+      const response: APIResponse<undefined> = {
+        error: {
+          error: ERROR_TYPE.FORBIDDEN,
+          message: 'Solo OWNER y CAPITALIST pueden crear grupos',
+        },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      const createdOrg = await this.controller.createSubOrganization(
+        parentOrgId,
+        organization,
+        superAdmin // Optional - can be undefined
+      );
+      const response: APIResponse<IOrganizationEntityFront> = {
+        data: { organization: createdOrg },
+      };
+      res.status(201).json(response);
+    } catch (error) {
+      console.error(error);
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * GET /api/private/organization/:id/children
+   * Get direct sub-organizations of an organization
+   * OWNER can see all, CAPITALIST can see their org's children
+   */
+  private getChildrenHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { id: parentOrgId } = req.params;
+    const user = req.user;
+
+    const allowedRoles = [
+      USER_TYPE.OWNER,
+      USER_TYPE.CAPITALIST,
+      USER_TYPE.SUPERADMIN,
+      USER_TYPE.ADMIN,
+    ];
+    if (!allowedRoles.includes(user?.user.user_type as USER_TYPE)) {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    // Non-OWNER users can only see children of their own organization
+    if (user?.user.user_type !== USER_TYPE.OWNER && parentOrgId !== req.organization_id) {
+      const response: APIResponse<undefined> = {
+        error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
+      };
+      res.status(403).json(response);
+      return;
+    }
+
+    try {
+      let children = await this.controller.getChildren(parentOrgId);
+
+      // ADMIN with group: only show their own group
+      if (
+        user?.user.user_type === USER_TYPE.ADMIN &&
+        user.user.group_id &&
+        user.user.group_id !== req.organization_id
+      ) {
+        children = children.filter((child) => child.organization_id === user.user.group_id);
+      }
+
+      const response: APIResponse<IOrganizationEntityFront[]> = {
+        data: { organizations: children },
+      };
+      res.status(200).json(response);
     } catch (error) {
       console.error(error);
       const response: APIResponse<null> = {
@@ -152,18 +275,39 @@ export class OrganizationRouter {
     }
   };
 
-  // Solo OWNER puede actualizar organizaciones
+  // OWNER puede actualizar cualquier org; CAPITALIST/SUPERADMIN solo grupos de su org
   private updateHandler: RequestHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name } = req.body;
     const user = req.user;
+    const userType = user?.user.user_type;
 
-    if (user?.user.user_type !== USER_TYPE.OWNER) {
+    const canManage =
+      userType === USER_TYPE.OWNER ||
+      userType === USER_TYPE.CAPITALIST ||
+      userType === USER_TYPE.SUPERADMIN;
+
+    if (!canManage) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
       res.status(403).json(response);
       return;
+    }
+
+    // Non-OWNER can only update sub-orgs (groups) of their own org
+    if (userType !== USER_TYPE.OWNER) {
+      const org = await this.controller.get(id).catch(() => null);
+      if (!org || org.parent_organization_id !== req.organization_id) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.FORBIDDEN,
+            message: 'Solo puedes editar grupos de tu organización',
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
     }
 
     // No se puede actualizar la organización por defecto
@@ -196,11 +340,18 @@ export class OrganizationRouter {
     }
   };
 
-  // Solo OWNER puede eliminar organizaciones
+  // OWNER puede eliminar cualquier org; CAPITALIST/SUPERADMIN solo grupos de su org
   private deleteHandler: RequestHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = req.user;
-    if (user?.user.user_type !== USER_TYPE.OWNER) {
+    const userType = user?.user.user_type;
+
+    const canManage =
+      userType === USER_TYPE.OWNER ||
+      userType === USER_TYPE.CAPITALIST ||
+      userType === USER_TYPE.SUPERADMIN;
+
+    if (!canManage) {
       const response: APIResponse<undefined> = {
         error: { error: ERROR_TYPE.FORBIDDEN, message: ERROR_MESSAGE.FORBIDDEN },
       };
@@ -218,6 +369,21 @@ export class OrganizationRouter {
       };
       res.status(403).json(response);
       return;
+    }
+
+    // Non-OWNER can only delete sub-orgs (groups) of their own org
+    if (userType !== USER_TYPE.OWNER) {
+      const org = await this.controller.get(id).catch(() => null);
+      if (!org || org.parent_organization_id !== req.organization_id) {
+        const response: APIResponse<undefined> = {
+          error: {
+            error: ERROR_TYPE.FORBIDDEN,
+            message: 'Solo puedes eliminar grupos de tu organización',
+          },
+        };
+        res.status(403).json(response);
+        return;
+      }
     }
 
     try {

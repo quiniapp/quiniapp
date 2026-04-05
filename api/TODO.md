@@ -1,5 +1,132 @@
 # TODO - API Backend
 
+## Testing Pendiente
+
+### Testing End-to-End del Sistema de Archive 🔄 **PRIORITARIO**
+
+**Objetivo:** Validar que el sistema de archive query routing funciona correctamente en todos los flujos.
+
+#### Contexto
+Se implementó un sistema de archive automático que divide datos entre tablas principales (`bets`, `tickets`) y tablas de archivo (`bets_archive`, `tickets_archive`) basándose en días activos. El sistema usa cache en memoria para routing de queries y se sincroniza con el cron job de archivado.
+
+#### Tareas de Testing
+
+##### 1. Preparación del Ambiente de Testing
+- [ ] Verificar que `ARCHIVE_DAYS_TO_KEEP=2` en variables de entorno
+- [ ] Verificar que el servidor inicia correctamente y muestra logs del cache:
+  ```
+  [ArchiveHelper] Cache initialized with N active days: [...]
+  ```
+- [ ] Verificar que el cron job está configurado (check logs de inicio)
+
+##### 2. Crear Datos de Prueba
+- [ ] Crear tickets y bets para fechas antiguas (>2 días activos atrás)
+  - Ejemplo: Si hoy es 10/02, crear datos para 05/02, 04/02, 03/02
+- [ ] Insertar directamente en la BD usando SQL o scripts de migración
+- [ ] Marcar esas fechas en `activity_days` con `has_activity = true`
+
+##### 3. Ejecutar Archivado Manual
+- [ ] Ejecutar cron de archivado manualmente (endpoint o método `runArchiveJobManual()`)
+- [ ] Verificar logs del proceso de archivado:
+  - Cutoff date calculado correctamente
+  - Cantidad de registros archivados
+  - Cache actualizado después del archivado
+- [ ] Verificar que datos antiguos están en tablas `_archive`
+- [ ] Verificar que datos recientes permanecen en tablas principales
+
+##### 4. Testing de Queries del Frontend
+
+**Pages a probar:**
+- [ ] `@web/src/features/plays-and-hits/` - Consultas de apuestas por día
+  - Probar consulta de día reciente (debe ir a tabla main)
+  - Probar consulta de día archivado (debe ir a tabla archive)
+  - Verificar que los totales se calculan correctamente
+  - Verificar que los filtros (lottery, schedule, cashier) funcionan en ambas tablas
+
+- [ ] `@web/src/features/terminal-ticket/` - Consultas de tickets
+  - Probar consulta de ticket reciente por número
+  - Probar consulta de ticket archivado por número
+  - Verificar que `getTicketByNumber` busca en ambas tablas (main → archive)
+  - Verificar que los detalles del ticket se cargan correctamente
+
+- [ ] `@web/src/features/current-account/` - Cuenta corriente
+  - Probar cálculo de cuenta corriente con fechas archivadas
+  - Verificar que los RPCs de totales funcionan con archive
+
+##### 5. Testing de Casos Edge
+
+- [ ] **Buscar ticket sin fecha (por número)**
+  - Debe buscar primero en main (rápido)
+  - Debe buscar en archive si no encuentra (fallback)
+  - Verificar orden correcto de búsqueda (main → archive)
+
+- [ ] **Intentar pagar ticket archivado**
+  - Debe retornar error específico: "TICKET_ARCHIVED"
+  - No debe permitir el pago
+  - Mensaje de error claro para el usuario
+
+- [ ] **Días inactivos intermedios**
+  - Crear datos: Lunes (activo), Domingo (inactivo), Sábado (activo)
+  - Verificar que tabla main contiene todos 3 días
+  - Verificar que próximo cron limpia correctamente
+
+- [ ] **Consulta de fecha futura**
+  - Debe ir a tabla main (no está en cache pero no es < cutoff)
+  - No debe generar errores
+
+##### 6. Verificación de Performance
+
+- [ ] Medir tamaño de tabla `bets` antes y después de archivar
+- [ ] Medir tamaño de tabla `tickets` antes y después de archivar
+- [ ] Verificar que tabla `bets_archive` crece correctamente
+- [ ] Verificar que tabla `tickets_archive` crece correctamente
+- [ ] Confirmar que queries a tabla main son más rápidos
+
+##### 7. Testing del Cache
+
+- [ ] Verificar que cache se inicializa al arrancar servidor
+- [ ] Verificar que cache se actualiza después de cron
+- [ ] Probar reinicio del servidor (cache debe recargarse)
+- [ ] Verificar logs de cache refresh:
+  ```
+  [ArchiveHelper] Cache refreshed with N active days: [...]
+  ```
+
+##### 8. Rollback y Recuperación
+
+- [ ] Probar qué pasa si el cron falla
+- [ ] Verificar que el cache mantiene valores anteriores en caso de error
+- [ ] Probar recuperación después de un error de archivado
+
+#### Comandos Útiles
+
+```sql
+-- Ver estado de activity_days
+SELECT * FROM activity_days ORDER BY date DESC LIMIT 10;
+
+-- Contar registros en main vs archive
+SELECT COUNT(*) FROM bets;
+SELECT COUNT(*) FROM bets_archive;
+SELECT COUNT(*) FROM tickets;
+SELECT COUNT(*) FROM tickets_archive;
+
+-- Ver últimos días activos
+SELECT * FROM get_last_active_days(2);
+
+-- Verificar cutoff date
+SELECT * FROM activity_days WHERE has_activity = true ORDER BY date DESC OFFSET 1 LIMIT 1;
+```
+
+#### Resultado Esperado
+
+✅ Todos los endpoints funcionan correctamente con datos archivados
+✅ Performance mejorada en tabla main
+✅ Cache se mantiene sincronizado
+✅ Errores específicos para operaciones no permitidas en archive
+✅ Cero cambios necesarios en el frontend
+
+---
+
 ## Features Nuevas
 
 ### Endpoint Específico para Reorder 🔄

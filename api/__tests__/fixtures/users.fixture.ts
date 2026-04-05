@@ -1,0 +1,137 @@
+import { v4 as uuidv4 } from 'uuid';
+
+export const TEST_ORG_ID = uuidv4();
+
+export const TEST_OWNER = {
+  user_id: uuidv4(),
+  organization_id: TEST_ORG_ID,
+  user_type: 'OWNER' as const,
+  cashier_type: null,
+  name: 'Test Owner',
+  username: 'owner_test',
+  password: 'TestPassword123!',
+  number: null,
+  fee: null,
+  fee_plus: null,
+  disabled: false,
+};
+
+// 8 Cashiers: 4 con fee_plus=10, 4 con fee_plus=0
+// Cada cashier testea un rango de hits usando diferentes combinaciones de schedules/lotteries
+export const TEST_CASHIERS = [
+  // === Cashiers con fee_plus=10 ===
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier A - 0 Hits (fee_plus=10)',
+    username: 'cashier_a',
+    password: 'TestCashier123!',
+    number: 1,
+    fee: 20,
+    fee_plus: 10,
+    disabled: false,
+    scenario: 'HITS_0' as const, // Perdedoras
+  },
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier B - 1-5 Hits (fee_plus=10)',
+    username: 'cashier_b',
+    password: 'TestCashier123!',
+    number: 2,
+    fee: 20,
+    fee_plus: 10,
+    disabled: false,
+    scenario: 'HITS_1_TO_5' as const, // 1, 2, 3, 4, 5 hits (distribuido entre schedules)
+  },
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier C - 6-10 Hits (fee_plus=10)',
+    username: 'cashier_c',
+    password: 'TestCashier123!',
+    number: 3,
+    fee: 20,
+    fee_plus: 10,
+    disabled: false,
+    scenario: 'HITS_6_TO_10' as const, // 6, 7, 8, 9, 10 hits
+  },
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier D - 11-20 Hits (fee_plus=10)',
+    username: 'cashier_d',
+    password: 'TestCashier123!',
+    number: 4,
+    fee: 20,
+    fee_plus: 10,
+    disabled: false,
+    scenario: 'HITS_11_TO_20' as const, // 11-20 hits
+  },
+
+  // === Cashiers con fee_plus=0 ===
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier E - 0 Hits (fee_plus=0)',
+    username: 'cashier_e',
+    password: 'TestCashier123!',
+    number: 5,
+    fee: 20,
+    fee_plus: 0,
+    disabled: false,
+    scenario: 'HITS_0' as const,
+  },
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier F - 1-5 Hits (fee_plus=0)',
+    username: 'cashier_f',
+    password: 'TestCashier123!',
+    number: 6,
+    fee: 20,
+    fee_plus: 0,
+    disabled: false,
+    scenario: 'HITS_1_TO_5' as const,
+  },
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier G - 6-10 Hits (fee_plus=0)',
+    username: 'cashier_g',
+    password: 'TestCashier123!',
+    number: 7,
+    fee: 20,
+    fee_plus: 0,
+    disabled: false,
+    scenario: 'HITS_6_TO_10' as const,
+  },
+  {
+    user_id: uuidv4(),
+    organization_id: TEST_ORG_ID,
+    user_type: 'CASHIER' as const,
+    cashier_type: 'PC' as const,
+    name: 'Cashier H - 11-20 Hits (fee_plus=0)',
+    username: 'cashier_h',
+    password: 'TestCashier123!',
+    number: 8,
+    fee: 20,
+    fee_plus: 0,
+    disabled: false,
+    scenario: 'HITS_11_TO_20' as const,
+  },
+];

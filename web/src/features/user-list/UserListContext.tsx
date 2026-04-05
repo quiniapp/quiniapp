@@ -9,7 +9,7 @@ interface UserListContextType {
 const UserListContext = createContext<UserListContextType | undefined>(undefined);
 
 export const UserListProvider = ({ children }: { children: ReactNode }) => {
-  const [filterUserType, setFilterUserType] = useState<USER_TYPE | undefined>(USER_TYPE.CASHIER);
+  const [filterUserType, setFilterUserType] = useState<USER_TYPE | undefined>(undefined);
 
   return (
     <UserListContext.Provider value={{ filterUserType, setFilterUserType }}>
