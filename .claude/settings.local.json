@@ -7,7 +7,10 @@
       "Write",
       "WebSearch",
       "Skill(superpowers:*)",
-      "mcp__github__pull_request_read"
+      "mcp__github__pull_request_read",
+      "mcp__filesystem__directory_tree",
+      "Skill(code-review:code-review)",
+      "WebFetch(domain:api.github.com)"
     ],
     "deny": [
       "Bash(git push:*)"
