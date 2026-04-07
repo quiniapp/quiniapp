@@ -78,13 +78,11 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
     totalItems: bets.length,
   });
 
-  // Actualizar totales cuando cambian los datos
+  // Actualizar totales cuando cambian los datos (grouped o individual)
   useEffect(() => {
-    if (grouped === 'false' || !grouped) {
-      const agg = data?.pages?.[0]?.aggregates;
-      onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
-    }
-  }, [data, grouped, onTotalsUpdate]);
+    const agg = data?.pages?.[0]?.aggregates;
+    onTotalsUpdate?.(toFinite(agg?.totalAmount, 0), toFinite(agg?.totalPrize, 0));
+  }, [data, onTotalsUpdate]);
 
   if (isLoading) {
     return (

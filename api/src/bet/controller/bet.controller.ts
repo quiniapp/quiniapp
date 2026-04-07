@@ -59,6 +59,30 @@ export class BetController {
         const totalCount = page === 1 ? count : 0;
         const totalPages = page === 1 ? Math.ceil(count / limit) : 0;
         const hasMore = page === 1 ? page < totalPages : parsedBets.length >= limit;
+
+        let aggregates: { totalAmount?: number; totalPrize?: number } = {};
+        if (page === 1) {
+          const [totalAmount, totalPrize] = await Promise.all([
+            this.repository.getTotalAmount({
+              date,
+              schedule_id,
+              cashier_id,
+              lottery_id,
+              organization_ids,
+              group_user_ids,
+            }),
+            this.repository.getTotalPrize({
+              date,
+              schedule_id,
+              cashier_id,
+              lottery_id,
+              organization_ids,
+              group_user_ids,
+            }),
+          ]);
+          aggregates = { totalAmount, totalPrize };
+        }
+
         return {
           data: parsedBets,
           pagination: {
@@ -68,6 +92,7 @@ export class BetController {
             totalPages,
             hasMore,
           },
+          aggregates,
         };
       } else {
         // Con paginación
