@@ -41,9 +41,13 @@ const PlaysAndHitsTable: React.FC<Props> = ({ onTotalsUpdate }) => {
   const min_amount_param = searchParams.get('min_amount');
   const min_amount = min_amount_param ? Math.max(0, parseFloat(min_amount_param) || 0) : undefined;
 
+  // Fallback a hoy para que la query nunca quede disabled durante la transición
+  // cuando el sidebar navega a /plays-and-hits sin params y el header aún no re-seteó el date
+  const effectiveDate = date || new Date().toISOString().split('T')[0];
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteBets({
     schedule_id,
-    date,
+    date: effectiveDate,
     cashier_id,
     lottery_id,
     grouped,
