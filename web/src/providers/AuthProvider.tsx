@@ -27,6 +27,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
+  const [optimisticAuth] = useState(() => sessionStorage.getItem('auth_hint') === '1');
   const [loading, setLoading] = useState(true);
 
   const validateIntervalRef = useRef<number | null>(null);
@@ -40,12 +41,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setOrganizationId(u.organization_id);
       setGroupId(u.group_id ?? null);
       setIsAuth(true);
+      sessionStorage.setItem('auth_hint', '1');
     } else {
       setUser(null);
       setRole(null);
       setOrganizationId(null);
       setGroupId(null);
       setIsAuth(false);
+      sessionStorage.removeItem('auth_hint');
     }
   }, []);
 
@@ -205,6 +208,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const value: AuthContextValue = useMemo(
     () => ({
       isAuth,
+      optimisticAuth,
       loading,
       user,
       role,
@@ -215,7 +219,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       validate,
       hasRole,
     }),
-    [isAuth, loading, user, role, organizationId, groupId, login, logout, validate, hasRole]
+    [isAuth, optimisticAuth, loading, user, role, organizationId, groupId, login, logout, validate, hasRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
