@@ -14,9 +14,8 @@ const ResultsOverview = () => {
     handleCreateBet,
     handleResetBets,
     handleDeleteSelectedBets,
+    isEnabledCreateBet,
     isEnabledCreateBetByAdmin,
-    isPendingCreate,
-    isPendingEdit,
     setOpenDeleteModal,
   } = usePlayDetails();
 
@@ -90,7 +89,7 @@ const ResultsOverview = () => {
         <IconButton
           label="Cerrar Ticket"
           onClick={() => handleCreateBet()}
-          disabled={!isEnabled || isPendingCreate || isPendingEdit}
+          disabled={!isEnabled || !isEnabledCreateBet}
           className="flex-1 sm:flex-none  lg:min-w-[80px]"
         />
         <IconButton

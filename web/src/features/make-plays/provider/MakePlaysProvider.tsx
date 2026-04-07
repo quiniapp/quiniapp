@@ -31,7 +31,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
+  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(true);
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
   const [openClosedSchedulesModal, setOpenClosedSchedulesModal] = useState<boolean>(false);
   const [closedSchedules, setClosedSchedules] = useState<IScheduleEntityFront[]>([]);
@@ -199,11 +199,28 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             cashier_number: user?.number,
           };
 
-          try {
-            if (user?.user_type === USER_TYPE.CASHIER) {
+          // 1. Limpiar estado inmediatamente — el botón queda deshabilitado
+          //    por totalAmount=0 independientemente de lo que pase con el PDF.
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+          setBets([]);
+          setPartialAmount(0);
+          setTotalAmount(0);
+          setCashier(undefined);
+          setLotteries(new Map());
+          setSchedules(new Map());
+          setUserNumber(undefined);
+          setSelectedIndexes([]);
+          setTicketId(undefined);
+          isSubmittingRef.current = false;
+          setIsEnabledCreateBet(true);
+          toast.success('Ticket creado correctamente');
+
+          // 2. Generar e imprimir/compartir PDF (puede tardar; si falla no afecta el estado)
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const pdfToast = toast.loading('Generando comprobante...');
+            try {
               const { blob, fileName } = await makeTicketPdf(lastTicket);
               const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
               try {
                 if (isMobile) {
                   await sharePdfBlob(blob, fileName, {
@@ -215,25 +232,11 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
               } catch {
                 printPdfBlob(blob);
               }
+            } catch {
+              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
+            } finally {
+              toast.dismiss(pdfToast);
             }
-
-            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-            setBets([]);
-            setPartialAmount(0);
-            setTotalAmount(0);
-            setCashier(undefined);
-            setLotteries(new Map());
-            setSchedules(new Map());
-            setUserNumber(undefined);
-            setSelectedIndexes([]);
-            setTicketId(undefined);
-            toast.success('Ticket creado correctamente');
-          } finally {
-            // Release the mutex only after all async PDF/share work is done.
-            // onSettled fires synchronously alongside onSuccess in TanStack Query v5
-            // (it does NOT await the async callback), so we must reset here instead.
-            isSubmittingRef.current = false;
-            setIsEnabledCreateBet(true);
           }
         },
         onError: (err) => {
@@ -348,11 +351,25 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             cashier_number: user?.number,
           };
 
-          try {
-            if (user?.user_type === USER_TYPE.CASHIER) {
+          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+          setBets([]);
+          setPartialAmount(0);
+          setTotalAmount(0);
+          setCashier(undefined);
+          setLotteries(new Map());
+          setSchedules(new Map());
+          setUserNumber(undefined);
+          setSelectedIndexes([]);
+          setTicketId(undefined);
+          isSubmittingRef.current = false;
+          setIsEnabledCreateBet(true);
+          toast.success('Ticket creado correctamente');
+
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const pdfToast = toast.loading('Generando comprobante...');
+            try {
               const { blob, fileName } = await makeTicketPdf(lastTicket);
               const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
               try {
                 if (isMobile) {
                   await sharePdfBlob(blob, fileName, {
@@ -364,22 +381,11 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
               } catch {
                 printPdfBlob(blob);
               }
+            } catch {
+              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
+            } finally {
+              toast.dismiss(pdfToast);
             }
-
-            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-            setBets([]);
-            setPartialAmount(0);
-            setTotalAmount(0);
-            setCashier(undefined);
-            setLotteries(new Map());
-            setSchedules(new Map());
-            setUserNumber(undefined);
-            setSelectedIndexes([]);
-            setTicketId(undefined);
-            toast.success('Ticket creado correctamente');
-          } finally {
-            isSubmittingRef.current = false;
-            setIsEnabledCreateBet(true);
           }
         },
         onError: (err) => {
