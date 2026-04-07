@@ -131,6 +131,10 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const betsRef = useRef(bets);
   useEffect(() => { betsRef.current = bets; }, [bets]);
 
+  // Mutex: prevents duplicate ticket creation from rapid double-clicks / Enter key.
+  // useRef updates synchronously unlike useState, so the guard works within the same event.
+  const isSubmittingRef = useRef(false);
+
   // Auto-clean closed-schedule bets every 10s for CASHIERs
   useEffect(() => {
     if (user?.user_type !== USER_TYPE.CASHIER) return;
@@ -163,6 +167,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   );
 
   const handleCreateBet = useCallback(() => {
+    if (isSubmittingRef.current) return;
+
     // Solo validar schedules cerrados para cashiers
     if (user?.user_type === USER_TYPE.CASHIER) {
       const closed = detectClosedSchedules(bets);
@@ -173,6 +179,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       }
     }
 
+    isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -226,6 +233,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           toast.error('Ocurrió un error, intente de nuevo');
         },
         onSettled: () => {
+          isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
       });
@@ -250,6 +258,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
           },
           onSettled: () => {
+            isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
         }
@@ -312,6 +321,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     }
 
     // Proceder con el cierre del ticket
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -332,7 +343,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           };
 
           if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = makeTicketPdf(lastTicket);
+            const { blob, fileName } = await makeTicketPdf(lastTicket);
             const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             try {
@@ -365,6 +376,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           toast.error('Ocurrió un error, intente de nuevo');
         },
         onSettled: () => {
+          isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
       });
@@ -389,6 +401,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
           },
           onSettled: () => {
+            isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
         }
