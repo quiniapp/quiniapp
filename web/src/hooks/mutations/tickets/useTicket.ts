@@ -17,6 +17,8 @@ export const useCreateTicket = () => {
     mutationFn: createTicket,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['bets-infinite'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['tickets-infinite'], exact: false });
     },
   });
 };

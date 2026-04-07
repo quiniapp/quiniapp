@@ -7,16 +7,17 @@ import { useSearchParams } from 'react-router-dom';
 const HeaderPlayAndHits = () => {
   const today = dayjs();
   const [searchParams, setSearchParams] = useSearchParams();
+  const date = searchParams.get('date');
 
-  // Inicializar fecha solo si no está ya en la URL — evita render extra con useEffect
+  // Inicializar fecha si no está en la URL — también re-ejecuta al volver a la página sin params
   useLayoutEffect(() => {
-    if (!searchParams.get('date')) {
+    if (!date) {
       const params = new URLSearchParams(searchParams);
       params.set('date', today.format('YYYY-MM-DD'));
       setSearchParams(params, { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [date]);
 
   const handleDayChange = (date?: string) => {
     const params = new URLSearchParams(searchParams);

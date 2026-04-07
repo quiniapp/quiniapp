@@ -24,6 +24,8 @@ export const useEditTicket = () => {
         exact: false,
         refetchType: 'active',
       });
+      queryClient.invalidateQueries({ queryKey: ['bets-infinite'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['tickets-infinite'], exact: false });
     },
   });
 };
