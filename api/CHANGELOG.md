@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-04-07
+
+#### bet — aggregates no se devolvían en modo agrupado
+- **`bet/controller/bet.controller.ts`**: En el path `grouped=true`, para `page === 1` ahora también llama a `repository.getTotalAmount` y `repository.getTotalPrize` en paralelo e incluye `aggregates: { totalAmount, totalPrize }` en la respuesta. Antes el campo `aggregates` era `undefined`, lo que causaba que el frontend mostrara los totales en blanco al recargar la página en modo agrupado.
+
 ### Fixed - 2026-04-04
 
 #### current-account — grupo sin pasadores mostraba todos

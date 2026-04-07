@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-04-07
+
+#### plays-and-hits — totales vacíos en modo agrupado al recargar
+- **`features/plays-and-hits/plays-and-hits-table.tsx`**: Elimina la guarda `if (grouped === 'false' || !grouped)` del `useEffect` que llama `onTotalsUpdate`. Ahora siempre propaga los agregados (ya que el API también los devuelve en modo agrupado — ver API CHANGELOG).
+
+#### plays-and-hits — no cargaban jugadas al volver desde el aside
+- **`features/plays-and-hits/header-play-and-hits.tsx`**: Cambia el dep array del `useLayoutEffect` de `[]` a `[date]`. Con `[]`, si el componente ya estaba montado y la navegación SPA limpiaba los search params (sin `date`), el efecto no se re-ejecutaba y la fecha nunca se re-inicializaba. Con `[date]`, se re-ejecuta cada vez que `date` desaparece de la URL.
+
+#### make-plays — jugadas y tickets no se actualizaban al crear un ticket
+- **`hooks/mutations/tickets/useTicket.ts`**: `onSuccess` ahora también invalida `['bets-infinite']` y `['tickets-infinite']`, forzando el refresh de plays-and-hits y terminal-ticket al crear un ticket.
+- **`hooks/mutations/tickets/useEditTicket.ts`**: Ídem para edición de tickets.
+
 ### Changed - 2026-04-04
 
 #### filter-section — botón Buscar para filtrar por pasador
