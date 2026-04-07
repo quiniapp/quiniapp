@@ -196,7 +196,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           const lastTicket = {
             bets: [...bets].reverse(),
             ticket: res,
-            cashier_number: user?.number,
+            cashier_number: user?.number ?? undefined,
           };
 
           // 1. Limpiar estado inmediatamente — el botón queda deshabilitado
@@ -348,7 +348,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           const lastTicket = {
             bets: [...cleanedBets].reverse(),
             ticket: res,
-            cashier_number: user?.number,
+            cashier_number: user?.number ?? undefined,
           };
 
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
