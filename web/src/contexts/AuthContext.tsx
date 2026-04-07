@@ -5,6 +5,7 @@ export type LoginPayload = { username?: string; password?: string };
 
 export type AuthContextValue = {
   isAuth: boolean;
+  optimisticAuth: boolean;
   loading: boolean;
   user: IUserEntityFront | null;
   role: USER_TYPE | null;
