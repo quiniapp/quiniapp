@@ -199,40 +199,46 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             cashier_number: user?.number,
           };
 
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = await makeTicketPdf(lastTicket);
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          try {
+            if (user?.user_type === USER_TYPE.CASHIER) {
+              const { blob, fileName } = await makeTicketPdf(lastTicket);
+              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-            try {
-              if (isMobile) {
-                await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.ticket_number}`,
-                });
-              } else {
+              try {
+                if (isMobile) {
+                  await sharePdfBlob(blob, fileName, {
+                    text: `Ticket ${res.ticket_number}`,
+                  });
+                } else {
+                  printPdfBlob(blob);
+                }
+              } catch {
                 printPdfBlob(blob);
               }
-            } catch {
-              printPdfBlob(blob);
             }
-          }
 
-          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-          setBets([]);
-          setPartialAmount(0);
-          setTotalAmount(0);
-          setCashier(undefined);
-          setLotteries(new Map());
-          setSchedules(new Map());
-          setUserNumber(undefined);
-          setSelectedIndexes([]);
-          setTicketId(undefined);
-          toast.success('Ticket creado correctamente');
+            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+            setBets([]);
+            setPartialAmount(0);
+            setTotalAmount(0);
+            setCashier(undefined);
+            setLotteries(new Map());
+            setSchedules(new Map());
+            setUserNumber(undefined);
+            setSelectedIndexes([]);
+            setTicketId(undefined);
+            toast.success('Ticket creado correctamente');
+          } finally {
+            // Release the mutex only after all async PDF/share work is done.
+            // onSettled fires synchronously alongside onSuccess in TanStack Query v5
+            // (it does NOT await the async callback), so we must reset here instead.
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
+          }
         },
         onError: (err) => {
           console.error(err);
           toast.error('Ocurrió un error, intente de nuevo');
-        },
-        onSettled: () => {
           isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
@@ -252,12 +258,12 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-          },
-          onSettled: () => {
             isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
@@ -342,40 +348,43 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             cashier_number: user?.number,
           };
 
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = await makeTicketPdf(lastTicket);
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          try {
+            if (user?.user_type === USER_TYPE.CASHIER) {
+              const { blob, fileName } = await makeTicketPdf(lastTicket);
+              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-            try {
-              if (isMobile) {
-                await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.ticket_number}`,
-                });
-              } else {
+              try {
+                if (isMobile) {
+                  await sharePdfBlob(blob, fileName, {
+                    text: `Ticket ${res.ticket_number}`,
+                  });
+                } else {
+                  printPdfBlob(blob);
+                }
+              } catch {
                 printPdfBlob(blob);
               }
-            } catch {
-              printPdfBlob(blob);
             }
-          }
 
-          localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
-          setBets([]);
-          setPartialAmount(0);
-          setTotalAmount(0);
-          setCashier(undefined);
-          setLotteries(new Map());
-          setSchedules(new Map());
-          setUserNumber(undefined);
-          setSelectedIndexes([]);
-          setTicketId(undefined);
-          toast.success('Ticket creado correctamente');
+            localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
+            setBets([]);
+            setPartialAmount(0);
+            setTotalAmount(0);
+            setCashier(undefined);
+            setLotteries(new Map());
+            setSchedules(new Map());
+            setUserNumber(undefined);
+            setSelectedIndexes([]);
+            setTicketId(undefined);
+            toast.success('Ticket creado correctamente');
+          } finally {
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
+          }
         },
         onError: (err) => {
           console.error(err);
           toast.error('Ocurrió un error, intente de nuevo');
-        },
-        onSettled: () => {
           isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
@@ -395,12 +404,12 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-          },
-          onSettled: () => {
             isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
