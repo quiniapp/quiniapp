@@ -3,11 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
-import {
-  VALIDATE_INTERVAL_MS,
-  VALIDATE_ON_VISIBILITY,
-  VISIBILITY_MIN_GAP_MS,
-} from '@helper/config/session.config';
+import { VALIDATE_ON_VISIBILITY, VISIBILITY_MIN_GAP_MS } from '@helper/config/session.config';
 import { apiClient, ApiError } from '@/lib/apiClient';
 import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
 
@@ -30,7 +26,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [optimisticAuth] = useState(() => sessionStorage.getItem('auth_hint') === '1');
   const [loading, setLoading] = useState(true);
 
-  const validateIntervalRef = useRef<number | null>(null);
   const refreshIntervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
 
@@ -75,25 +70,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     async (payload: LoginPayload) => {
       setLoading(true);
       try {
-        const user = await apiClient.post<IUserEntityFront>(
-          BACKEND_ROUTES.auth.login,
-          payload
-        );
-        if (!user) throw new Error('Respuesta inválida del servidor');
-
-        // validate establece la sesión con todos los datos (incluyendo organization_id)
-        await validate();
+        // Login now returns organization_id directly — no need for a validate() round-trip
+        const userData = await apiClient.post<UserWithOrg>(BACKEND_ROUTES.auth.login, payload);
+        if (!userData) throw new Error('Respuesta inválida del servidor');
+        setSession(userData);
       } catch (err) {
-        // Re-lanzar el error con el mensaje del servidor para que el componente lo capture
-        if (err instanceof ApiError) {
-          throw new Error(err.message);
-        }
+        if (err instanceof ApiError) throw new Error(err.message);
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    [setSession, validate]
+    [setSession]
   );
 
   const logout = useCallback(
@@ -145,21 +133,28 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Validación periódica (cada 4 minutos)
-  // Backend maneja expiración de sesión con sliding window
+  // SSE — recibe session_expired del backend en lugar de hacer polling periódico
   useEffect(() => {
-    if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
+    if (!isAuth) return;
 
-    if (isAuth) {
-      validateIntervalRef.current = window.setInterval(() => {
-        void validate();
-      }, VALIDATE_INTERVAL_MS) as unknown as number;
-    }
+    const es = new EventSource(BACKEND_ROUTES.auth.stream, { withCredentials: true });
 
-    return () => {
-      if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as { type: string };
+        if (data.type === 'session_expired') {
+          queryClient.clear();
+          setSession(null);
+          es.close();
+        }
+      } catch {
+        // ignore malformed messages
+      }
     };
-  }, [isAuth, validate]);
+
+    // EventSource reconecta automáticamente en caso de error de red
+    return () => es.close();
+  }, [isAuth, setSession, queryClient]);
 
   // Auto-refresh de access token (cada 13-14 minutos)
   // Access token expira a los 15 minutos, refrescamos antes

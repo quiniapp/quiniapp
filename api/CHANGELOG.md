@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-04-07
+
+#### Session — cache en memoria + SSE para eliminar DB ops por request
+
+- **`session/cache/session.cache.ts`** (nuevo): Singleton `SessionCache`. Evita el DB read de sesión en cada request autenticado. Cache miss → DB read → popula el cache. Incluye `getSessionIdsByUserId` para limpiar todas las sesiones de un usuario en logout-all.
+- **`session/cache/session-activity.cache.ts`** (nuevo): Singleton `SessionActivityCache`. Bufferiza las actualizaciones de `last_activity_at` y `expires_at` en memoria. El monitor job las flushea a DB cada 30 minutos en un único batch query.
+- **`session/sse/session-sse.manager.ts`** (nuevo): Singleton `SessionSSEManager`. Mantiene las conexiones SSE abiertas. Pushea `session_expired` cuando una sesión es revocada o expira, eliminando el polling periódico del frontend.
+- **`session/job/session-monitor.job.ts`** (nuevo): Job en background que corre cada 30 min. Flushea el `ActivityCache` → re-lee sesiones desde DB → expira sesiones inválidas via SSE → pingea conexiones para detectar las muertas. Exporta `flushActivityCache()` para el SIGTERM handler.
+- **`supabase/migrations/20260407120000_batch_update_session_activity.sql`** (nuevo): Función `batch_update_session_activity` — actualiza N sesiones en un único `UPDATE ... FROM UNNEST(...)`. Reemplaza N queries individuales por 1.
+
+#### Session — endpoints y comportamiento
+
+- **`auth/route/auth.route.ts`**: Agrega `GET /api/private/auth/stream` — endpoint SSE pasivo que no extiende el sliding window.
+- **`auth/route/auth.route.ts`**: `POST /api/login` ahora incluye `organization_id` en la respuesta, eliminando el round-trip a `/validate` post-login.
+- **`middlewares/auth.middleware.ts`**: Reescrito para usar `SessionCache` y `ActivityCache`. Cache hit → 0 DB reads de sesión. Solo endpoints reales (no `/validate`, no `/stream`) actualizan el sliding window. Cache miss → 1 DB read para poblar el cache.
+- **`auth/controller/auth.controller.ts`**: `logoutSession` ahora limpia ambos caches y pushea el evento SSE inmediatamente, sin esperar al monitor job.
+- **`session/repository/session.repository.ts`**: Agrega `getBatchByIds` y `batchUpdateActivity` (usa RPC).
+- **`index.ts`**: Arranca `startSessionMonitorJob()` al iniciar el servidor. Agrega handler `SIGTERM` que flushea el `ActivityCache` antes de cerrar.
+
 ### Fixed - 2026-04-07
 
 #### bet — aggregates no se devolvían en modo agrupado

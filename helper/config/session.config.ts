@@ -17,10 +17,10 @@
 export const SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 4 horas
 
 /**
- * Intervalo de validación periódica con el servidor (4 minutos)
+ * Intervalo de validación periódica con el servidor (5 minutos)
  * Se verifica que la sesión siga siendo válida cada este tiempo
  */
-export const VALIDATE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutos
+export const VALIDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
 /**
  * Tiempo mínimo entre validaciones al volver a la pestaña (10 minutos)
