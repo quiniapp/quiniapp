@@ -1,5 +1,5 @@
 import path from 'path';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
@@ -88,9 +88,14 @@ export default defineConfig({
               return 'pdf-vendor';
             }
 
+            // Calendar component dependencies (lazy-loaded via SelectDayToSearch)
+            if (id.includes('react-day-picker') || id.includes('date-fns')) {
+              return 'calendar-vendor';
+            }
+
             // Date libraries (lazy-loaded con ClockProvider)
             // Puede estar separado porque no depende de React directamente
-            if (id.includes('dayjs') || id.includes('date-fns')) {
+            if (id.includes('dayjs')) {
               return 'date-vendor';
             }
 

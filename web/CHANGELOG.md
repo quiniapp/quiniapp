@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-07
+
+#### Performance — optimizaciones de performance móvil (LCP/INP)
+
+**Objetivo:** reducir LCP móvil de 5.28s a ~2.0–2.5s e INP de 424ms a ~150–200ms
+
+- **`vite.config.ts`**: Cambia `@vitejs/plugin-react` → `@vitejs/plugin-react-swc` (SWC ya estaba instalado). Output JS más eficiente.
+- **`vite.config.ts`**: Mueve `react-day-picker` y `date-fns` al nuevo chunk `calendar-vendor` (57KB / 16KB gzip). Antes estaban en `vendor` y `date-vendor` respectivamente y se descargaban en cada carga inicial. Ahora solo cargan cuando el usuario abre un date picker.
+- **`vite.config.ts`**: `date-vendor` ahora contiene solo `dayjs` (16KB / 6.5KB gzip, antes 43KB con date-fns).
+- **`index.html`**: Agrega estilos críticos inline (`background-color: #151933`) para evitar flash blanco antes de que cargue el CSS.
+- **`providers/AuthProvider.tsx`**: Agrega `optimisticAuth` (lee `sessionStorage`) y escribe/borra la clave `auth_hint` al setear sesión. Permite saber si el usuario estaba autenticado sin esperar la respuesta del servidor.
+- **`contexts/AuthContext.tsx`**: Agrega `optimisticAuth: boolean` al tipo `AuthContextValue`.
+- **`protected/protected-routes.tsx`**: Reemplaza `<div>Cargando…</div>` con `<LayoutSkeleton />` cuando `loading && optimisticAuth`, o `null` en primera visita. Elimina el bloqueo de pantalla en blanco durante la validación de auth (~300–600ms en móvil).
+- **`components/layout/index.tsx`**: Elimina el `useEffect` redundante que llamaba `validate()` en cada mount del Layout. AuthProvider ya maneja validación periódica y por visibilidad de pestaña.
+- **`components/button/SelectDayToSearch.tsx`**: Lazy-load del componente `Calendar` con `React.lazy()` + `<Suspense fallback={null}>` dentro del Popover.
+- **`features/plays-and-hits/select-day-to-search.tsx`**: Ídem.
+- **`package.json`**: Elimina `react-datepicker` (dependencia instalada pero sin ningún import en el código).
+
+**Nuevo archivo:**
+- **`components/skeletons/LayoutSkeleton.tsx`**: Esqueleto estático del app shell (sidebar + header + filas de contenido). Se muestra durante la validación de auth en usuarios que ya tenían sesión activa.
+
 ### Fixed - 2026-04-07
 
 #### plays-and-hits — totales vacíos en modo agrupado al recargar

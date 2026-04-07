@@ -31,7 +31,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
+  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(true);
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
   const [openClosedSchedulesModal, setOpenClosedSchedulesModal] = useState<boolean>(false);
   const [closedSchedules, setClosedSchedules] = useState<IScheduleEntityFront[]>([]);
@@ -131,6 +131,10 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const betsRef = useRef(bets);
   useEffect(() => { betsRef.current = bets; }, [bets]);
 
+  // Mutex: prevents duplicate ticket creation from rapid double-clicks / Enter key.
+  // useRef updates synchronously unlike useState, so the guard works within the same event.
+  const isSubmittingRef = useRef(false);
+
   // Auto-clean closed-schedule bets every 10s for CASHIERs
   useEffect(() => {
     if (user?.user_type !== USER_TYPE.CASHIER) return;
@@ -163,6 +167,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   );
 
   const handleCreateBet = useCallback(() => {
+    if (isSubmittingRef.current) return;
+
     // Solo validar schedules cerrados para cashiers
     if (user?.user_type === USER_TYPE.CASHIER) {
       const closed = detectClosedSchedules(bets);
@@ -173,6 +179,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       }
     }
 
+    isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -192,23 +199,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             cashier_number: user?.number,
           };
 
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = await makeTicketPdf(lastTicket);
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-            try {
-              if (isMobile) {
-                await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.ticket_number}`,
-                });
-              } else {
-                printPdfBlob(blob);
-              }
-            } catch {
-              printPdfBlob(blob);
-            }
-          }
-
+          // 1. Limpiar estado inmediatamente — el botón queda deshabilitado
+          //    por totalAmount=0 independientemente de lo que pase con el PDF.
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
           setPartialAmount(0);
@@ -219,13 +211,38 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setUserNumber(undefined);
           setSelectedIndexes([]);
           setTicketId(undefined);
+          isSubmittingRef.current = false;
+          setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
+
+          // 2. Generar e imprimir/compartir PDF (puede tardar; si falla no afecta el estado)
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const pdfToast = toast.loading('Generando comprobante...');
+            try {
+              const { blob, fileName } = await makeTicketPdf(lastTicket);
+              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              try {
+                if (isMobile) {
+                  await sharePdfBlob(blob, fileName, {
+                    text: `Ticket ${res.ticket_number}`,
+                  });
+                } else {
+                  printPdfBlob(blob);
+                }
+              } catch {
+                printPdfBlob(blob);
+              }
+            } catch {
+              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
+            } finally {
+              toast.dismiss(pdfToast);
+            }
+          }
         },
         onError: (err) => {
           console.error(err);
           toast.error('Ocurrió un error, intente de nuevo');
-        },
-        onSettled: () => {
+          isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
       });
@@ -244,12 +261,13 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-          },
-          onSettled: () => {
+            isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
         }
@@ -312,6 +330,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     }
 
     // Proceder con el cierre del ticket
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -331,23 +351,6 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             cashier_number: user?.number,
           };
 
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = makeTicketPdf(lastTicket);
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-            try {
-              if (isMobile) {
-                await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.ticket_number}`,
-                });
-              } else {
-                printPdfBlob(blob);
-              }
-            } catch {
-              printPdfBlob(blob);
-            }
-          }
-
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
           setPartialAmount(0);
@@ -358,13 +361,37 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setUserNumber(undefined);
           setSelectedIndexes([]);
           setTicketId(undefined);
+          isSubmittingRef.current = false;
+          setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
+
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const pdfToast = toast.loading('Generando comprobante...');
+            try {
+              const { blob, fileName } = await makeTicketPdf(lastTicket);
+              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              try {
+                if (isMobile) {
+                  await sharePdfBlob(blob, fileName, {
+                    text: `Ticket ${res.ticket_number}`,
+                  });
+                } else {
+                  printPdfBlob(blob);
+                }
+              } catch {
+                printPdfBlob(blob);
+              }
+            } catch {
+              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
+            } finally {
+              toast.dismiss(pdfToast);
+            }
+          }
         },
         onError: (err) => {
           console.error(err);
           toast.error('Ocurrió un error, intente de nuevo');
-        },
-        onSettled: () => {
+          isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
       });
@@ -383,12 +410,13 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-          },
-          onSettled: () => {
+            isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
         }
