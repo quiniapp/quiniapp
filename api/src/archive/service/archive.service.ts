@@ -130,7 +130,7 @@ export class ArchiveService {
 
   /**
    * Manual implementation of archiving bets (fallback)
-   * This is database-agnostic and can be used if stored procedures fail
+   * Processes in batches to avoid statement timeouts on large tables.
    */
   private async archiveOldBetsManual(daysToKeep: number): Promise<IArchiveResult> {
     const cutoffDate = await this.activityDaysRepo.getCutoffDate(daysToKeep);
@@ -146,69 +146,71 @@ export class ArchiveService {
       };
     }
 
-    // cutoffDate is already a string after the null check
-    const cutoffDateStr = cutoffDate;
+    const BATCH_SIZE = 5000;
+    const archivedAt = new Date().toISOString();
+    let totalCount = 0;
 
-    // Get old bets (INCLUDING deleted ones)
-    const { data: oldBets, error: selectError } = await supabase
-      .from('bets')
-      .select('*')
-      .lt('date', cutoffDateStr);
-    // Note: Gets ALL bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
+    // Process in batches: always fetch from the top since we delete as we go
+    while (true) {
+      const { data: batch, error: selectError } = await supabase
+        .from('bets')
+        .select('*')
+        .lt('date', cutoffDate)
+        .limit(BATCH_SIZE);
 
-    if (selectError) {
-      const errorMsg =
-        typeof selectError.message === 'string' ? selectError.message : JSON.stringify(selectError);
-      throw new Error(`Failed to select old bets: ${errorMsg}`);
-    }
+      if (selectError) {
+        const errorMsg =
+          typeof selectError.message === 'string'
+            ? selectError.message
+            : JSON.stringify(selectError);
+        throw new Error(`Failed to select old bets: ${errorMsg}`);
+      }
 
-    if (!oldBets || oldBets.length === 0) {
-      return {
-        success: true,
-        message: 'No bets to archive',
-        cutoff_date: cutoffDateStr,
-        archived_count: 0,
-        deleted_count: 0,
-        days_kept: daysToKeep,
-      };
-    }
+      if (!batch || batch.length === 0) break;
 
-    // Insert into archive
-    const betsToArchive = oldBets.map((bet) => ({
-      ...bet,
-      archived_at: new Date().toISOString(),
-    }));
+      const ids = batch.map((b) => b.bet_id);
 
-    const { error: insertError } = await supabase.from('bets_archive').insert(betsToArchive);
+      const { error: insertError } = await supabase.from('bets_archive').upsert(
+        batch.map((bet) => ({ ...bet, archived_at: archivedAt })),
+        { onConflict: 'bet_id', ignoreDuplicates: true }
+      );
 
-    if (insertError) {
-      const errorMsg =
-        typeof insertError.message === 'string' ? insertError.message : JSON.stringify(insertError);
-      throw new Error(`Failed to insert bets into archive: ${errorMsg}`);
-    }
+      if (insertError) {
+        const errorMsg =
+          typeof insertError.message === 'string'
+            ? insertError.message
+            : JSON.stringify(insertError);
+        throw new Error(`Failed to insert bets into archive: ${errorMsg}`);
+      }
 
-    // Delete from main table (INCLUDING deleted ones)
-    const { error: deleteError } = await supabase.from('bets').delete().lt('date', cutoffDateStr);
-    // Note: Deletes ALL archived bets (deleted_at IS NULL AND deleted_at IS NOT NULL)
+      const { error: deleteError } = await supabase.from('bets').delete().in('bet_id', ids);
 
-    if (deleteError) {
-      const errorMsg =
-        typeof deleteError.message === 'string' ? deleteError.message : JSON.stringify(deleteError);
-      throw new Error(`Failed to delete archived bets: ${errorMsg}`);
+      if (deleteError) {
+        const errorMsg =
+          typeof deleteError.message === 'string'
+            ? deleteError.message
+            : JSON.stringify(deleteError);
+        throw new Error(`Failed to delete archived bets: ${errorMsg}`);
+      }
+
+      totalCount += batch.length;
+
+      if (batch.length < BATCH_SIZE) break;
     }
 
     return {
       success: true,
-      message: 'Bets archived successfully',
-      cutoff_date: cutoffDateStr,
-      archived_count: oldBets.length,
-      deleted_count: oldBets.length,
+      message: totalCount === 0 ? 'No bets to archive' : 'Bets archived successfully',
+      cutoff_date: cutoffDate,
+      archived_count: totalCount,
+      deleted_count: totalCount,
       days_kept: daysToKeep,
     };
   }
 
   /**
    * Manual implementation of archiving tickets (fallback)
+   * Processes in batches to avoid statement timeouts on large tables.
    */
   private async archiveOldTicketsManual(daysToKeep: number): Promise<IArchiveResult> {
     const cutoffDate = await this.activityDaysRepo.getCutoffDate(daysToKeep);
@@ -224,66 +226,63 @@ export class ArchiveService {
       };
     }
 
-    // cutoffDate is already a string after the null check
-    const cutoffDateStr = cutoffDate;
+    const BATCH_SIZE = 5000;
+    const archivedAt = new Date().toISOString();
+    let totalCount = 0;
 
-    // Get old tickets (INCLUDING deleted ones)
-    const { data: oldTickets, error: selectError } = await supabase
-      .from('tickets')
-      .select('*')
-      .lt('date', cutoffDateStr);
-    // Note: Gets ALL tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
+    while (true) {
+      const { data: batch, error: selectError } = await supabase
+        .from('tickets')
+        .select('*')
+        .lt('date', cutoffDate)
+        .limit(BATCH_SIZE);
 
-    if (selectError) {
-      const errorMsg =
-        typeof selectError.message === 'string' ? selectError.message : JSON.stringify(selectError);
-      throw new Error(`Failed to select old tickets: ${errorMsg}`);
-    }
+      if (selectError) {
+        const errorMsg =
+          typeof selectError.message === 'string'
+            ? selectError.message
+            : JSON.stringify(selectError);
+        throw new Error(`Failed to select old tickets: ${errorMsg}`);
+      }
 
-    if (!oldTickets || oldTickets.length === 0) {
-      return {
-        success: true,
-        message: 'No tickets to archive',
-        cutoff_date: cutoffDateStr,
-        archived_count: 0,
-        deleted_count: 0,
-        days_kept: daysToKeep,
-      };
-    }
+      if (!batch || batch.length === 0) break;
 
-    // Insert into archive
-    const ticketsToArchive = oldTickets.map((ticket) => ({
-      ...ticket,
-      archived_at: new Date().toISOString(),
-    }));
+      const ids = batch.map((t) => t.ticket_id);
 
-    const { error: insertError } = await supabase.from('tickets_archive').insert(ticketsToArchive);
+      const { error: insertError } = await supabase.from('tickets_archive').upsert(
+        batch.map((ticket) => ({ ...ticket, archived_at: archivedAt })),
+        { onConflict: 'ticket_id', ignoreDuplicates: true }
+      );
 
-    if (insertError) {
-      const errorMsg =
-        typeof insertError.message === 'string' ? insertError.message : JSON.stringify(insertError);
-      throw new Error(`Failed to insert tickets into archive: ${errorMsg}`);
-    }
+      if (insertError) {
+        const errorMsg =
+          typeof insertError.message === 'string'
+            ? insertError.message
+            : JSON.stringify(insertError);
+        throw new Error(`Failed to insert tickets into archive: ${errorMsg}`);
+      }
 
-    // Delete from main table (INCLUDING deleted ones)
-    const { error: deleteError } = await supabase
-      .from('tickets')
-      .delete()
-      .lt('date', cutoffDateStr);
-    // Note: Deletes ALL archived tickets (deleted_at IS NULL AND deleted_at IS NOT NULL)
+      const { error: deleteError } = await supabase.from('tickets').delete().in('ticket_id', ids);
 
-    if (deleteError) {
-      const errorMsg =
-        typeof deleteError.message === 'string' ? deleteError.message : JSON.stringify(deleteError);
-      throw new Error(`Failed to delete archived tickets: ${errorMsg}`);
+      if (deleteError) {
+        const errorMsg =
+          typeof deleteError.message === 'string'
+            ? deleteError.message
+            : JSON.stringify(deleteError);
+        throw new Error(`Failed to delete archived tickets: ${errorMsg}`);
+      }
+
+      totalCount += batch.length;
+
+      if (batch.length < BATCH_SIZE) break;
     }
 
     return {
       success: true,
-      message: 'Tickets archived successfully',
-      cutoff_date: cutoffDateStr,
-      archived_count: oldTickets.length,
-      deleted_count: oldTickets.length,
+      message: totalCount === 0 ? 'No tickets to archive' : 'Tickets archived successfully',
+      cutoff_date: cutoffDate,
+      archived_count: totalCount,
+      deleted_count: totalCount,
       days_kept: daysToKeep,
     };
   }

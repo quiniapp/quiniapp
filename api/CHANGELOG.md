@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-04-08
+
+#### Archive — batched processing to fix statement timeout on 1M+ rows
+
+- **`archive/service/archive.service.ts`**: Rewrote `archiveOldBetsManual` and `archiveOldTicketsManual` to process in batches of 5000 rows instead of a single massive SELECT/INSERT/DELETE. Each iteration fetches the next batch from the top of the table (no offset) since rows are deleted as we go. Uses `upsert` with `ignoreDuplicates` to handle safe re-runs after a partial failure.
+  - Why: Production cron job failed with `canceling statement due to statement timeout` trying to delete ~1M bets in one operation.
+- **`supabase/migrations/20260408070911_fix_archive_batch_processing.sql`** (nuevo): Replaces `archive_old_bets` and `archive_old_tickets` stored procedures with batched PL/pgSQL loop using `WITH to_delete AS (...LIMIT 5000) ... DELETE ... WHERE id IN (...)`. `ON CONFLICT DO NOTHING` makes it safe to re-run after partial failure.
+
 ### Added - 2026-04-07
 
 #### Session — cache en memoria + SSE para eliminar DB ops por request
