@@ -6,6 +6,7 @@ import { asyncHandler } from '../../middlewares/error.middleware';
 import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { sseManager } from 'api/src/session/sse/session-sse.manager';
 
 // Cookie configuration based on SESSION_CONFIG
 const COOKIE_OPTIONS = {
@@ -36,8 +37,9 @@ export class AuthRouter {
 
   private setupPrivateRoutes() {
     this.privateRouter.post('/logout', this.logoutHandler);
-    this.privateRouter.post('/logout-all', this.logoutAllHandler); // NEW - Phase 2
+    this.privateRouter.post('/logout-all', this.logoutAllHandler);
     this.privateRouter.get('/validate', this.validateHandler);
+    this.privateRouter.get('/stream', this.sessionStreamHandler);
   }
 
   /**
@@ -75,10 +77,13 @@ export class AuthRouter {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
-    // Respuesta exitosa
-    const response: APIResponse<IUserEntityFront> = {
+    // Incluye organization_id para que el frontend no necesite llamar a /validate post-login
+    const response: APIResponse<IUserEntityFront & { organization_id: string }> = {
       data: {
-        user: loginResponse.user,
+        user: {
+          ...loginResponse.user,
+          organization_id: loginResponse.organization_id,
+        },
       },
     };
 
@@ -165,7 +170,7 @@ export class AuthRouter {
 
   /**
    * GET /api/private/auth/validate
-   * Validate current session
+   * Passive session check — does not extend the session sliding window.
    */
   private validateHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req.user!;
@@ -184,5 +189,24 @@ export class AuthRouter {
     };
 
     res.status(200).json(response);
+  });
+
+  /**
+   * GET /api/private/auth/stream
+   * SSE stream — pushes session_expired event when session is revoked or expires.
+   * Replaces the periodic polling interval on the frontend.
+   * Passive: does not extend the session sliding window.
+   */
+  private sessionStreamHandler = asyncHandler(async (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sessionId = req.user!.session_id;
+    sseManager.add(sessionId, res);
+    res.write('data: {"type":"connected"}\n\n');
+
+    req.on('close', () => sseManager.remove(sessionId));
   });
 }

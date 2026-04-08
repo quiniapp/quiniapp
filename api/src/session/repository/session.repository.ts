@@ -203,6 +203,56 @@ export class SessionRepository {
   }
 
   /**
+   * Get multiple sessions by IDs in a single query
+   */
+  async getBatchByIds(sessionIds: string[]): Promise<ISession[]> {
+    if (sessionIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .in('session_id', sessionIds);
+
+    if (error) {
+      console.error('[SessionRepository] Failed to batch get sessions:', error);
+      throw new InternalServerError('Failed to batch get sessions');
+    }
+
+    return (data || []).map(this.mapToSession);
+  }
+
+  /**
+   * Batch update session activity from in-memory cache flush.
+   * Uses a single Postgres function call regardless of the number of sessions.
+   */
+  async batchUpdateActivity(
+    entries: Map<string, { last_activity_at: Date; expires_at: Date }>
+  ): Promise<void> {
+    if (entries.size === 0) return;
+
+    const sessionIds: string[] = [];
+    const activityTimes: string[] = [];
+    const expiryTimes: string[] = [];
+
+    for (const [sessionId, entry] of entries) {
+      sessionIds.push(sessionId);
+      activityTimes.push(entry.last_activity_at.toISOString());
+      expiryTimes.push(entry.expires_at.toISOString());
+    }
+
+    const { error } = await supabase.rpc('batch_update_session_activity', {
+      p_session_ids: sessionIds,
+      p_activity_times: activityTimes,
+      p_expiry_times: expiryTimes,
+    });
+
+    if (error) {
+      console.error('[SessionRepository] Failed to batch update activity:', error);
+      throw new InternalServerError('Failed to batch update session activity');
+    }
+  }
+
+  /**
    * Cleanup expired sessions (called periodically)
    */
   async cleanupExpiredSessions(): Promise<number> {

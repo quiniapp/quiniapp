@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - 2026-04-07
 
+#### Auth — SSE reemplaza polling periódico de sesión
+
+- **`providers/AuthProvider.tsx`**: Elimina el `setInterval` de validate cada 5 minutos. Reemplazado por una conexión `EventSource` a `/api/private/auth/stream`. El backend pushea `session_expired` cuando la sesión expira o es revocada. `EventSource` reconecta automáticamente en caso de error de red.
+- **`providers/AuthProvider.tsx`**: `login()` ya no llama a `validate()` post-login. Usa directamente la respuesta del endpoint de login que ahora incluye `organization_id`.
+- **`routes/routes.ts`**: Agrega `auth.stream` → `/api/private/auth/stream`.
+- **`helper/config/session.config.ts`**: Elimina el import de `VALIDATE_INTERVAL_MS` (ya no se usa en AuthProvider).
+
+### Changed - 2026-04-07
+
 #### Performance — optimizaciones de performance móvil (LCP/INP)
 
 **Objetivo:** reducir LCP móvil de 5.28s a ~2.0–2.5s e INP de 424ms a ~150–200ms

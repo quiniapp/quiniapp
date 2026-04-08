@@ -9,6 +9,7 @@ export const BACKEND_ROUTES = {
     logout: `${PRIVATE}/auth/logout`,
     logoutAll: `${PRIVATE}/auth/logout-all`,
     validate: `${PRIVATE}/auth/validate`,
+    stream: `${PRIVATE}/auth/stream`,
   },
   user: {
     base: `${PRIVATE}/user`,

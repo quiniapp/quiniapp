@@ -7,6 +7,7 @@ import { isAuthenticated } from '../middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
 import { startSessionCleanupJob } from './utils/session-cleanup.job';
+import { startSessionMonitorJob, flushActivityCache } from './session/job/session-monitor.job';
 import { getCronService } from './cron/service/cron.service';
 import { initializeActiveDaysCache } from './archive/helper/archive-helper';
 import {
@@ -152,6 +153,9 @@ if (process.env.NODE_ENV !== 'test') {
     // Start session cleanup job (runs every hour)
     startSessionCleanupJob();
 
+    // Start session monitor job (flushes activity cache + checks revocations every 30 min)
+    startSessionMonitorJob();
+
     // Initialize active days cache (for query routing)
     await initializeActiveDaysCache();
 
@@ -161,6 +165,12 @@ if (process.env.NODE_ENV !== 'test') {
     console.log('[Archive] Cron job initialized - Daily archiving of old bets/tickets');
   });
 }
+
+// Flush activity cache on graceful shutdown so in-flight activity isn't lost
+process.on('SIGTERM', () => {
+  console.log('[Server] SIGTERM received, flushing activity cache...');
+  flushActivityCache().finally(() => process.exit(0));
+});
 
 // Exportar app para tests
 export default app;

@@ -8,6 +8,9 @@ import { SessionRepository } from 'api/src/session/repository/session.repository
 import { AuditRepository } from 'api/src/session/repository/audit.repository';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from 'api/helper/JWT';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { sessionCache } from 'api/src/session/cache/session.cache';
+import { activityCache } from 'api/src/session/cache/session-activity.cache';
+import { sseManager } from 'api/src/session/sse/session-sse.manager';
 
 export interface ILoginResponse {
   user: IUserEntityFront;
@@ -322,7 +325,8 @@ export class AuthController {
   };
 
   /**
-   * Logout (revoke session) (NEW - Phase 2)
+   * Logout (revoke session)
+   * Cleans in-memory caches and pushes SSE expiry event immediately.
    */
   logoutSession = async (
     sessionId: string,
@@ -331,6 +335,15 @@ export class AuthController {
   ): Promise<boolean> => {
     if (logoutAll) {
       await this.sessionRepository.revokeAllUserSessions(userId, 'user_logout_all');
+
+      // Clean all sessions for this user from both caches and SSE
+      const userSessionIds = sessionCache.getSessionIdsByUserId(userId);
+      for (const id of userSessionIds) {
+        sessionCache.delete(id);
+        activityCache.delete(id);
+        sseManager.expire(id);
+      }
+
       await this.auditRepository.log({
         user_id: userId,
         event_type: 'logout_all',
@@ -338,6 +351,11 @@ export class AuthController {
       });
     } else {
       await this.sessionRepository.revoke(sessionId, 'user_logout');
+
+      sessionCache.delete(sessionId);
+      activityCache.delete(sessionId);
+      sseManager.expire(sessionId);
+
       await this.auditRepository.log({
         user_id: userId,
         session_id: sessionId,

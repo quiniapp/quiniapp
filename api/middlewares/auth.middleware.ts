@@ -7,6 +7,8 @@ import { SessionRepository } from 'api/src/session/repository/session.repository
 import { AuthRepository } from 'api/src/auth/repository/auth.repository';
 import { parseUser } from 'api/src/user/helper/parseUser';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { sessionCache } from 'api/src/session/cache/session.cache';
+import { activityCache } from 'api/src/session/cache/session-activity.cache';
 
 // Extend Express Request interface to include session info
 declare module 'express' {
@@ -23,16 +25,17 @@ declare module 'express' {
 const sessionRepository = new SessionRepository();
 const authRepository = new AuthRepository();
 
+// Endpoints that don't count as user activity (passive checks)
+const PASSIVE_PATHS = ['/auth/validate', '/auth/stream'];
+
 /**
- * Session-based authentication middleware
- * Validates JWT access token and session in database with sliding window
+ * Session-based authentication middleware.
  *
- * Features:
- * - Validates access token JWT
- * - Checks session in database (is_active, expires_at)
- * - Updates last_activity_at (sliding window: 4 hours)
- * - Gets fresh user data from database
- * - Attaches user and organization_id to request
+ * Uses two in-memory caches to eliminate per-request DB writes:
+ * - SessionCache: avoids DB reads on cache hit
+ * - ActivityCache: buffers activity updates, flushed to DB every 30 min by the monitor job
+ *
+ * Passive endpoints (/auth/validate, /auth/stream) do not update activity.
  */
 export const isAuthenticated = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -50,23 +53,40 @@ export const isAuthenticated = asyncHandler(
       throw new UnauthorizedError('Token de acceso inválido');
     }
 
-    // 2. Verify session in database
-    const session = await sessionRepository.getById(decoded.session_id);
+    // 2. Check session cache (cache miss → DB read)
+    let sessionEntry = sessionCache.get(decoded.session_id);
 
-    if (!session || !session.is_active) {
-      throw new UnauthorizedError('Sesión inválida o expirada');
+    if (!sessionEntry) {
+      const session = await sessionRepository.getById(decoded.session_id);
+      if (!session || !session.is_active) {
+        throw new UnauthorizedError('Sesión inválida o expirada');
+      }
+      sessionEntry = {
+        user_id: session.user_id,
+        organization_id: session.organization_id,
+        expires_at: session.expires_at,
+        created_at: session.created_at,
+      };
+      sessionCache.set(decoded.session_id, sessionEntry);
     }
 
-    // 3. Check if session expired
-    if (new Date() > session.expires_at) {
-      await sessionRepository.revoke(session.session_id, 'expired');
+    // 3. Check expiry — activity cache may have a newer expires_at than the DB-sourced cache
+    const activityEntry = activityCache.get(decoded.session_id);
+    const effectiveExpiry = activityEntry ? activityEntry.expires_at : sessionEntry.expires_at;
+
+    if (new Date() > effectiveExpiry) {
+      await sessionRepository.revoke(decoded.session_id, 'expired');
+      sessionCache.delete(decoded.session_id);
+      activityCache.delete(decoded.session_id);
       throw new UnauthorizedError('Sesión expirada');
     }
 
-    // 4. Update session activity (sliding window)
-    // This extends the session expiration by INACTIVITY_TIMEOUT (4 hours)
-    // respecting the ABSOLUTE_TIMEOUT (30 days) limit
-    await sessionRepository.updateActivity(session.session_id, session.created_at);
+    // 4. Update activity for real requests (not passive endpoints)
+    const isPassive = PASSIVE_PATHS.some((p) => req.path.endsWith(p));
+    if (!isPassive) {
+      const newExpiry = activityCache.mark(decoded.session_id, sessionEntry.created_at);
+      sessionCache.updateExpiry(decoded.session_id, newExpiry);
+    }
 
     // 5. Get fresh user data from database
     const userData = await authRepository.getUserById(decoded.user_id);
@@ -74,10 +94,10 @@ export const isAuthenticated = asyncHandler(
     // 6. Attach user to request
     req.user = {
       user: parseUser(userData),
-      session_id: session.session_id,
-      organization_id: session.organization_id,
+      session_id: decoded.session_id,
+      organization_id: sessionEntry.organization_id,
     };
-    req.organization_id = session.organization_id;
+    req.organization_id = sessionEntry.organization_id;
 
     next();
   }
@@ -85,7 +105,6 @@ export const isAuthenticated = asyncHandler(
 
 /**
  * Helper function to get session info from request
- * Useful for controllers that need session details
  */
 export const getSessionInfo = (req: Request) => {
   if (!req.user) {
