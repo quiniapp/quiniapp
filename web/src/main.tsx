@@ -2,11 +2,6 @@ import { createRoot } from 'react-dom/client';
 
 import './styles/index.css';
 import App from './pages/App.tsx';
-import { injectSpeedInsights } from '@vercel/speed-insights';
- import { inject } from "@vercel/analytics"
-
-injectSpeedInsights();
-inject()
 
 // Reload once when a dynamic import fails due to stale chunk hashes after a new deploy.
 window.addEventListener('vite:preloadError', () => {

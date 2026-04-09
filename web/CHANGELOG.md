@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-09
+
+#### Observability — Speed Insights y Analytics migrados a componentes React
+
+- **`src/main.tsx`**: Elimina `injectSpeedInsights()` e `inject()` (imperativo). Estas llamadas estaban fuera del contexto del router, causando que todas las visitas aparecieran como "Unknown" en Vercel Speed Insights.
+- **`src/pages/App.tsx`**: Agrega `<SpeedInsights />` de `@vercel/speed-insights/react` y `<Analytics />` de `@vercel/analytics/react` como siblings de `<RouterProvider>`. Al estar en el árbol de React con acceso al History API, ambos componentes capturan correctamente la ruta activa en cada navegación.
+
 ### Changed - 2026-04-07
 
 #### Auth — SSE reemplaza polling periódico de sesión
