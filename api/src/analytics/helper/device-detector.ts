@@ -19,6 +19,13 @@ export interface ClientInfo {
 
 const UNKNOWN = 'unknown';
 
+// Strip non-printable ASCII and truncate to avoid storing arbitrary user-controlled strings
+const sanitize = (val: string, maxLen = 80): string =>
+  val
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim()
+    .slice(0, maxLen) || UNKNOWN;
+
 const ANDROID_VENDORS: [RegExp, string][] = [
   [/samsung|SM-|SCH-|SGH-|SHV-|SPH-/i, 'Samsung'],
   [/xiaomi|redmi|poco/i, 'Xiaomi'],
@@ -85,7 +92,7 @@ export function parseUA(userAgent?: string | null): ClientInfo {
     const devM = ua.match(/Android [\d.]+;\s*([^)]+)\)/);
     if (devM) {
       const raw = devM[1].split(/\s+Build\//)[0].trim(); // strip "Build/..."
-      device_model = raw;
+      device_model = sanitize(raw);
       for (const [pattern, vendor] of ANDROID_VENDORS) {
         if (pattern.test(raw) || pattern.test(ua)) {
           device_vendor = vendor;

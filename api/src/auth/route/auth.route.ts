@@ -9,6 +9,8 @@ import { SESSION_CONFIG } from 'api/src/config/session.config';
 import { sseManager } from 'api/src/session/sse/session-sse.manager';
 import { deviceStatsCache } from 'api/src/analytics/cache/device-stats.cache';
 
+const ALLOWED_CONNECTION_TYPES = new Set(['4g', '3g', '2g', 'slow-2g', 'safari', 'unknown']);
+
 // Cookie configuration based on SESSION_CONFIG
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -200,7 +202,7 @@ export class AuthRouter {
    */
   private connectionHandler = asyncHandler(async (req: Request, res: Response) => {
     const { connection_type } = req.body;
-    if (connection_type && typeof connection_type === 'string') {
+    if (typeof connection_type === 'string' && ALLOWED_CONNECTION_TYPES.has(connection_type)) {
       deviceStatsCache.increment(`conn:${connection_type}`);
     }
     const response: APIResponse<boolean> = { data: { ok: true } };
