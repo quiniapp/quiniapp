@@ -1,7 +1,7 @@
 export type DeviceType = 'mobile' | 'tablet' | 'desktop' | 'bot' | 'unknown';
 
 export function detectDevice(userAgent?: string | null): DeviceType {
-  if (!userAgent) return 'unknown';
+  if (!userAgent || userAgent.length > 500) return 'unknown';
   if (/bot|crawler|spider|slurp|facebookexternalhit/i.test(userAgent)) return 'bot';
   if (/ipad|tablet|kindle/i.test(userAgent)) return 'tablet';
   if (/mobile|android|iphone|ipod|blackberry|windows phone/i.test(userAgent)) return 'mobile';
@@ -53,6 +53,7 @@ export function parseUA(userAgent?: string | null): ClientInfo {
   };
 
   if (!userAgent) return empty;
+  if (userAgent.length > 500) return empty;
 
   const ua = userAgent;
 
