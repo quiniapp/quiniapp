@@ -7,6 +7,8 @@ import { ThemeProvider } from '../providers/theme-provider';
 import { RoutesContent } from '../routes/route';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { ConditionalProviders } from '@/providers/ConditionalProviders';
+import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 
 const router = createBrowserRouter(RoutesContent);
 export const queryClient = new QueryClient({
@@ -28,6 +30,8 @@ function App() {
           <ConditionalProviders>
             <Toaster position="bottom-center" />
             <RouterProvider router={router} />
+            <SpeedInsights />
+            <Analytics />
           </ConditionalProviders>
         </ThemeProvider>
       </AuthProvider>
