@@ -133,6 +133,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Report connection type once per authenticated session (analytics)
+  useEffect(() => {
+    if (!isAuth) return;
+    const conn = (navigator as any).connection || (navigator as any).mozConnection;
+    const connection_type: string = conn?.effectiveType ?? 'safari';
+    void apiClient.patch(BACKEND_ROUTES.auth.connection, { connection_type });
+  }, [isAuth]);
+
   // SSE — recibe session_expired del backend en lugar de hacer polling periódico
   useEffect(() => {
     if (!isAuth) return;
