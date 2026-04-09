@@ -7,6 +7,7 @@ import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
 import { sseManager } from 'api/src/session/sse/session-sse.manager';
+import { deviceStatsCache } from 'api/src/analytics/cache/device-stats.cache';
 
 // Cookie configuration based on SESSION_CONFIG
 const COOKIE_OPTIONS = {
@@ -40,6 +41,7 @@ export class AuthRouter {
     this.privateRouter.post('/logout-all', this.logoutAllHandler);
     this.privateRouter.get('/validate', this.validateHandler);
     this.privateRouter.get('/stream', this.sessionStreamHandler);
+    this.privateRouter.patch('/connection', this.connectionHandler);
   }
 
   /**
@@ -188,6 +190,20 @@ export class AuthRouter {
       },
     };
 
+    res.status(200).json(response);
+  });
+
+  /**
+   * PATCH /api/private/auth/connection
+   * Called once by the frontend after login to report connection type.
+   * Increments the in-memory analytics cache (flushed to DB every 6h).
+   */
+  private connectionHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { connection_type } = req.body;
+    if (connection_type && typeof connection_type === 'string') {
+      deviceStatsCache.increment(`conn:${connection_type}`);
+    }
+    const response: APIResponse<boolean> = { data: { ok: true } };
     res.status(200).json(response);
   });
 

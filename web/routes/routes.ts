@@ -10,6 +10,7 @@ export const BACKEND_ROUTES = {
     logoutAll: `${PRIVATE}/auth/logout-all`,
     validate: `${PRIVATE}/auth/validate`,
     stream: `${PRIVATE}/auth/stream`,
+    connection: `${PRIVATE}/auth/connection`,
   },
   user: {
     base: `${PRIVATE}/user`,

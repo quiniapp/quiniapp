@@ -11,6 +11,9 @@ import { SESSION_CONFIG } from 'api/src/config/session.config';
 import { sessionCache } from 'api/src/session/cache/session.cache';
 import { activityCache } from 'api/src/session/cache/session-activity.cache';
 import { sseManager } from 'api/src/session/sse/session-sse.manager';
+import { deviceStatsCache } from 'api/src/analytics/cache/device-stats.cache';
+import { clientStatsCache } from 'api/src/analytics/cache/client-stats.cache';
+import { detectDevice, parseUA } from 'api/src/analytics/helper/device-detector';
 
 export interface ILoginResponse {
   user: IUserEntityFront;
@@ -176,6 +179,10 @@ export class AuthController {
       finalRefreshTokenHash,
       session.refresh_token_version + 1
     );
+
+    // Track device type + detailed client info in analytics cache (fire-and-forget)
+    deviceStatsCache.increment(`device:${detectDevice(userAgent)}`);
+    clientStatsCache.increment(parseUA(userAgent));
 
     // 8, 9, 10. Run independent post-login updates in parallel
     await Promise.all([
