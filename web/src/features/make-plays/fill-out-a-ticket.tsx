@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import GameTurns from '@/features/make-plays/game-turns';
 import { PLACE_TYPE } from '@helper/types/bet.type';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { startTransition, useEffect, useRef, useState } from 'react';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { placeTypeParse } from '@helper/functions/placeTypeParse';
@@ -93,13 +93,15 @@ const FillOutATicket = () => {
   };
 
   const handleBet = (key: string, value: string | number) => {
-    setBet((prev) => {
-      // Si es amount, parseamos a número
-      if (key === 'amount') {
-        const numValue = value === '' ? undefined : Number(value);
-        return { ...prev, [key]: numValue };
-      }
-      return { ...prev, [key]: value };
+    startTransition(() => {
+      setBet((prev) => {
+        // Si es amount, parseamos a número
+        if (key === 'amount') {
+          const numValue = value === '' ? undefined : Number(value);
+          return { ...prev, [key]: numValue };
+        }
+        return { ...prev, [key]: value };
+      });
     });
   };
 

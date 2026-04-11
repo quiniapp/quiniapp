@@ -1,5 +1,3 @@
-'use client';
-
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import timezone from 'dayjs/plugin/timezone';
