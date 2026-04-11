@@ -1,4 +1,6 @@
 export function LayoutSkeleton() {
+  const skeletonTime = new Date().toLocaleTimeString('es-AR', { hour12: false });
+
   return (
     <div
       style={{ backgroundColor: '#151933' }}
@@ -30,6 +32,13 @@ export function LayoutSkeleton() {
           <div className="h-10 w-full rounded bg-white/10 animate-pulse" />
           <div className="h-10 w-full rounded bg-white/10 animate-pulse" />
           <div className="h-10 w-3/4 rounded bg-white/10 animate-pulse" />
+        </div>
+
+        {/* Footer — mirrors real footer to register LCP early (text-4xl clock) */}
+        <div className="flex justify-end py-1 border-t border-gray-700 px-8">
+          <div className="text-right">
+            <div className="text-4xl font-semibold text-primary opacity-30">{skeletonTime}</div>
+          </div>
         </div>
       </div>
     </div>

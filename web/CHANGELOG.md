@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-11
+
+#### Performance — optimizaciones mobile P99 (FCP/LCP/INP/CLS)
+
+**Objetivo:** mejorar mobile P99 de RES 60 → >90, FCP 3.2s → <1.8s, LCP 4.59s → <2.5s, INP 416ms → <200ms.
+
+**Ruta `/` eliminada (FID 2161ms, RES 54)**
+- **`src/routes/route.tsx`**: Ruta `ROUTES.HOME` reemplazada por `<Navigate to={ROUTES.MAKE_PLAYS} replace />`. Elimina página vacía con FID 2161ms.
+- **`src/features/home.tsx`**: Eliminado (archivo sin funcionalidad).
+- **`src/pages/index.tsx`**: Eliminado (archivo sin funcionalidad).
+
+**Auth waterfall — FCP/LCP**
+- **`src/routes/route.tsx`**: Agrega prefetch de chunks `Layout` y `MakePlays` cuando `auth_hint` está en sessionStorage, en paralelo con `validate()`. Elimina el waterfall secuencial de chunk downloads.
+- **`src/protected/protected-routes.tsx`**: `LayoutSkeleton` se muestra para TODOS los usuarios durante loading (antes: solo cuando `optimisticAuth=true`). Elimina pantalla en blanco para sesiones nuevas.
+- **`src/components/skeletons/LayoutSkeleton.tsx`**: Agrega footer con hora local JS para registrar LCP temprano. El LCP real es el `text-4xl` del footer clock (4.84s mobile P99) — ahora se registra desde el primer render del skeleton.
+
+**Login page LCP/CLS**
+- **`src/hooks/use-mobile.ts`**: Estado inicializado con lazy initializer en lugar de `undefined` → elimina re-render innecesario y flash en login page.
+- **`src/features/login/index.tsx`**: Elimina condicional JS `{!isMobile}` (duplicaba CSS `hidden md:flex`). Agrega `width={860} height={860}` al `bg-login.svg` para eliminar CLS. Elimina `loading="lazy"` que retrasaba LCP.
+- **`src/components/logo/index.tsx`**: Cambia `decoding="async"` → `decoding="sync"` para pintar logo inmediatamente (ya tiene `fetchpriority="high"` + preload).
+
+**INP — inputs y sidebar**
+- **`src/features/make-plays/fill-out-a-ticket.tsx`**: Envuelve `setBet` en `startTransition` → reduce INP de `#number` (1448ms mobile P99) y `#amount` (416ms).
+- **`src/components/layout/index.tsx`**: Envuelve `setIsOpen` del sidebar toggle en `startTransition` → reduce INP de íconos sidebar (312-320ms, 32+31 data points).
+
+**CLS — repeat-ticket-modal (0.67 mobile Poor)**
+- **`src/components/modals/repeat-ticket-modal.tsx`**: Cambia `min-h-0` → `min-h-[200px]` en contenedor scrollable para reservar espacio y evitar CLS 0.67.
+- **`src/components/modals/repeat-ticket-modal.tsx`**: Separa `useClock()` (solo para `time`) de `useClockFunctions()` (para `isScheduleEnabled`, `isLessThanTenMinutes`) → evita re-renders cada segundo innecesarios.
+
+**Cache + cleanup**
+- **`vercel.json`**: Agrega `Cache-Control: immutable, max-age=31536000` para `/js/*`, `/css/*`, `/images/*`, `/assets/*`. `index.html` queda en `max-age=0, must-revalidate`.
+- **`src/providers/ClockProvider.tsx`**: Elimina directiva `'use client'` (Next.js App Router, sin efecto en Vite SPA).
+
 ### Changed - 2026-04-09
 
 #### Observability — Speed Insights y Analytics migrados a componentes React

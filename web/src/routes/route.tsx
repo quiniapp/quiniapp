@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { Navigate } from 'react-router-dom';
 import { LoadingFallback } from '@/components/molecules/LoadingFallback';
 
 // Eager imports (necesarios inmediatamente)
@@ -6,9 +7,14 @@ import LoginPage from '@/features/login';
 import ProtectedRoute from '@/protected/protected-routes.tsx';
 import { ROUTES } from '@/types/routes.type';
 
+// Prefetch chunks for returning users in parallel with validate()
+if (sessionStorage.getItem('auth_hint') === '1') {
+  void import('@/components/layout');
+  void import('@/pages/MakePlays');
+}
+
 // Lazy imports (cargados bajo demanda)
 const Layout = lazy(() => import('@/components/layout'));
-const Index = lazy(() => import('@/pages').then((module) => ({ default: module.Index })));
 const CurrentAccountPage = lazy(() => import('@/pages/current-account.tsx'));
 const GroupsPage = lazy(() => import('@/pages/groups'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -58,7 +64,7 @@ export const RoutesContent = [
       {
         path: ROUTES.HOME,
         id: 'Home',
-        element: withSuspense(Index),
+        element: <Navigate to={ROUTES.MAKE_PLAYS} replace />,
       },
       {
         path: ROUTES.MAKE_PLAYS,
