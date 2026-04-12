@@ -1,5 +1,5 @@
 // src/components/layout/index.tsx
-import { useCallback, useState } from 'react';
+import { startTransition, useCallback, useState } from 'react';
 import { Outlet, useNavigation } from 'react-router-dom';
 
 import Footer from '../footer';
@@ -14,7 +14,9 @@ const Layout = () => {
   const isRouteLoading = navigation.state === 'loading';
 
   const [isOpen, setIsOpen] = useState(true);
-  const toggleSidebar = useCallback(() => setIsOpen((v) => !v), []);
+  const toggleSidebar = useCallback(() => {
+    startTransition(() => setIsOpen((v) => !v));
+  }, []);
 
   return (
     <SidebarProvider>

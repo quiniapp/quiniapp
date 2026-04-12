@@ -11,7 +11,6 @@ import { ROUTES } from '@/types/routes.type';
  * Si cambias una ruta en routes.type.ts, se actualiza automáticamente aquí
  */
 const ROUTE_PREFETCH_MAP: Partial<Record<ROUTES, () => Promise<any>>> = {
-  [ROUTES.HOME]: () => import('@/pages'),
   [ROUTES.MAKE_PLAYS]: () => import('@/pages/MakePlays'),
   [ROUTES.PLAYS_AND_HITS]: () => import('@/pages/plays-and-hits'),
   [ROUTES.TERMINAL_TICKET]: () => import('@/pages/terminal-ticket'),

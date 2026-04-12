@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { usePlatform } from '@/hooks/use-platform';
 import { ROUTES } from '@/types/routes.type';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +31,6 @@ const validationSchemaLogin = z.object({
 const LoginContent = () => {
   const { login, isAuth, loading } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const platform = usePlatform();
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -61,11 +59,10 @@ const LoginContent = () => {
 
   return (
     <Flex className="h-screen flex-col md:flex-row">
-      {!isMobile && (
-        <Flex className="flex-1 items-center justify-center w-full hidden md:flex">
-          <img src={'/bg-login.svg'} alt={''} className={' w-[200px] md:w-[860px] md:h-[860px]'} loading="lazy" />
-        </Flex>
-      )}
+      <Flex className="flex-1 items-center justify-center w-full hidden md:flex">
+        <img src="/bg-login.svg" alt="" width={860} height={860}
+             className="w-[200px] md:w-[860px] md:h-[860px]" />
+      </Flex>
 
       <Flex className="flex-1 justify-center items-center gap-4 border-l-2">
         <Card className="bg-transparent w-[480px]">

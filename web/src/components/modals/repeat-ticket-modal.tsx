@@ -17,7 +17,7 @@ import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { useClock } from '@/providers/ClockProvider';
+import { useClock, useClockFunctions } from '@/providers/ClockProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { IBetTable } from '@helper/request/ticket.request';
 
@@ -36,7 +36,8 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
 
   const { user } = useAuth();
   const isCashier = user?.user_type === USER_TYPE.CASHIER;
-  const { time, isScheduleEnabled, isLessThanTenMinutes } = useClock();
+  const { time } = useClock();
+  const { isScheduleEnabled, isLessThanTenMinutes } = useClockFunctions();
 
   const todayIdx = dayjs().day();
   const todayKey: DayKey = dayParseToString[todayIdx];
@@ -266,7 +267,7 @@ useEffect(() => {
       className="!max-w-[1024px] w-full m-auto bg-[#060813] p-2 sm:p-4 md:p-6 !max-h-[95vh] flex flex-col !gap-0 overflow-y-scroll"
     >
       {/* Contenedor con scroll - Todo excepto los botones */}
-      <div className="overflow-y-auto flex-1 pr-1 -mr-1 min-h-0">
+      <div className="overflow-y-auto flex-1 pr-1 -mr-1 min-h-[200px]">
         {/* Input de Ticket y Monto - Layout Responsive */}
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">

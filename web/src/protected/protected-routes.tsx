@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // Mientras valida: si el usuario estaba autenticado en esta sesión mostramos
   // el skeleton de la app en lugar de pantalla en blanco (mejora LCP móvil)
-  if (loading) return optimisticAuth ? <LayoutSkeleton /> : null;
+  if (loading) return <LayoutSkeleton />;
   if (!isAuth) return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
 
   // Soporta <ProtectedRoute><Layout/></ProtectedRoute> O bien rutas anidadas con <Outlet/>
