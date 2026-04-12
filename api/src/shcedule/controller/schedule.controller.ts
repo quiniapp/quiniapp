@@ -10,6 +10,12 @@ import { scheduleBase } from '../helper/scheduleBase';
 import { parseSchedule } from '../helper/parseSchedule';
 import { SCHEDULE_DAY } from '@helper/types/schedule-lottery.type';
 import { ScheduleLotteryController } from '../../schedule-lottery/controller/schedule-lottery.controller';
+import { globalCacheManager } from 'src/cache/CacheManager';
+import {
+  getScheduleCacheKey,
+  getScheduleDayCacheKey,
+  invalidateScheduleRelated,
+} from 'src/cache/cacheInvalidation';
 
 export class ScheduleController {
   private repository = new ScheduleRepository();
@@ -22,6 +28,7 @@ export class ScheduleController {
     try {
       const newSchedule = scheduleBase(props, organization_id);
       const schedule = await this.repository.create(newSchedule);
+      invalidateScheduleRelated(organization_id);
       return parseSchedule(schedule);
     } catch (error) {
       console.error('Controller creation error:', error);
@@ -44,11 +51,12 @@ export class ScheduleController {
 
   getAll = async (organization_id: string, all?: boolean): Promise<IScheduleEntityFront[]> => {
     try {
-      const schedules: IScheduleEntityBack[] = await this.repository.getAll(organization_id, all);
-
-      return schedules.map((schedule) => {
-        return parseSchedule(schedule);
+      const key = getScheduleCacheKey(organization_id, all ?? false);
+      const snap = await globalCacheManager.getOrLoad(key, async () => {
+        const schedules: IScheduleEntityBack[] = await this.repository.getAll(organization_id, all);
+        return schedules.map(parseSchedule);
       });
+      return snap.payload;
     } catch (error) {
       console.error('GetAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -62,33 +70,35 @@ export class ScheduleController {
     withLotteries: boolean = false
   ): Promise<IScheduleEntityFront[]> => {
     try {
-      // Fetch schedule_lotteries for the day and all schedules in parallel (2 queries total)
-      const [slRecords, allSchedules] = await Promise.all([
-        this.scheduleLotteryController.getScheduleLotteriesForDay(organization_id, day),
-        this.repository.getAll(organization_id, all),
-      ]);
+      const key = getScheduleDayCacheKey(organization_id, day, all, withLotteries);
+      const snap = await globalCacheManager.getOrLoad(key, async () => {
+        const [slRecords, allSchedules] = await Promise.all([
+          this.scheduleLotteryController.getScheduleLotteriesForDay(organization_id, day),
+          this.repository.getAll(organization_id, all),
+        ]);
 
-      // Build lookup structures from the already-fetched records — no extra queries needed
-      const scheduleIdSet = new Set(slRecords.map((r) => r.schedule_id));
-      const lotteryIdsBySchedule = new Map<string, string[]>();
-      for (const r of slRecords) {
-        const ids = lotteryIdsBySchedule.get(r.schedule_id) ?? [];
-        ids.push(r.lottery_id);
-        lotteryIdsBySchedule.set(r.schedule_id, ids);
-      }
+        const scheduleIdSet = new Set(slRecords.map((r) => r.schedule_id));
+        const lotteryIdsBySchedule = new Map<string, string[]>();
+        for (const r of slRecords) {
+          const ids = lotteryIdsBySchedule.get(r.schedule_id) ?? [];
+          ids.push(r.lottery_id);
+          lotteryIdsBySchedule.set(r.schedule_id, ids);
+        }
 
-      const parsedSchedules = allSchedules
-        .filter((s) => scheduleIdSet.has(s.schedule_id))
-        .map((s) => parseSchedule(s));
+        const parsedSchedules = allSchedules
+          .filter((s) => scheduleIdSet.has(s.schedule_id))
+          .map((s) => parseSchedule(s));
 
-      if (withLotteries) {
-        return parsedSchedules.map((schedule) => ({
-          ...schedule,
-          lottery_ids: lotteryIdsBySchedule.get(schedule.schedule_id) ?? [],
-        }));
-      }
+        if (withLotteries) {
+          return parsedSchedules.map((schedule) => ({
+            ...schedule,
+            lottery_ids: lotteryIdsBySchedule.get(schedule.schedule_id) ?? [],
+          }));
+        }
 
-      return parsedSchedules;
+        return parsedSchedules;
+      });
+      return snap.payload;
     } catch (error) {
       console.error('getAllByDay error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -102,16 +112,18 @@ export class ScheduleController {
   ): Promise<IScheduleEntityFront> => {
     try {
       const schedule = await this.repository.update(id, props, organization_id);
+      invalidateScheduleRelated(organization_id);
       return parseSchedule(schedule);
     } catch (error) {
       console.error('Update error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
+
   delete = async (props: IDeleteScheduleEntity, organization_id: string) => {
     try {
       await this.repository.delete(props.schedule_id, organization_id);
-      return;
+      invalidateScheduleRelated(organization_id);
     } catch (error) {
       console.error('Delete error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');

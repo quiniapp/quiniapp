@@ -5,6 +5,12 @@ import { INewOrganizationEntity } from '@helper/request/organization.request';
 import { INewUserEntity } from '@helper/request/user.request';
 import { UserController } from '../../user/controller/user.controller';
 import { USER_TYPE } from '@helper/types/user.type';
+import { globalCacheManager } from 'src/cache/CacheManager';
+import {
+  getOrganizationAllCacheKey,
+  getOrganizationChildrenCacheKey,
+  invalidateOrganizations,
+} from 'src/cache/cacheInvalidation';
 
 export class OrganizationController {
   private repository = new OrganizationRepository();
@@ -20,17 +26,13 @@ export class OrganizationController {
     capitalistData: INewUserEntity
   ): Promise<IOrganizationEntityFront> => {
     try {
-      // Ensure the user is created as CAPITALIST
       capitalistData.user_type = USER_TYPE.CAPITALIST;
 
-      // 1. Create the organization first
       const createdOrganization = await this.repository.create(organizationData);
 
-      // 2. Create the CAPITALIST user with the organization_id
       try {
         await this.userController.create(capitalistData, createdOrganization.organization_id);
       } catch (userError) {
-        // If user creation fails, delete the organization (rollback)
         await this.repository.delete(createdOrganization.organization_id);
         console.error('Capitalist creation error, organization rolled back:', userError);
         throw new Error(
@@ -39,6 +41,7 @@ export class OrganizationController {
         );
       }
 
+      invalidateOrganizations();
       return parseOrganization(createdOrganization);
     } catch (error) {
       console.error('Organization creation error:', error);
@@ -57,23 +60,19 @@ export class OrganizationController {
     superAdminData?: INewUserEntity
   ): Promise<IOrganizationEntityFront> => {
     try {
-      // 1. Create the sub-organization
       const createdOrg = await this.repository.createSubOrganization({
         name: organizationData.name,
         parent_organization_id: parentOrgId,
       });
 
       try {
-        // 2. Inherit configuration from parent (lotteries, schedules, schedule_lotteries)
         await this.repository.inheritConfiguration(parentOrgId, createdOrg.organization_id);
 
-        // 3. Create SUPERADMIN if provided
         if (superAdminData) {
           superAdminData.user_type = USER_TYPE.SUPERADMIN;
           await this.userController.create(superAdminData, createdOrg.organization_id);
         }
       } catch (setupError) {
-        // If setup fails, delete the sub-organization (rollback)
         await this.repository.delete(createdOrg.organization_id);
         console.error('Sub-organization setup error, rolled back:', setupError);
         throw new Error(
@@ -82,6 +81,7 @@ export class OrganizationController {
         );
       }
 
+      invalidateOrganizations();
       return parseOrganization(createdOrg);
     } catch (error) {
       console.error('Sub-organization creation error:', error);
@@ -94,8 +94,12 @@ export class OrganizationController {
    */
   getChildren = async (parentOrgId: string): Promise<IOrganizationEntityFront[]> => {
     try {
-      const children = await this.repository.getChildren(parentOrgId);
-      return children.map((org) => parseOrganization(org));
+      const key = getOrganizationChildrenCacheKey(parentOrgId);
+      const snap = await globalCacheManager.getOrLoad(key, async () => {
+        const children = await this.repository.getChildren(parentOrgId);
+        return children.map(parseOrganization);
+      });
+      return snap.payload;
     } catch (error) {
       console.error('Organization getChildren error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -114,8 +118,12 @@ export class OrganizationController {
 
   getAll = async (): Promise<IOrganizationEntityFront[]> => {
     try {
-      const orgs = await this.repository.getAll();
-      return orgs.map((org) => parseOrganization(org));
+      const key = getOrganizationAllCacheKey();
+      const snap = await globalCacheManager.getOrLoad(key, async () => {
+        const orgs = await this.repository.getAll();
+        return orgs.map(parseOrganization);
+      });
+      return snap.payload;
     } catch (error) {
       console.error('Organization getAll error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -128,6 +136,7 @@ export class OrganizationController {
   ): Promise<IOrganizationEntityFront> => {
     try {
       const org = await this.repository.update(id, props);
+      invalidateOrganizations();
       return parseOrganization(org);
     } catch (error) {
       console.error('Organization update error:', error);
@@ -138,6 +147,7 @@ export class OrganizationController {
   delete = async (organization_id: string): Promise<void> => {
     try {
       await this.repository.delete(organization_id);
+      invalidateOrganizations();
     } catch (error) {
       console.error('Organization delete error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
