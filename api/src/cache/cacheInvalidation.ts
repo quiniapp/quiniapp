@@ -100,6 +100,21 @@ export function invalidateOrgNetworkIds(organization_id: string): void {
   globalCacheManager.invalidate(`org:${organization_id}:network-ids`);
 }
 
+// ====== Organization cache keys ======
+
+export function getOrganizationAllCacheKey(): string {
+  return 'organizations:all';
+}
+
+export function getOrganizationChildrenCacheKey(parentOrgId: string): string {
+  return `org:${parentOrgId}:children`;
+}
+
+export function invalidateOrganizations(): void {
+  globalCacheManager.invalidate(getOrganizationAllCacheKey());
+  globalCacheManager.invalidateMatching(/^org:[^:]+:children$/);
+}
+
 /**
  * Nuclear option: invalidate all caches for an organization
  * Use when you need to ensure complete cache refresh
@@ -109,6 +124,7 @@ export function invalidateAllForOrg(organization_id: string): void {
   invalidateSchedulesForOrg(organization_id);
   invalidateScheduleLotteriesForOrg(organization_id);
   invalidateOrgNetworkIds(organization_id);
+  invalidateOrganizations();
 }
 
 /**

@@ -5,12 +5,22 @@ import {
   IScheduleLotteryEntityFront,
   SCHEDULE_DAY,
 } from '@helper/types/schedule-lottery.type';
+import { globalCacheManager } from 'src/cache/CacheManager';
+import {
+  getScheduleLotteryCacheKey,
+  invalidateScheduleLotteryRelated,
+} from 'src/cache/cacheInvalidation';
 
 export class ScheduleLotteryController {
   private repository = new ScheduleLotteryRepository();
+
   async getAllScheduleLotteries(organization_id: string): Promise<IScheduleLotteryEntityFront> {
-    const response = await this.repository.getAllScheduleLottery(organization_id);
-    return parseScheduleLottery(response);
+    const key = getScheduleLotteryCacheKey(organization_id);
+    const snap = await globalCacheManager.getOrLoad(key, async () => {
+      const response = await this.repository.getAllScheduleLottery(organization_id);
+      return parseScheduleLottery(response);
+    });
+    return snap.payload;
   }
 
   async deleteAllForScheduleAndDay({
@@ -45,17 +55,19 @@ export class ScheduleLotteryController {
   ): Promise<IScheduleLotteryEntityFront> {
     try {
       await this.repository.bulkInsert(props);
+      invalidateScheduleLotteryRelated(organization_id);
       return await this.getAllScheduleLotteries(organization_id);
     } catch (error) {
       console.error('bulkInsert:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   }
+
   async bulkActiveLotteries(lotteries: string[], organization_id: string): Promise<void> {
     try {
       await this.repository.bulkActiveLotteries(lotteries, organization_id);
     } catch (error) {
-      console.error('bulkInsert:', error);
+      console.error('bulkActiveLotteries:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   }
@@ -65,10 +77,8 @@ export class ScheduleLotteryController {
     organization_id: string
   ): Promise<IScheduleLotteryEntityFront> {
     try {
-      // Use RPC function for atomic save
       await this.repository.saveScheduleLottery(scheduleLottery, organization_id);
 
-      // Extract all lottery IDs to activate
       const lotteries: string[] = [];
       for (const daySchedules of Object.values(scheduleLottery)) {
         for (const lotteryIds of Object.values(daySchedules ?? {})) {
@@ -78,12 +88,11 @@ export class ScheduleLotteryController {
         }
       }
 
-      // Activate lotteries
       if (lotteries.length > 0) {
         await this.repository.bulkActiveLotteries(lotteries, organization_id);
       }
 
-      // Return fresh data
+      invalidateScheduleLotteryRelated(organization_id);
       return await this.getAllScheduleLotteries(organization_id);
     } catch (error) {
       console.error('saveScheduleLottery:', error);
@@ -106,9 +115,7 @@ export class ScheduleLotteryController {
   async getLotteryIdsForDay(organization_id: string, day: SCHEDULE_DAY): Promise<string[]> {
     try {
       const records = await this.repository.getScheduleLotteriesByDay(organization_id, day);
-      const lotteryIds = records.map((record) => record.lottery_id);
-      // Return unique lottery IDs
-      return [...new Set(lotteryIds)];
+      return [...new Set(records.map((record) => record.lottery_id))];
     } catch (error) {
       console.error('getLotteryIdsForDay:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
@@ -118,9 +125,7 @@ export class ScheduleLotteryController {
   async getScheduleIdsForDay(organization_id: string, day: SCHEDULE_DAY): Promise<string[]> {
     try {
       const records = await this.repository.getScheduleLotteriesByDay(organization_id, day);
-      const scheduleIds = records.map((record) => record.schedule_id);
-      // Return unique schedule IDs
-      return [...new Set(scheduleIds)];
+      return [...new Set(records.map((record) => record.schedule_id))];
     } catch (error) {
       console.error('getScheduleIdsForDay:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
