@@ -6,7 +6,6 @@ import { asyncHandler } from '../../middlewares/error.middleware';
 import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
-import { sseManager } from 'api/src/session/sse/session-sse.manager';
 import { deviceStatsCache } from 'api/src/analytics/cache/device-stats.cache';
 
 const ALLOWED_CONNECTION_TYPES = new Set(['4g', '3g', '2g', 'slow-2g', 'safari', 'unknown']);
@@ -42,7 +41,6 @@ export class AuthRouter {
     this.privateRouter.post('/logout', this.logoutHandler);
     this.privateRouter.post('/logout-all', this.logoutAllHandler);
     this.privateRouter.get('/validate', this.validateHandler);
-    this.privateRouter.get('/stream', this.sessionStreamHandler);
     this.privateRouter.patch('/connection', this.connectionHandler);
   }
 
@@ -207,24 +205,5 @@ export class AuthRouter {
     }
     const response: APIResponse<boolean> = { data: { ok: true } };
     res.status(200).json(response);
-  });
-
-  /**
-   * GET /api/private/auth/stream
-   * SSE stream — pushes session_expired event when session is revoked or expires.
-   * Replaces the periodic polling interval on the frontend.
-   * Passive: does not extend the session sliding window.
-   */
-  private sessionStreamHandler = asyncHandler(async (req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
-    const sessionId = req.user!.session_id;
-    sseManager.add(sessionId, res);
-    res.write('data: {"type":"connected"}\n\n');
-
-    req.on('close', () => sseManager.remove(sessionId));
   });
 }

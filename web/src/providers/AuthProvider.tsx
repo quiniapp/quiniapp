@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
-import { VALIDATE_ON_VISIBILITY, VISIBILITY_MIN_GAP_MS } from '@helper/config/session.config';
+import { VALIDATE_ON_VISIBILITY, VALIDATE_INTERVAL_MS, VISIBILITY_MIN_GAP_MS } from '@helper/config/session.config';
 import { apiClient, ApiError } from '@/lib/apiClient';
 import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
 
@@ -141,28 +141,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     void apiClient.patch(BACKEND_ROUTES.auth.connection, { connection_type });
   }, [isAuth]);
 
-  // SSE — recibe session_expired del backend en lugar de hacer polling periódico
+  // Polling periódico — detecta sesión expirada o revocada cada VALIDATE_INTERVAL_MS
   useEffect(() => {
     if (!isAuth) return;
 
-    const es = new EventSource(BACKEND_ROUTES.auth.stream, { withCredentials: true });
+    const interval = window.setInterval(() => {
+      void validate();
+    }, VALIDATE_INTERVAL_MS);
 
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data) as { type: string };
-        if (data.type === 'session_expired') {
-          queryClient.clear();
-          setSession(null);
-          es.close();
-        }
-      } catch {
-        // ignore malformed messages
-      }
-    };
-
-    // EventSource reconecta automáticamente en caso de error de red
-    return () => es.close();
-  }, [isAuth, setSession, queryClient]);
+    return () => window.clearInterval(interval);
+  }, [isAuth, validate]);
 
   // Auto-refresh de access token (cada 13-14 minutos)
   // Access token expira a los 15 minutos, refrescamos antes
