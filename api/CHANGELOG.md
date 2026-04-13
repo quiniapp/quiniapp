@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed - 2026-04-13
+
+#### Auth — eliminar endpoint SSE `/api/private/auth/stream`
+
+- **`src/auth/route/auth.route.ts`**: Eliminado el route `GET /stream` y el handler `sessionStreamHandler`. La SSE no es compatible con Vercel serverless (timeout de 10s en Hobby, 5 min en Pro). El frontend ahora usa polling periódico vía `/validate`. También eliminado el import de `sseManager`.
+- El archivo `src/session/sse/session-sse.manager.ts` queda sin consumidores activos (puede eliminarse en una limpieza posterior si `sseManager.expire()` no se llama desde ningún otro módulo).
+
 ### Fixed - 2026-04-08
 
 #### Archive — batched processing to fix statement timeout on 1M+ rows
