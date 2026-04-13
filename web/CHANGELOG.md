@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-13
+
+#### Auth — reemplazar SSE con polling periódico
+
+- **`src/providers/AuthProvider.tsx`**: Reemplazado el `useEffect` de SSE (`EventSource`) por un intervalo de polling que llama a `validate()` cada `VALIDATE_INTERVAL_MS` (5 minutos). La SSE generaba `TypeError: terminated` en Vercel porque las serverless functions tienen un máximo de 10s en Hobby y 5 min en Pro — incompatible con conexiones persistentes. El polling detecta igualmente sesiones expiradas o revocadas con latencia máxima de 5 minutos.
+
 ### Changed - 2026-04-11
 
 #### Performance — optimizaciones mobile P99 (FCP/LCP/INP/CLS)
