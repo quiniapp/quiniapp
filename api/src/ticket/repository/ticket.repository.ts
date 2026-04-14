@@ -14,6 +14,7 @@ export class TicketRepository {
     const { data, error } = await supabase.rpc('create_ticket_with_bets', {
       ticket: ticket,
       p_organization_id: ticket.organization_id,
+      p_client_request_id: ticket.client_request_id ?? null,
     });
     if (error) throw error;
     return data;
