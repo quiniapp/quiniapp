@@ -15,6 +15,7 @@ export interface ITicketEntityBase {
   deleted_at: string | null;
   deleted_by: string | null;
   hits: number;
+  client_request_id?: string | null; // idempotency key
 }
 
 export interface ITicketEntityBack extends ITicketEntityBase {

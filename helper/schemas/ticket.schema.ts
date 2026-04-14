@@ -6,4 +6,5 @@ export const newTicketSchema = z.object({
   user_name: z.string().min(1),
   date: z.string(),
   bets: z.array(BetTableSchema).min(1),
+  client_request_id: z.string().uuid().optional(),
 });
