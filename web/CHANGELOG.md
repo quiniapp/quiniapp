@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-04-12
+
+#### Idempotency — client_request_id en creación de tickets
+
+- **`src/features/make-plays/provider/MakePlaysProvider.tsx`**: Agrega `clientRequestIdRef` (useRef) para generar un UUID estable por sesión de ticket. Se genera lazily en `handleCreateBet` y `handleConfirmClosedSchedules`, se incluye en el payload como `client_request_id`, y se limpia en `onSuccess`, `handleResetBets` y `handleRecreateBet`. Usa ref (no state) para que la actualización sea sincrónica sin disparar re-renders.
+
 ### Changed - 2026-04-13
 
 #### Auth — reemplazar SSE con polling periódico

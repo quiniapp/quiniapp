@@ -135,6 +135,10 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   // useRef updates synchronously unlike useState, so the guard works within the same event.
   const isSubmittingRef = useRef(false);
 
+  // Idempotency key: generated once per ticket session, cleared on success/reset.
+  // Using a ref (not state) so it updates synchronously without triggering re-renders.
+  const clientRequestIdRef = useRef<string | undefined>(undefined);
+
   // Auto-clean closed-schedule bets every 10s for CASHIERs
   useEffect(() => {
     if (user?.user_type !== USER_TYPE.CASHIER) return;
@@ -162,12 +166,18 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       setTotalAmount(total);
       setSelectedIndexes([]);
       setIsEnabledCreateBet(true);
+      clientRequestIdRef.current = undefined;  // will be generated on next submit
     },
     [computeTotal]
   );
 
   const handleCreateBet = useCallback(() => {
     if (isSubmittingRef.current) return;
+
+    // Generate a stable idempotency key for this session if not yet set
+    if (!clientRequestIdRef.current) {
+      clientRequestIdRef.current = crypto.randomUUID();
+    }
 
     // Solo validar schedules cerrados para cashiers
     if (user?.user_type === USER_TYPE.CASHIER) {
@@ -188,6 +198,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       user_id: cashier?.user_id ?? user!.user_id,
       user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
       bets: bets,
+      client_request_id: clientRequestIdRef.current,
     };
 
     if (!ticketId) {
@@ -212,6 +223,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setSelectedIndexes([]);
           setTicketId(undefined);
           isSubmittingRef.current = false;
+          clientRequestIdRef.current = undefined;
           setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
 
@@ -260,6 +272,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setUserNumber(undefined);
             setSelectedIndexes([]);
             setTicketId(undefined);
+            clientRequestIdRef.current = undefined;
             toast.success('Ticket modificado correctamente');
             isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
@@ -286,6 +299,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     setBets([]);
     setPartialAmount(0);
     setTotalAmount(0);
+    clientRequestIdRef.current = undefined;
   }, []);
 
   const handleDeleteSelectedBets = useCallback(() => {
@@ -332,6 +346,9 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     // Proceder con el cierre del ticket
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
+    if (!clientRequestIdRef.current) {
+      clientRequestIdRef.current = crypto.randomUUID();
+    }
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -340,6 +357,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       user_id: cashier?.user_id ?? user!.user_id,
       user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
       bets: cleanedBets,
+      client_request_id: clientRequestIdRef.current,
     };
 
     if (!ticketId) {
@@ -362,6 +380,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setSelectedIndexes([]);
           setTicketId(undefined);
           isSubmittingRef.current = false;
+          clientRequestIdRef.current = undefined;
           setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
 
@@ -409,6 +428,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setUserNumber(undefined);
             setSelectedIndexes([]);
             setTicketId(undefined);
+            clientRequestIdRef.current = undefined;
             toast.success('Ticket modificado correctamente');
             isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
