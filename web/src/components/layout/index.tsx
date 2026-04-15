@@ -1,5 +1,5 @@
 // src/components/layout/index.tsx
-import { useCallback, useEffect, useState } from 'react';
+import { startTransition, useCallback, useState } from 'react';
 import { Outlet, useNavigation } from 'react-router-dom';
 
 import Footer from '../footer';
@@ -8,20 +8,15 @@ import Aside from '@/components/aside';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Flex, FlexCol } from '../flex';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
 
 const Layout = () => {
-  const { isAuth, validate } = useAuth(); // ⬅️ viene del AuthProvider
   const navigation = useNavigation();
   const isRouteLoading = navigation.state === 'loading';
 
   const [isOpen, setIsOpen] = useState(true);
-  const toggleSidebar = useCallback(() => setIsOpen((v) => !v), []);
-
-  // Tocar/validar sesión al montar el layout si ya está autenticado
-  useEffect(() => {
-    if (isAuth) void validate();
-  }, [isAuth, validate]);
+  const toggleSidebar = useCallback(() => {
+    startTransition(() => setIsOpen((v) => !v));
+  }, []);
 
   return (
     <SidebarProvider>

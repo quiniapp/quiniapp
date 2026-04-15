@@ -1,23 +1,25 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
-import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
-import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
-import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
-import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
-import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
-import { useClock } from '@/providers/ClockProvider';
+import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
+import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
+import { useCreateTicket } from '@/hooks/mutations/tickets/useTicket';
+import { useClockFunctions } from '@/providers/ClockProvider';
+
+import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysContext';
+
 
 export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
-  const { isScheduleEnabled } = useClock();
+  const { isScheduleEnabled } = useClockFunctions();
 
   // ---- state
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);
@@ -29,7 +31,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const [schedules, setSchedules] = useState<Map<string, IScheduleEntityFront>>(new Map());
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [userNumber, setUserNumber] = useState<number | undefined>(undefined);
-  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(false);
+  const [isEnabledCreateBet, setIsEnabledCreateBet] = useState<boolean>(true);
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
   const [openClosedSchedulesModal, setOpenClosedSchedulesModal] = useState<boolean>(false);
   const [closedSchedules, setClosedSchedules] = useState<IScheduleEntityFront[]>([]);
@@ -125,6 +127,33 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     return cleanedBets;
   }, [isScheduleEnabled]);
 
+  // Keep a ref to latest bets so the interval below doesn't need bets as a dep
+  const betsRef = useRef(bets);
+  useEffect(() => { betsRef.current = bets; }, [bets]);
+
+  // Mutex: prevents duplicate ticket creation from rapid double-clicks / Enter key.
+  // useRef updates synchronously unlike useState, so the guard works within the same event.
+  const isSubmittingRef = useRef(false);
+
+  // Auto-clean closed-schedule bets every 10s for CASHIERs
+  useEffect(() => {
+    if (user?.user_type !== USER_TYPE.CASHIER) return;
+
+    const id = window.setInterval(() => {
+      const prev = betsRef.current;
+      if (prev.length === 0) return;
+      const cleaned = cleanClosedSchedulesFromBets(prev);
+      if (cleaned.length === prev.length) return;
+      const newTotal = computeTotal(cleaned);
+      setBets(cleaned);
+      setTotalAmount(newTotal);
+      setPartialAmount(newTotal);
+    }, 10_000);
+
+    return () => clearInterval(id);
+  }, [user?.user_type, cleanClosedSchedulesFromBets, computeTotal]);
+
+
   const handleRecreateBet = useCallback(
     (values: IBetTable[]) => {
       setBets(values);
@@ -138,6 +167,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   );
 
   const handleCreateBet = useCallback(() => {
+    if (isSubmittingRef.current) return;
+
     // Solo validar schedules cerrados para cashiers
     if (user?.user_type === USER_TYPE.CASHIER) {
       const closed = detectClosedSchedules(bets);
@@ -148,6 +179,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       }
     }
 
+    isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -164,26 +196,11 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           const lastTicket = {
             bets: [...bets].reverse(),
             ticket: res,
-            cashier_number: user?.number,
+            cashier_number: user?.number ?? undefined,
           };
 
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = makeTicketPdf(lastTicket);
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-            try {
-              if (isMobile) {
-                await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.ticket_number}`,
-                });
-              } else {
-                printPdfBlob(blob);
-              }
-            } catch {
-              printPdfBlob(blob);
-            }
-          }
-
+          // 1. Limpiar estado inmediatamente — el botón queda deshabilitado
+          //    por totalAmount=0 independientemente de lo que pase con el PDF.
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
           setPartialAmount(0);
@@ -194,13 +211,38 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setUserNumber(undefined);
           setSelectedIndexes([]);
           setTicketId(undefined);
+          isSubmittingRef.current = false;
+          setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
+
+          // 2. Generar e imprimir/compartir PDF (puede tardar; si falla no afecta el estado)
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const pdfToast = toast.loading('Generando comprobante...');
+            try {
+              const { blob, fileName } = await makeTicketPdf(lastTicket);
+              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              try {
+                if (isMobile) {
+                  await sharePdfBlob(blob, fileName, {
+                    text: `Ticket ${res.ticket_number}`,
+                  });
+                } else {
+                  printPdfBlob(blob);
+                }
+              } catch {
+                printPdfBlob(blob);
+              }
+            } catch {
+              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
+            } finally {
+              toast.dismiss(pdfToast);
+            }
+          }
         },
         onError: (err) => {
           console.error(err);
           toast.error('Ocurrió un error, intente de nuevo');
-        },
-        onSettled: () => {
+          isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
       });
@@ -219,12 +261,13 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-          },
-          onSettled: () => {
+            isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
         }
@@ -287,6 +330,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     }
 
     // Proceder con el cierre del ticket
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
     const today = dayjs().format('YYYY-MM-DD');
 
@@ -303,25 +348,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           const lastTicket = {
             bets: [...cleanedBets].reverse(),
             ticket: res,
-            cashier_number: user?.number,
+            cashier_number: user?.number ?? undefined,
           };
-
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const { blob, fileName } = makeTicketPdf(lastTicket);
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-            try {
-              if (isMobile) {
-                await sharePdfBlob(blob, fileName, {
-                  text: `Ticket ${res.ticket_number}`,
-                });
-              } else {
-                printPdfBlob(blob);
-              }
-            } catch {
-              printPdfBlob(blob);
-            }
-          }
 
           localStorage.setItem('lastTicket', JSON.stringify(lastTicket));
           setBets([]);
@@ -333,13 +361,37 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setUserNumber(undefined);
           setSelectedIndexes([]);
           setTicketId(undefined);
+          isSubmittingRef.current = false;
+          setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
+
+          if (user?.user_type === USER_TYPE.CASHIER) {
+            const pdfToast = toast.loading('Generando comprobante...');
+            try {
+              const { blob, fileName } = await makeTicketPdf(lastTicket);
+              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              try {
+                if (isMobile) {
+                  await sharePdfBlob(blob, fileName, {
+                    text: `Ticket ${res.ticket_number}`,
+                  });
+                } else {
+                  printPdfBlob(blob);
+                }
+              } catch {
+                printPdfBlob(blob);
+              }
+            } catch {
+              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
+            } finally {
+              toast.dismiss(pdfToast);
+            }
+          }
         },
         onError: (err) => {
           console.error(err);
           toast.error('Ocurrió un error, intente de nuevo');
-        },
-        onSettled: () => {
+          isSubmittingRef.current = false;
           setIsEnabledCreateBet(true);
         },
       });
@@ -358,12 +410,13 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
             setSelectedIndexes([]);
             setTicketId(undefined);
             toast.success('Ticket modificado correctamente');
+            isSubmittingRef.current = false;
+            setIsEnabledCreateBet(true);
           },
           onError: (err) => {
             console.error(err);
             toast.error('Ocurrió un error al modificar el ticket, intente de nuevo');
-          },
-          onSettled: () => {
+            isSubmittingRef.current = false;
             setIsEnabledCreateBet(true);
           },
         }

@@ -6,10 +6,12 @@ import { ITicketEntityFront } from '@helper/types/ticket.type';
 import { newTicketSchema } from '@helper/schemas/ticket.schema';
 import { USER_TYPE } from '@helper/types/user.type';
 import { asyncHandler } from '../../middlewares/error.middleware';
+import { UserRepository } from '../../user/repository/user.repository';
 
 export class TicketRouter {
   public router: Router;
   private controller: TicketController;
+  private userRepository = new UserRepository();
   constructor() {
     this.router = Router();
     this.controller = new TicketController();
@@ -25,6 +27,55 @@ export class TicketRouter {
     this.router.put('/:id', this.updateTicketHandler);
     this.router.post('/', this.newTicketHandler);
     this.router.delete('/:id', this.deleteTicketHandler);
+  }
+
+  private async resolveGroupFilters(
+    req: Request,
+    group_id: unknown,
+    cashier_id: unknown
+  ): Promise<{ group_user_ids?: string[]; effectiveCashierId?: string }> {
+    const user = req.user!;
+
+    // ADMIN with group (group_id !== organization_id): auto-scope, ignore query param
+    if (
+      user.user.user_type === USER_TYPE.ADMIN &&
+      user.user.group_id &&
+      user.user.group_id !== req.organization_id
+    ) {
+      const adminGroupUserIds = await this.userRepository.getUserIdsByGroupId(
+        user.user.group_id,
+        req.organization_id!
+      );
+
+      let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
+      if (effectiveCashierId && !adminGroupUserIds.includes(effectiveCashierId)) {
+        return { group_user_ids: ['__invalid__'] };
+      }
+      if (effectiveCashierId) {
+        return { effectiveCashierId };
+      }
+      return { group_user_ids: adminGroupUserIds };
+    }
+
+    let group_user_ids: string[] | undefined;
+    if (typeof group_id === 'string' && user.user.user_type !== USER_TYPE.CASHIER) {
+      group_user_ids = await this.userRepository.getUserIdsByGroupId(
+        group_id,
+        req.organization_id!
+      );
+    }
+
+    let effectiveCashierId = typeof cashier_id === 'string' ? cashier_id : undefined;
+    if (effectiveCashierId && group_user_ids) {
+      if (!group_user_ids.includes(effectiveCashierId)) {
+        group_user_ids = ['__invalid__'];
+        effectiveCashierId = undefined;
+      } else {
+        group_user_ids = undefined;
+      }
+    }
+
+    return { group_user_ids, effectiveCashierId };
   }
 
   private newTicketHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -61,9 +112,10 @@ export class TicketRouter {
 
   private getAllTicketHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, ticket_number, cashier_id, winner, page, limit, paid } = req.query;
+    const { date, ticket_number, cashier_id, winner, page, limit, paid, group_id } = req.query;
 
     if (typeof ticket_number === 'string') {
+      // Ticket lookup by number is scoped to the user's own org; group_id does not apply here
       const ticketData = await this.controller.get({ ticket_number }, req.organization_id!);
       const response: APIResponse<ITicketEntityFront[]> = {
         data: {
@@ -78,12 +130,21 @@ export class TicketRouter {
       throw new BadRequestError('Fecha requerida');
     }
 
+    const { group_user_ids, effectiveCashierId } = await this.resolveGroupFilters(
+      req,
+      group_id,
+      cashier_id
+    );
+
+    const effectiveOrgId = req.organization_id!;
+
     const result = await this.controller.getAll({
       user_type: user!.user.user_type,
       user_id: user!.user.user_id,
-      organization_id: req.organization_id!,
+      organization_id: effectiveOrgId,
       date: date,
-      ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
+      ...(effectiveCashierId !== undefined && { cashier_id: effectiveCashierId }),
+      ...(group_user_ids !== undefined && { group_user_ids }),
       ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
       ...(typeof paid === 'undefined'
         ? paid
@@ -104,18 +165,27 @@ export class TicketRouter {
 
   private getAllTicketNumberHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, cashier_id, winner } = req.query;
+    const { date, cashier_id, winner, group_id } = req.query;
 
     if (typeof date !== 'string') {
       throw new BadRequestError('Fecha requerida');
     }
 
+    const { group_user_ids, effectiveCashierId } = await this.resolveGroupFilters(
+      req,
+      group_id,
+      cashier_id
+    );
+
+    const effectiveOrgId = req.organization_id!;
+
     const ticket = await this.controller.getAllTicketNumber({
       user_type: user!.user.user_type,
       user_id: user!.user.user_id,
-      organization_id: req.organization_id!,
+      organization_id: effectiveOrgId,
       date: date,
-      ...(typeof cashier_id === 'string' && { cashier_id: cashier_id }),
+      ...(effectiveCashierId !== undefined && { cashier_id: effectiveCashierId }),
+      ...(group_user_ids !== undefined && { group_user_ids }),
       ...(typeof winner === 'string' && winner === 'true' ? { winner: true } : { winner: false }),
     });
 

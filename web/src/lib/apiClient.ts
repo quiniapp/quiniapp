@@ -1,4 +1,5 @@
 import { APIResponse, ErrorResponse } from '@helper/response/api_response.response';
+import { dispatchAuthExpired } from './authEvents';
 
 export class ApiError extends Error {
   public readonly statusCode: number;
@@ -192,10 +193,11 @@ class ApiClient {
         // Retry the original request with new token
         return await this.request<T>(endpoint, { ...config, _skipRefreshRetry: true });
       } else {
-        // Refresh failed - reject all pending requests
+        // Refresh failed - notify AuthProvider to logout
+        dispatchAuthExpired();
         const refreshError = new ApiError(401, {
           code: 'REFRESH_FAILED',
-          message: 'Sesión expirada. Por favor, inicie sesión nuevamente.',
+          message: 'Ususario o contraseña incorrectas.',
         });
         this.processPendingRequests(refreshError);
         throw refreshError;

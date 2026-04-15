@@ -1,9 +1,11 @@
 /* eslint-disable no-unused-vars */
+// User hierarchy: OWNER -> CAPITALIST -> SUPERADMIN -> ADMIN -> CASHIER
 export enum USER_TYPE {
   OWNER = 'OWNER',
+  CAPITALIST = 'CAPITALIST',
+  SUPERADMIN = 'SUPERADMIN',
   ADMIN = 'ADMIN',
   CASHIER = 'CASHIER',
-  SUPERADMIN = 'SUPERADMIN',
 }
 
 export enum CASHIER_TYPE {
@@ -17,8 +19,8 @@ interface BaseUserEntityBack {
   user_type: USER_TYPE;
   name: string;
   organization_id: string;
+  group_id: string | null;
   username?: string | null;
-  group_id?: string | null;
   last_name?: string | null;
   address?: string | null;
   phone?: number | null;
@@ -38,9 +40,9 @@ interface BaseUserEntityBack {
   last_login_ip?: string | null;
 }
 
-// Usuario tipo OWNER o ADMIN
+// Usuario tipo OWNER, CAPITALIST, SUPERADMIN o ADMIN (no-cashier users)
 export interface OwnerOrAdminUserEntityBack extends BaseUserEntityBack {
-  user_type: USER_TYPE.OWNER | USER_TYPE.ADMIN | USER_TYPE.SUPERADMIN;
+  user_type: USER_TYPE.OWNER | USER_TYPE.CAPITALIST | USER_TYPE.SUPERADMIN | USER_TYPE.ADMIN;
   cashier_type: null;
   fee: null;
   fee_plus: null;
@@ -62,19 +64,36 @@ export type IBaseUserEntityFront = Omit<
   'created_at' | 'deleted_at' | 'edited_at' | 'organization_id'
 >;
 
-// Usuario tipo OWNER o ADMIN
+// Usuario tipo OWNER, CAPITALIST, SUPERADMIN o ADMIN (no-cashier users)
 export interface OwnerOrAdminUserEntityFront extends IBaseUserEntityFront {
-  user_type: USER_TYPE.OWNER | USER_TYPE.ADMIN | USER_TYPE.SUPERADMIN;
-  group_id?: string | null;
+  user_type: USER_TYPE.OWNER | USER_TYPE.CAPITALIST | USER_TYPE.SUPERADMIN | USER_TYPE.ADMIN;
 }
 
 // Usuario tipo CASHIER
 export interface CashierUserEntityFront extends IBaseUserEntityFront {
   user_type: USER_TYPE.CASHIER;
-  group_id?: string | null;
   cashier_type: CASHIER_TYPE;
   fee: number;
   fee_plus: number;
 }
 
 export type IUserEntityFront = OwnerOrAdminUserEntityFront | CashierUserEntityFront;
+
+// ============= Session Types =============
+
+/**
+ * Last session information (simplified for frontend)
+ * Only the most recent session's last_activity_at
+ */
+export interface ILastSessionInfo {
+  last_activity_at: string | Date;
+}
+
+/**
+ * User with last session information
+ * Used when fetching users with include_session=true
+ * Only includes the most recent session's activity time
+ */
+export type IUserWithSessionFront = IUserEntityFront & {
+  last_session?: ILastSessionInfo;
+};

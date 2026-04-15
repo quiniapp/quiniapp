@@ -5,9 +5,12 @@ export type LoginPayload = { username?: string; password?: string };
 
 export type AuthContextValue = {
   isAuth: boolean;
+  optimisticAuth: boolean;
   loading: boolean;
   user: IUserEntityFront | null;
   role: USER_TYPE | null;
+  organizationId: string | null;
+  groupId: string | null;
   login: (data: LoginPayload) => Promise<void>;
   logout: (logoutAll?: boolean) => Promise<void>;
   validate: () => Promise<void>;

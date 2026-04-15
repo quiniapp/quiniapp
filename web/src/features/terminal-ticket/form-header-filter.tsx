@@ -17,15 +17,20 @@ import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import IsRoleCashier from '@/components/is-role-cashier';
 import { useEffect, useState } from 'react';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
+import { useGroups } from '@/hooks/fetchs/organization/useGroups';
+import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 const FormHeaderFilter = () => {
-  const { role } = useAuth();
-  const { cashier_id, setDate, toggleCashier, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
-  const { data: cashiers } = useUsers(role);
+  const { role, organizationId } = useAuth();
+  const { cashier_id, group_id, setDate, toggleCashier, setCashierId, setGroupId, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
+  const { data: allCashiers } = useUsers(role);
+  const { data: groups } = useGroups(organizationId, role);
+  const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
+  const cashiers = group_id ? groupUsers : allCashiers;
   const [inputValue, setInputValue] = useState('');
 
   const handleSearch = () => {
@@ -39,7 +44,11 @@ const FormHeaderFilter = () => {
   };
 
   const handleSelectCashier = (id: string) => {
-    toggleCashier(id);
+    if (id === '__all__') {
+      setCashierId(undefined);
+    } else {
+      toggleCashier(id);
+    }
   };
 
   const handleSelectDate = (date?: string) => {
@@ -63,23 +72,35 @@ const FormHeaderFilter = () => {
           <IsRoleCashier role={role}>
             <Flex className={' gap-3'}>
               <Select
-                defaultValue={undefined}
-                value={cashier_id}
-                onValueChange={(value) => {
-                  handleSelectCashier(value);
-                }}
+                value={group_id ?? ''}
+                onValueChange={(value) => setGroupId(value === 'Todos' ? undefined : value)}
               >
-                <SelectTrigger className={'border w-full '}>
-                  <SelectValue placeholder="Todos" />
+                <SelectTrigger className={'border w-full'}>
+                  <SelectValue placeholder="Todos los grupos" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cashiers?.map((cashier) => {
-                    return (
-                      <SelectItem key={cashier.user_id} value={cashier.user_id}>
-                        {cashier.name} - {cashier.number}
-                      </SelectItem>
-                    );
-                  })}
+                  <SelectItem value="Todos">Todos los grupos</SelectItem>
+                  {groups?.map((g) => (
+                    <SelectItem key={g.organization_id} value={g.organization_id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={cashier_id ?? '__all__'}
+                onValueChange={handleSelectCashier}
+              >
+                <SelectTrigger className={'border w-full '}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos</SelectItem>
+                  {cashiers?.map((cashier) => (
+                    <SelectItem key={cashier.user_id} value={cashier.user_id}>
+                      {cashier.name} - {cashier.number}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Flex>

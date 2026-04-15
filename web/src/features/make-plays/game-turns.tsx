@@ -1,19 +1,23 @@
-import { Flex } from '@/components/flex';
-import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
-import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list';
-import { ILotteryEntityFront } from '@helper/types/lottery.type';
-import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { useClock } from '@/providers/ClockProvider';
-import { useEffect, useMemo } from 'react';
-import { USER_TYPE } from '@helper/types/user.type';
-import { useAuth } from '@/contexts/AuthContext';
-import LotteriesCheckboxList from './lotteries-checkbox-list';
-import { usePlayDetails } from './context/MakePlaysContext';
-import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
-import { DayKey } from '@helper/types/schedule-lottery.type';
 import { dayParseToString } from '@helper/functions/dayDictionary';
+import { ILotteryEntityFront } from '@helper/types/lottery.type';
+import { DayKey } from '@helper/types/schedule-lottery.type';
+import { IScheduleEntityFront } from '@helper/types/schedule.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
+import { useEffect, useMemo } from 'react';
+
+import { Flex } from '@/components/flex';
+import { useAuth } from '@/contexts/AuthContext';
+import ScheduleCheckboxList from '@/features/make-plays/schedules-checkbox-list';
 import { useLotteries } from '@/hooks/fetchs/lottery/useLotteries';
+import { useSchedules } from '@/hooks/fetchs/schedule/useSchedules';
+import { useScheduleLottery } from '@/hooks/fetchs/schedule-lottery/useScheduleLottery';
+import { useClockFunctions } from '@/providers/ClockProvider';
+
+import { usePlayDetails } from './context/MakePlaysContext';
+import LotteriesCheckboxList from './lotteries-checkbox-list';
+
+
 
 const GameTurns = () => {
   const {
@@ -48,7 +52,7 @@ const GameTurns = () => {
       return newMap;
     });
   };
-  const { now, isLessThanTenMinutes } = useClock();
+  const { isScheduleAfter, isLessThanTenMinutes } = useClockFunctions();
   const { role } = useAuth();
 
   const todayKey: DayKey = useMemo(() => dayParseToString[today], [today]);
@@ -84,11 +88,37 @@ const GameTurns = () => {
   }, [checkedSchedules, scheduleLotteryPerDate, todayKey, allLotteries]);
 
   useEffect(() => {
-    const status = schedulesData?.some((sch: IScheduleEntityFront) =>
-      isLessThanTenMinutes(sch.time)
-    );
-    setIsEnabledCreateBet(!status || role !== USER_TYPE.CASHIER);
-  }, [now, schedulesData]);
+    const check = () => {
+      // Auto-deselect closed schedules for CASHIERs
+      if (role === USER_TYPE.CASHIER) {
+        setSchedules((prev) => {
+          let changed = false;
+          const newMap = new Map(prev);
+          prev.forEach((sch) => {
+            const stillOpen = isScheduleAfter(sch.time) && !isLessThanTenMinutes(sch.time);
+            if (!stillOpen) {
+              newMap.delete(sch.schedule_id);
+              changed = true;
+            }
+          });
+          return changed ? newMap : prev;
+        });
+      }
+
+      // isLessThanTenMinutes returns false for past times (diffSec < 0), so
+      // we also need isScheduleAfter to properly detect closed schedules.
+      const hasOpenSchedule =
+        schedulesData?.some(
+          (sch: IScheduleEntityFront) =>
+            isScheduleAfter(sch.time) && !isLessThanTenMinutes(sch.time)
+        ) ?? false;
+      setIsEnabledCreateBet(role !== USER_TYPE.CASHIER || hasOpenSchedule);
+    };
+    check();
+    // Re-check every 10s — more than enough for a 10-minute threshold.
+    const id = window.setInterval(check, 10_000);
+    return () => clearInterval(id);
+  }, [schedulesData, isScheduleAfter, isLessThanTenMinutes, role, setIsEnabledCreateBet, setSchedules]);
 
   // Limpiar loterías seleccionadas que ya no están disponibles
   useEffect(() => {

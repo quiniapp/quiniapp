@@ -32,7 +32,7 @@ export class ResultsRouter {
     const { user } = req;
     const { newResults } = req.body;
 
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.FORBIDDEN,
@@ -168,7 +168,7 @@ export class ResultsRouter {
     const { user } = req;
     const { id: results_id } = req.params;
     const { updateResults } = req.body;
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.FORBIDDEN,
@@ -226,7 +226,7 @@ export class ResultsRouter {
   private deleteResultsHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
     const { id: results_id } = req.params;
-    if (user?.user.user_type === USER_TYPE.CASHIER) {
+    if ([USER_TYPE.CASHIER, USER_TYPE.ADMIN].includes(user?.user.user_type as USER_TYPE)) {
       const response: APIResponse<undefined> = {
         error: {
           error: ERROR_TYPE.FORBIDDEN,

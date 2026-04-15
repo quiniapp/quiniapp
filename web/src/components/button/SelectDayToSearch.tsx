@@ -1,11 +1,15 @@
-import { format, parseISO } from 'date-fns';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
 import { es } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const Calendar = lazy(() =>
+  import('@/components/ui/calendar').then((m) => ({ default: m.Calendar }))
+);
 import { cn } from '@/lib/utils';
 
 interface SelectDayToSearchProps {
@@ -23,18 +27,18 @@ export function SelectDayToSearch({
 }: SelectDayToSearchProps) {
   // Maintain internal Date state synced with selectedDay prop
   const [date, setDate] = useState<Date | undefined>(
-    selectedDay ? parseISO(selectedDay) : undefined
+    selectedDay ? dayjs(selectedDay).toDate() : undefined
   );
 
   // Sync when selectedDay prop changes
   useEffect(() => {
-    setDate(selectedDay ? parseISO(selectedDay) : undefined);
+    setDate(selectedDay ? dayjs(selectedDay).toDate() : undefined);
   }, [selectedDay]);
 
   const handleSelect = (newDate: Date | undefined) => {
     setDate(newDate);
     // Format to local date string without timezone offset
-    onDayChange(newDate ? format(newDate, 'yyyy-MM-dd') : undefined);
+    onDayChange(newDate ? dayjs(newDate).format('YYYY-MM-DD') : undefined);
   };
 
   return (
@@ -52,10 +56,10 @@ export function SelectDayToSearch({
           <span className="truncate text-white font-semibold  text-xs md:text-sm lg:text-base text-nowrap">
             {date ? (
               // Show shorter format on mobile
-              <span className="hidden sm:inline">{format(date, 'PPP', { locale: es })}</span>
+              <span className="hidden sm:inline">{dayjs(date).locale('es').format('D [de] MMMM [de] YYYY')}</span>
             ) : null}
             {date ? (
-              <span className="inline sm:hidden">{format(date, 'dd/MM/yy', { locale: es })}</span>
+              <span className="inline sm:hidden">{dayjs(date).format('DD/MM/YY')}</span>
             ) : (
               <span className="">
                 <span className="hidden sm:inline">Seleccionar Fecha</span>
@@ -66,15 +70,17 @@ export function SelectDayToSearch({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={handleSelect}
-          locale={es}
-          toDate={toDate}
-          initialFocus
-          className={cn('p-2 sm:p-3 pointer-events-auto')}
-        />
+        <Suspense fallback={null}>
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={handleSelect}
+            locale={es}
+            toDate={toDate}
+            initialFocus
+            className={cn('p-2 sm:p-3 pointer-events-auto')}
+          />
+        </Suspense>
       </PopoverContent>
     </Popover>
   );

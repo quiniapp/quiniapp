@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { LoadingState } from '../molecules/LoadingState';
 import { Text } from '../atoms/Text';
@@ -28,15 +28,20 @@ export function InfiniteScrollTable<T>({
   className = '',
   triggerIndex = 60,
 }: InfiniteScrollTableProps<T>) {
-  // Ref para el trigger element
   const [triggerRef, isIntersecting] = useIntersectionObserver({
     threshold: 0.1,
     rootMargin: '100px',
   });
 
-  // Detectar cuando el elemento trigger es visible
+  // Ref sincrónico: evita llamadas duplicadas entre el momento en que
+  // fetchNextPage() se invoca y el re-render que actualiza isFetchingNextPage.
+  const pendingFetchRef = useRef(false);
+
   useEffect(() => {
-    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+    if (!isFetchingNextPage) pendingFetchRef.current = false;
+
+    if (isIntersecting && hasNextPage && !isFetchingNextPage && !pendingFetchRef.current) {
+      pendingFetchRef.current = true;
       fetchNextPage();
     }
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);

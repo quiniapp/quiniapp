@@ -53,7 +53,7 @@ const PlayDetailGameTable = () => {
         ) : (
           bets.map((bet, index) => (
             <BetCard
-              key={index}
+              key={bet.bet_order ?? `${bet.number}-${bet.place}-${bet.amount}-${index}`}
               bet={bet}
               index={index}
               isSelected={selectedIndexes.includes(index)}
@@ -83,7 +83,7 @@ const PlayDetailGameTable = () => {
               bets.map((bet, index) => {
                 return (
                   <TableRow
-                    key={index}
+                    key={bet.bet_order ?? `${bet.number}-${bet.place}-${bet.amount}-${index}`}
                     data-state={selectedIndexes.includes(index) ? 'selected' : undefined}
                     className={cn(
                       'cursor-pointer select-none text-slate-300 text-sm lg:text-xs lg:h-8'

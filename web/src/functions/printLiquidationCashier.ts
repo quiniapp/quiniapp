@@ -52,16 +52,24 @@ export async function printUserSlipPDF(opts: {
   const block1Rows = [
     [
       `Pase: ${money(account.pass)}`,
+      `Aciertos: ${money(account.successes)}`,
+      `Reclamos: ${money(account.claims)}`,
+    ],
+    [
       `Subtotal: ${money(account.subtotal)}`,
-      `Deja: ${money(account.revenue)}`,
+      `Saldo: ${money(account.previous_balance)}`,
+      `Cobre: ${money(account.collections)}`,
+    ],
+    [
+      `Pague: ${money(account.paid)}`,
+      account?.leave ? `Deje: ${account.leave}` : '',
+      '',
     ],
     [
       `Comision: ${money(account.cashier_commission)}`,
-      `Saldo: ${money(account.previous_balance)}`,
+      `Deja: ${money(account.revenue)}`,
       `Gastos: ${money(account.bills)}`,
     ],
-    [`Aciertos: ${money(account.successes)}`, `Pague: ${money(account.paid)}`, ''],
-    [`Reclamos: ${money(account.claims)}`, `Cobre: ${money(account.collections)}`, account?.leave?`Deje: ${account.leave}`:''],
   ];
 
   autoTable(doc, {

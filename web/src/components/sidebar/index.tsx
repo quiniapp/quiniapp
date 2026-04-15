@@ -1,9 +1,18 @@
+import { useMemo } from 'react';
 import { UserIcon } from 'lucide-react';
 
 import SidebarItem from '@/components/sidebar/sidebar-item.tsx';
 import MENU_ITEMS from '@/constants/SidebarMenu';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Sidebar = () => {
+  const { role } = useAuth();
+
+  const visibleItems = useMemo(
+    () => MENU_ITEMS.filter((item) => !item.roles || (role && item.roles.includes(role))),
+    [role]
+  );
+
   return (
     <aside className="max-w-[300px] flex-1 bg-[var(--primary-bg-content)] text-white flex flex-col h-screen border-r-2 ">
       <div className="p-4 border-b border-gray-700 flex items-center">
@@ -14,7 +23,7 @@ const Sidebar = () => {
       </div>
 
       <div className="flex-1 overflow-auto">
-        {MENU_ITEMS.map((item) => (
+        {visibleItems.map((item) => (
           <SidebarItem key={item.id} data={item} />
         ))}
       </div>

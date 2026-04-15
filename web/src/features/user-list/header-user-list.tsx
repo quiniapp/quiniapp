@@ -18,23 +18,23 @@ import { useMemo } from 'react';
 
 const HeaderUserList = () => {
   const navigate = useNavigate();
-  const { setFilterUserType } = useUserListContext();
+  const { filterUserType, setFilterUserType } = useUserListContext();
   const { role } = useAuth();
 
   // Determine available options based on user role
   const options = useMemo(() => {
     if (role === USER_TYPE.OWNER) {
       return [
-        { value: USER_TYPE.CASHIER, label: 'PASADORES' },
-        { value: USER_TYPE.SUPERADMIN, label: 'SUPERADMIN' },
-        { value: USER_TYPE.ADMIN, label: 'ADMIN' },
-        { value: 'TODOS', label: 'TODOS' }, 
-      ];
-    } else if (role === USER_TYPE.SUPERADMIN) {
-      return [
-        { value: USER_TYPE.CASHIER, label: 'PASADORES' },
-        { value: USER_TYPE.ADMIN, label: 'ADMIN' },
         { value: 'TODOS', label: 'TODOS' },
+        { value: USER_TYPE.CASHIER, label: 'PASADORES' },
+        { value: USER_TYPE.ADMIN, label: 'ADMIN' },
+        { value: USER_TYPE.SUPERADMIN, label: 'SUPERADMIN' },
+      ];
+    } else if (role === USER_TYPE.CAPITALIST || role === USER_TYPE.SUPERADMIN) {
+      return [
+        { value: 'TODOS', label: 'TODOS' },
+        { value: USER_TYPE.CASHIER, label: 'PASADORES' },
+        { value: USER_TYPE.ADMIN, label: 'ADMIN' },
       ];
     } else if (role === USER_TYPE.ADMIN) {
       return [{ value: USER_TYPE.CASHIER, label: 'PASADORES' }];
@@ -50,6 +50,9 @@ const HeaderUserList = () => {
     }
   };
 
+  // Convert filterUserType to select value (undefined = 'TODOS')
+  const selectValue = filterUserType ?? 'TODOS';
+
   return (
     <Flex className={'items-center gap-4'}>
       <Flex className={'gap-4 items-center'}>
@@ -57,7 +60,7 @@ const HeaderUserList = () => {
           Tipo de usuario
         </Text>
         <Select
-          value={USER_TYPE.CASHIER}
+          value={selectValue}
           onValueChange={handleValueChange}
         >
           <SelectTrigger className="w-[200px] bg-dark-light border-dark-lighter">
@@ -72,14 +75,16 @@ const HeaderUserList = () => {
           </SelectContent>
         </Select>
       </Flex>
-      <Button
-        className={'!hover:cursor-pointer bg-[--primary-800]'}
-        type={'button'}
-        variant={'outline'}
-        onClick={() => navigate(ROUTES.NEW_USER)}
-      >
-        Crear nuevo
-      </Button>
+      {role !== USER_TYPE.ADMIN && role !== USER_TYPE.CASHIER && (
+        <Button
+          className={'!hover:cursor-pointer bg-[--primary-800]'}
+          type={'button'}
+          variant={'outline'}
+          onClick={() => navigate(ROUTES.NEW_USER)}
+        >
+          Crear nuevo
+        </Button>
+      )}
     </Flex>
   );
 };

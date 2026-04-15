@@ -6,6 +6,9 @@ import { asyncHandler } from '../../middlewares/error.middleware';
 import { UnauthorizedError } from '@helper/errors';
 import { loginSchema } from '@helper/schemas/auth.schema';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { deviceStatsCache } from 'api/src/analytics/cache/device-stats.cache';
+
+const ALLOWED_CONNECTION_TYPES = new Set(['4g', '3g', '2g', 'slow-2g', 'safari', 'unknown']);
 
 // Cookie configuration based on SESSION_CONFIG
 const COOKIE_OPTIONS = {
@@ -36,8 +39,9 @@ export class AuthRouter {
 
   private setupPrivateRoutes() {
     this.privateRouter.post('/logout', this.logoutHandler);
-    this.privateRouter.post('/logout-all', this.logoutAllHandler); // NEW - Phase 2
+    this.privateRouter.post('/logout-all', this.logoutAllHandler);
     this.privateRouter.get('/validate', this.validateHandler);
+    this.privateRouter.patch('/connection', this.connectionHandler);
   }
 
   /**
@@ -75,10 +79,13 @@ export class AuthRouter {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
-    // Respuesta exitosa
-    const response: APIResponse<IUserEntityFront> = {
+    // Incluye organization_id para que el frontend no necesite llamar a /validate post-login
+    const response: APIResponse<IUserEntityFront & { organization_id: string }> = {
       data: {
-        user: loginResponse.user,
+        user: {
+          ...loginResponse.user,
+          organization_id: loginResponse.organization_id,
+        },
       },
     };
 
@@ -165,7 +172,7 @@ export class AuthRouter {
 
   /**
    * GET /api/private/auth/validate
-   * Validate current session
+   * Passive session check — does not extend the session sliding window.
    */
   private validateHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req.user!;
@@ -174,12 +181,29 @@ export class AuthRouter {
       throw new UnauthorizedError('Usuario no encontrado');
     }
 
-    const response: APIResponse<IUserEntityFront> = {
+    const response: APIResponse<IUserEntityFront & { organization_id: string }> = {
       data: {
-        user,
+        user: {
+          ...user,
+          organization_id: req.organization_id!,
+        },
       },
     };
 
+    res.status(200).json(response);
+  });
+
+  /**
+   * PATCH /api/private/auth/connection
+   * Called once by the frontend after login to report connection type.
+   * Increments the in-memory analytics cache (flushed to DB every 6h).
+   */
+  private connectionHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { connection_type } = req.body;
+    if (typeof connection_type === 'string' && ALLOWED_CONNECTION_TYPES.has(connection_type)) {
+      deviceStatsCache.increment(`conn:${connection_type}`);
+    }
+    const response: APIResponse<boolean> = { data: { ok: true } };
     res.status(200).json(response);
   });
 }

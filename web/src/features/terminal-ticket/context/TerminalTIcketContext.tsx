@@ -5,6 +5,7 @@ interface TerminalTicketContextValue {
   // Search params values
   date: string | undefined;
   cashier_id: string | undefined;
+  group_id: string | undefined;
   filter: FilterType;
   ticket_number: string | undefined;
 
@@ -18,6 +19,7 @@ interface TerminalTicketContextValue {
   setPayTicket: React.Dispatch<React.SetStateAction<boolean | undefined>>;
   setDate: (date?: string) => void;
   setCashierId: (id?: string) => void;
+  setGroupId: (id?: string) => void;
   setFilter: (filter: FilterType) => void;
   setTicketNumber: (ticketNumber?: string) => void;
   toggleCashier: (id: string) => void;

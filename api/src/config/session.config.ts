@@ -49,7 +49,7 @@ export const SESSION_CONFIG = {
   // Cookie Settings
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
   COOKIE_SECURE: process.env.COOKIE_SECURE !== 'false', // default true
-  COOKIE_SAME_SITE: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') || 'none',
+  COOKIE_SAME_SITE: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') || 'lax', // lax provides CSRF protection
   COOKIE_HTTP_ONLY: true, // Always true for security
 
   // Token Names

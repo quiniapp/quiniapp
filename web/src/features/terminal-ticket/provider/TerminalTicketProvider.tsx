@@ -15,6 +15,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
   // Get values from search params
   const date = searchParams.get('date') ?? undefined;
   const cashier_id = searchParams.get('cashier_id') ?? undefined;
+  const group_id = searchParams.get('group_id') ?? undefined;
   const filterParam = searchParams.get('filter') ?? 'all';
   const ticket_number = searchParams.get('ticket_number') ?? undefined;
 
@@ -51,6 +52,20 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       } else {
         params.delete('cashier_id');
       }
+      setSearchParams(params);
+    },
+    [searchParams, setSearchParams]
+  );
+
+  const setGroupId = useCallback(
+    (id?: string) => {
+      const params = new URLSearchParams(searchParams);
+      if (id) {
+        params.set('group_id', id);
+      } else {
+        params.delete('group_id');
+      }
+      params.delete('cashier_id');
       setSearchParams(params);
     },
     [searchParams, setSearchParams]
@@ -124,6 +139,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       // Values
       date,
       cashier_id,
+      group_id,
       filter,
       ticket_number,
       winner,
@@ -135,6 +151,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       setPayTicket,
       setDate,
       setCashierId,
+      setGroupId,
       setFilter,
       setTicketNumber,
       toggleCashier,
@@ -147,6 +164,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
     [
       date,
       cashier_id,
+      group_id,
       filter,
       ticket_number,
       winner,
@@ -155,6 +173,7 @@ export const TerminalTicketProvider = ({ children }: TerminalTicketProviderProps
       payTicket,
       setDate,
       setCashierId,
+      setGroupId,
       setFilter,
       setTicketNumber,
       toggleCashier,

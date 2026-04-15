@@ -2,14 +2,14 @@ import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type.ts';
 import { toast } from 'react-hot-toast';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<IScheduleLotteryEntityFront> => {
-  const res = await fetch(BACKEND_ROUTES.schedule_lottery.base, {
+  const res = await fetchWithAuth(BACKEND_ROUTES.schedule_lottery.base, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify({ scheduleLottery: scheduleLottery }),
   });
 
@@ -41,11 +41,11 @@ export const useSaveScheduleLottery = (
       // Update cache synchronously with server response
       queryClient.setQueryData(['schedule-lottery'], data);
 
-      // Still invalidate lotteries since active status may have changed
-      await queryClient.invalidateQueries({
-        queryKey: ['lotteries'],
-        exact: false,
-      });
+      // Invalidate lotteries and schedules since active status and day assignments may have changed
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['lotteries'], exact: false }),
+        queryClient.invalidateQueries({ queryKey: ['schedules'], exact: false }),
+      ]);
 
       toast.success('Guardado correctamente');
       onSuccess?.(data, variables, context);

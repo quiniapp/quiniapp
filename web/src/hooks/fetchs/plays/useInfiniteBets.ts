@@ -2,6 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
 import { IPaginatedBetsResponse } from '@helper/request/pagination.request';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 export interface FetchInfiniteBetsProps {
   lottery_id?: string | null;
@@ -14,6 +15,8 @@ export interface FetchInfiniteBetsProps {
   quatern?: string | null;
   ticket_number?: string | null;
   limit?: number;
+  group_id?: string | null;
+  min_amount?: number | null;
 }
 
 export async function fetchPaginatedBets(
@@ -31,6 +34,8 @@ export async function fetchPaginatedBets(
     tern,
     ticket_number,
     limit = 150,
+    group_id,
+    min_amount,
   } = props;
 
   if (!date) {
@@ -55,11 +60,12 @@ export async function fetchPaginatedBets(
   if (quatern) params.append('quatern', quatern);
   if (tern) params.append('tern', tern);
   if (ticket_number) params.append('ticket_number', ticket_number);
+  if (group_id) params.append('group_id', group_id);
+  if (min_amount != null && min_amount > 0) params.append('min_amount', String(min_amount));
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching paginated bets');
@@ -91,6 +97,8 @@ export const useInfiniteBets = (props: FetchInfiniteBetsProps) => {
       props.tern ?? '',
       props.ticket_number ?? '',
       props.limit ?? 100,
+      props.group_id ?? '',
+      props.min_amount ?? 0,
     ],
     queryFn: ({ pageParam = 1 }) => fetchPaginatedBets(props, pageParam as number),
     getNextPageParam: (lastPage) => {

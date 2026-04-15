@@ -8,6 +8,12 @@ import { SessionRepository } from 'api/src/session/repository/session.repository
 import { AuditRepository } from 'api/src/session/repository/audit.repository';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from 'api/helper/JWT';
 import { SESSION_CONFIG } from 'api/src/config/session.config';
+import { sessionCache } from 'api/src/session/cache/session.cache';
+import { activityCache } from 'api/src/session/cache/session-activity.cache';
+import { sseManager } from 'api/src/session/sse/session-sse.manager';
+import { deviceStatsCache } from 'api/src/analytics/cache/device-stats.cache';
+import { clientStatsCache } from 'api/src/analytics/cache/client-stats.cache';
+import { detectDevice, parseUA } from 'api/src/analytics/helper/device-detector';
 
 export interface ILoginResponse {
   user: IUserEntityFront;
@@ -68,7 +74,7 @@ export class AuthController {
         user_agent: userAgent,
       });
       throw new UnauthorizedError(
-        `Cuenta bloqueada. Intenta nuevamente después de ${new Date(userData.locked_until).toLocaleTimeString()}`
+        'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
       );
     }
 
@@ -93,6 +99,7 @@ export class AuthController {
       await this.repository.incrementFailedAttempts(userData.user_id);
 
       const newFailedAttempts = (userData?.failed_login_attempts ?? 0) + 1;
+      const remainingAttempts = SESSION_CONFIG.MAX_FAILED_ATTEMPTS - newFailedAttempts;
 
       // Lock account if max attempts reached
       if (newFailedAttempts >= SESSION_CONFIG.MAX_FAILED_ATTEMPTS) {
@@ -104,27 +111,30 @@ export class AuthController {
           username,
           event_type: 'account_locked',
           success: false,
-          error_message: `Max failed attempts reached (${newFailedAttempts})`,
+          error_message: 'Account locked due to multiple failed attempts',
           ip_address: ipAddress,
           user_agent: userAgent,
         });
 
         throw new UnauthorizedError(
-          `Cuenta bloqueada por múltiples intentos fallidos. Intenta nuevamente después de ${lockUntil.toLocaleTimeString()}`
+          'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
         );
       }
 
+      // Log failed login
       await this.auditRepository.log({
         user_id: userData.user_id,
         username,
         event_type: 'login_failed',
         success: false,
-        error_message: `Invalid password (attempt ${newFailedAttempts}/${SESSION_CONFIG.MAX_FAILED_ATTEMPTS})`,
+        error_message: 'Invalid password',
         ip_address: ipAddress,
         user_agent: userAgent,
       });
 
-      throw new UnauthorizedError('Usuario o contraseña incorrectos');
+      throw new UnauthorizedError(
+        `Contraseña incorrecta. Te quedan ${remainingAttempts} ${remainingAttempts === 1 ? 'intento' : 'intentos'}.`
+      );
     }
 
     // 5. Check concurrent sessions limit
@@ -164,25 +174,31 @@ export class AuthController {
 
     // Update session with correct refresh token hash
     const finalRefreshTokenHash = await hashPassword(refreshToken);
-    await this.sessionRepository.rotateRefreshToken(session.session_id, finalRefreshTokenHash);
+    await this.sessionRepository.rotateRefreshToken(
+      session.session_id,
+      finalRefreshTokenHash,
+      session.refresh_token_version + 1
+    );
 
-    // 8. Update user login metadata
-    await this.repository.updateLoginMetadata(userData.user_id, ipAddress || null);
+    // Track device type + detailed client info in analytics cache (fire-and-forget)
+    deviceStatsCache.increment(`device:${detectDevice(userAgent)}`);
+    clientStatsCache.increment(parseUA(userAgent));
 
-    // 9. Reset failed attempts
-    await this.repository.resetFailedAttempts(userData.user_id);
-
-    // 10. Log successful login
-    await this.auditRepository.log({
-      user_id: userData.user_id,
-      session_id: session.session_id,
-      organization_id: userData.organization_id,
-      username,
-      event_type: 'login_success',
-      success: true,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-    });
+    // 8, 9, 10. Run independent post-login updates in parallel
+    await Promise.all([
+      this.repository.updateLoginMetadata(userData.user_id, ipAddress || null),
+      this.repository.resetFailedAttempts(userData.user_id),
+      this.auditRepository.log({
+        user_id: userData.user_id,
+        session_id: session.session_id,
+        organization_id: userData.organization_id,
+        username,
+        event_type: 'login_success',
+        success: true,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      }),
+    ]);
 
     return {
       user: parseUser(userData),
@@ -287,12 +303,16 @@ export class AuthController {
       session.refresh_token_version + 1
     );
 
-    // 7. Update session with new refresh token hash
+    // 7. Update session: rotate token + update activity in parallel
     const newRefreshTokenHash = await hashPassword(newRefreshToken);
-    await this.sessionRepository.rotateRefreshToken(session.session_id, newRefreshTokenHash);
-
-    // 8. Update activity (sliding window)
-    await this.sessionRepository.updateActivity(session.session_id);
+    await Promise.all([
+      this.sessionRepository.rotateRefreshToken(
+        session.session_id,
+        newRefreshTokenHash,
+        session.refresh_token_version + 1
+      ),
+      this.sessionRepository.updateActivity(session.session_id, session.created_at),
+    ]);
 
     // 9. Log successful refresh
     await this.auditRepository.log({
@@ -312,7 +332,8 @@ export class AuthController {
   };
 
   /**
-   * Logout (revoke session) (NEW - Phase 2)
+   * Logout (revoke session)
+   * Cleans in-memory caches and pushes SSE expiry event immediately.
    */
   logoutSession = async (
     sessionId: string,
@@ -321,6 +342,15 @@ export class AuthController {
   ): Promise<boolean> => {
     if (logoutAll) {
       await this.sessionRepository.revokeAllUserSessions(userId, 'user_logout_all');
+
+      // Clean all sessions for this user from both caches and SSE
+      const userSessionIds = sessionCache.getSessionIdsByUserId(userId);
+      for (const id of userSessionIds) {
+        sessionCache.delete(id);
+        activityCache.delete(id);
+        sseManager.expire(id);
+      }
+
       await this.auditRepository.log({
         user_id: userId,
         event_type: 'logout_all',
@@ -328,6 +358,11 @@ export class AuthController {
       });
     } else {
       await this.sessionRepository.revoke(sessionId, 'user_logout');
+
+      sessionCache.delete(sessionId);
+      activityCache.delete(sessionId);
+      sseManager.expire(sessionId);
+
       await this.auditRepository.log({
         user_id: userId,
         session_id: sessionId,

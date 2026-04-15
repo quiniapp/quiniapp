@@ -1,5 +1,5 @@
 import { supabase } from '@database/db.connection';
-import { InternalServerError, UnauthorizedError } from '@helper/errors';
+import { InternalServerError } from '@helper/errors';
 import { SESSION_CONFIG } from '../../config/session.config';
 
 export interface ISession {
@@ -80,17 +80,14 @@ export class SessionRepository {
   /**
    * Update session activity (sliding window)
    */
-  async updateActivity(sessionId: string): Promise<void> {
-    const session = await this.getById(sessionId);
-    if (!session) throw new UnauthorizedError('Invalid session');
-
+  async updateActivity(sessionId: string, createdAt: Date): Promise<void> {
     const now = new Date();
 
     // Calculate new expiration with sliding window
     const newExpiry = new Date(now.getTime() + SESSION_CONFIG.INACTIVITY_TIMEOUT);
 
     // Respect absolute timeout
-    const absoluteEnd = new Date(session.created_at.getTime() + SESSION_CONFIG.ABSOLUTE_TIMEOUT);
+    const absoluteEnd = new Date(createdAt.getTime() + SESSION_CONFIG.ABSOLUTE_TIMEOUT);
 
     const finalExpiry = newExpiry > absoluteEnd ? absoluteEnd : newExpiry;
 
@@ -186,21 +183,72 @@ export class SessionRepository {
   /**
    * Rotate refresh token (for security)
    */
-  async rotateRefreshToken(sessionId: string, newRefreshTokenHash: string): Promise<void> {
-    const session = await this.getById(sessionId);
-    if (!session) throw new UnauthorizedError('Invalid session');
-
+  async rotateRefreshToken(
+    sessionId: string,
+    newRefreshTokenHash: string,
+    newVersion: number
+  ): Promise<void> {
     const { error } = await supabase
       .from('sessions')
       .update({
         refresh_token_hash: newRefreshTokenHash,
-        refresh_token_version: session.refresh_token_version + 1,
+        refresh_token_version: newVersion,
       })
       .eq('session_id', sessionId);
 
     if (error) {
       console.error('[SessionRepository] Failed to rotate refresh token:', error);
       throw new InternalServerError('Failed to rotate refresh token');
+    }
+  }
+
+  /**
+   * Get multiple sessions by IDs in a single query
+   */
+  async getBatchByIds(sessionIds: string[]): Promise<ISession[]> {
+    if (sessionIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .in('session_id', sessionIds);
+
+    if (error) {
+      console.error('[SessionRepository] Failed to batch get sessions:', error);
+      throw new InternalServerError('Failed to batch get sessions');
+    }
+
+    return (data || []).map(this.mapToSession);
+  }
+
+  /**
+   * Batch update session activity from in-memory cache flush.
+   * Uses a single Postgres function call regardless of the number of sessions.
+   */
+  async batchUpdateActivity(
+    entries: Map<string, { last_activity_at: Date; expires_at: Date }>
+  ): Promise<void> {
+    if (entries.size === 0) return;
+
+    const sessionIds: string[] = [];
+    const activityTimes: string[] = [];
+    const expiryTimes: string[] = [];
+
+    for (const [sessionId, entry] of entries) {
+      sessionIds.push(sessionId);
+      activityTimes.push(entry.last_activity_at.toISOString());
+      expiryTimes.push(entry.expires_at.toISOString());
+    }
+
+    const { error } = await supabase.rpc('batch_update_session_activity', {
+      p_session_ids: sessionIds,
+      p_activity_times: activityTimes,
+      p_expiry_times: expiryTimes,
+    });
+
+    if (error) {
+      console.error('[SessionRepository] Failed to batch update activity:', error);
+      throw new InternalServerError('Failed to batch update session activity');
     }
   }
 

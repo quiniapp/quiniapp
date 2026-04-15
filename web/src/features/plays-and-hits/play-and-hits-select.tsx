@@ -13,6 +13,8 @@ import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { useSearchParams } from 'react-router-dom';
 import { useUsers } from '@/hooks/fetchs/users/useUsers';
+import { useGroups } from '@/hooks/fetchs/organization/useGroups';
+import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers';
 import { USER_TYPE } from '@helper/types/user.type';
 import { Fragment } from 'react/jsx-runtime';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,20 +22,36 @@ import { useAuth } from '@/contexts/AuthContext';
 const ALL = 'Todos';
 
 const PlayAndHitsSelect = () => {
-  const { role } = useAuth();
+  const { role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lotteries } = useLotteries();
-  const { data } = useUsers(role);
+  const { data: allUsers } = useUsers(role);
   const { data: schedules } = useSchedules();
+  const { data: groups } = useGroups(organizationId, role);
 
   const selectedSchedule = searchParams.get('schedule_id');
   const selectedLottery = searchParams.get('lottery_id');
   const selectedCashier = searchParams.get('cashier_id');
+  const selectedGroup = searchParams.get('group_id');
+
+  const { data: groupUsers } = useGroupUsers(selectedGroup, role);
+  const users = selectedGroup ? groupUsers : allUsers;
 
   const handleChange = (id: string, key: string) => {
     const params = new URLSearchParams(searchParams);
     if (id === ALL) params.delete(key);
     else params.set(key, id);
+    setSearchParams(params);
+  };
+
+  const handleGroupChange = (id: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (id === ALL) {
+      params.delete('group_id');
+    } else {
+      params.set('group_id', id);
+    }
+    params.delete('cashier_id');
     setSearchParams(params);
   };
 
@@ -54,7 +72,7 @@ const PlayAndHitsSelect = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}> {ALL}</SelectItem>
-                {data?.map((user) => {
+                {users?.map((user) => {
                   return (
                     <SelectItem key={user.user_id} value={user.user_id}>
                       {user.name} - {user.number}
@@ -66,16 +84,20 @@ const PlayAndHitsSelect = () => {
           </Flex>
           <Flex className={'flex-1 gap-3 items-center'}>
             <Text className='text-base font-bold'>Grupo</Text>
-            <Select>
-              <SelectTrigger className={'border   w-full  bg-[var(--bg-card)]'}>
-                <SelectValue placeholder={ALL}  className='text-white'/>
+            <Select
+              value={selectedGroup ?? ''}
+              onValueChange={handleGroupChange}
+            >
+              <SelectTrigger className={'border w-full bg-[var(--bg-card)]'}>
+                <SelectValue placeholder={ALL} className='text-white'/>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}> {ALL}</SelectItem>
-                <SelectItem value={'Pasador 1'}> Grupo 1</SelectItem>
-                <SelectItem value={'Pasador 2'}> Grupo 2</SelectItem>
-                <SelectItem value={'Pasador 4'}> Grupo 4</SelectItem>
-                <SelectItem value={'Pasador 5'}> Grupo 5</SelectItem>
+                <SelectItem value={ALL}>{ALL}</SelectItem>
+                {groups?.map((g) => (
+                  <SelectItem key={g.organization_id} value={g.organization_id}>
+                    {g.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Flex>

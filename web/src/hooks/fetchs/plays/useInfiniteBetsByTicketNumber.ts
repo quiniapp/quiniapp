@@ -2,6 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
 import { IPaginatedBetsResponse } from '@helper/request/pagination.request';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 export interface FetchInfiniteBetsByTicketNumberProps {
   lottery_id?: string | null;
@@ -57,9 +58,8 @@ export async function fetchPaginatedBetsByTicketNumber(
   if (ticket_number) params.append('ticket_number', ticket_number);
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching paginated bets by ticket number');

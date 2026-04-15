@@ -24,7 +24,7 @@ const PayTicketModal = lazy(() => import('@/components/modals/PayTicketModal'));
 
 const TerminalTicketContentInner = () => {
   const { role } = useAuth();
-  const { date, cashier_id, winner, paid, not_paid, ticket_number, resetTicketNumber, payTicket } =
+  const { date, cashier_id, group_id, winner, paid, not_paid, ticket_number, resetTicketNumber, payTicket } =
     useTerminalTicket();
   const [isOpenDeleteTicket, setIsOpenDeleteTicket] = useState(false);
   const [isOpenPayTicket, setIsOpenPayTicket] = useState(false);
@@ -76,6 +76,7 @@ const TerminalTicketContentInner = () => {
               winner={winner}
               paid={paid}
               not_paid={not_paid}
+              group_id={group_id}
             />
             <Flex className={'w-full justify-between 1440:py-8 py-3 border-t gap-2'}>
               <Flex className="gap-1 sm:gap-2 2xl:gap-4">

@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react';
+import { USER_TYPE } from '@helper/types/user.type';
+import dayjs from 'dayjs';
 import { Filter } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import Box from '@/components/box';
+import { IconButton } from '@/components/button/IconButton';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import { Flex } from '@/components/flex';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,28 +17,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useSearchParams } from 'react-router-dom';
-import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext.tsx';
+import { useGroups } from '@/hooks/fetchs/organization/useGroups.ts';
+import { useGroupUsers } from '@/hooks/fetchs/users/useGroupUsers.ts';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber.ts';
-import { USER_TYPE } from '@helper/types/user.type';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useDebounce } from '@/hooks/useDebounce';
+import { SearchIcon, XIcon } from 'lucide-react';
 
-interface FilterSectionProps {
-  group: string;
-  onGroupChange: (group: string) => void;
-}
 
-const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
+const FilterSection = () => {
   const [userNumber, setUserNumber] = useState<string>('');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const isMobile = useIsMobile();
-  const { role } = useAuth();
+  const { role, organizationId, groupId } = useAuth();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date') ?? undefined;
+  const group_id = searchParams.get('group_id') ?? undefined;
+  const activeUserId = searchParams.get('user_id') ?? undefined;
+
+  // ADMIN with group: auto-scope to their group
+  const adminHasGroup = role === USER_TYPE.ADMIN && !!groupId && groupId !== organizationId;
+
+  useEffect(() => {
+    if (adminHasGroup && group_id !== groupId) {
+      const params = new URLSearchParams(searchParams);
+      params.set('group_id', groupId!);
+      setSearchParams(params);
+    }
+  }, [adminHasGroup, groupId, group_id, searchParams, setSearchParams]);
+
+  const { data: groups } = useGroups(organizationId, role);
+  const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
 
   // No pises otros params al setear la fecha
   const handleDayChange = (newDate?: string) => {
@@ -43,12 +60,41 @@ const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
     setSearchParams(params);
   };
 
-  // Si tu hook admite "enabled", mejor: pero por compatibilidad dejamos el parseo acá
+  const handleGroupChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === 'Todos') {
+      params.delete('group_id');
+    } else {
+      params.set('group_id', value);
+    }
+    setSearchParams(params);
+  };
+
+  const debouncedUserNumber = useDebounce(userNumber, 400);
   const userNumberInt = useMemo(
-    () => (userNumber.trim() === '' ? 0 : Number.parseInt(userNumber, 10) || 0),
-    [userNumber]
+    () => (debouncedUserNumber.trim() === '' ? 0 : Number.parseInt(debouncedUserNumber, 10) || 0),
+    [debouncedUserNumber]
   );
   const { data } = useGetUserByNumber(userNumberInt);
+
+  const userNotInGroup = useMemo(() => {
+    if (!group_id || !data || !groupUsers) return false;
+    return !groupUsers.some((u) => u.user_id === data.user_id);
+  }, [group_id, data, groupUsers]);
+
+  const handleSearchUser = () => {
+    if (!data) return;
+    const params = new URLSearchParams(searchParams);
+    params.set('user_id', data.user_id);
+    setSearchParams(params);
+  };
+
+  const handleClearUser = () => {
+    setUserNumber('');
+    const params = new URLSearchParams(searchParams);
+    params.delete('user_id');
+    setSearchParams(params);
+  };
 
   const showGroupAndCashierFilters = role !== USER_TYPE.CASHIER;
 
@@ -86,21 +132,24 @@ const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
             <Flex className="items-center">
               <Label className="text-sm text-muted-foreground mr-2">Grupo:</Label>
               <Box>
-                <Select value={group} onValueChange={onGroupChange}>
+                <Select value={group_id ?? 'Todos'} onValueChange={handleGroupChange} disabled={adminHasGroup}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar Grupo" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Todos">Todos</SelectItem>
-                    <SelectItem value="Group 1">Group 1</SelectItem>
-                    <SelectItem value="Group 2">Group 2</SelectItem>
+                    {groups?.map((g) => (
+                      <SelectItem key={g.organization_id} value={g.organization_id}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Box>
             </Flex>
 
             <Flex className="items-center gap-1 sm:gap-3">
-              <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
+              <Label htmlFor="employee_number" className="text-sm text-muted-foreground">
                 Pasador:
               </Label>
               <Input
@@ -110,11 +159,33 @@ const FilterSection = ({ group, onGroupChange }: FilterSectionProps) => {
                 inputMode="numeric"
                 value={userNumber}
                 onChange={(e) => setUserNumber(e.currentTarget.value)}
-                // Si querés solo dígitos: onChange={(e)=> setUserNumber(e.currentTarget.value.replace(/\D/g,''))}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
               />
-              <Label htmlFor="employee_number" className="text-sm  text-muted-foreground">
-                {data?.name} {data?.number}
-              </Label>
+              <IconButton
+                type="button"
+                label="Buscar"
+                icon={<SearchIcon />}
+                onClick={handleSearchUser}
+                disabled={!data}
+              />
+              {activeUserId && (
+                <Flex className="items-center gap-1">
+                  <span className="text-sm text-muted-foreground">
+                    {data?.name ?? activeUserId}
+                  </span>
+                  <IconButton
+                    type="button"
+                    label="Limpiar"
+                    icon={<XIcon />}
+                    variant="outline"
+                    onClick={handleClearUser}
+                    className="!px-2"
+                  />
+                </Flex>
+              )}
+              {userNotInGroup && (
+                <span className="text-red-500 text-xs">No pertenece al grupo</span>
+              )}
             </Flex>
           </>
         )}

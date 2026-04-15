@@ -3,36 +3,47 @@ import { useQueryClient } from '@tanstack/react-query';
 import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import { AuthContext, AuthContextValue, LoginPayload } from '@/contexts/AuthContext';
 import { BACKEND_ROUTES } from '../../routes/routes';
-import {
-  VALIDATE_INTERVAL_MS,
-  VALIDATE_ON_VISIBILITY,
-  VISIBILITY_MIN_GAP_MS,
-} from '@helper/config/session.config';
+import { VALIDATE_ON_VISIBILITY, VALIDATE_INTERVAL_MS, VISIBILITY_MIN_GAP_MS } from '@helper/config/session.config';
 import { apiClient, ApiError } from '@/lib/apiClient';
+import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
 
 // Auto-refresh access token every 13-14 minutes (random to avoid thundering herd)
 const AUTO_REFRESH_INTERVAL_MS = (13 + Math.random()) * 60 * 1000;
+
+// Extended user type with organization_id from validate endpoint
+interface UserWithOrg extends IUserEntityFront {
+  organization_id: string;
+  group_id: string;
+}
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<IUserEntityFront | null>(null);
   const [role, setRole] = useState<USER_TYPE | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
+  const [optimisticAuth] = useState(() => sessionStorage.getItem('auth_hint') === '1');
   const [loading, setLoading] = useState(true);
 
-  const validateIntervalRef = useRef<number | null>(null);
   const refreshIntervalRef = useRef<number | null>(null);
   const lastValidateRef = useRef<number>(0);
 
-  const setSession = useCallback((u: IUserEntityFront | null) => {
+  const setSession = useCallback((u: UserWithOrg | null) => {
     if (u) {
       setUser(u);
       setRole(u.user_type);
+      setOrganizationId(u.organization_id);
+      setGroupId(u.group_id ?? null);
       setIsAuth(true);
+      sessionStorage.setItem('auth_hint', '1');
     } else {
       setUser(null);
       setRole(null);
+      setOrganizationId(null);
+      setGroupId(null);
       setIsAuth(false);
+      sessionStorage.removeItem('auth_hint');
     }
   }, []);
 
@@ -42,16 +53,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     lastValidateRef.current = now;
 
     try {
-      const user = await apiClient.get<IUserEntityFront>(BACKEND_ROUTES.auth.validate);
+      const user = await apiClient.get<UserWithOrg>(BACKEND_ROUTES.auth.validate);
       if (!user) throw new Error('Respuesta inválida del servidor');
       setSession(user);
     } catch (err) {
-      // Si es un error 401, simplemente limpiar la sesión
       if (err instanceof ApiError && err.statusCode === 401) {
         setSession(null);
-      } else {
-        setSession(null);
       }
+      // Otros errores (red, 5xx): no desconectar, el intervalo siguiente reintentará
     } finally {
       setLoading(false);
     }
@@ -61,27 +70,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     async (payload: LoginPayload) => {
       setLoading(true);
       try {
-        const user = await apiClient.post<IUserEntityFront>(
-          BACKEND_ROUTES.auth.login,
-          payload
-        );
-        if (!user) throw new Error('Respuesta inválida del servidor');
-
-        // seteo inmediato para actualizar UI
-        setSession(user);
-        // una sola validación posterior para asegurar cookies/estado del server
-        await validate();
+        // Login now returns organization_id directly — no need for a validate() round-trip
+        const userData = await apiClient.post<UserWithOrg>(BACKEND_ROUTES.auth.login, payload);
+        if (!userData) throw new Error('Respuesta inválida del servidor');
+        setSession(userData);
       } catch (err) {
-        // Re-lanzar el error con el mensaje del servidor para que el componente lo capture
-        if (err instanceof ApiError) {
-          throw new Error(err.message);
-        }
+        if (err instanceof ApiError) throw new Error(err.message);
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    [setSession, validate]
+    [setSession]
   );
 
   const logout = useCallback(
@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const endpoint = logoutAll
           ? BACKEND_ROUTES.auth.logoutAll
           : BACKEND_ROUTES.auth.logout;
-        await apiClient.post(endpoint);
+        await apiClient.post(endpoint, undefined, { _skipRefreshRetry: true });
       } catch {
         // no-op - even if logout fails on server, clear local session
       } finally {
@@ -116,26 +116,40 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const hasRole = useCallback((...roles: USER_TYPE[]) => !!role && roles.includes(role), [role]);
 
+  // Escuchar evento auth:expired disparado por apiClient cuando el refresh falla.
+  // En este caso el token ya no existe — no llamamos al server logout, solo limpiamos estado local.
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      queryClient.clear();
+      setSession(null);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, [queryClient, setSession]);
+
   // Primer validate al montar
   useEffect(() => {
     void validate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Validación periódica (cada 4 minutos)
-  // Backend maneja expiración de sesión con sliding window
+  // Report connection type once per authenticated session (analytics)
   useEffect(() => {
-    if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
+    if (!isAuth) return;
+    const conn = (navigator as any).connection || (navigator as any).mozConnection;
+    const connection_type: string = conn?.effectiveType ?? 'safari';
+    void apiClient.patch(BACKEND_ROUTES.auth.connection, { connection_type });
+  }, [isAuth]);
 
-    if (isAuth) {
-      validateIntervalRef.current = window.setInterval(() => {
-        void validate();
-      }, VALIDATE_INTERVAL_MS) as unknown as number;
-    }
+  // Polling periódico — detecta sesión expirada o revocada cada VALIDATE_INTERVAL_MS
+  useEffect(() => {
+    if (!isAuth) return;
 
-    return () => {
-      if (validateIntervalRef.current) window.clearInterval(validateIntervalRef.current);
-    };
+    const interval = window.setInterval(() => {
+      void validate();
+    }, VALIDATE_INTERVAL_MS);
+
+    return () => window.clearInterval(interval);
   }, [isAuth, validate]);
 
   // Auto-refresh de access token (cada 13-14 minutos)
@@ -185,15 +199,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const value: AuthContextValue = useMemo(
     () => ({
       isAuth,
+      optimisticAuth,
       loading,
       user,
       role,
+      organizationId,
+      groupId,
       login,
       logout,
       validate,
       hasRole,
     }),
-    [isAuth, loading, user, role, login, logout, validate, hasRole]
+    [isAuth, optimisticAuth, loading, user, role, organizationId, groupId, login, logout, validate, hasRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

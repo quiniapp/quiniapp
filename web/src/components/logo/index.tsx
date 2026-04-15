@@ -8,7 +8,7 @@ const Logo = () => {
         width={200}
         height={200}
         fetchpriority="high"
-        decoding="async"
+        decoding="sync"
       />
     </div>
   );

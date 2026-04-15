@@ -6,7 +6,7 @@ import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { IScheduleEntityFront } from '@helper/types/schedule.type';
-import { useClock } from '@/providers/ClockProvider';
+import { useClockFunctions } from '@/providers/ClockProvider';
 import { USER_TYPE } from '@helper/types/user.type';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,7 +28,7 @@ const SchedulesCheckboxListMobile = ({
   checkedSchedules,
 }: SchedulesCheckboxListMobileProps) => {
   const { role } = useAuth();
-  const { isScheduleAfter, isLessThanTenMinutes } = useClock();
+  const { isScheduleAfter, isLessThanTenMinutes } = useClockFunctions();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [triggerW, setTriggerW] = useState(0);

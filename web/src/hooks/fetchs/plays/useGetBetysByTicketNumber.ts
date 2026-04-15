@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 
 export interface FetchBetsProps {
@@ -54,9 +55,8 @@ export async function fetchBetsByTicketNumber({
   if (ticket_number) params.append('ticket_number', ticket_number);
 
   const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
 
   if (!res.ok) throw new Error('Error fetching bets');

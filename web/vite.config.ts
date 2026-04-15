@@ -1,5 +1,5 @@
 import path from 'path';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
@@ -88,28 +88,50 @@ export default defineConfig({
               return 'pdf-vendor';
             }
 
+            // Calendar component dependencies (lazy-loaded via SelectDayToSearch)
+            if (id.includes('react-day-picker') || id.includes('date-fns')) {
+              return 'calendar-vendor';
+            }
+
             // Date libraries (lazy-loaded con ClockProvider)
             // Puede estar separado porque no depende de React directamente
-            if (id.includes('dayjs') || id.includes('date-fns')) {
+            if (id.includes('dayjs')) {
               return 'date-vendor';
             }
 
-            // React ecosystem - TODO en el mismo chunk para evitar problemas de dependencias
-            // React + librerías que dependen de React DEBEN estar juntas
-            if (
-              id.includes('react') ||
-              id.includes('react-dom') ||
-              id.includes('react-router') ||
-              id.includes('@tanstack/react-query') ||
-              id.includes('@radix-ui') ||
-              id.includes('lucide-react')
-            ) {
-              return 'vendor';
+            // React core - base que todo depende
+            if (id.includes('react-dom')) {
+              return 'react-dom-vendor';
             }
 
-            // Utility libraries (no dependen de React)
+            // React base (scheduler, react)
+            if (id.includes('/react/') || id.includes('scheduler')) {
+              return 'react-vendor';
+            }
+
+            // React Router
+            if (id.includes('react-router') || id.includes('@remix-run')) {
+              return 'router-vendor';
+            }
+
+            // TanStack Query
+            if (id.includes('@tanstack/react-query')) {
+              return 'query-vendor';
+            }
+
+            // Radix UI components (separado para mejor caching)
+            if (id.includes('@radix-ui')) {
+              return 'radix-vendor';
+            }
+
+            // Icons (lucide-react es grande)
+            if (id.includes('lucide-react')) {
+              return 'icons-vendor';
+            }
+
+            // Utility libraries
             if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
-              return 'vendor';
+              return 'utils-vendor';
             }
 
             // Otras dependencias

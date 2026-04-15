@@ -1,11 +1,8 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-// @Components
 import { Flex } from '@/components/flex';
-
-// @types
 import type { MENU_ITEM } from '@/types/menu-item';
 
 type SidebarItemProps = {
@@ -19,29 +16,35 @@ const SidebarItem = ({ data }: SidebarItemProps) => {
 
   const hasChildren = !!data.children?.length;
 
-  const isChildRouteActive = () =>
-    data.children?.some((child) => location.pathname.startsWith(child.route)) ?? false;
+  const isChildRouteActive = useMemo(
+    () => data.children?.some((child) => location.pathname.startsWith(child.route)) ?? false,
+    [data.children, location.pathname]
+  );
 
-  const isRouteActive = (route: string) => {
-    return location.pathname === route || location.pathname.startsWith(route + '/');
-  };
+  const isRouteActive = useCallback(
+    (route: string) => location.pathname === route || location.pathname.startsWith(route + '/'),
+    [location.pathname]
+  );
 
   useEffect(() => {
-    if (hasChildren && isChildRouteActive()) {
+    if (hasChildren && isChildRouteActive) {
       setOpen(true);
     }
-  }, [location.pathname]);
+  }, [hasChildren, isChildRouteActive]);
 
-  const parentIsActive = isRouteActive(data.route) || isChildRouteActive();
+  const parentIsActive = useMemo(
+    () => isRouteActive(data.route) || isChildRouteActive,
+    [isRouteActive, data.route, isChildRouteActive]
+  );
 
-  const handleParentClick = () => {
+  const handleParentClick = useCallback(() => {
     navigate(data.route);
-  };
+  }, [navigate, data.route]);
 
-  const toggleOpen = (e: React.MouseEvent) => {
+  const toggleOpen = useCallback((e: MouseEvent) => {
     e.stopPropagation();
     setOpen((prev) => !prev);
-  };
+  }, []);
   return (
     <div className="w-full">
       <Flex

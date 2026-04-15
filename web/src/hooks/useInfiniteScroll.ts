@@ -85,8 +85,10 @@ export function useInfiniteScroll({
     isFetchingNextPageRef.current = isFetchingNextPage;
   });
 
-  // Limpiar elementos observados de índices antiguos
+  // Limpiar elementos observados de índices antiguos y resetear el dedup cuando
+  // cambia el trigger index (nueva página cargada o nuevo query por cambio de filtros)
   useEffect(() => {
+    lastTriggerIndexRef.current = -1;
     const currentElements = observedElementsRef.current.get(triggerIndex);
     observedElementsRef.current.clear();
     if (currentElements) {

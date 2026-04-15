@@ -7,6 +7,7 @@ import {
 } from '@helper/request/ticket.request';
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
+import { getTableName } from '../../archive/helper/archive-helper';
 
 export class TicketRepository {
   async create(ticket: INewTicketBaseEntity & { organization_id: string }) {
@@ -19,31 +20,71 @@ export class TicketRepository {
   }
 
   async getById(id: string, organization_id: string) {
+    // Try main table first (has more indexes, faster)
     const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
       p_ticket_id: id,
       p_organization_id: organization_id,
     });
 
-    if (error) throw error;
-    return data;
+    // If found in main table, return
+    if (!error && data && data.ticket_id) {
+      return data;
+    }
+
+    // If not found in main table, try archive
+    const { data: archiveData, error: archiveError } = await supabase.rpc(
+      'ticket_full_json_plpgsql_archive',
+      {
+        p_ticket_id: id,
+        p_organization_id: organization_id,
+      }
+    );
+
+    if (archiveError) throw archiveError;
+    return archiveData;
   }
 
   async getByNumber(ticket_number: string, organization_id: string) {
-    const { data: ticket, error: error_ticket_number } = await supabase
-      .from('tickets')
-      .select('ticket_id')
-      .eq('ticket_number', ticket_number)
-      .eq('organization_id', organization_id)
-      .maybeSingle();
-    if (!ticket || error_ticket_number) {
-      console.error({ ticket, error_ticket_number });
+    // Query both tables in parallel to avoid sequential round-trips
+    const [{ data: ticket }, { data: archiveTicket, error: error_archive }] = await Promise.all([
+      supabase
+        .from('tickets')
+        .select('ticket_id')
+        .eq('ticket_number', ticket_number)
+        .eq('organization_id', organization_id)
+        .maybeSingle(),
+      supabase
+        .from('tickets_archive')
+        .select('ticket_id')
+        .eq('ticket_number', ticket_number)
+        .eq('organization_id', organization_id)
+        .maybeSingle(),
+    ]);
+
+    if (ticket?.ticket_id) {
+      const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
+        p_ticket_id: ticket.ticket_id,
+        p_organization_id: organization_id,
+      });
+      if (!error && data && data.ticket_id) {
+        return data;
+      }
     }
-    const { data, error } = await supabase.rpc('ticket_full_json_plpgsql', {
-      p_ticket_id: ticket?.ticket_id,
-      p_organization_id: organization_id,
-    });
-    if (error) throw error;
-    return data;
+
+    if (!archiveTicket || error_archive) {
+      return null;
+    }
+
+    const { data: archiveData, error: archiveRpcError } = await supabase.rpc(
+      'ticket_full_json_plpgsql_archive',
+      {
+        p_ticket_id: archiveTicket.ticket_id,
+        p_organization_id: organization_id,
+      }
+    );
+
+    if (archiveRpcError) throw archiveRpcError;
+    return archiveData;
   }
 
   async getAll({
@@ -52,6 +93,7 @@ export class TicketRepository {
     date,
     winner,
     paid,
+    group_user_ids,
     page = 1,
     limit = 100,
   }: {
@@ -60,24 +102,33 @@ export class TicketRepository {
     date: string;
     winner?: boolean;
     paid?: boolean;
+    group_user_ids?: string[];
     page?: number;
     limit?: number;
   }) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
+    // Determine which table to query based on date
+    const tableName = getTableName(date, 'tickets');
+
     let query = supabase
-      .from('tickets')
+      .from(tableName)
       .select('*', { count: 'exact' })
-      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (user_id !== undefined) {
-      query = query.eq('user_id', user_id);
+    if (group_user_ids?.length) {
+      query = query.in('user_id', group_user_ids);
+    } else {
+      query = query.eq('organization_id', organization_id);
+      if (user_id !== undefined) {
+        query = query.eq('user_id', user_id);
+      }
     }
+
     if (winner) {
       query = query.is('winner', true);
     }
@@ -145,8 +196,11 @@ export class TicketRepository {
     user_id?: string;
     date: string;
   }): Promise<number> {
+    // Determine which table to query based on date
+    const tableName = getTableName(date, 'tickets');
+
     let query = supabase
-      .from('tickets')
+      .from(tableName)
       .select('ticket_id', { count: 'exact', head: true })
       .eq('organization_id', organization_id)
       .eq('date', date)
@@ -178,23 +232,33 @@ export class TicketRepository {
     user_id,
     date,
     winner,
+    group_user_ids,
   }: {
     organization_id: string;
     user_id?: string;
     date: string;
     winner: boolean;
+    group_user_ids?: string[];
   }) {
+    // Determine which table to query based on date
+    const tableName = getTableName(date, 'tickets');
+
     let query = supabase
-      .from('tickets')
+      .from(tableName)
       .select('ticket_id,ticket_number')
-      .eq('organization_id', organization_id)
       .eq('date', date)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-    if (user_id !== undefined) {
-      query = query.eq('user_id', user_id);
+    if (group_user_ids?.length) {
+      query = query.in('user_id', group_user_ids);
+    } else {
+      query = query.eq('organization_id', organization_id);
+      if (user_id !== undefined) {
+        query = query.eq('user_id', user_id);
+      }
     }
+
     if (winner) {
       query = query.is('winner', true);
     }
