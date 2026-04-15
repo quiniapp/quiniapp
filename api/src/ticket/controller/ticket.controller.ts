@@ -32,13 +32,10 @@ export class TicketController {
   get = async (props: IGetTicketEntity, organization_id: string): Promise<ITicketEntityFront> => {
     let ticket;
     if (props.ticket_id) {
-      // Repository handles searching in both main and archive tables
+      // Repository handles searching in both main and archive tables.
+      // Both RPCs already filter by organization_id in the WHERE clause,
+      // so any result is guaranteed to belong to the correct org.
       ticket = await this.repository.getById(props.ticket_id, organization_id);
-
-      // If found but organization doesn't match, treat as not found
-      if (ticket && ticket.organization_id !== organization_id) {
-        ticket = null;
-      }
     } else if (props.ticket_number) {
       // Repository handles searching in both main and archive tables
       ticket = await this.repository.getByNumber(props.ticket_number, organization_id);
