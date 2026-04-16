@@ -4,54 +4,51 @@ import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
 import { PLACE_TYPE } from '@helper/types/bet.type';
 
 // ── constants ─────────────────────────────────────────────────────────────────
-const PAGE_W = 58;         // mm
-const MARGIN = 3;          // mm each side
+const PAGE_W = 58;
+const MARGIN = 3;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-/** 3 primeras letras del schedule + guión + 1ª letra de la lottery */
-function abbrev(sl: ILotterySchedule): string[] {
-  const sch = sl.schedule.name.slice(0, 3);
-  return sl.lotteries.map((l) => `${sch}-${l.name[0]}`);
-}
-
-/** Collect unique combo abbreviations preserving insertion order */
-function uniqueAbbrevs(bets: IBetTable[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const bet of bets) {
-    for (const sl of bet.scheduleLottery) {
-      for (const a of abbrev(sl)) {
-        if (!seen.has(a)) { seen.add(a); out.push(a); }
-      }
-    }
-  }
-  return out;
-}
-
-/** Place code — matches image "01" style */
+// ── place codes ───────────────────────────────────────────────────────────────
 const PLACE_CODE: Record<PLACE_TYPE, string> = {
-  [PLACE_TYPE.HEAD]:    'C1',
-  [PLACE_TYPE.FIVE]:    '05',
-  [PLACE_TYPE.TEN]:     '10',
-  [PLACE_TYPE.TWENTY]:  '20',
+  [PLACE_TYPE.HEAD]:   '01',
+  [PLACE_TYPE.FIVE]:   '05',
+  [PLACE_TYPE.TEN]:    '10',
+  [PLACE_TYPE.TWENTY]: '20',
 };
 
-function placeLabel(place: PLACE_TYPE, position: PLACE_TYPE | null): string {
+function placeLabel(place: PLACE_TYPE, position?: PLACE_TYPE | null): string {
   const base = PLACE_CODE[place] ?? place;
   return position ? `${base}/${PLACE_CODE[position] ?? position}` : base;
 }
 
+// ── grouping (same logic as original) ────────────────────────────────────────
+function comboKey(scheduleLottery: ILotterySchedule[]): string {
+  return scheduleLottery
+    .map((sl) => ({
+      sid: String((sl.schedule as any).schedule_id ?? sl.schedule.name),
+      lids: sl.lotteries.map((l) => String((l as any).lottery_id ?? l.name)).sort(),
+    }))
+    .sort((a, b) => a.sid.localeCompare(b.sid))
+    .map((p) => `${p.sid}:${p.lids.join(',')}`)
+    .join('|');
+}
+
+/** "Prev-NPSEC Pri-NPSEC ..." — one token per schedule, lotteries concatenated */
+function compactHeader(scheduleLottery: ILotterySchedule[]): string {
+  return scheduleLottery
+    .map((sl) => {
+      const sch = sl.schedule.name.slice(0, 4);
+      const lots = sl.lotteries.map((l) => l.name[0]).join('');
+      return `${sch}-${lots}`;
+    })
+    .join(' ');
+}
+
 function fmtAmount(n: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
+  return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
 // ── PDF builder ───────────────────────────────────────────────────────────────
-
 export async function makeTicketPdf({
   ticket,
   bets,
@@ -63,38 +60,24 @@ export async function makeTicketPdf({
 }) {
   const { jsPDF } = await import('jspdf');
 
-  // ── measure pass: calculate page height ──────────────────────────────────
-  const abbrevs = uniqueAbbrevs(bets);
-  const ABBREV_COL_W = 10;                        // mm per abbrev cell (5 chars + space)
-  const ABBREVS_PER_ROW = Math.floor(CONTENT_W / ABBREV_COL_W) || 1;
-  const abbrevRows = Math.ceil(abbrevs.length / ABBREVS_PER_ROW);
+  // Group bets by schedule-lottery combination
+  type Group = { header: ILotterySchedule[]; items: IBetTable[] };
+  const groupsMap = new Map<string, Group>();
+  for (const bet of bets) {
+    const key = comboKey(bet.scheduleLottery);
+    if (!groupsMap.has(key)) groupsMap.set(key, { header: bet.scheduleLottery, items: [] });
+    groupsMap.get(key)!.items.push(bet);
+  }
+  const groups = Array.from(groupsMap.values());
 
-  // Rough height estimate (mm):
-  const headerH = 18;          // vendor + ticket (2 lines × 9)
-  const dateH   = 14;          // fecha/hora block
-  const abbrevH = abbrevRows * 5 + 6;
-  const betH    = bets.length * 5 + 6;
-  const totalH  = 14;
-  const idH     = 8;
-  const pageH   = headerH + dateH + abbrevH + betH + totalH + idH + 10;
+  // Estimate page height
+  const betCount = bets.length;
+  const headerLinesPerGroup = groups.length * 2; // compact header + spacer
+  const pageH = 50 + headerLinesPerGroup * 5 + betCount * 5 + 20;
 
   const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, Math.max(pageH, 60)] });
-
   let y = MARGIN + 2;
 
-  // ── header (Vendedor / Ticket) ────────────────────────────────────────────
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  const cx = PAGE_W / 2;
-
-  if (cashier_number !== undefined) {
-    doc.text(`Vendedor: ${cashier_number}`, cx, y, { align: 'center' });
-    y += 7;
-  }
-  doc.text(`Ticket: ${ticket.ticket_number}`, cx, y, { align: 'center' });
-  y += 6;
-
-  // ── divider ───────────────────────────────────────────────────────────────
   const divider = (dashed = false) => {
     doc.setLineDashPattern(dashed ? [1, 1] : [], 0);
     doc.line(MARGIN, y, PAGE_W - MARGIN, y);
@@ -102,9 +85,21 @@ export async function makeTicketPdf({
     y += 3;
   };
 
+  const cx = PAGE_W / 2;
+
+  // ── Vendedor / Ticket ─────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  if (cashier_number !== undefined) {
+    doc.text(`Vendedor: ${cashier_number}`, cx, y, { align: 'center' });
+    y += 7;
+  }
+  doc.text(`Ticket: ${ticket.ticket_number}`, cx, y, { align: 'center' });
+  y += 6;
+
   divider();
 
-  // ── Fecha / Hora ─────────────────────────────────────────────────────────
+  // ── Fecha / Hora ──────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.text('Fecha', MARGIN, y);
@@ -117,42 +112,38 @@ export async function makeTicketPdf({
 
   divider();
 
-  // ── Lottery/schedule abbreviations ────────────────────────────────────────
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-
-  for (let i = 0; i < abbrevs.length; i += ABBREVS_PER_ROW) {
-    const row = abbrevs.slice(i, i + ABBREVS_PER_ROW);
-    const line = row.join('  ');
-    doc.text(line, MARGIN, y);
-    y += 4.5;
-  }
-  y += 1;
-
-  divider();
-
-  // ── Bets ──────────────────────────────────────────────────────────────────
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(8);
-
-  // Column x positions
+  // ── Groups ────────────────────────────────────────────────────────────────
   const numX    = MARGIN;
-  const typeX   = MARGIN + 22;
+  const typeX   = MARGIN + 20;
   const amountX = PAGE_W - MARGIN;
 
-  for (const bet of bets) {
-    const num    = `${bet.number}${bet.with ? `-${bet.with}` : ''}`;
-    const type   = placeLabel(bet.place, bet.position ?? null);
-    const amount = fmtAmount(bet.amount);
+  for (const g of groups) {
+    // Compact schedule-lottery header, auto-wrapped
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    const headerText = compactHeader(g.header);
+    const headerLines = doc.splitTextToSize(headerText, CONTENT_W) as string[];
+    for (const line of headerLines) {
+      doc.text(line, MARGIN, y);
+      y += 4;
+    }
+    y += 1;
 
-    doc.text(num,    numX,    y);
-    doc.text(type,   typeX,   y);
-    doc.text(amount, amountX, y, { align: 'right' });
-    y += 4.5;
+    // Bets in this group
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8);
+    for (const bet of g.items) {
+      const num    = `${bet.number}${bet.with ? `-${bet.with}` : ''}`;
+      const type   = placeLabel(bet.place, bet.position);
+      const amount = fmtAmount(bet.amount);
+      doc.text(num,    numX,    y);
+      doc.text(type,   typeX,   y);
+      doc.text(amount, amountX, y, { align: 'right' });
+      y += 5;
+    }
+
+    divider(true);
   }
-  y += 1;
-
-  divider();
 
   // ── Total ─────────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
@@ -167,13 +158,12 @@ export async function makeTicketPdf({
   doc.setFontSize(6);
   doc.text(ticket.ticket_id ?? '', cx, y, { align: 'center' });
 
-  // ── output ────────────────────────────────────────────────────────────────
   const blob     = doc.output('blob');
   const fileName = `ticket-${ticket.ticket_number}.pdf`;
   return { blob, fileName };
 }
 
-// ── print / share helpers (unchanged) ────────────────────────────────────────
+// ── print / share (unchanged) ─────────────────────────────────────────────────
 
 export function printPdfBlob(blob: Blob) {
   const url    = URL.createObjectURL(blob);
@@ -199,7 +189,7 @@ export async function sharePdfBlob(
       return true;
     }
   } catch {
-    // fall through to WhatsApp fallback
+    // fall through
   }
   const message = encodeURIComponent(opts?.text ?? 'Te comparto el ticket');
   const link    = opts?.urlForWa ? `%0A${encodeURIComponent(opts.urlForWa)}` : '';
