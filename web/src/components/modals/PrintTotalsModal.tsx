@@ -20,7 +20,7 @@ import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 import { fetchCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import { fetchCurrentAccountTotals } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
 import { printDailyTotalsTicket, printRangeTotalsTicket } from '@/functions/printTotalsTicket';
-import { useGetOrgExpenses, type OrgExpense } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
+import { useGetOrgExpenses, fetchOrgExpenses, type OrgExpense } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
 import { useCreateOrgExpense } from '@/hooks/mutations/org-expense/useCreateOrgExpense';
 import { useDeleteOrgExpense } from '@/hooks/mutations/org-expense/useDeleteOrgExpense';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
@@ -109,7 +109,10 @@ const PrintTotalsModal = ({
       setPrinting(true);
 
       if (mode === 'day') {
-        const data = await fetchCurrentAccount(date, effectiveGroupId);
+        const [data, freshExpenses] = await Promise.all([
+          fetchCurrentAccount(date, effectiveGroupId),
+          fetchOrgExpenses(date),
+        ]);
         if (!data.length) {
           toast.error('Sin datos para esa fecha.');
           return;
@@ -119,7 +122,7 @@ const PrintTotalsModal = ({
           date,
           orgName,
           groupName: selectedGroup?.name,
-          expenses: savedExpenses.map((e) => ({ nombre: e.name, monto: e.amount })),
+          expenses: freshExpenses.map((e) => ({ nombre: e.name, monto: e.amount })),
         });
         toast.success('Ticket generado.');
       } else {
