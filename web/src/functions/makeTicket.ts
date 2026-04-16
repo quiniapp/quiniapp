@@ -81,12 +81,28 @@ export async function makeTicketPdf({
   }
   const groups = Array.from(groupsMap.values());
 
-  // Estimate page height
-  const betCount = bets.length;
-  const headerLinesPerGroup = groups.length * 2; // compact header + spacer
-  const pageH = 50 + headerLinesPerGroup * 5 + betCount * 5 + 20;
+  // Pre-measure header lines per group using a throwaway doc
+  const measureDoc = new jsPDF({ unit: 'mm', format: [PAGE_W, 200] });
+  measureDoc.setFont('helvetica', 'bold');
+  measureDoc.setFontSize(7);
+  const groupHeaderLineCounts = groups.map((g) =>
+    (measureDoc.splitTextToSize(compactHeader(g.header), CONTENT_W) as string[]).length
+  );
 
-  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, Math.max(pageH, 60)] });
+  // Calculate exact page height
+  let exactH = MARGIN + 2;
+  if (cashier_number !== undefined) exactH += 7;
+  exactH += 6 + 3;                                                   // Ticket + divider
+  exactH += 4 + 5 + 3;                                              // Fecha/Hora + divider
+  for (let i = 0; i < groups.length; i++) {
+    exactH += groupHeaderLineCounts[i] * 4 + 1;                    // group header
+    exactH += groups[i].items.length * 5;                          // bet rows
+    exactH += 3;                                                    // dashed divider
+  }
+  exactH += 1 + 9 + 3;                                             // Total + divider
+  exactH += 5 + MARGIN;                                            // UUID + bottom margin
+
+  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, exactH] });
   let y = MARGIN + 2;
 
   const divider = (dashed = false) => {
@@ -98,11 +114,11 @@ export async function makeTicketPdf({
 
   const cx = PAGE_W / 2;
 
-  // ── Vendedor / Ticket ─────────────────────────────────────────────────────
+  // ── Usuario / Ticket ─────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   if (cashier_number !== undefined) {
-    doc.text(`Vendedor: ${cashier_number}`, cx, y, { align: 'center' });
+    doc.text(`Usuario: ${cashier_number}`, cx, y, { align: 'center' });
     y += 7;
   }
   doc.text(`Ticket: ${ticket.ticket_number}`, cx, y, { align: 'center' });
