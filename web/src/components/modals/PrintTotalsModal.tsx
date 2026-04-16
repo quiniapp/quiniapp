@@ -47,10 +47,6 @@ const PrintTotalsModal = ({
   const [mode, setMode] = useState<'day' | 'range'>('day');
   const [date, setDate] = useState<string>(initialDate ?? dayjs().format('YYYY-MM-DD'));
 
-  // Sync date from URL param each time modal opens
-  useEffect(() => {
-    if (isOpen && initialDate) setDate(initialDate);
-  }, [isOpen, initialDate]);
   const [dateFrom, setDateFrom] = useState<string>(dayjs().startOf('week').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [groupId, setGroupId] = useState<string>(initialGroupId || ALL_GROUPS);
