@@ -1,9 +1,6 @@
 import dayjs from 'dayjs';
-import weekOfYear from 'dayjs/plugin/weekOfYear';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { DailyTotalEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
-
-dayjs.extend(weekOfYear);
 
 const TICKET_WIDTH = 72; // mm — ancho del ticket (80mm - márgenes)
 const MARGIN = { left: 4, right: 4 };
@@ -49,11 +46,10 @@ export async function printDailyTotalsTicket(params: {
   const totalExpenses = expenses.reduce((s, e) => s + (e.monto ?? 0), 0);
   const saldoDia = totalCollections - totalPaid - totalExpenses;
 
-  const weekNum = dayjs(date).week();
   const dateStr = dayjs(date).format('DD/MM/YYYY');
 
   // Calcular alto del documento dinámicamente
-  const headerLines = 5;
+  const headerLines = (orgName ? 1 : 0) + (groupName ? 1 : 0) + 3;
   const mePagoLines = mePago.length + 2; // items + encabezado + subtotal
   const lePagoLines = lePago.length + 2;
   const expenseLines = expenses.length > 0 ? expenses.length + 2 : 2;
@@ -75,10 +71,10 @@ export async function printDailyTotalsTicket(params: {
   // Encabezado
   doc.setFontSize(FONT_SIZE + 1);
   doc.setFont('Courier', 'bold');
-  doc.text(`Semana Nro. ${weekNum}`, 80 / 2, y, { align: 'center' });
-  y += LINE_H;
-  doc.text(orgName.toUpperCase(), 80 / 2, y, { align: 'center' });
-  y += LINE_H;
+  if (orgName) {
+    doc.text(orgName.toUpperCase(), 80 / 2, y, { align: 'center' });
+    y += LINE_H;
+  }
   if (groupName) {
     doc.text(groupName.toUpperCase(), 80 / 2, y, { align: 'center' });
     y += LINE_H;
@@ -165,11 +161,11 @@ export async function printRangeTotalsTicket(params: {
   const grandTotal = dailyTotals.reduce((s, d) => s + d.net_balance, 0);
   const percentageAmount = (grandTotal * percentage) / 100;
 
-  const weekStart = dayjs(date_from).week();
   const fromStr = dayjs(date_from).format('DD/MM/YYYY');
   const toStr = dayjs(date_to).format('DD/MM/YYYY');
 
-  const totalLines = 6 + dailyTotals.length + 5 + (groupName ? 1 : 0);
+  const totalLines =
+    (orgName ? 1 : 0) + (groupName ? 1 : 0) + 3 + dailyTotals.length + 5;
   const docHeight = Math.max(100, totalLines * LINE_H + 20);
 
   const doc = new jsPDF({
@@ -186,10 +182,10 @@ export async function printRangeTotalsTicket(params: {
   // Encabezado
   doc.setFontSize(FONT_SIZE + 1);
   doc.setFont('Courier', 'bold');
-  doc.text(`Semana Nro. ${weekStart}`, 80 / 2, y, { align: 'center' });
-  y += LINE_H;
-  doc.text(orgName.toUpperCase(), 80 / 2, y, { align: 'center' });
-  y += LINE_H;
+  if (orgName) {
+    doc.text(orgName.toUpperCase(), 80 / 2, y, { align: 'center' });
+    y += LINE_H;
+  }
   if (groupName) {
     doc.text(groupName.toUpperCase(), 80 / 2, y, { align: 'center' });
     y += LINE_H;
