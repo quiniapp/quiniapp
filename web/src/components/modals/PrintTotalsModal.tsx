@@ -50,7 +50,8 @@ const PrintTotalsModal = ({
     dayjs().startOf('week').format('YYYY-MM-DD')
   );
   const [dateTo, setDateTo] = useState<string>(dayjs().format('YYYY-MM-DD'));
-  const [groupId, setGroupId] = useState<string>(initialGroupId ?? '');
+  const ALL_GROUPS = '__all__';
+  const [groupId, setGroupId] = useState<string>(initialGroupId || ALL_GROUPS);
   const [percentage, setPercentage] = useState<number>(50);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [printing, setPrinting] = useState(false);
@@ -59,11 +60,15 @@ const PrintTotalsModal = ({
   useEffect(() => {
     if (!isOpen || !organizationId) return;
     fetchWithAuth(BACKEND_ROUTES.organization.id(organizationId))
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((json) => setOrgName(json?.data?.organization?.name ?? ''))
       .catch(() => setOrgName(''));
   }, [isOpen, organizationId]);
 
+  const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
   const selectedGroup = groups?.find((g) => g.organization_id === groupId);
 
   const addExpense = () =>
@@ -84,7 +89,7 @@ const PrintTotalsModal = ({
       setPrinting(true);
 
       if (mode === 'day') {
-        const data = await fetchCurrentAccount(date, groupId || null);
+        const data = await fetchCurrentAccount(date, effectiveGroupId);
         if (!data.length) {
           toast.error('Sin datos para esa fecha.');
           return;
@@ -101,7 +106,7 @@ const PrintTotalsModal = ({
         const dailyTotals = await fetchCurrentAccountTotals(
           dateFrom,
           dateTo,
-          groupId || null
+          effectiveGroupId
         );
         if (!dailyTotals.length) {
           toast.error('Sin datos para ese rango.');
@@ -161,7 +166,7 @@ const PrintTotalsModal = ({
                 <SelectValue placeholder="Todos los grupos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los grupos</SelectItem>
+                <SelectItem value={ALL_GROUPS}>Todos los grupos</SelectItem>
                 {groups.map((g) => (
                   <SelectItem key={g.organization_id} value={g.organization_id}>
                     {g.name}
