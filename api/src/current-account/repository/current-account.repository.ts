@@ -270,4 +270,62 @@ export class CurrentAccountRepository {
     if (error) throw error;
     return data || [];
   }
+
+  /**
+   * Get aggregated totals grouped by date within a date range (for print totals ticket)
+   */
+  async getTotalsByDateRangeHandler(
+    organization_id: string,
+    date_from: string,
+    date_to: string,
+    user_ids?: string[]
+  ): Promise<
+    {
+      date: string;
+      total_collections: number;
+      total_paid: number;
+      total_bills: number;
+      total_balance: number;
+    }[]
+  > {
+    const orgIds = await this.getOrganizationNetworkIds(organization_id);
+
+    let query = supabase
+      .from('current_accounts')
+      .select('date, collections, paid, bills, total')
+      .in('organization_id', orgIds)
+      .gte('date', dayjs(date_from).format('YYYY-MM-DD'))
+      .lte('date', dayjs(date_to).format('YYYY-MM-DD'))
+      .order('date', { ascending: true });
+
+    if (user_ids && user_ids.length > 0) {
+      query = query.in('user_id', user_ids);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const byDate: Record<
+      string,
+      { total_collections: number; total_paid: number; total_bills: number; total_balance: number }
+    > = {};
+    for (const row of data ?? []) {
+      if (!byDate[row.date]) {
+        byDate[row.date] = {
+          total_collections: 0,
+          total_paid: 0,
+          total_bills: 0,
+          total_balance: 0,
+        };
+      }
+      byDate[row.date].total_collections += Number(row.collections) || 0;
+      byDate[row.date].total_paid += Number(row.paid) || 0;
+      byDate[row.date].total_bills += Number(row.bills) || 0;
+      byDate[row.date].total_balance += Number(row.total) || 0;
+    }
+
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, totals]) => ({ date, ...totals }));
+  }
 }
