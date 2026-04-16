@@ -8,6 +8,8 @@ export type DailyTotalEntry = {
   total_paid: number;
   total_bills: number;
   total_balance: number;
+  total_expenses: number;
+  net_balance: number;
 };
 
 export const currentAccountTotalsKey = (date_from?: string | null, date_to?: string | null, group_id?: string | null) =>

@@ -67,6 +67,10 @@ export const BACKEND_ROUTES = {
   settings: {
     storage: `${PRIVATE}/settings/storage`,
   },
+  org_expense: {
+    base: `${PRIVATE}/org_expense`,
+    id: (id: string) => `${PRIVATE}/org_expense/${id}`,
+  },
   organization: {
     base: `${PRIVATE}/organization`,
     id: (id: string) => `${PRIVATE}/organization/${id}`,
