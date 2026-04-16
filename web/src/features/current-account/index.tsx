@@ -27,6 +27,7 @@ const CurrentAccountContent = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<boolean>(false);
   const [openPrintTotals, setOpenPrintTotals] = useState<boolean>(false);
+  const [printTotalsKey, setPrintTotalsKey] = useState(0);
   const { role } = useAuth();
   const [searchParams] = useSearchParams();
   const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
@@ -134,7 +135,7 @@ const CurrentAccountContent = () => {
             <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing}>
               Exportar Liquidación
             </Button>
-            <Button variant={'outline'} onClick={() => setOpenPrintTotals(true)} disabled={printing}>
+            <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing}>
               Imprimir Totales
             </Button>
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
@@ -154,6 +155,7 @@ const CurrentAccountContent = () => {
       </Suspense>
       <Suspense>
         <PrintTotalsModal
+          key={printTotalsKey}
           isOpen={openPrintTotals}
           onClose={() => setOpenPrintTotals(false)}
           initialDate={date}
