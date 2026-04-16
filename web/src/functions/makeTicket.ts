@@ -21,6 +21,17 @@ function placeLabel(place: PLACE_TYPE, position?: PLACE_TYPE | null): string {
   return position ? `${base}/${PLACE_CODE[position] ?? position}` : base;
 }
 
+/** Format number column based on inferred bet type:
+ *  - 10 digits            → BORRATINA  → show as-is
+ *  - bet.with is set      → REDOUBLE   → "12-34"
+ *  - otherwise            → ONE/DOUBLE/TERN/QUATERN → pad to 4 with '*'
+ */
+function formatBetNum(bet: IBetTable): string {
+  if (bet.number.length === 10) return bet.number;
+  if (bet.with) return `${bet.number}-${bet.with}`;
+  return bet.number.padStart(4, '*');
+}
+
 // ── grouping (same logic as original) ────────────────────────────────────────
 function comboKey(scheduleLottery: ILotterySchedule[]): string {
   return scheduleLottery
@@ -114,10 +125,15 @@ export async function makeTicketPdf({
 
   // ── Groups ────────────────────────────────────────────────────────────────
   const numX    = MARGIN;
-  const typeX   = MARGIN + 20;
   const amountX = PAGE_W - MARGIN;
+  // ~2.1mm per char at 8pt Courier; borratina = 10 chars ≈ 21mm, normal = 4 chars ≈ 8mm
+  const TYPE_X_NORMAL    = MARGIN + 14; // after 4-char padded number
+  const TYPE_X_BORRATINA = MARGIN + 26; // after 10-char borratina
 
   for (const g of groups) {
+    const hasBorratina = g.items.some((b) => b.number.length === 10);
+    const typeX = hasBorratina ? TYPE_X_BORRATINA : TYPE_X_NORMAL;
+
     // Compact schedule-lottery header, auto-wrapped
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
@@ -133,7 +149,7 @@ export async function makeTicketPdf({
     doc.setFont('courier', 'normal');
     doc.setFontSize(8);
     for (const bet of g.items) {
-      const num    = `${bet.number}${bet.with ? `-${bet.with}` : ''}`;
+      const num    = formatBetNum(bet);
       const type   = placeLabel(bet.place, bet.position);
       const amount = fmtAmount(bet.amount);
       doc.text(num,    numX,    y);
