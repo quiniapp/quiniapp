@@ -250,6 +250,28 @@ export class CurrentAccountController {
   };
 
   /**
+   * Get totals grouped by date within a date range
+   */
+  getTotalsByDateRangeHandler = async (
+    organization_id: string,
+    date_from: string,
+    date_to: string,
+    user_ids?: string[]
+  ) => {
+    try {
+      return await this.repository.getTotalsByDateRangeHandler(
+        organization_id,
+        date_from,
+        date_to,
+        user_ids
+      );
+    } catch (error) {
+      console.error('getTotalsByDateRangeHandler error:', error);
+      throw error instanceof Error ? error : new Error('Unknown error');
+    }
+  };
+
+  /**
    * Get network summary (aggregated totals per organization)
    */
   getNetworkSummaryHandler = async (
