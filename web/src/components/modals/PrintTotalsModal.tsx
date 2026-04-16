@@ -252,7 +252,7 @@ const PrintTotalsModal = ({
                   onClick={handleAddExpense}
                   disabled={creating}
                 >
-                  <PlusIcon className="h-4 w-4" />
+                  <PlusIcon className="h-4 w-4" /> Agregar
                 </Button>
               </div>
 
