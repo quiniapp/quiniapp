@@ -42,7 +42,8 @@ const UserCurrentAccountModal = ({
           user_id: '',
           user_name: '',
           user_number: 0,
-          // group_id: "",
+          group_id: null,
+          is_liquidated: false,
           pass: 0, //sp
           successes: 0, // sp
           claims: 0, // sp
@@ -175,7 +176,6 @@ const UserCurrentAccountModal = ({
                   <TableRow>
                     <TableHead>Número </TableHead>
                     <TableHead>Monto </TableHead>
-                    <TableHead>Liquidar</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -199,7 +199,6 @@ const UserCurrentAccountModal = ({
                       <TableRow key={ticket.ticket_id}>
                         <TableCell>{ticket.ticket_number}</TableCell>
                         <TableCell>{ticket.total}</TableCell>
-                        <TableCell>Liquidar</TableCell>
                       </TableRow>
                     ))
                   )}
