@@ -3,6 +3,7 @@ import { Flex, FlexCol } from '../flex';
 
 import { FormProvider, useForm } from 'react-hook-form';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import { USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import LabelInputForm from '../molecules/LabelInputForm';
 import { useBets } from '@/hooks/fetchs/plays/useBets';
@@ -89,7 +90,8 @@ const UserCurrentAccountModal = ({
     if (enable) {
       setValue('leave', 0);
     } else {
-      setValue('leave', getValues('drag')*cashier?.fee_plus/100);
+      const feePlus = cashier?.user_type === USER_TYPE.CASHIER ? cashier.fee_plus : 0;
+      setValue('leave', getValues('drag') * feePlus / 100);
     }
     setCalcLeave(!enable);
   };
