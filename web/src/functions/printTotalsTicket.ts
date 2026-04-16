@@ -162,7 +162,7 @@ export async function printRangeTotalsTicket(params: {
   const { dailyTotals, date_from, date_to, percentage, orgName, groupName } = params;
   const { jsPDF } = await getPDFDeps();
 
-  const grandTotal = dailyTotals.reduce((s, d) => s + d.total_balance, 0);
+  const grandTotal = dailyTotals.reduce((s, d) => s + d.net_balance, 0);
   const percentageAmount = (grandTotal * percentage) / 100;
 
   const weekStart = dayjs(date_from).week();
@@ -204,10 +204,10 @@ export async function printRangeTotalsTicket(params: {
   drawDivider(doc, y);
   y += 3;
 
-  // Totales por día
+  // Totales por día (usa net_balance = total_balance - expenses)
   for (const entry of dailyTotals) {
     const dateLabel = dayjs(entry.date).format('DD/MM/YY');
-    lineWithAmount(doc, dateLabel, money(entry.total_balance), y);
+    lineWithAmount(doc, dateLabel, money(entry.net_balance), y);
     y += LINE_H;
   }
 

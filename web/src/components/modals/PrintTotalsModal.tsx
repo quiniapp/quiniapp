@@ -20,13 +20,13 @@ import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 import { fetchCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import { fetchCurrentAccountTotals } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
 import { printDailyTotalsTicket, printRangeTotalsTicket } from '@/functions/printTotalsTicket';
+import { useGetOrgExpenses, type OrgExpense } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
+import { useCreateOrgExpense } from '@/hooks/mutations/org-expense/useCreateOrgExpense';
+import { useDeleteOrgExpense } from '@/hooks/mutations/org-expense/useDeleteOrgExpense';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { BACKEND_ROUTES } from '../../../routes/routes';
 
-interface ExpenseItem {
-  nombre: string;
-  monto: number;
-}
+const ALL_GROUPS = '__all__';
 
 interface PrintTotalsModalProps {
   isOpen: boolean;
@@ -46,16 +46,24 @@ const PrintTotalsModal = ({
 
   const [mode, setMode] = useState<'day' | 'range'>('day');
   const [date, setDate] = useState<string>(initialDate ?? dayjs().format('YYYY-MM-DD'));
-  const [dateFrom, setDateFrom] = useState<string>(
-    dayjs().startOf('week').format('YYYY-MM-DD')
-  );
+  const [dateFrom, setDateFrom] = useState<string>(dayjs().startOf('week').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = useState<string>(dayjs().format('YYYY-MM-DD'));
-  const ALL_GROUPS = '__all__';
   const [groupId, setGroupId] = useState<string>(initialGroupId || ALL_GROUPS);
   const [percentage, setPercentage] = useState<number>(50);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [printing, setPrinting] = useState(false);
   const [orgName, setOrgName] = useState<string>('');
+
+  // New expense form state (before saving)
+  const [newExpenseName, setNewExpenseName] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
+
+  const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
+  const selectedGroup = groups?.find((g) => g.organization_id === groupId);
+
+  // Load existing expenses from DB for selected date
+  const { data: savedExpenses = [] } = useGetOrgExpenses(mode === 'day' ? date : null);
+  const { mutate: createExpense, isPending: creating } = useCreateOrgExpense();
+  const { mutate: deleteExpense } = useDeleteOrgExpense(date);
 
   useEffect(() => {
     if (!isOpen || !organizationId) return;
@@ -68,21 +76,32 @@ const PrintTotalsModal = ({
       .catch(() => setOrgName(''));
   }, [isOpen, organizationId]);
 
-  const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
-  const selectedGroup = groups?.find((g) => g.organization_id === groupId);
-
-  const addExpense = () =>
-    setExpenses((prev) => [...prev, { nombre: '', monto: 0 }]);
-
-  const removeExpense = (idx: number) =>
-    setExpenses((prev) => prev.filter((_, i) => i !== idx));
-
-  const updateExpense = (idx: number, field: keyof ExpenseItem, value: string | number) =>
-    setExpenses((prev) =>
-      prev.map((e, i) => (i === idx ? { ...e, [field]: value } : e))
+  const handleAddExpense = () => {
+    const name = newExpenseName.trim();
+    const amount = Number(newExpenseAmount);
+    if (!name || !amount) {
+      toast.error('Ingresá nombre y monto.');
+      return;
+    }
+    createExpense(
+      { date, name, amount },
+      {
+        onSuccess: () => {
+          setNewExpenseName('');
+          setNewExpenseAmount('');
+        },
+        onError: () => toast.error('Error al guardar el gasto.'),
+      }
     );
+  };
 
-  const totalExpenses = expenses.reduce((s, e) => s + (Number(e.monto) || 0), 0);
+  const handleDeleteExpense = (expense: OrgExpense) => {
+    deleteExpense(expense.expense_id, {
+      onError: () => toast.error('Error al eliminar el gasto.'),
+    });
+  };
+
+  const totalExpenses = savedExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
 
   const handlePrint = async () => {
     try {
@@ -99,15 +118,11 @@ const PrintTotalsModal = ({
           date,
           orgName,
           groupName: selectedGroup?.name,
-          expenses: expenses.filter((e) => e.nombre && e.monto > 0),
+          expenses: savedExpenses.map((e) => ({ nombre: e.name, monto: e.amount })),
         });
         toast.success('Ticket generado.');
       } else {
-        const dailyTotals = await fetchCurrentAccountTotals(
-          dateFrom,
-          dateTo,
-          effectiveGroupId
-        );
+        const dailyTotals = await fetchCurrentAccountTotals(dateFrom, dateTo, effectiveGroupId);
         if (!dailyTotals.length) {
           toast.error('Sin datos para ese rango.');
           return;
@@ -177,7 +192,7 @@ const PrintTotalsModal = ({
           </div>
         )}
 
-        {/* Fecha (modo día) */}
+        {/* Modo día */}
         {mode === 'day' && (
           <>
             <div className="space-y-1">
@@ -189,43 +204,55 @@ const PrintTotalsModal = ({
               />
             </div>
 
-            {/* Gastos */}
+            {/* Gastos persistidos */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Gastos</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addExpense}>
-                  <PlusIcon className="h-3 w-3 mr-1" />
-                  Agregar
-                </Button>
-              </div>
+              <Label>Gastos del día</Label>
 
-              {expenses.map((exp, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <Input
-                    placeholder="Nombre del gasto"
-                    value={exp.nombre}
-                    onChange={(e) => updateExpense(idx, 'nombre', e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Monto"
-                    value={exp.monto || ''}
-                    onChange={(e) => updateExpense(idx, 'monto', Number(e.target.value))}
-                    className="w-28"
-                  />
+              {/* Lista de gastos guardados */}
+              {savedExpenses.map((exp) => (
+                <div key={exp.expense_id} className="flex items-center gap-2">
+                  <span className="flex-1 text-sm">{exp.name}</span>
+                  <span className="text-sm w-24 text-right">
+                    {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(exp.amount)}
+                  </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeExpense(idx)}
+                    onClick={() => handleDeleteExpense(exp)}
                   >
                     <XIcon className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
 
-              {expenses.length > 0 && (
+              {/* Form para agregar nuevo gasto */}
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Nombre del gasto"
+                  value={newExpenseName}
+                  onChange={(e) => setNewExpenseName(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  placeholder="Monto"
+                  value={newExpenseAmount}
+                  onChange={(e) => setNewExpenseAmount(e.target.value)}
+                  className="w-28"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddExpense}
+                  disabled={creating}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {totalExpenses > 0 && (
                 <div className="text-sm text-right opacity-70">
                   Total gastos:{' '}
                   {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(
@@ -237,7 +264,7 @@ const PrintTotalsModal = ({
           </>
         )}
 
-        {/* Rango de fechas */}
+        {/* Modo rango */}
         {mode === 'range' && (
           <>
             <div className="space-y-1">
