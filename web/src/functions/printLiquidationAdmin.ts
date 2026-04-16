@@ -61,79 +61,79 @@ export async function downloadCurrentAccountTablePDF(params: {
   // 2) dentro de downloadCurrentAccountTablePDF, después de crear el doc:
 
   // 👉 Márgenes y medidas base
-// --- medidas base (seguí usando landscape A4 en mm)
-// const BASE_FONT = 8.5;
-// const CELL_PAD = 1.6;
-doc.setFontSize(BASE_FONT);
+  // --- medidas base (seguí usando landscape A4 en mm)
+  // const BASE_FONT = 8.5;
+  // const CELL_PAD = 1.6;
+  doc.setFontSize(BASE_FONT);
 
-const margin = { left: 14, right: 14 };       // si hace falta más lugar, podés bajar a 12/12
-const pageWidth = doc.internal.pageSize.getWidth();
-const available = pageWidth - margin.left - margin.right;
+  const margin = { left: 14, right: 14 }; // si hace falta más lugar, podés bajar a 12/12
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const available = pageWidth - margin.left - margin.right;
 
-// peor caso garantizado: 7 dígitos + 1 decimal + separadores + posible signo
-const worstMoney = '-9.999.999,9';
-const MONEY_W_TEXT = doc.getTextWidth(worstMoney);
-const minMoneyCol = MONEY_W_TEXT + CELL_PAD * 2 + 0.5; // ancho mínimo numérico
+  // peor caso garantizado: 7 dígitos + 1 decimal + separadores + posible signo
+  const worstMoney = '-9.999.999,9';
+  const MONEY_W_TEXT = doc.getTextWidth(worstMoney);
+  const minMoneyCol = MONEY_W_TEXT + CELL_PAD * 2 + 0.5; // ancho mínimo numérico
 
-const numberColWidth = 16;             // "Número" angosto y fijo
-const MONEY_COL_COUNT = 10;            // Pase, Subtotal, Aciertos, Reclamos, Deuda, Cobros, Pagos, Total, Arrastre, Deje
+  const numberColWidth = 16; // "Número" angosto y fijo
+  const MONEY_COL_COUNT = 10; // Pase, Subtotal, Aciertos, Reclamos, Deuda, Cobros, Pagos, Total, Arrastre, Deje
 
-// 1) Partimos del mínimo que entra seguro para cada numérica
-let moneyColWidth = Math.ceil(minMoneyCol);
+  // 1) Partimos del mínimo que entra seguro para cada numérica
+  let moneyColWidth = Math.ceil(minMoneyCol);
 
-// 2) Asignamos a "Nombre" un ancho inicial más chico (achicamos esta col)
-const MIN_NAME = 24;                   // ⬅️ ANTES era 30/32, ahora la achicamos
-let nameColWidth = MIN_NAME;
+  // 2) Asignamos a "Nombre" un ancho inicial más chico (achicamos esta col)
+  const MIN_NAME = 24; // ⬅️ ANTES era 30/32, ahora la achicamos
+  let nameColWidth = MIN_NAME;
 
-// 3) Calculamos el espacio usado y el remanente
-let used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
-let leftover = available - used;
+  // 3) Calculamos el espacio usado y el remanente
+  let used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
+  let leftover = available - used;
 
-// Si sobra ancho, lo repartimos entre TODAS las numéricas por igual
-if (leftover > 0) {
-  const addEach = leftover / MONEY_COL_COUNT;
-  moneyColWidth = Math.floor(moneyColWidth + addEach); // puede ser float, pero redondeo a piso para evitar overrun
-  // recalculamos con el nuevo ancho
-  used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
-  leftover = available - used;
-  // Si quedó 1–2mm sueltos por redondeo, sumalos a "Nombre" como colchón
-  if (leftover > 0) nameColWidth += leftover;
-} else {
-  // Si falta espacio (no debería, pero por si cambiaste márgenes/fuente)
-  // reducimos 0.5mm a cada numérica sin bajar del mínimo medido
-  const deficit = -leftover;
-  const reduceEach = Math.ceil(deficit / MONEY_COL_COUNT);
-  moneyColWidth = Math.max(Math.ceil(minMoneyCol), moneyColWidth - reduceEach);
-  // y recomputamos
-  used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
-  nameColWidth = Math.max(MIN_NAME, available - numberColWidth - moneyColWidth * MONEY_COL_COUNT);
-}
+  // Si sobra ancho, lo repartimos entre TODAS las numéricas por igual
+  if (leftover > 0) {
+    const addEach = leftover / MONEY_COL_COUNT;
+    moneyColWidth = Math.floor(moneyColWidth + addEach); // puede ser float, pero redondeo a piso para evitar overrun
+    // recalculamos con el nuevo ancho
+    used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
+    leftover = available - used;
+    // Si quedó 1–2mm sueltos por redondeo, sumalos a "Nombre" como colchón
+    if (leftover > 0) nameColWidth += leftover;
+  } else {
+    // Si falta espacio (no debería, pero por si cambiaste márgenes/fuente)
+    // reducimos 0.5mm a cada numérica sin bajar del mínimo medido
+    const deficit = -leftover;
+    const reduceEach = Math.ceil(deficit / MONEY_COL_COUNT);
+    moneyColWidth = Math.max(Math.ceil(minMoneyCol), moneyColWidth - reduceEach);
+    // y recomputamos
+    used = numberColWidth + nameColWidth + moneyColWidth * MONEY_COL_COUNT;
+    nameColWidth = Math.max(MIN_NAME, available - numberColWidth - moneyColWidth * MONEY_COL_COUNT);
+  }
 
-// 4) columnStyles (se aplican IGUAL a la tabla principal y al footer)
-const columnStyles: Record<number, any> = {
-  0:  { cellWidth: numberColWidth, halign: 'left',  overflow: 'ellipsize' }, // Número
-  1:  { cellWidth: nameColWidth,   halign: 'left',  overflow: 'ellipsize' }, // Nombre
-  2:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Pase
-  3:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Subtotal
-  4:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Aciertos
-  5:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Reclamos
-  6:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Deuda
-  7:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Cobros
-  8:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Pagos
-  9:  { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Total
-  10: { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Arrastre
-  11: { cellWidth: moneyColWidth,  halign: 'right', overflow: 'hidden' },    // Deje
-};
+  // 4) columnStyles (se aplican IGUAL a la tabla principal y al footer)
+  const columnStyles: Record<number, any> = {
+    0: { cellWidth: numberColWidth, halign: 'left', overflow: 'ellipsize' }, // Número
+    1: { cellWidth: nameColWidth, halign: 'left', overflow: 'ellipsize' }, // Nombre
+    2: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Pase
+    3: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Subtotal
+    4: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Aciertos
+    5: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Reclamos
+    6: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Deuda
+    7: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Cobros
+    8: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Pagos
+    9: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Total
+    10: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Arrastre
+    11: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' }, // Deje
+  };
 
-// usa el MISMO font/padding/columnStyles en ambos autoTable
-const baseStyles = {
-  ...BORDER_CELL,
-  fontSize: BASE_FONT,
-  cellPadding: CELL_PAD,
-  overflow: 'linebreak',
-  fillColor: [255, 255, 255],
-  textColor: [0, 0, 0],
-};
+  // usa el MISMO font/padding/columnStyles en ambos autoTable
+  const baseStyles = {
+    ...BORDER_CELL,
+    fontSize: BASE_FONT,
+    cellPadding: CELL_PAD,
+    overflow: 'linebreak',
+    fillColor: [255, 255, 255],
+    textColor: [0, 0, 0],
+  };
   // 👉 HEAD en el orden pedido
   const HEAD = [
     [
