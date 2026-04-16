@@ -344,7 +344,7 @@ export class CurrentAccountRepository {
           date,
           ...totals,
           total_expenses,
-          net_balance: totals.total_balance - total_expenses,
+          net_balance: totals.total_collections - totals.total_paid - total_expenses,
         };
       });
   }
