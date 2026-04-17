@@ -140,6 +140,7 @@ export async function makeTicketPdf({
   doc.text(padLine(dayjs(ticket.date).format('DD/MM/YYYY'), dayjs().format('HH:mm:ss')), MARGIN, y);
   y += 5;
 
+  divider(true);
   // ── Groups ────────────────────────────────────────────────────────────────
   // Pre-compute monospace column widths for bet rows (Courier 8pt)
   doc.setFont('courier', 'normal');
@@ -147,13 +148,10 @@ export async function makeTicketPdf({
   const monoSf = (doc as any).internal.scaleFactor as number;
   const monoCharW = (doc.getStringUnitWidth('0') * 8) / monoSf;
   // Column widths in chars (match original mm positions: normal=14mm, borratina=26mm)
-  const NUM_COL_NORMAL = Math.round(14 / monoCharW);
   const NUM_COL_BORRATINA = Math.round(26 / monoCharW);
   const TYPE_COL = 7; // "01/05" max 5 chars + padding
 
-  // Use same numCol for ALL groups so type column aligns across the ticket
-  const ticketHasBorratina = bets.some((b) => b.number.length === 10);
-  const numCol = ticketHasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
+  const numCol = NUM_COL_BORRATINA;
   const amtCol = CHARS_PER_LINE - numCol - TYPE_COL;
 
   for (const g of groups) {
