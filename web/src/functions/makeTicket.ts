@@ -191,7 +191,7 @@ export async function makeTicketPdf({
   doc.text(`Total: ${fmtAmount(ticket.total)}`, cx, y + 1, { align: 'center' });
   y += 9;
 
-  divider();
+  divider(true);
 
   const blob     = doc.output('blob');
   const fileName = `ticket-${ticket.ticket_number}.pdf`;
