@@ -184,7 +184,7 @@ export async function makeTicketPdf({
   // ── Total ─────────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text(`Total: ${fmtAmount(ticket.total)}`, cx, y + 1, { align: 'center' });
+  doc.text(`Total: $${fmtAmount(ticket.total)}`, cx, y + 1, { align: 'center' });
   y += 9;
 
   divider(true);
