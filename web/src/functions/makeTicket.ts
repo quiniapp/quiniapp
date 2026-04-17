@@ -191,8 +191,8 @@ export async function makeTicketPdf({
 
   divider(true);
 
-  divider(true);
-  divider(true);
+  divider();
+  divider();
   const blob = doc.output('blob');
   const fileName = `ticket-${ticket.ticket_number}.pdf`;
   return { blob, fileName };
