@@ -48,7 +48,7 @@ function comboKey(scheduleLottery: ILotterySchedule[]): string {
 function compactHeader(scheduleLottery: ILotterySchedule[]): string {
   return scheduleLottery
     .map((sl) => {
-      const sch = sl.schedule.name.slice(0, 4);
+      const sch = sl.schedule.name.slice(0, 3);
       const lots = sl.lotteries.map((l) => l.name[0]).join('');
       return `${sch}-${lots}`;
     })
@@ -126,15 +126,10 @@ export async function makeTicketPdf({
 
   divider();
 
-  // Helper: build a two-column line by padding spaces between left and right strings
-  // Uses current doc font/size to measure widths accurately
+  // Thermal printer renders at fixed 32-char line width — use char-count padding
+  const CHARS_PER_LINE = 32;
   const padLine = (left: string, right: string) => {
-    const sf = (doc as any).internal.scaleFactor as number;
-    const fs = doc.getFontSize();
-    const spW = doc.getStringUnitWidth(' ') * fs / sf;
-    const lW  = doc.getStringUnitWidth(left)  * fs / sf;
-    const rW  = doc.getStringUnitWidth(right) * fs / sf;
-    const spaces = Math.max(1, Math.round((CONTENT_W - lW - rW) / spW));
+    const spaces = Math.max(1, CHARS_PER_LINE - left.length - right.length);
     return left + ' '.repeat(spaces) + right;
   };
 
@@ -153,9 +148,8 @@ export async function makeTicketPdf({
   // Pre-compute monospace column widths for bet rows (Courier 8pt)
   doc.setFont('courier', 'normal');
   doc.setFontSize(8);
-  const monoSf   = (doc as any).internal.scaleFactor as number;
+  const monoSf    = (doc as any).internal.scaleFactor as number;
   const monoCharW = doc.getStringUnitWidth('0') * 8 / monoSf;
-  const monoTotal = Math.floor(CONTENT_W / monoCharW);
   // Column widths in chars (match original mm positions: normal=14mm, borratina=26mm)
   const NUM_COL_NORMAL    = Math.round(14 / monoCharW);
   const NUM_COL_BORRATINA = Math.round(26 / monoCharW);
@@ -164,7 +158,7 @@ export async function makeTicketPdf({
   for (const g of groups) {
     const hasBorratina = g.items.some((b) => b.number.length === 10);
     const numCol = hasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
-    const amtCol = monoTotal - numCol - TYPE_COL;
+    const amtCol = CHARS_PER_LINE - numCol - TYPE_COL;
 
     // Compact schedule-lottery header, auto-wrapped
     doc.setFont('helvetica', 'bold');
