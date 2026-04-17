@@ -126,29 +126,45 @@ export async function makeTicketPdf({
 
   divider();
 
+  // Helper: build a two-column line by padding spaces between left and right strings
+  // Uses current doc font/size to measure widths accurately
+  const padLine = (left: string, right: string) => {
+    const sf = (doc as any).internal.scaleFactor as number;
+    const fs = doc.getFontSize();
+    const spW = doc.getStringUnitWidth(' ') * fs / sf;
+    const lW  = doc.getStringUnitWidth(left)  * fs / sf;
+    const rW  = doc.getStringUnitWidth(right) * fs / sf;
+    const spaces = Math.max(1, Math.round((CONTENT_W - lW - rW) / spW));
+    return left + ' '.repeat(spaces) + right;
+  };
+
   // ── Fecha / Hora ──────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.text('Fecha', MARGIN, y);
-  doc.text('Hora', PAGE_W - MARGIN, y, { align: 'right' });
+  doc.text(padLine('Fecha', 'Hora'), MARGIN, y);
   y += 4;
   doc.setFontSize(8);
-  doc.text(dayjs(ticket.date).format('DD/MM/YYYY'), MARGIN, y);
-  doc.text(dayjs().format('HH:mm:ss'), PAGE_W - MARGIN, y, { align: 'right' });
+  doc.text(padLine(dayjs(ticket.date).format('DD/MM/YYYY'), dayjs().format('HH:mm:ss')), MARGIN, y);
   y += 5;
 
   divider();
 
   // ── Groups ────────────────────────────────────────────────────────────────
-  const numX    = MARGIN;
-  const amountX = PAGE_W - MARGIN;
-  // ~2.1mm per char at 8pt Courier; borratina = 10 chars ≈ 21mm, normal = 4 chars ≈ 8mm
-  const TYPE_X_NORMAL    = MARGIN + 14; // after 4-char padded number
-  const TYPE_X_BORRATINA = MARGIN + 26; // after 10-char borratina
+  // Pre-compute monospace column widths for bet rows (Courier 8pt)
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(8);
+  const monoSf   = (doc as any).internal.scaleFactor as number;
+  const monoCharW = doc.getStringUnitWidth('0') * 8 / monoSf;
+  const monoTotal = Math.floor(CONTENT_W / monoCharW);
+  // Column widths in chars (match original mm positions: normal=14mm, borratina=26mm)
+  const NUM_COL_NORMAL    = Math.round(14 / monoCharW);
+  const NUM_COL_BORRATINA = Math.round(26 / monoCharW);
+  const TYPE_COL = 7; // "01/05" max 5 chars + padding
 
   for (const g of groups) {
     const hasBorratina = g.items.some((b) => b.number.length === 10);
-    const typeX = hasBorratina ? TYPE_X_BORRATINA : TYPE_X_NORMAL;
+    const numCol = hasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
+    const amtCol = monoTotal - numCol - TYPE_COL;
 
     // Compact schedule-lottery header, auto-wrapped
     doc.setFont('helvetica', 'bold');
@@ -161,16 +177,15 @@ export async function makeTicketPdf({
     }
     y += 1;
 
-    // Bets in this group
+    // Bets in this group — single string per row to preserve columns on thermal printers
     doc.setFont('courier', 'normal');
     doc.setFontSize(8);
     for (const bet of g.items) {
       const num    = formatBetNum(bet);
       const type   = placeLabel(bet.place, bet.position);
       const amount = fmtAmount(bet.amount);
-      doc.text(num,    numX,    y);
-      doc.text(type,   typeX,   y);
-      doc.text(amount, amountX, y, { align: 'right' });
+      const row = num.padEnd(numCol) + type.padEnd(TYPE_COL) + amount.padStart(Math.max(0, amtCol));
+      doc.text(row, MARGIN, y);
       y += 5;
     }
 

@@ -4,6 +4,11 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-17
+
+#### Ticket PDF — impresora térmica comprime texto
+- **`web/src/functions/makeTicket.ts`**: Thermal printers concatenate all `doc.text()` calls at same Y coordinate, ignoring X positions. Fix: each row now built as a single padded string — `padLine()` helper for two-column Helvetica rows (Fecha/Hora, date/time), char-width padding for three-column Courier bet rows (num/type/amount).
+
 ### Added - 2026-04-16
 
 #### Imprimir Totales — Cuenta Corriente
