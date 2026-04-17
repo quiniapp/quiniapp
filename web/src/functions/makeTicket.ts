@@ -10,9 +10,9 @@ const CONTENT_W = PAGE_W - MARGIN * 2;
 
 // ── place codes ───────────────────────────────────────────────────────────────
 const PLACE_CODE: Record<PLACE_TYPE, string> = {
-  [PLACE_TYPE.HEAD]:   '01',
-  [PLACE_TYPE.FIVE]:   '05',
-  [PLACE_TYPE.TEN]:    '10',
+  [PLACE_TYPE.HEAD]: '01',
+  [PLACE_TYPE.FIVE]: '05',
+  [PLACE_TYPE.TEN]: '10',
   [PLACE_TYPE.TWENTY]: '20',
 };
 
@@ -48,7 +48,7 @@ function comboKey(scheduleLottery: ILotterySchedule[]): string {
 function compactHeader(scheduleLottery: ILotterySchedule[]): string {
   return scheduleLottery
     .map((sl) => {
-      const sch = sl.schedule.name.slice(0, 4);
+      const sch = sl.schedule.name.slice(0, 3);
       const lots = sl.lotteries.map((l) => l.name[0]).join('');
       return `${sch}-${lots}`;
     })
@@ -56,7 +56,10 @@ function compactHeader(scheduleLottery: ILotterySchedule[]): string {
 }
 
 function fmtAmount(n: number): string {
-  return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 // ── PDF builder ───────────────────────────────────────────────────────────────
@@ -85,30 +88,30 @@ export async function makeTicketPdf({
   const measureDoc = new jsPDF({ unit: 'mm', format: [PAGE_W, 200] });
   measureDoc.setFont('helvetica', 'bold');
   measureDoc.setFontSize(7);
-  const groupHeaderLineCounts = groups.map((g) =>
-    (measureDoc.splitTextToSize(compactHeader(g.header), CONTENT_W) as string[]).length
+  const groupHeaderLineCounts = groups.map(
+    (g) => (measureDoc.splitTextToSize(compactHeader(g.header), CONTENT_W) as string[]).length
   );
 
   // Calculate exact page height
   let exactH = MARGIN + 2;
   if (cashier_number !== undefined) exactH += 7;
-  exactH += 6 + 3;                                                   // Ticket + divider
-  exactH += 4 + 5 + 3;                                              // Fecha/Hora + divider
+  exactH += 6 + 3; // Ticket + divider
+  exactH += 5 + 3; // Fecha+Hora single row + divider
   for (let i = 0; i < groups.length; i++) {
-    exactH += groupHeaderLineCounts[i] * 4 + 1;                    // group header
-    exactH += groups[i].items.length * 5;                          // bet rows
-    exactH += 3;                                                    // dashed divider
+    exactH += groupHeaderLineCounts[i] * 4 + 1; // group header
+    exactH += groups[i].items.length * 5; // bet rows
+    exactH += 3; // dashed divider
   }
-  exactH += 1 + 9 + 3;                                             // Total + divider
-  exactH += 5 + MARGIN;                                            // UUID + bottom margin
+  exactH += 9 + 3 + 1; // Total + divider + tiny bottom margin
 
   const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, exactH] });
   let y = MARGIN + 2;
 
+  // Thermal printers often ignore doc.line() — use text chars for reliable rendering
   const divider = (dashed = false) => {
-    doc.setLineDashPattern(dashed ? [1, 1] : [], 0);
-    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-    doc.setLineDashPattern([], 0);
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8);
+    doc.text(dashed ? '- '.repeat(16) : '-'.repeat(32), MARGIN, y);
     y += 3;
   };
 
@@ -124,48 +127,36 @@ export async function makeTicketPdf({
   doc.text(`Ticket: ${ticket.ticket_number}`, cx, y, { align: 'center' });
   y += 6;
 
-  divider();
-
-  // Helper: build a two-column line by padding spaces between left and right strings
-  // Uses current doc font/size to measure widths accurately
+  // Thermal printer renders at fixed 32-char line width — use char-count padding
+  const CHARS_PER_LINE = 32;
   const padLine = (left: string, right: string) => {
-    const sf = (doc as any).internal.scaleFactor as number;
-    const fs = doc.getFontSize();
-    const spW = doc.getStringUnitWidth(' ') * fs / sf;
-    const lW  = doc.getStringUnitWidth(left)  * fs / sf;
-    const rW  = doc.getStringUnitWidth(right) * fs / sf;
-    const spaces = Math.max(1, Math.round((CONTENT_W - lW - rW) / spW));
+    const spaces = Math.max(1, CHARS_PER_LINE - left.length - right.length);
     return left + ' '.repeat(spaces) + right;
   };
 
   // ── Fecha / Hora ──────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text(padLine('Fecha', 'Hora'), MARGIN, y);
-  y += 4;
   doc.setFontSize(8);
   doc.text(padLine(dayjs(ticket.date).format('DD/MM/YYYY'), dayjs().format('HH:mm:ss')), MARGIN, y);
   y += 5;
-
-  divider();
 
   // ── Groups ────────────────────────────────────────────────────────────────
   // Pre-compute monospace column widths for bet rows (Courier 8pt)
   doc.setFont('courier', 'normal');
   doc.setFontSize(8);
-  const monoSf   = (doc as any).internal.scaleFactor as number;
-  const monoCharW = doc.getStringUnitWidth('0') * 8 / monoSf;
-  const monoTotal = Math.floor(CONTENT_W / monoCharW);
+  const monoSf = (doc as any).internal.scaleFactor as number;
+  const monoCharW = (doc.getStringUnitWidth('0') * 8) / monoSf;
   // Column widths in chars (match original mm positions: normal=14mm, borratina=26mm)
-  const NUM_COL_NORMAL    = Math.round(14 / monoCharW);
+  const NUM_COL_NORMAL = Math.round(14 / monoCharW);
   const NUM_COL_BORRATINA = Math.round(26 / monoCharW);
   const TYPE_COL = 7; // "01/05" max 5 chars + padding
 
-  for (const g of groups) {
-    const hasBorratina = g.items.some((b) => b.number.length === 10);
-    const numCol = hasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
-    const amtCol = monoTotal - numCol - TYPE_COL;
+  // Use same numCol for ALL groups so type column aligns across the ticket
+  const ticketHasBorratina = bets.some((b) => b.number.length === 10);
+  const numCol = ticketHasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
+  const amtCol = CHARS_PER_LINE - numCol - TYPE_COL;
 
+  for (const g of groups) {
     // Compact schedule-lottery header, auto-wrapped
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
@@ -181,9 +172,9 @@ export async function makeTicketPdf({
     doc.setFont('courier', 'normal');
     doc.setFontSize(8);
     for (const bet of g.items) {
-      const num    = formatBetNum(bet);
-      const type   = placeLabel(bet.place, bet.position);
-      const amount = fmtAmount(bet.amount);
+      const num = formatBetNum(bet);
+      const type = bet.number.length === 10 ? 'BORR' : placeLabel(bet.place, bet.position);
+      const amount = '$' + fmtAmount(bet.amount);
       const row = num.padEnd(numCol) + type.padEnd(TYPE_COL) + amount.padStart(Math.max(0, amtCol));
       doc.text(row, MARGIN, y);
       y += 5;
@@ -198,14 +189,11 @@ export async function makeTicketPdf({
   doc.text(`Total: ${fmtAmount(ticket.total)}`, cx, y + 1, { align: 'center' });
   y += 9;
 
+  divider(true);
+
   divider();
-
-  // ── Ticket ID ─────────────────────────────────────────────────────────────
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
-  doc.text(ticket.ticket_id ?? '', cx, y, { align: 'center' });
-
-  const blob     = doc.output('blob');
+  divider();
+  const blob = doc.output('blob');
   const fileName = `ticket-${ticket.ticket_number}.pdf`;
   return { blob, fileName };
 }
@@ -213,7 +201,7 @@ export async function makeTicketPdf({
 // ── print / share (unchanged) ─────────────────────────────────────────────────
 
 export function printPdfBlob(blob: Blob) {
-  const url    = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
   iframe.src = url;
@@ -232,14 +220,18 @@ export async function sharePdfBlob(
   try {
     const file = new File([blob], fileName, { type: 'application/pdf' });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ title: 'Ticket', text: opts?.text ?? 'Te comparto el ticket', files: [file] });
+      await navigator.share({
+        title: 'Ticket',
+        text: opts?.text ?? 'Te comparto el ticket',
+        files: [file],
+      });
       return true;
     }
   } catch {
     // fall through
   }
   const message = encodeURIComponent(opts?.text ?? 'Te comparto el ticket');
-  const link    = opts?.urlForWa ? `%0A${encodeURIComponent(opts.urlForWa)}` : '';
+  const link = opts?.urlForWa ? `%0A${encodeURIComponent(opts.urlForWa)}` : '';
   window.open(`https://wa.me/?text=${message}${link}`, '_blank', 'noopener,noreferrer');
   return false;
 }
