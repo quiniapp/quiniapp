@@ -240,11 +240,6 @@ const CurrentAcoountByUserTable = () => {
                         <span className="text-sm opacity-70">Monto</span>
                         <span className="font-medium">{t.total}</span>
                       </div>
-                      <div className="mt-2">
-                        <Button size="sm" variant="secondary" className="w-full">
-                          Liquidar
-                        </Button>
-                      </div>
                     </div>
                   ))
                 )}
@@ -257,7 +252,6 @@ const CurrentAcoountByUserTable = () => {
                     <TableRow>
                       <TableHead>Número</TableHead>
                       <TableHead>Monto</TableHead>
-                      <TableHead>Liquidar</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="border">
@@ -280,11 +274,6 @@ const CurrentAcoountByUserTable = () => {
                         <TableRow key={ticket.ticket_id}>
                           <TableCell>{ticket.ticket_number}</TableCell>
                           <TableCell>{ticket.total}</TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="secondary">
-                              Liquidar
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       ))
                     )}

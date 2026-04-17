@@ -1,13 +1,22 @@
 import { supabase } from '@database/db.connection';
 import { ActivityDaysRepository } from '../../activity/repository/activity-days.repository';
 
-export interface IArchiveResult {
+export interface IArchiveDayResult {
+  date: string;
+  bets_archived: number;
+  tickets_archived: number;
   success: boolean;
-  message: string;
-  cutoff_date: string | null;
-  archived_count: number;
-  deleted_count: number;
-  days_kept: number;
+}
+
+export interface IArchiveJobResult {
+  success: boolean;
+  cutoff_date: string;
+  days_attempted: number;
+  days_succeeded: number;
+  failed_at?: string;
+  error?: string;
+  days: IArchiveDayResult[];
+  execution_time_ms: number;
 }
 
 export interface IArchiveStats {
@@ -37,76 +46,81 @@ export class ArchiveService {
   }
 
   /**
-   * Archive old bets (older than N active days)
-   * Uses stored procedure if available, fallback to TypeScript implementation
+   * Archive all data older than the cutoff date, one day at a time.
+   * Calls archive_data_by_date RPC per day so no single call can timeout.
+   * Iterates from oldest to newest and stops on the first failure.
    */
-  async archiveOldBets(daysToKeep: number = 2): Promise<IArchiveResult> {
-    try {
-      // Try using stored procedure first (performance optimization)
-      const { data, error } = await supabase.rpc('archive_old_bets', {
-        p_days_to_keep: daysToKeep,
-      });
+  async archiveOldData(daysToKeep: number = 2): Promise<IArchiveJobResult> {
+    const startTime = Date.now();
 
-      if (error) {
-        console.warn('Stored procedure failed, using TypeScript fallback:', error.message);
-        return await this.archiveOldBetsManual(daysToKeep);
-      }
+    const cutoffDate = await this.activityDaysRepo.getCutoffDate(daysToKeep);
 
-      return data as IArchiveResult;
-    } catch (err) {
-      console.error('Error archiving bets:', err);
-      throw err;
+    if (!cutoffDate) {
+      return {
+        success: true,
+        cutoff_date: '',
+        days_attempted: 0,
+        days_succeeded: 0,
+        days: [],
+        execution_time_ms: Date.now() - startTime,
+      };
     }
-  }
 
-  /**
-   * Archive old tickets (older than N active days)
-   * Uses stored procedure if available, fallback to TypeScript implementation
-   */
-  async archiveOldTickets(daysToKeep: number = 2): Promise<IArchiveResult> {
-    try {
-      // Try using stored procedure first (performance optimization)
-      const { data, error } = await supabase.rpc('archive_old_tickets', {
-        p_days_to_keep: daysToKeep,
-      });
+    const { data: dates, error: datesError } = await supabase.rpc('get_dates_to_archive', {
+      p_cutoff_date: cutoffDate,
+    });
 
-      if (error) {
-        console.warn('Stored procedure failed, using TypeScript fallback:', error.message);
-        return await this.archiveOldTicketsManual(daysToKeep);
-      }
-
-      return data as IArchiveResult;
-    } catch (err) {
-      console.error('Error archiving tickets:', err);
-      throw err;
+    if (datesError) {
+      throw new Error(`Failed to get dates to archive: ${datesError.message}`);
     }
-  }
 
-  /**
-   * Archive both bets and tickets in a single operation
-   */
-  async archiveOldData(daysToKeep: number = 2): Promise<{
-    success: boolean;
-    bets: IArchiveResult;
-    tickets: IArchiveResult;
-    execution_time_ms?: number;
-  }> {
-    try {
-      // Try using stored procedure first (more efficient - single transaction)
-      const { data, error } = await supabase.rpc('archive_old_data', {
-        p_days_to_keep: daysToKeep,
-      });
+    const datesToArchive: string[] = dates || [];
+    const results: IArchiveDayResult[] = [];
 
-      if (error) {
-        console.warn('Stored procedure failed, using TypeScript fallback:', error.message);
-        return await this.archiveOldDataManual(daysToKeep);
+    for (const date of datesToArchive) {
+      try {
+        const { data, error } = await supabase.rpc('archive_data_by_date', { p_date: date });
+
+        if (error) throw new Error(error.message);
+
+        const dayResult: IArchiveDayResult = {
+          date,
+          bets_archived: data.bets_archived,
+          tickets_archived: data.tickets_archived,
+          success: true,
+        };
+
+        results.push(dayResult);
+        console.log(
+          `[ArchiveService] ✓ ${date}: ${dayResult.bets_archived} bets, ${dayResult.tickets_archived} tickets`
+        );
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[ArchiveService] ✗ ${date}: ${errorMsg}`);
+
+        results.push({ date, bets_archived: 0, tickets_archived: 0, success: false });
+
+        return {
+          success: false,
+          cutoff_date: cutoffDate,
+          days_attempted: results.length,
+          days_succeeded: results.filter((r) => r.success).length,
+          failed_at: date,
+          error: errorMsg,
+          days: results,
+          execution_time_ms: Date.now() - startTime,
+        };
       }
-
-      return data;
-    } catch (err) {
-      console.error('Error archiving data:', err);
-      throw err;
     }
+
+    return {
+      success: true,
+      cutoff_date: cutoffDate,
+      days_attempted: results.length,
+      days_succeeded: results.length,
+      days: results,
+      execution_time_ms: Date.now() - startTime,
+    };
   }
 
   /**
@@ -128,194 +142,7 @@ export class ArchiveService {
     }
   }
 
-  /**
-   * Manual implementation of archiving bets (fallback)
-   * Processes in batches to avoid statement timeouts on large tables.
-   */
-  private async archiveOldBetsManual(daysToKeep: number): Promise<IArchiveResult> {
-    const cutoffDate = await this.activityDaysRepo.getCutoffDate(daysToKeep);
-
-    if (!cutoffDate) {
-      return {
-        success: true,
-        message: 'Not enough active days to archive',
-        cutoff_date: null,
-        archived_count: 0,
-        deleted_count: 0,
-        days_kept: daysToKeep,
-      };
-    }
-
-    const BATCH_SIZE = 5000;
-    const archivedAt = new Date().toISOString();
-    let totalCount = 0;
-
-    // Process in batches: always fetch from the top since we delete as we go
-    while (true) {
-      const { data: batch, error: selectError } = await supabase
-        .from('bets')
-        .select('*')
-        .lt('date', cutoffDate)
-        .limit(BATCH_SIZE);
-
-      if (selectError) {
-        const errorMsg =
-          typeof selectError.message === 'string'
-            ? selectError.message
-            : JSON.stringify(selectError);
-        throw new Error(`Failed to select old bets: ${errorMsg}`);
-      }
-
-      if (!batch || batch.length === 0) break;
-
-      const ids = batch.map((b) => b.bet_id);
-
-      const { error: insertError } = await supabase.from('bets_archive').upsert(
-        batch.map((bet) => ({ ...bet, archived_at: archivedAt })),
-        { onConflict: 'bet_id', ignoreDuplicates: true }
-      );
-
-      if (insertError) {
-        const errorMsg =
-          typeof insertError.message === 'string'
-            ? insertError.message
-            : JSON.stringify(insertError);
-        throw new Error(`Failed to insert bets into archive: ${errorMsg}`);
-      }
-
-      const { error: deleteError } = await supabase.from('bets').delete().in('bet_id', ids);
-
-      if (deleteError) {
-        const errorMsg =
-          typeof deleteError.message === 'string'
-            ? deleteError.message
-            : JSON.stringify(deleteError);
-        throw new Error(`Failed to delete archived bets: ${errorMsg}`);
-      }
-
-      totalCount += batch.length;
-
-      if (batch.length < BATCH_SIZE) break;
-    }
-
-    return {
-      success: true,
-      message: totalCount === 0 ? 'No bets to archive' : 'Bets archived successfully',
-      cutoff_date: cutoffDate,
-      archived_count: totalCount,
-      deleted_count: totalCount,
-      days_kept: daysToKeep,
-    };
-  }
-
-  /**
-   * Manual implementation of archiving tickets (fallback)
-   * Processes in batches to avoid statement timeouts on large tables.
-   */
-  private async archiveOldTicketsManual(daysToKeep: number): Promise<IArchiveResult> {
-    const cutoffDate = await this.activityDaysRepo.getCutoffDate(daysToKeep);
-
-    if (!cutoffDate) {
-      return {
-        success: true,
-        message: 'Not enough active days to archive',
-        cutoff_date: null,
-        archived_count: 0,
-        deleted_count: 0,
-        days_kept: daysToKeep,
-      };
-    }
-
-    const BATCH_SIZE = 5000;
-    const archivedAt = new Date().toISOString();
-    let totalCount = 0;
-
-    while (true) {
-      const { data: batch, error: selectError } = await supabase
-        .from('tickets')
-        .select('*')
-        .lt('date', cutoffDate)
-        .limit(BATCH_SIZE);
-
-      if (selectError) {
-        const errorMsg =
-          typeof selectError.message === 'string'
-            ? selectError.message
-            : JSON.stringify(selectError);
-        throw new Error(`Failed to select old tickets: ${errorMsg}`);
-      }
-
-      if (!batch || batch.length === 0) break;
-
-      const ids = batch.map((t) => t.ticket_id);
-
-      const { error: insertError } = await supabase.from('tickets_archive').upsert(
-        batch.map((ticket) => ({ ...ticket, archived_at: archivedAt })),
-        { onConflict: 'ticket_id', ignoreDuplicates: true }
-      );
-
-      if (insertError) {
-        const errorMsg =
-          typeof insertError.message === 'string'
-            ? insertError.message
-            : JSON.stringify(insertError);
-        throw new Error(`Failed to insert tickets into archive: ${errorMsg}`);
-      }
-
-      const { error: deleteError } = await supabase.from('tickets').delete().in('ticket_id', ids);
-
-      if (deleteError) {
-        const errorMsg =
-          typeof deleteError.message === 'string'
-            ? deleteError.message
-            : JSON.stringify(deleteError);
-        throw new Error(`Failed to delete archived tickets: ${errorMsg}`);
-      }
-
-      totalCount += batch.length;
-
-      if (batch.length < BATCH_SIZE) break;
-    }
-
-    return {
-      success: true,
-      message: totalCount === 0 ? 'No tickets to archive' : 'Tickets archived successfully',
-      cutoff_date: cutoffDate,
-      archived_count: totalCount,
-      deleted_count: totalCount,
-      days_kept: daysToKeep,
-    };
-  }
-
-  /**
-   * Manual implementation of archiving both bets and tickets
-   */
-  private async archiveOldDataManual(daysToKeep: number): Promise<{
-    success: boolean;
-    bets: IArchiveResult;
-    tickets: IArchiveResult;
-    execution_time_ms?: number;
-  }> {
-    const startTime = Date.now();
-
-    const betsResult = await this.archiveOldBetsManual(daysToKeep);
-    const ticketsResult = await this.archiveOldTicketsManual(daysToKeep);
-
-    const executionTime = Date.now() - startTime;
-
-    return {
-      success: true,
-      bets: betsResult,
-      tickets: ticketsResult,
-      execution_time_ms: executionTime,
-    };
-  }
-
-  /**
-   * Manual implementation of getting archive stats
-   */
   private async getArchiveStatsManual(): Promise<IArchiveStats> {
-    // Count main tables (ALL rows, including deleted)
     const { count: betsMainCount } = await supabase
       .from('bets')
       .select('*', { count: 'exact', head: true });
@@ -324,7 +151,6 @@ export class ArchiveService {
       .from('tickets')
       .select('*', { count: 'exact', head: true });
 
-    // Count archive tables
     const { count: betsArchiveCount } = await supabase
       .from('bets_archive')
       .select('*', { count: 'exact', head: true });
@@ -333,17 +159,11 @@ export class ArchiveService {
       .from('tickets_archive')
       .select('*', { count: 'exact', head: true });
 
-    // Get activity info
     const activeDays = await this.activityDaysRepo.getActiveDaysOnly();
-
     const lastActiveDay = activeDays.length > 0 ? activeDays[0].date : null;
 
-    // Calculate compression ratios
     const betsTotal = (betsMainCount || 0) + (betsArchiveCount || 0);
     const ticketsTotal = (ticketsMainCount || 0) + (ticketsArchiveCount || 0);
-
-    const betsRatio = betsTotal > 0 ? ((betsArchiveCount || 0) / betsTotal) * 100 : 0;
-    const ticketsRatio = ticketsTotal > 0 ? ((ticketsArchiveCount || 0) / ticketsTotal) * 100 : 0;
 
     return {
       main_tables: {
@@ -359,8 +179,11 @@ export class ArchiveService {
         last_active_date: lastActiveDay,
       },
       compression_ratio: {
-        bets: Math.round(betsRatio * 100) / 100,
-        tickets: Math.round(ticketsRatio * 100) / 100,
+        bets: betsTotal > 0 ? Math.round(((betsArchiveCount || 0) / betsTotal) * 10000) / 100 : 0,
+        tickets:
+          ticketsTotal > 0
+            ? Math.round(((ticketsArchiveCount || 0) / ticketsTotal) * 10000) / 100
+            : 0,
       },
     };
   }

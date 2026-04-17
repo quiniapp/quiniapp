@@ -1,243 +1,230 @@
 import dayjs from 'dayjs';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
 import { IBetTable, ILotterySchedule } from '@helper/request/ticket.request';
+import { PLACE_TYPE } from '@helper/types/bet.type';
 
-// ======= width y utilidades base =======
-const WIDTH = 32;
-const LINE = '='.repeat(WIDTH);
+// ── constants ─────────────────────────────────────────────────────────────────
+const PAGE_W = 58;
+const MARGIN = 3;
+const CONTENT_W = PAGE_W - MARGIN * 2;
 
-const pad = (s: string) => (s.length > WIDTH ? s.slice(0, WIDTH) : s.padEnd(WIDTH, ' '));
-function comboKey(scheduleLottery: ILotterySchedule[]): string {
-  const parts = scheduleLottery
-    .map(sl => ({
-      sid: String((sl.schedule as any).schedule_id ?? sl.schedule.name),
-      lids: sl.lotteries.map(l => String((l as any).lottery_id ?? l.name)).sort(), // ordena sólo para la key
-    }))
-    .sort((a, b) => a.sid.localeCompare(b.sid)) // ordena sólo para la key
-    .map(p => `${p.sid}:${p.lids.join(',')}`);
-  return parts.join('|');
-}
-
-// ✅ Header EXACTAMENTE en el orden provisto en cada bet
-type ComboHeader = Array<{ scheduleName: string; lotteryName: string }>;
-
-function comboHeader(scheduleLottery: ILotterySchedule[]): ComboHeader {
-  const rows: ComboHeader = [];
-  for (const sl of scheduleLottery) {
-    for (const lot of sl.lotteries) {
-      rows.push({ scheduleName: sl.schedule.name, lotteryName: lot.name });
-    }
-  }
-  return rows; // sin sort
-}
-
-function formatNumberLine(
-  num: string,
-  amount: number,
-  bet_type: string,
-  opts?: { numWidth?: number; currency?: boolean }
-) {
-  const numWidth = opts?.numWidth ?? 10; // soporta hasta 10 cifras; ajusta si querés
-
-  const digits = num.length <= numWidth ? num : num.slice(num.length - numWidth); // conserva las 'numWidth' de la derecha
-  const numField = digits.padStart(numWidth, ' ');
-
-  // monto a la derecha de la línea
-  const amtStr =`$${amount}`
-
-  const left = `${numField} ${bet_type}`;
-  const spaces = Math.max(0, WIDTH - left.length - amtStr.length);
-  return left + ' '.repeat(spaces - 2) + 'X ' + amtStr;
-}
-
-
-
-type Ticket = {
-  user_name?: number;
-  ticket_number: string;
-  date: string; // ISO o 'YYYY-MM-DD'
-  total: number;
+// ── place codes ───────────────────────────────────────────────────────────────
+const PLACE_CODE: Record<PLACE_TYPE, string> = {
+  [PLACE_TYPE.HEAD]:   '01',
+  [PLACE_TYPE.FIVE]:   '05',
+  [PLACE_TYPE.TEN]:    '10',
+  [PLACE_TYPE.TWENTY]: '20',
 };
 
-function formatEnBlock(rows: ComboHeader): string[] {
-  // Primera línea: "En:"
-  const out: string[] = [pad('En:')];
-  for (const r of rows) {
-    // Ej: "Nacional - noche"
-    const line = `${r.lotteryName} - ${r.scheduleName}`;
-    out.push(pad(line));
-  }
-  return out;
-}
-// ======= NUEVA buildTicketLines agrupada =======
-function buildTicketLines(ticket: Ticket, bets: IBetTable[]): string[] {
-  const lines: string[] = [];
-  lines.push(LINE);
-  lines.push(pad(`Usuario: ${ticket.user_name}`));
-  lines.push(pad(`Ticket: ${ticket.ticket_number}`));
-  lines.push(pad(`Fecha: ${ticket.date}`));
-  lines.push(pad(`Hora: ${dayjs().format('HH:mm')}`));
-  lines.push(LINE);
-
-  // 1) Agrupar ignorando el orden (comboKey), pero RECORDAR el orden del primer bet del grupo
-  type Group = {
-    key: string;
-    header: ComboHeader;   // viene en el orden del primer bet que vimos
-    items: IBetTable[];    // números en el orden en que llegaron
-  };
-  const groupsMap = new Map<string, Group>();
-
-  for (const bet of bets) {
-    const key = comboKey(bet.scheduleLottery);
-    if (!groupsMap.has(key)) {
-      groupsMap.set(key, {
-        key,
-        header: comboHeader(bet.scheduleLottery), // orden directo, sin sort
-        items: [],
-      });
-    }
-    groupsMap.get(key)!.items.push(bet);
-  }
-
-  // 2) Orden de grupos = orden de primera aparición
-  const groups = Array.from(groupsMap.values());
-
-  // 3) Render
-  for (const g of groups) {
-    // "En:" respetando el orden provisto en el bet
-    lines.push(...formatEnBlock(g.header));
-    lines.push('');
-
-    for (const bet of g.items) {
-      lines.push(
-        formatNumberLine(
-          `${bet.number}${bet.with ? `-${bet.with}` : ''}`,
-          bet.amount,
-          `${betPlaceDictionary[bet.place]} ${bet?.position ? betPlaceDictionary[bet.position] : ''}`.trim(),
-          { numWidth: 10 }
-        )
-      );
-      lines.push('');
-    }
-
-    lines.push('-'.repeat(WIDTH));
-  }
-
-  lines.push(LINE);
-  lines.push(pad(`Total: $${ticket.total}`));
-  lines.push(LINE);
-
-  return lines;
+function placeLabel(place: PLACE_TYPE, position?: PLACE_TYPE | null): string {
+  const base = PLACE_CODE[place] ?? place;
+  return position ? `${base}/${PLACE_CODE[position] ?? position}` : base;
 }
 
-
-
-interface MakeTicketPdfProps{
-  ticket: ITicketEntityFront, bets: IBetTable[], cashier_number?:number
+/** Format number column based on inferred bet type:
+ *  - 10 digits            → BORRATINA  → show as-is
+ *  - bet.with is set      → REDOUBLE   → "12-34"
+ *  - otherwise            → ONE/DOUBLE/TERN/QUATERN → pad to 4 with '*'
+ */
+function formatBetNum(bet: IBetTable): string {
+  if (bet.number.length === 10) return bet.number;
+  if (bet.with) return `${bet.number}-${bet.with}`;
+  return bet.number.padStart(4, '*');
 }
 
-function addFeedLines(lines: string[], extraMm: number, lineHeightMm: number) {
-  // cuántas líneas agregar para alcanzar ~extraMm
-  const extraLines = Math.ceil(extraMm / lineHeightMm);
-  for (let i = 0; i < extraLines; i++) {
-    // guiones o vacío: elegí lo que prefieras
-    lines.push('-'.repeat(WIDTH));
-  }
-  return lines;
+// ── grouping (same logic as original) ────────────────────────────────────────
+function comboKey(scheduleLottery: ILotterySchedule[]): string {
+  return scheduleLottery
+    .map((sl) => ({
+      sid: String((sl.schedule as any).schedule_id ?? sl.schedule.name),
+      lids: sl.lotteries.map((l) => String((l as any).lottery_id ?? l.name)).sort(),
+    }))
+    .sort((a, b) => a.sid.localeCompare(b.sid))
+    .map((p) => `${p.sid}:${p.lids.join(',')}`)
+    .join('|');
 }
 
+/** "Prev-NPSEC Pri-NPSEC ..." — one token per schedule, lotteries concatenated */
+function compactHeader(scheduleLottery: ILotterySchedule[]): string {
+  return scheduleLottery
+    .map((sl) => {
+      const sch = sl.schedule.name.slice(0, 4);
+      const lots = sl.lotteries.map((l) => l.name[0]).join('');
+      return `${sch}-${lots}`;
+    })
+    .join(' ');
+}
 
-//blob
-export async function makeTicketPdf({ ticket, bets, cashier_number }: MakeTicketPdfProps) {
+function fmtAmount(n: number): string {
+  return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+}
+
+// ── PDF builder ───────────────────────────────────────────────────────────────
+export async function makeTicketPdf({
+  ticket,
+  bets,
+  cashier_number,
+}: {
+  ticket: ITicketEntityFront;
+  bets: IBetTable[];
+  cashier_number?: number;
+}) {
   const { jsPDF } = await import('jspdf');
 
-  let lines = buildTicketLines(
-    {
-      user_name: cashier_number,
-      ticket_number: ticket.ticket_number,
-      date: dayjs(ticket.date).format('DD-MM-YYYY'),
-      total: ticket.total,
-    },
-    bets
+  // Group bets by schedule-lottery combination
+  type Group = { header: ILotterySchedule[]; items: IBetTable[] };
+  const groupsMap = new Map<string, Group>();
+  for (const bet of bets) {
+    const key = comboKey(bet.scheduleLottery);
+    if (!groupsMap.has(key)) groupsMap.set(key, { header: bet.scheduleLottery, items: [] });
+    groupsMap.get(key)!.items.push(bet);
+  }
+  const groups = Array.from(groupsMap.values());
+
+  // Pre-measure header lines per group using a throwaway doc
+  const measureDoc = new jsPDF({ unit: 'mm', format: [PAGE_W, 200] });
+  measureDoc.setFont('helvetica', 'bold');
+  measureDoc.setFontSize(7);
+  const groupHeaderLineCounts = groups.map((g) =>
+    (measureDoc.splitTextToSize(compactHeader(g.header), CONTENT_W) as string[]).length
   );
 
-  const pageWidthMm = 58;
-  const marginMm = 2;
-  const topOffsetMm = marginMm + 3;
-  const lineHeightMm = 4.5;
+  // Calculate exact page height
+  let exactH = MARGIN + 2;
+  if (cashier_number !== undefined) exactH += 7;
+  exactH += 6 + 3;                                                   // Ticket + divider
+  exactH += 4 + 5 + 3;                                              // Fecha/Hora + divider
+  for (let i = 0; i < groups.length; i++) {
+    exactH += groupHeaderLineCounts[i] * 4 + 1;                    // group header
+    exactH += groups[i].items.length * 5;                          // bet rows
+    exactH += 3;                                                    // dashed divider
+  }
+  exactH += 1 + 9 + 3;                                             // Total + divider
+  exactH += 5 + MARGIN;                                            // UUID + bottom margin
 
-  lines = addFeedLines(lines, 15, lineHeightMm);
+  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, exactH] });
+  let y = MARGIN + 2;
 
-  const contentHeightMm = lines.length ? (lines.length - 1) * lineHeightMm : 0;
-  const pageHeightMm = topOffsetMm + contentHeightMm + marginMm;
+  const divider = (dashed = false) => {
+    doc.setLineDashPattern(dashed ? [1, 1] : [], 0);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    doc.setLineDashPattern([], 0);
+    y += 3;
+  };
 
-  const doc = new jsPDF({
-    unit: 'mm',
-    format: [pageWidthMm, Math.max(pageHeightMm, 40)],
-  });
+  const cx = PAGE_W / 2;
 
-  doc.setFont('courier', 'normal');
+  // ── Usuario / Ticket ─────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  if (cashier_number !== undefined) {
+    doc.text(`Usuario: ${cashier_number}`, cx, y, { align: 'center' });
+    y += 7;
+  }
+  doc.text(`Ticket: ${ticket.ticket_number}`, cx, y, { align: 'center' });
+  y += 6;
+
+  divider();
+
+  // ── Fecha / Hora ──────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Fecha', MARGIN, y);
+  doc.text('Hora', PAGE_W - MARGIN, y, { align: 'right' });
+  y += 4;
   doc.setFontSize(8);
+  doc.text(dayjs(ticket.date).format('DD/MM/YYYY'), MARGIN, y);
+  doc.text(dayjs().format('HH:mm:ss'), PAGE_W - MARGIN, y, { align: 'right' });
+  y += 5;
 
-  lines.forEach((text, i) => {
-    const y = topOffsetMm + i * lineHeightMm;
-    doc.text(text, marginMm, y);
-  });
+  divider();
 
-  // 👇 en vez de doc.save(...) devolvemos el Blob
-  const blob = doc.output('blob'); // application/pdf
+  // ── Groups ────────────────────────────────────────────────────────────────
+  const numX    = MARGIN;
+  const amountX = PAGE_W - MARGIN;
+  // ~2.1mm per char at 8pt Courier; borratina = 10 chars ≈ 21mm, normal = 4 chars ≈ 8mm
+  const TYPE_X_NORMAL    = MARGIN + 14; // after 4-char padded number
+  const TYPE_X_BORRATINA = MARGIN + 26; // after 10-char borratina
+
+  for (const g of groups) {
+    const hasBorratina = g.items.some((b) => b.number.length === 10);
+    const typeX = hasBorratina ? TYPE_X_BORRATINA : TYPE_X_NORMAL;
+
+    // Compact schedule-lottery header, auto-wrapped
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    const headerText = compactHeader(g.header);
+    const headerLines = doc.splitTextToSize(headerText, CONTENT_W) as string[];
+    for (const line of headerLines) {
+      doc.text(line, MARGIN, y);
+      y += 4;
+    }
+    y += 1;
+
+    // Bets in this group
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8);
+    for (const bet of g.items) {
+      const num    = formatBetNum(bet);
+      const type   = placeLabel(bet.place, bet.position);
+      const amount = fmtAmount(bet.amount);
+      doc.text(num,    numX,    y);
+      doc.text(type,   typeX,   y);
+      doc.text(amount, amountX, y, { align: 'right' });
+      y += 5;
+    }
+
+    divider(true);
+  }
+
+  // ── Total ─────────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(`Total: ${fmtAmount(ticket.total)}`, cx, y + 1, { align: 'center' });
+  y += 9;
+
+  divider();
+
+  // ── Ticket ID ─────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  doc.text(ticket.ticket_id ?? '', cx, y, { align: 'center' });
+
+  const blob     = doc.output('blob');
   const fileName = `ticket-${ticket.ticket_number}.pdf`;
   return { blob, fileName };
 }
 
+// ── print / share (unchanged) ─────────────────────────────────────────────────
 
-// pdfActions.ts
 export function printPdfBlob(blob: Blob) {
-  const url = URL.createObjectURL(blob);
+  const url    = URL.createObjectURL(blob);
   const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
   iframe.src = url;
   document.body.appendChild(iframe);
-
-
-
   iframe.onload = () => {
-    // algunos navegadores requieren focus
     iframe.contentWindow?.focus();
     iframe.contentWindow?.print();
-
   };
 }
 
-/** Web Share API (Chrome Android) → comparte archivo directamente
- * Fallback: abre wa.me con texto y (opcional) un URL público si lo tenés
- */
-export async function sharePdfBlob(blob: Blob, fileName: string, opts?: { text?: string; urlForWa?: string }) {
+export async function sharePdfBlob(
+  blob: Blob,
+  fileName: string,
+  opts?: { text?: string; urlForWa?: string }
+) {
   try {
     const file = new File([blob], fileName, { type: 'application/pdf' });
-
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({
-        title: 'Ticket',
-        text: opts?.text ?? 'Te comparto el ticket',
-        files: [file],
-      });
+      await navigator.share({ title: 'Ticket', text: opts?.text ?? 'Te comparto el ticket', files: [file] });
       return true;
     }
-  } catch (e) {
-    // continua al fallback
+  } catch {
+    // fall through
   }
-
-  // Fallback: WhatsApp con texto + URL si lo tenés (wa.me no acepta adjuntar archivos)
   const message = encodeURIComponent(opts?.text ?? 'Te comparto el ticket');
-  const link = opts?.urlForWa ? `%0A${encodeURIComponent(opts.urlForWa)}` : '';
-  const waUrl = `https://wa.me/?text=${message}${link}`;
-  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  const link    = opts?.urlForWa ? `%0A${encodeURIComponent(opts.urlForWa)}` : '';
+  window.open(`https://wa.me/?text=${message}${link}`, '_blank', 'noopener,noreferrer');
   return false;
 }

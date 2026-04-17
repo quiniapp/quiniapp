@@ -26,11 +26,14 @@ import { PageWrapper } from '@/components/wrapper/PageWrapper';
 const CurrentAccountContent = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<boolean>(false);
+  const [openPrintTotals, setOpenPrintTotals] = useState<boolean>(false);
+  const [printTotalsKey, setPrintTotalsKey] = useState(0);
   const { role } = useAuth();
   const [searchParams] = useSearchParams();
   const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
   const [printing, setPrinting] = useState(false);
   const date = searchParams.get('date'); // puede ser null: backend devuelve la última
+  const group_id = searchParams.get('group_id');
 
   const handleUpdateCurrentAccount = () => {
     calculateCurrentAccount(searchParams.get('date'), {
@@ -132,6 +135,9 @@ const CurrentAccountContent = () => {
             <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing}>
               Exportar Liquidación
             </Button>
+            <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing}>
+              Imprimir Totales
+            </Button>
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
             </Button>
@@ -147,6 +153,15 @@ const CurrentAccountContent = () => {
       <Suspense>
         <GenerateLiquitationModal isOpen={open} onClose={() => setOpen(false)} />
       </Suspense>
+      <Suspense>
+        <PrintTotalsModal
+          key={printTotalsKey}
+          isOpen={openPrintTotals}
+          onClose={() => setOpenPrintTotals(false)}
+          initialDate={date}
+          initialGroupId={group_id}
+        />
+      </Suspense>
     </PageWrapper>
   );
 };
@@ -155,4 +170,8 @@ export default CurrentAccountContent;
 
 const GenerateLiquitationModal = React.lazy(
   () => import('../../components/modals/GenerateLiquitationModal')
+);
+
+const PrintTotalsModal = React.lazy(
+  () => import('../../components/modals/PrintTotalsModal')
 );

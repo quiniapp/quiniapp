@@ -102,17 +102,20 @@ export class CronService {
 
       // Step 7: Log results
       const executionTime = Date.now() - startTime;
+      const totalBets = result.days.reduce((sum, d) => sum + d.bets_archived, 0);
+      const totalTickets = result.days.reduce((sum, d) => sum + d.tickets_archived, 0);
+
       console.log('\n========================================');
       console.log('[CronService] Archive job completed successfully');
       console.log('========================================');
-      console.log('\nBETS:');
-      console.log(`  - Archived: ${result.bets.archived_count}`);
-      console.log(`  - Deleted from main: ${result.bets.deleted_count}`);
-      console.log(`  - Cutoff date: ${result.bets.cutoff_date}`);
-      console.log('\nTICKETS:');
-      console.log(`  - Archived: ${result.tickets.archived_count}`);
-      console.log(`  - Deleted from main: ${result.tickets.deleted_count}`);
-      console.log(`  - Cutoff date: ${result.tickets.cutoff_date}`);
+      console.log(`\nDays archived: ${result.days_succeeded} / ${result.days_attempted}`);
+      console.log(`Cutoff date:   ${result.cutoff_date}`);
+      console.log(`Total bets:    ${totalBets}`);
+      console.log(`Total tickets: ${totalTickets}`);
+      console.log('\nPer-day breakdown:');
+      for (const day of result.days) {
+        console.log(`  ${day.date}: ${day.bets_archived} bets, ${day.tickets_archived} tickets`);
+      }
       console.log('\nSTATS AFTER:');
       console.log(`  - Main bets: ${statsAfter.main_tables.bets_count}`);
       console.log(`  - Main tickets: ${statsAfter.main_tables.tickets_count}`);
