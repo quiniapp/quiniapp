@@ -93,22 +93,23 @@ export async function makeTicketPdf({
   let exactH = MARGIN + 2;
   if (cashier_number !== undefined) exactH += 7;
   exactH += 6 + 3;                                                   // Ticket + divider
-  exactH += 4 + 5 + 3;                                              // Fecha/Hora + divider
+  exactH += 5 + 3;                                                   // Fecha+Hora single row + divider
   for (let i = 0; i < groups.length; i++) {
     exactH += groupHeaderLineCounts[i] * 4 + 1;                    // group header
     exactH += groups[i].items.length * 5;                          // bet rows
     exactH += 3;                                                    // dashed divider
   }
   exactH += 1 + 9 + 3;                                             // Total + divider
-  exactH += 5 + MARGIN;                                            // UUID + bottom margin
+  exactH += 3;                                                      // UUID + bottom margin
 
   const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, exactH] });
   let y = MARGIN + 2;
 
+  // Thermal printers often ignore doc.line() — use text chars for reliable rendering
   const divider = (dashed = false) => {
-    doc.setLineDashPattern(dashed ? [1, 1] : [], 0);
-    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-    doc.setLineDashPattern([], 0);
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8);
+    doc.text(dashed ? '- '.repeat(16) : '-'.repeat(32), MARGIN, y);
     y += 3;
   };
 
@@ -135,9 +136,6 @@ export async function makeTicketPdf({
 
   // ── Fecha / Hora ──────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text(padLine('Fecha', 'Hora'), MARGIN, y);
-  y += 4;
   doc.setFontSize(8);
   doc.text(padLine(dayjs(ticket.date).format('DD/MM/YYYY'), dayjs().format('HH:mm:ss')), MARGIN, y);
   y += 5;
@@ -155,10 +153,12 @@ export async function makeTicketPdf({
   const NUM_COL_BORRATINA = Math.round(26 / monoCharW);
   const TYPE_COL = 7; // "01/05" max 5 chars + padding
 
+  // Use same numCol for ALL groups so type column aligns across the ticket
+  const ticketHasBorratina = bets.some((b) => b.number.length === 10);
+  const numCol = ticketHasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
+  const amtCol = CHARS_PER_LINE - numCol - TYPE_COL;
+
   for (const g of groups) {
-    const hasBorratina = g.items.some((b) => b.number.length === 10);
-    const numCol = hasBorratina ? NUM_COL_BORRATINA : NUM_COL_NORMAL;
-    const amtCol = CHARS_PER_LINE - numCol - TYPE_COL;
 
     // Compact schedule-lottery header, auto-wrapped
     doc.setFont('helvetica', 'bold');
@@ -176,8 +176,8 @@ export async function makeTicketPdf({
     doc.setFontSize(8);
     for (const bet of g.items) {
       const num    = formatBetNum(bet);
-      const type   = placeLabel(bet.place, bet.position);
-      const amount = fmtAmount(bet.amount);
+      const type   = bet.number.length === 10 ? 'BORR' : placeLabel(bet.place, bet.position);
+      const amount = '$' + fmtAmount(bet.amount);
       const row = num.padEnd(numCol) + type.padEnd(TYPE_COL) + amount.padStart(Math.max(0, amtCol));
       doc.text(row, MARGIN, y);
       y += 5;
