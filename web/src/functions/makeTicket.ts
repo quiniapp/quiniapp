@@ -99,8 +99,7 @@ export async function makeTicketPdf({
     exactH += groups[i].items.length * 5;                          // bet rows
     exactH += 3;                                                    // dashed divider
   }
-  exactH += 1 + 9 + 3;                                             // Total + divider
-  exactH += 3;                                                      // UUID + bottom margin
+  exactH += 9 + 3 + 1;                                             // Total + divider + tiny bottom margin
 
   const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, exactH] });
   let y = MARGIN + 2;
@@ -193,11 +192,6 @@ export async function makeTicketPdf({
   y += 9;
 
   divider();
-
-  // ── Ticket ID ─────────────────────────────────────────────────────────────
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
-  doc.text(ticket.ticket_id ?? '', cx, y, { align: 'center' });
 
   const blob     = doc.output('blob');
   const fileName = `ticket-${ticket.ticket_number}.pdf`;
