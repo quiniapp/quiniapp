@@ -136,7 +136,7 @@ const CurrentAccountContent = () => {
               Exportar Liquidación
             </Button>
             <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing}>
-              Imprimir Totales
+              Exportar Cobros y Pagos
             </Button>
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
