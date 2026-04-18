@@ -1,11 +1,14 @@
 import dayjs from 'dayjs';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { DailyTotalEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
+import { printPdfBlob } from './makeTicket';
 
-const TICKET_WIDTH = 72; // mm — ancho del ticket (80mm - márgenes)
-const MARGIN = { left: 4, right: 4 };
+const PAPER_W = 58;
+const CHARS = 32;
+const NUM_COL = 5; // max 5-digit user numbers
+const MARGIN = 3;
 const FONT_SIZE = 8;
-const LINE_H = 4.5;
+const LINE_H = 4;
 
 async function getPDFDeps() {
   const { default: jsPDF } = await import('jspdf');
@@ -13,21 +16,22 @@ async function getPDFDeps() {
 }
 
 const money = (n: number) =>
+  '$' +
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(
     Number.isFinite(n) ? n : 0
   );
 
-/** Pad string derecha con espacios hasta targetLen, luego agrega valor alineado a la derecha */
-function lineWithAmount(doc: any, label: string, amount: string, y: number) {
-  doc.text(label, MARGIN.left, y);
-  doc.text(amount, TICKET_WIDTH + MARGIN.left - MARGIN.right, y, { align: 'right' });
+function padLine(label: string, amount: string): string {
+  const spaces = CHARS - label.length - amount.length;
+  return label + ' '.repeat(Math.max(1, spaces)) + amount;
 }
 
-function drawDivider(doc: any, y: number) {
-  doc.setLineDashPattern([1, 1], 0);
-  doc.line(MARGIN.left, y, TICKET_WIDTH + MARGIN.left - MARGIN.right, y);
-  doc.setLineDashPattern([], 0);
+function centerLine(text: string): string {
+  const pad = Math.max(0, Math.floor((CHARS - text.length) / 2));
+  return ' '.repeat(pad) + text;
 }
+
+const DIVIDER = '- '.repeat(CHARS / 2);
 
 export async function printDailyTotalsTicket(params: {
   data: ICurrentAccountEntityFront[];
@@ -47,104 +51,66 @@ export async function printDailyTotalsTicket(params: {
   const saldoDia = totalCollections - totalPaid - totalExpenses;
 
   const dateStr = dayjs(date).format('DD/MM/YYYY');
+  const timeStr = dayjs().format('HH:mm');
 
-  // Calcular alto del documento dinámicamente
-  const headerLines = (orgName ? 1 : 0) + (groupName ? 1 : 0) + 3;
-  const mePagoLines = mePago.length + 2; // items + encabezado + subtotal
-  const lePagoLines = lePago.length + 2;
-  const expenseLines = expenses.length > 0 ? expenses.length + 2 : 2;
-  const footerLines = 2;
-  const totalLines = headerLines + mePagoLines + lePagoLines + expenseLines + footerLines + 6; // 6 = separadores/espacios
-  const docHeight = Math.max(100, totalLines * LINE_H + 20);
+  const lines: string[] = [];
+
+  if (orgName) lines.push(centerLine(orgName.toUpperCase()));
+  if (groupName) lines.push(centerLine(groupName.toUpperCase()));
+  lines.push(centerLine('ENTRADA Y SALIDA DEL DIA'));
+  lines.push(centerLine(`FECHA: ${dateStr} ${timeStr}`));
+  lines.push(DIVIDER);
+  lines.push(padLine('Nro'.padEnd(NUM_COL) + ' Detalle', 'Importe'));
+  lines.push(DIVIDER);
+
+  if (mePago.length > 0) {
+    for (const acc of mePago) {
+      lines.push(padLine(`${String(acc.user_number).padEnd(NUM_COL)} Pago`, money(acc.collections ?? 0)));
+    }
+    lines.push(padLine('Subtotal Entradas:', money(totalCollections)));
+    lines.push(DIVIDER);
+  }
+
+  if (lePago.length > 0) {
+    for (const acc of lePago) {
+      lines.push(padLine(`${String(acc.user_number).padEnd(NUM_COL)} Pague`, money(acc.paid ?? 0)));
+    }
+    lines.push(padLine('Subtotal Salidas:', money(totalPaid)));
+    lines.push(DIVIDER);
+  }
+
+  if (expenses.length > 0) {
+    for (const exp of expenses) {
+      lines.push(padLine(exp.nombre, money(exp.monto)));
+    }
+  }
+  lines.push(padLine('Subtotal Gastos:', money(totalExpenses)));
+  lines.push(DIVIDER);
+  lines.push(padLine('SALDO DEL DIA:', money(saldoDia)));
+
+  // Extra padding — same pattern as makeTicket.ts to flush printer buffer
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+
+  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
 
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [80, docHeight],
+    format: [PAPER_W, docHeight],
   });
 
-  doc.setFont('Courier', 'normal');
+  doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
-  let y = 8;
-
-  // Encabezado
-  doc.setFontSize(FONT_SIZE + 1);
-  doc.setFont('Courier', 'bold');
-  if (orgName) {
-    doc.text(orgName.toUpperCase(), 80 / 2, y, { align: 'center' });
+  let y = MARGIN + 4;
+  for (const line of lines) {
+    doc.text(line, MARGIN, y);
     y += LINE_H;
   }
-  if (groupName) {
-    doc.text(groupName.toUpperCase(), 80 / 2, y, { align: 'center' });
-    y += LINE_H;
-  }
-  doc.setFont('Courier', 'normal');
-  doc.setFontSize(FONT_SIZE);
-  doc.text(`FECHA: ${dateStr}`, 80 / 2, y, { align: 'center' });
-  y += LINE_H;
-  doc.text('ENTRADA Y SALIDA DEL DIA', 80 / 2, y, { align: 'center' });
-  y += LINE_H + 2;
 
-  drawDivider(doc, y);
-  y += 3;
-
-  // Sección "Me Pagó"
-  if (mePago.length > 0) {
-    for (const acc of mePago) {
-      lineWithAmount(doc, `${acc.user_number} Me Pagó`, money(acc.collections ?? 0), y);
-      y += LINE_H;
-    }
-    y += 1;
-    doc.setFont('Courier', 'bold');
-    lineWithAmount(doc, 'Sub-I. Entr.:', money(totalCollections), y);
-    doc.setFont('Courier', 'normal');
-    y += LINE_H + 1;
-  }
-
-  drawDivider(doc, y);
-  y += 3;
-
-  // Sección "Le Pagó"
-  if (lePago.length > 0) {
-    for (const acc of lePago) {
-      lineWithAmount(doc, `${acc.user_number} Le Pagó`, money(acc.paid ?? 0), y);
-      y += LINE_H;
-    }
-    y += 1;
-    doc.setFont('Courier', 'bold');
-    lineWithAmount(doc, 'Sub-I. Sal.:', money(totalPaid), y);
-    doc.setFont('Courier', 'normal');
-    y += LINE_H + 1;
-  }
-
-  drawDivider(doc, y);
-  y += 3;
-
-  // Gastos
-  if (expenses.length > 0) {
-    for (const exp of expenses) {
-      lineWithAmount(doc, exp.nombre, money(exp.monto), y);
-      y += LINE_H;
-    }
-    y += 1;
-  }
-  doc.setFont('Courier', 'bold');
-  lineWithAmount(doc, 'GASTOS:', money(totalExpenses), y);
-  doc.setFont('Courier', 'normal');
-  y += LINE_H + 1;
-
-  drawDivider(doc, y);
-  y += 3;
-
-  // Saldo del día
-  doc.setFontSize(FONT_SIZE + 1);
-  doc.setFont('Courier', 'bold');
-  lineWithAmount(doc, 'SALDO DEL DIA:', money(saldoDia), y);
-  doc.setFont('Courier', 'normal');
-  doc.setFontSize(FONT_SIZE);
-
-  doc.save(`Totales_${dateStr.replace(/\//g, '-')}.pdf`);
+  printPdfBlob(doc.output('blob'));
 }
 
 export async function printRangeTotalsTicket(params: {
@@ -159,64 +125,63 @@ export async function printRangeTotalsTicket(params: {
   const { jsPDF } = await getPDFDeps();
 
   const grandTotal = dailyTotals.reduce((s, d) => s + d.net_balance, 0);
+  const isGana = grandTotal < 0;
   const percentageAmount = (grandTotal * percentage) / 100;
 
   const fromStr = dayjs(date_from).format('DD/MM/YYYY');
   const toStr = dayjs(date_to).format('DD/MM/YYYY');
+  const timeStr = dayjs().format('HH:mm');
 
-  const totalLines =
-    (orgName ? 1 : 0) + (groupName ? 1 : 0) + 3 + dailyTotals.length + 5;
-  const docHeight = Math.max(100, totalLines * LINE_H + 20);
+  const lines: string[] = [];
+
+  if (orgName) lines.push(centerLine(orgName.toUpperCase()));
+  if (groupName) lines.push(centerLine(groupName.toUpperCase()));
+  lines.push(centerLine('BALANCE DE ENTRADA-SALIDA'));
+  lines.push(centerLine(`${fromStr} AL ${toStr}`));
+  lines.push(centerLine(`HORA: ${timeStr}`));
+  lines.push(DIVIDER);
+
+  // Column headers — "Fecha" aligns with DD/MM/YY (8), "Resultado" at pos 9, "Plata" right
+  lines.push(padLine('Fecha'.padEnd(9) + 'Resultado', 'Plata'));
+  lines.push(DIVIDER);
+
+  for (const entry of dailyTotals) {
+    const dateLabel = dayjs(entry.date).format('DD/MM/YY'); // 8 chars
+    const neg = entry.net_balance < 0;
+    const result = neg ? 'Gana:' : 'Deja:';
+    const amount = money(entry.net_balance);
+    lines.push(padLine(`${dateLabel} ${result}`, amount));
+  }
+
+  lines.push(DIVIDER);
+  lines.push('Ud a la fecha');
+  lines.push(padLine('', `${isGana ? 'GANA' : 'DEJA'}  ${money(grandTotal)}`));
+  if (!isGana) {
+    lines.push(DIVIDER);
+    lines.push(padLine(`${percentage}% DEJA:`, money(percentageAmount)));
+  }
+
+  // Extra padding — flush printer buffer
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+
+  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
 
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [80, docHeight],
+    format: [PAPER_W, docHeight],
   });
 
-  doc.setFont('Courier', 'normal');
+  doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
-  let y = 8;
-
-  // Encabezado
-  doc.setFontSize(FONT_SIZE + 1);
-  doc.setFont('Courier', 'bold');
-  if (orgName) {
-    doc.text(orgName.toUpperCase(), 80 / 2, y, { align: 'center' });
-    y += LINE_H;
-  }
-  if (groupName) {
-    doc.text(groupName.toUpperCase(), 80 / 2, y, { align: 'center' });
-    y += LINE_H;
-  }
-  doc.setFont('Courier', 'normal');
-  doc.setFontSize(FONT_SIZE);
-  doc.text(`FECHA: ${fromStr} AL ${toStr}`, 80 / 2, y, { align: 'center' });
-  y += LINE_H;
-  doc.text('BALANCE DE ENTRADA-SALIDA', 80 / 2, y, { align: 'center' });
-  y += LINE_H + 2;
-
-  drawDivider(doc, y);
-  y += 3;
-
-  // Totales por día (usa net_balance = total_balance - expenses)
-  for (const entry of dailyTotals) {
-    const dateLabel = dayjs(entry.date).format('DD/MM/YY');
-    lineWithAmount(doc, dateLabel, money(entry.net_balance), y);
+  let y = MARGIN + 4;
+  for (const line of lines) {
+    doc.text(line, MARGIN, y);
     y += LINE_H;
   }
 
-  y += 1;
-  drawDivider(doc, y);
-  y += 3;
-
-  doc.setFont('Courier', 'bold');
-  lineWithAmount(doc, 'UN A LA FECHA:', money(grandTotal), y);
-  y += LINE_H + 2;
-
-  lineWithAmount(doc, `${percentage}%:`, money(percentageAmount), y);
-  doc.setFont('Courier', 'normal');
-
-  doc.save(`Totales_Rango_${fromStr.replace(/\//g, '-')}_${toStr.replace(/\//g, '-')}.pdf`);
+  printPdfBlob(doc.output('blob'));
 }

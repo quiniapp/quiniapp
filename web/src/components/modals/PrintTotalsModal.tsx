@@ -151,7 +151,7 @@ const PrintTotalsModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Imprimir Totales" className="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Exportar Cobros y Pagos" className="max-w-md">
       <div className="space-y-4">
         {/* Modo */}
         <div className="space-y-2">
