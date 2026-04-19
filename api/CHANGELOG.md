@@ -14,7 +14,8 @@ All notable changes to the API workspace are documented in this file.
 - **`api/src/session/repository/session.repository.ts`**: Added `createWithLimit()` using `create_session_with_limit` RPC for atomic concurrent-session enforcement.
 - **`api/supabase/migrations/20260419100000`**: `batch_update_session_activity` now uses `GREATEST()` to prevent timestamp regression under concurrent flushes from multiple server instances.
 - **`api/supabase/migrations/20260419100001`**: `pay_ticket` adds `SELECT ... FOR UPDATE` before UPDATE to serialize concurrent payment attempts and prevent double side-effects.
-- **`api/supabase/migrations/20260419100002`**: `create_session_with_limit` RPC atomically enforces concurrent session limit using `FOR UPDATE` lock on session count — eliminates TOCTOU race.
+- **`api/supabase/migrations/20260419100002`**: `create_session_with_limit` RPC initial implementation (contained invalid `SELECT COUNT(*) ... FOR UPDATE` — fixed in 20260419192947).
+- **`api/supabase/migrations/20260419192947`**: Fix `create_session_with_limit` — replace invalid `FOR UPDATE` on aggregate with `pg_advisory_xact_lock(hashtext('create_session:' || user_id))`. PostgreSQL does not allow `FOR UPDATE` with aggregate functions; advisory lock serializes concurrent logins for the same user atomically.
 - **`api/supabase/migrations/20260419100003`**: `calculate_current_account` acquires `pg_advisory_xact_lock(org:date)` to serialize concurrent bulk liquidations from shared admin accounts.
 
 ### Fixed - 2026-04-18
