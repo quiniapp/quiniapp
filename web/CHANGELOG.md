@@ -4,6 +4,13 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-19
+
+#### Session race condition — concurrent refresh kicks all devices
+- **`web/src/lib/apiClient.ts`**: Added `safeRefresh()` public method that checks `isRefreshing` mutex before starting a token refresh. Prevents the proactive timer from racing with a 401-triggered refresh on the same device.
+- **`web/src/providers/AuthProvider.tsx`**: `refreshAccessToken` now calls `apiClient.safeRefresh()` instead of `apiClient.post('/auth/refresh')` directly. This routes proactive refreshes through the mutex that already protects 401-triggered refreshes.
+- **Why**: When access token expired exactly as the 13-14 min proactive timer fired, two concurrent refresh requests were sent with the same refresh token cookie. The second one arrived with the already-rotated token, triggering "token reuse detected" → `revokeAllUserSessions()` → both devices logged out simultaneously.
+
 ### Fixed - 2026-04-17
 
 #### Ticket PDF — impresora térmica comprime texto
