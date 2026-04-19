@@ -14,8 +14,13 @@ export async function flushActivityCache(): Promise<void> {
     await sessionRepository.batchUpdateActivity(snapshot);
     console.log(`[SessionMonitor] Flushed ${snapshot.size} activity entries to DB`);
   } catch (err) {
-    console.error('[SessionMonitor] Failed to flush activity cache:', err);
-    // Data is lost but server keeps running — next flush will capture new activity
+    console.error(
+      '[SessionMonitor] Failed to flush activity cache — re-merging to prevent data loss:',
+      err
+    );
+    for (const [id, entry] of snapshot) {
+      activityCache.restore(id, entry);
+    }
   }
 }
 
