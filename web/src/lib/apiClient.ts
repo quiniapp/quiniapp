@@ -207,6 +207,28 @@ class ApiClient {
     }
   }
 
+  /**
+   * Proactive token refresh that respects the isRefreshing mutex.
+   * Use this instead of posting to /auth/refresh directly to avoid
+   * concurrent refresh attempts that trigger token-reuse detection.
+   */
+  async safeRefresh(): Promise<void> {
+    if (this.isRefreshing) return; // refresh already in progress, skip
+    this.isRefreshing = true;
+    try {
+      const success = await this.refreshAccessToken();
+      if (success) {
+        this.processPendingRequests(null);
+      } else {
+        const error = new ApiError(401, { code: 'REFRESH_FAILED', message: 'Sesión expirada.' });
+        this.processPendingRequests(error);
+        throw error;
+      }
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(endpoint, { ...config, method: 'GET' });
   }
