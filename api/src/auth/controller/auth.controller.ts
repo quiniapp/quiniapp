@@ -262,6 +262,22 @@ export class AuthController {
       throw new UnauthorizedError('Sesión expirada');
     }
 
+    // 3.5. Check token version before expensive bcrypt comparison.
+    // If version doesn't match, a concurrent refresh already rotated this session.
+    // This is not an attack — the winning refresh already set the new cookie on the client.
+    if (decoded.token_version !== session.refresh_token_version) {
+      await this.auditRepository.log({
+        user_id: session.user_id,
+        session_id: session.session_id,
+        event_type: 'refresh_token_stale_version',
+        success: false,
+        error_message: `Stale version: JWT has ${decoded.token_version}, DB has ${session.refresh_token_version}`,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+      throw new UnauthorizedError('Sesión actualizada concurrentemente. Reintente.');
+    }
+
     // 4. Verify refresh token hash (detect token reuse)
     const isValidToken = await comparePassword(refreshToken, session.refresh_token_hash);
 
