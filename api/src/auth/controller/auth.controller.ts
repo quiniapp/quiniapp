@@ -137,25 +137,22 @@ export class AuthController {
       );
     }
 
-    // 5. Check concurrent sessions limit
-    if (SESSION_CONFIG.MAX_CONCURRENT_SESSIONS > 0) {
-      const activeSessions = await this.sessionRepository.countActiveSessions(userData.user_id);
-      if (activeSessions >= SESSION_CONFIG.MAX_CONCURRENT_SESSIONS) {
-        await this.sessionRepository.revokeOldestSession(userData.user_id);
-      }
-    }
-
-    // 6. Create session with temporary refresh token
+    // 5. Create session atomically — enforces concurrent session limit inside one DB transaction
+    const expiresAt = new Date(Date.now() + SESSION_CONFIG.INACTIVITY_TIMEOUT);
     const tempRefreshToken = signRefreshToken(userData.user_id, 'temp', 1);
     const refreshTokenHash = await hashPassword(tempRefreshToken);
 
-    const session = await this.sessionRepository.create({
-      user_id: userData.user_id,
-      organization_id: userData.organization_id,
-      refresh_token_hash: refreshTokenHash,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-    });
+    const session = await this.sessionRepository.createWithLimit(
+      {
+        user_id: userData.user_id,
+        organization_id: userData.organization_id,
+        refresh_token_hash: refreshTokenHash,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      },
+      SESSION_CONFIG.MAX_CONCURRENT_SESSIONS,
+      expiresAt
+    );
 
     // 7. Generate final tokens with actual session_id
     const accessToken = signAccessToken(
