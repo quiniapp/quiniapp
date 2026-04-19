@@ -7,6 +7,7 @@ import { ILotteryEntityFront } from '../types/lottery.type';
 export type INewTicketEntity = Pick<ITicketEntityBase, 'user_id' | 'user_name' | 'date'> & {
   bets: IBetTable[];
   client_request_id?: string;
+  user_number?: number | null;
 };
 export type IEditTicketEntity = Pick<ITicketEntityBase, 'ticket_id'> & {
   bets: IBetTable[];

@@ -13,7 +13,8 @@ export const ticketBase = (
 ): Omit<INewTicketBaseEntity, 'organization_id'> => {
   const timestamp = dayjs().tz('America/Argentina/Buenos_Aires');
   const ticket_id = uuidv4();
-  const ticket_number = dayjs().tz('America/Argentina/Buenos_Aires').format('YYYYMMDDHHmmssSSS');
+  const base = dayjs().tz('America/Argentina/Buenos_Aires').format('YYYYMMDDHHmmssSSS');
+  const ticket_number = ticket.user_number != null ? `${base}-${ticket.user_number}` : base;
 
   const total = ticket.bets.reduce((prev, curr) => prev + curr.amount, 0);
 

@@ -197,6 +197,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       date: today,
       user_id: cashier?.user_id ?? user!.user_id,
       user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
+      user_number: cashier?.number ?? user!.number,
       bets: bets,
       client_request_id: clientRequestIdRef.current,
     };
@@ -356,6 +357,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       date: today,
       user_id: cashier?.user_id ?? user!.user_id,
       user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
+      user_number: cashier?.number ?? user!.number,
       bets: cleanedBets,
       client_request_id: clientRequestIdRef.current,
     };
