@@ -1,13 +1,8 @@
-import { dispatchAuthExpired } from './authEvents';
+import { apiClient } from './apiClient';
 
 export async function fetchWithAuth(
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<Response> {
-  const res = await fetch(input, { credentials: 'include', ...init });
-  if (res.status === 401) {
-    dispatchAuthExpired();
-    throw new Error('Sesión expirada');
-  }
-  return res;
+  return apiClient.fetchRaw(input, init);
 }
