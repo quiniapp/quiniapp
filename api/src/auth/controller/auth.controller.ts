@@ -137,25 +137,22 @@ export class AuthController {
       );
     }
 
-    // 5. Check concurrent sessions limit
-    if (SESSION_CONFIG.MAX_CONCURRENT_SESSIONS > 0) {
-      const activeSessions = await this.sessionRepository.countActiveSessions(userData.user_id);
-      if (activeSessions >= SESSION_CONFIG.MAX_CONCURRENT_SESSIONS) {
-        await this.sessionRepository.revokeOldestSession(userData.user_id);
-      }
-    }
-
-    // 6. Create session with temporary refresh token
+    // 5. Create session atomically — enforces concurrent session limit inside one DB transaction
+    const expiresAt = new Date(Date.now() + SESSION_CONFIG.INACTIVITY_TIMEOUT);
     const tempRefreshToken = signRefreshToken(userData.user_id, 'temp', 1);
     const refreshTokenHash = await hashPassword(tempRefreshToken);
 
-    const session = await this.sessionRepository.create({
-      user_id: userData.user_id,
-      organization_id: userData.organization_id,
-      refresh_token_hash: refreshTokenHash,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-    });
+    const session = await this.sessionRepository.createWithLimit(
+      {
+        user_id: userData.user_id,
+        organization_id: userData.organization_id,
+        refresh_token_hash: refreshTokenHash,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      },
+      SESSION_CONFIG.MAX_CONCURRENT_SESSIONS,
+      expiresAt
+    );
 
     // 7. Generate final tokens with actual session_id
     const accessToken = signAccessToken(
@@ -260,6 +257,22 @@ export class AuthController {
         user_agent: userAgent,
       });
       throw new UnauthorizedError('Sesión expirada');
+    }
+
+    // 3.5. Check token version before expensive bcrypt comparison.
+    // If version doesn't match, a concurrent refresh already rotated this session.
+    // This is not an attack — the winning refresh already set the new cookie on the client.
+    if (decoded.token_version !== session.refresh_token_version) {
+      await this.auditRepository.log({
+        user_id: session.user_id,
+        session_id: session.session_id,
+        event_type: 'refresh_token_stale_version',
+        success: false,
+        error_message: `Stale version: JWT has ${decoded.token_version}, DB has ${session.refresh_token_version}`,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+      throw new UnauthorizedError('Sesión actualizada concurrentemente. Reintente.');
     }
 
     // 4. Verify refresh token hash (detect token reuse)

@@ -229,6 +229,34 @@ class ApiClient {
     }
   }
 
+  async fetchRaw(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const res = await fetch(input, { credentials: 'include', ...init });
+    if (res.status !== 401) return res;
+
+    if (this.isRefreshing) {
+      await new Promise<void>((resolve, reject) => {
+        this.refreshQueue.push({ resolve: () => resolve(), reject });
+      });
+      return fetch(input, { credentials: 'include', ...init });
+    }
+
+    this.isRefreshing = true;
+    try {
+      const success = await this.refreshAccessToken();
+      if (success) {
+        this.processPendingRequests(null);
+        return fetch(input, { credentials: 'include', ...init });
+      } else {
+        dispatchAuthExpired();
+        const error = new Error('Sesión expirada');
+        this.processPendingRequests(error);
+        throw error;
+      }
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(endpoint, { ...config, method: 'GET' });
   }

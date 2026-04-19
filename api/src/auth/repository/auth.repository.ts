@@ -55,32 +55,11 @@ export class AuthRepository {
    * Increment failed login attempts
    */
   async incrementFailedAttempts(userId: string): Promise<void> {
-    // Try to use the RPC function first (created in migration)
-    const { error: rpcError } = await supabase.rpc('increment_failed_attempts', {
+    const { error } = await supabase.rpc('increment_failed_attempts', {
       p_user_id: userId,
     });
-
-    // Fallback if RPC doesn't exist or fails
-    if (rpcError) {
-      // Fetch current value, increment, and update
-      const { data: user } = await supabase
-        .from('users')
-        .select('failed_login_attempts')
-        .eq('user_id', userId)
-        .single();
-
-      if (user) {
-        const { error } = await supabase
-          .from('users')
-          .update({
-            failed_login_attempts: (user.failed_login_attempts ?? 0) + 1,
-          })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('[AuthRepository] Failed to increment failed attempts:', error);
-        }
-      }
+    if (error) {
+      console.error('[AuthRepository] increment_failed_attempts RPC failed:', error);
     }
   }
 
