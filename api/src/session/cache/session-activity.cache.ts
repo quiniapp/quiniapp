@@ -29,6 +29,13 @@ class SessionActivityCache {
     this.map.delete(sessionId);
   }
 
+  restore(sessionId: string, entry: ActivityCacheEntry): void {
+    const current = this.map.get(sessionId);
+    if (!current || current.last_activity_at < entry.last_activity_at) {
+      this.map.set(sessionId, entry);
+    }
+  }
+
   /**
    * Returns a copy of the map for flushing to DB, then clears the original.
    */

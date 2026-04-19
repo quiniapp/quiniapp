@@ -7,9 +7,10 @@ All notable changes to the Web workspace are documented in this file.
 ### Fixed - 2026-04-19
 
 #### Session race condition — concurrent refresh kicks all devices
-- **`web/src/lib/apiClient.ts`**: Added `safeRefresh()` public method that checks `isRefreshing` mutex before starting a token refresh. Prevents the proactive timer from racing with a 401-triggered refresh on the same device.
-- **`web/src/providers/AuthProvider.tsx`**: `refreshAccessToken` now calls `apiClient.safeRefresh()` instead of `apiClient.post('/auth/refresh')` directly. This routes proactive refreshes through the mutex that already protects 401-triggered refreshes.
-- **Why**: When access token expired exactly as the 13-14 min proactive timer fired, two concurrent refresh requests were sent with the same refresh token cookie. The second one arrived with the already-rotated token, triggering "token reuse detected" → `revokeAllUserSessions()` → both devices logged out simultaneously.
+- **`web/src/lib/apiClient.ts`**: Added `safeRefresh()` public method that checks `isRefreshing` mutex before starting a token refresh. Prevents the proactive timer from racing with a 401-triggered refresh on the same device. Added `fetchRaw()` method that routes raw fetch calls through the same mutex + refresh logic.
+- **`web/src/providers/AuthProvider.tsx`**: `refreshAccessToken` now calls `apiClient.safeRefresh()` instead of `apiClient.post('/auth/refresh')` directly.
+- **`web/src/lib/fetchWithAuth.ts`**: Now routes through `apiClient.fetchRaw()` instead of raw fetch. All 48+ hooks using `fetchWithAuth` now benefit from the shared refresh mutex — a 401 triggers token refresh + retry instead of immediate logout.
+- **Why**: `fetchWithAuth` dispatching immediate logout on 401 could race with `apiClient`'s refresh, sending two concurrent refresh requests with the same cookie → token reuse detected → all sessions revoked.
 
 ### Fixed - 2026-04-17
 

@@ -63,6 +63,35 @@ export class SessionRepository {
   }
 
   /**
+   * Atomically enforce concurrent session limit then create a new session.
+   * Uses FOR UPDATE inside a single Postgres transaction to prevent TOCTOU.
+   */
+  async createWithLimit(
+    params: ICreateSessionParams,
+    maxSessions: number,
+    expiresAt: Date
+  ): Promise<ISession> {
+    const { data, error } = await supabase
+      .rpc('create_session_with_limit', {
+        p_user_id: params.user_id,
+        p_organization_id: params.organization_id,
+        p_refresh_token_hash: params.refresh_token_hash,
+        p_ip_address: params.ip_address || null,
+        p_user_agent: params.user_agent || null,
+        p_max_sessions: maxSessions,
+        p_expires_at: expiresAt.toISOString(),
+      })
+      .single();
+
+    if (error || !data) {
+      console.error('[SessionRepository] Failed to create session with limit:', error);
+      throw new InternalServerError('Failed to create session');
+    }
+
+    return this.mapToSession(data as Record<string, unknown>);
+  }
+
+  /**
    * Get session by ID
    */
   async getById(sessionId: string): Promise<ISession | null> {
