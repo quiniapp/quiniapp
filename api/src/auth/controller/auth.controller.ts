@@ -166,7 +166,7 @@ export class AuthController {
     const refreshToken = signRefreshToken(
       userData.user_id,
       session.session_id,
-      session.refresh_token_version
+      session.refresh_token_version + 1
     );
 
     // Update session with correct refresh token hash
