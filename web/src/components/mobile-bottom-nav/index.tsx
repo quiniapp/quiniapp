@@ -17,7 +17,7 @@ const MobileBottomNav = () => {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border pb-[env(safe-area-inset-bottom)]">
+    <div className="md:hidden bg-card border-t border-border pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-stretch h-14">
         {NAV_ITEMS.map(({ label, route, icon: Icon }) => {
           const isActive = location.pathname === route;

@@ -32,7 +32,7 @@ const Layout = () => {
           <Header setIsOpen={toggleSidebar} />
 
           <main
-            className="flex flex-1 w-full max-w-full mx-auto min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-3 py-1 sm:px-3 xl:px-4 2xl:px-5 2xl:py-2 justify-center pb-16 md:pb-0"
+            className="flex flex-1 w-full max-w-full mx-auto min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-3 py-1 sm:px-3 xl:px-4 2xl:px-5 2xl:py-2 justify-center"
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: '#666 transparent',
