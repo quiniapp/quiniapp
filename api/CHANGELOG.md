@@ -4,6 +4,11 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-20
+
+#### Session Management
+- **Version mismatch on login**: `signRefreshToken` at login now uses `refresh_token_version + 1` to match the version stored by `rotateRefreshToken`, fixing first-refresh 401 failures that caused users to be logged out every ~13-14 minutes (`api/src/auth/controller/auth.controller.ts`)
+
 ### Fixed - 2026-04-19
 
 #### Concurrency and race condition hardening
