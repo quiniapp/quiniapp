@@ -41,6 +41,7 @@ export class CurrentAccountRouter {
   private setupRoutes() {
     this.router.get('/network/summary', this.getNetworkSummaryHandler);
     this.router.get('/totals', this.getTotalsByDateRangeHandler);
+    this.router.get('/daily-summary', this.getDailySummaryByDateRangeHandler);
     this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
     this.router.post('/calculate', this.calculateCurrentAccountHandler);
@@ -630,14 +631,12 @@ export class CurrentAccountRouter {
     }
 
     if (!date_from || !date_to || typeof date_from !== 'string' || typeof date_to !== 'string') {
-      res
-        .status(400)
-        .json({
-          error: {
-            error: ERROR_TYPE.BAD_REQUEST,
-            message: 'Query params "date_from" and "date_to" (YYYY-MM-DD) are required',
-          },
-        });
+      res.status(400).json({
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: 'Query params "date_from" and "date_to" (YYYY-MM-DD) are required',
+        },
+      });
       return;
     }
 
@@ -665,6 +664,68 @@ export class CurrentAccountRouter {
       );
 
       res.status(200).json({ data: { totals } });
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: { error: ERROR_TYPE.AUTH_ERROR, message } });
+    }
+  };
+
+  private getDailySummaryByDateRangeHandler: RequestHandler = async (
+    req: Request,
+    res: Response
+  ) => {
+    const { user } = req;
+    const { date_from, date_to, group_id } = req.query;
+
+    if (!user?.user) {
+      res
+        .status(400)
+        .json({ error: { error: ERROR_TYPE.BAD_REQUEST, message: ERROR_MESSAGE.BAD_REQUEST } });
+      return;
+    }
+
+    if (user.user.user_type === USER_TYPE.CASHIER) {
+      res.status(403).json({ error: { error: ERROR_TYPE.AUTH_ERROR, message: 'Access denied' } });
+      return;
+    }
+
+    if (!date_from || !date_to || typeof date_from !== 'string' || typeof date_to !== 'string') {
+      res
+        .status(400)
+        .json({
+          error: {
+            error: ERROR_TYPE.BAD_REQUEST,
+            message: 'Query params "date_from" and "date_to" (YYYY-MM-DD) are required',
+          },
+        });
+      return;
+    }
+
+    try {
+      let user_ids: string[] | undefined;
+
+      if (
+        user.user.user_type === USER_TYPE.ADMIN &&
+        user.user.group_id &&
+        user.user.group_id !== req.organization_id
+      ) {
+        user_ids = await this.userRepository.getUserIdsByGroupId(
+          user.user.group_id,
+          req.organization_id!
+        );
+      } else if (typeof group_id === 'string') {
+        user_ids = await this.userRepository.getUserIdsByGroupId(group_id, req.organization_id!);
+      }
+
+      const summary = await this.controller.getDailySummaryByDateRangeHandler(
+        req.organization_id!,
+        date_from,
+        date_to,
+        user_ids
+      );
+
+      res.status(200).json({ data: { summary } });
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : 'Unknown error';

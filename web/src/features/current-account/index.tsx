@@ -28,6 +28,10 @@ const CurrentAccountContent = () => {
   const [open, setOpen] = useState<boolean>(false);
   const [openPrintTotals, setOpenPrintTotals] = useState<boolean>(false);
   const [printTotalsKey, setPrintTotalsKey] = useState(0);
+  const [openDailySummary, setOpenDailySummary] = useState<boolean>(false);
+  const [dailySummaryKey, setDailySummaryKey] = useState(0);
+  const [openSubtotals, setOpenSubtotals] = useState<boolean>(false);
+  const [subtotalsKey, setSubtotalsKey] = useState(0);
   const { role } = useAuth();
   const [searchParams] = useSearchParams();
   const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
@@ -138,6 +142,12 @@ const CurrentAccountContent = () => {
             <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing}>
               Exportar Cobros y Pagos
             </Button>
+            <Button variant={'outline'} onClick={() => { setDailySummaryKey((k) => k + 1); setOpenDailySummary(true); }} disabled={printing}>
+              Totales CC (A4)
+            </Button>
+            <Button variant={'outline'} onClick={() => { setSubtotalsKey((k) => k + 1); setOpenSubtotals(true); }} disabled={printing}>
+              Imprimir Subtotales
+            </Button>
             <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
               Actualizar
             </Button>
@@ -162,6 +172,24 @@ const CurrentAccountContent = () => {
           initialGroupId={group_id}
         />
       </Suspense>
+      <Suspense>
+        <PrintDailySummaryModal
+          key={dailySummaryKey}
+          isOpen={openDailySummary}
+          onClose={() => setOpenDailySummary(false)}
+          initialDate={date}
+          initialGroupId={group_id}
+        />
+      </Suspense>
+      <Suspense>
+        <PrintSubtotalsModal
+          key={subtotalsKey}
+          isOpen={openSubtotals}
+          onClose={() => setOpenSubtotals(false)}
+          initialDate={date}
+          initialGroupId={group_id}
+        />
+      </Suspense>
     </PageWrapper>
   );
 };
@@ -174,4 +202,12 @@ const GenerateLiquitationModal = React.lazy(
 
 const PrintTotalsModal = React.lazy(
   () => import('../../components/modals/PrintTotalsModal')
+);
+
+const PrintDailySummaryModal = React.lazy(
+  () => import('../../components/modals/PrintDailySummaryModal')
+);
+
+const PrintSubtotalsModal = React.lazy(
+  () => import('../../components/modals/PrintSubtotalsModal')
 );

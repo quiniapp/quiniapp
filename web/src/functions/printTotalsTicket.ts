@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { DailyTotalEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
+import { DailySummaryEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountDailySummary';
 import { printPdfBlob } from './makeTicket';
 
 const PAPER_W = 58;
@@ -174,6 +175,105 @@ export async function printRangeTotalsTicket(params: {
     format: [PAPER_W, docHeight],
   });
 
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(FONT_SIZE);
+
+  let y = MARGIN + 4;
+  for (const line of lines) {
+    doc.text(line, MARGIN, y);
+    y += LINE_H;
+  }
+
+  printPdfBlob(doc.output('blob'));
+}
+
+export async function printSubtotalsDayTicket(params: {
+  data: ICurrentAccountEntityFront[];
+  date: string;
+  orgName: string;
+  groupName?: string;
+}) {
+  const { data, date, orgName, groupName } = params;
+  const { jsPDF } = await getPDFDeps();
+
+  const dateStr = dayjs(date).format('DD/MM/YYYY');
+  const timeStr = dayjs().format('HH:mm');
+  const grandTotal = data.reduce((s, a) => s + (a.subtotal ?? 0), 0);
+
+  const lines: string[] = [];
+
+  if (orgName) lines.push(centerLine(orgName.toUpperCase()));
+  if (groupName) lines.push(centerLine(groupName.toUpperCase()));
+  lines.push(centerLine('SUBTOTALES DEL DIA'));
+  lines.push(centerLine(`FECHA: ${dateStr} ${timeStr}`));
+  lines.push(DIVIDER);
+  lines.push(padLine('Nro'.padEnd(NUM_COL) + ' Nombre', 'Subtotal'));
+  lines.push(DIVIDER);
+
+  for (const acc of data) {
+    const label = `${String(acc.user_number).padEnd(NUM_COL)} ${(acc.user_name ?? '').substring(0, 14)}`;
+    lines.push(padLine(label, money(acc.subtotal ?? 0)));
+  }
+
+  lines.push(DIVIDER);
+  lines.push(padLine('TOTAL:', money(grandTotal)));
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+
+  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(FONT_SIZE);
+
+  let y = MARGIN + 4;
+  for (const line of lines) {
+    doc.text(line, MARGIN, y);
+    y += LINE_H;
+  }
+
+  printPdfBlob(doc.output('blob'));
+}
+
+export async function printSubtotalsRangeTicket(params: {
+  dailySummary: DailySummaryEntry[];
+  date_from: string;
+  date_to: string;
+  orgName: string;
+  groupName?: string;
+}) {
+  const { dailySummary, date_from, date_to, orgName, groupName } = params;
+  const { jsPDF } = await getPDFDeps();
+
+  const fromStr = dayjs(date_from).format('DD/MM/YYYY');
+  const toStr = dayjs(date_to).format('DD/MM/YYYY');
+  const timeStr = dayjs().format('HH:mm');
+  const grandTotal = dailySummary.reduce((s, d) => s + d.total_subtotal, 0);
+
+  const lines: string[] = [];
+
+  if (orgName) lines.push(centerLine(orgName.toUpperCase()));
+  if (groupName) lines.push(centerLine(groupName.toUpperCase()));
+  lines.push(centerLine('SUBTOTALES POR FECHA'));
+  lines.push(centerLine(`${fromStr} AL ${toStr}`));
+  lines.push(centerLine(`HORA: ${timeStr}`));
+  lines.push(DIVIDER);
+  lines.push(padLine('Fecha'.padEnd(9), 'Subtotal'));
+  lines.push(DIVIDER);
+
+  for (const entry of dailySummary) {
+    const dateLabel = dayjs(entry.date).format('DD/MM/YY');
+    lines.push(padLine(dateLabel, money(entry.total_subtotal)));
+  }
+
+  lines.push(DIVIDER);
+  lines.push(padLine('TOTAL:', money(grandTotal)));
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+
+  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
