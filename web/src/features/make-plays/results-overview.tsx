@@ -24,7 +24,7 @@ const ResultsOverview = () => {
   return (
     <Flex
       className={
-        'flex-col sm:flex-row gap-2 sm:gap-4 p-1 1440:p-2 items-center  sticky bottom-0 bg-background z-10'
+        'flex-col sm:flex-row gap-2 sm:gap-4 p-1 1440:p-2 items-center sticky bottom-0 bg-background z-10 border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.3)]'
       }
     >
       <Flex

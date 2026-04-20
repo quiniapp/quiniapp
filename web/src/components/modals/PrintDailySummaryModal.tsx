@@ -102,6 +102,7 @@ const PrintDailySummaryModal = ({
           <SelectDayToSearch
             selectedDay={dateFrom}
             onDayChange={(d) => d && setDateFrom(d)}
+            toDate={dayjs().toDate()}
             className="w-full"
           />
         </div>
@@ -110,6 +111,7 @@ const PrintDailySummaryModal = ({
           <SelectDayToSearch
             selectedDay={dateTo}
             onDayChange={(d) => d && setDateTo(d)}
+            toDate={dayjs().toDate()}
             className="w-full"
           />
         </div>

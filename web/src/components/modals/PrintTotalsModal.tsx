@@ -204,6 +204,7 @@ const PrintTotalsModal = ({
               <SelectDayToSearch
                 selectedDay={date}
                 onDayChange={(d) => d && setDate(d)}
+                toDate={dayjs().toDate()}
                 className="w-full"
               />
             </div>
@@ -276,6 +277,7 @@ const PrintTotalsModal = ({
               <SelectDayToSearch
                 selectedDay={dateFrom}
                 onDayChange={(d) => d && setDateFrom(d)}
+                toDate={dayjs().toDate()}
                 className="w-full"
               />
             </div>
@@ -284,6 +286,7 @@ const PrintTotalsModal = ({
               <SelectDayToSearch
                 selectedDay={dateTo}
                 onDayChange={(d) => d && setDateTo(d)}
+                toDate={dayjs().toDate()}
                 className="w-full"
               />
             </div>

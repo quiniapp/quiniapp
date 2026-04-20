@@ -77,6 +77,7 @@ export function SelectDayToSearch({
             onSelect={handleSelect}
             locale={es}
             toDate={toDate}
+            weekStartsOn={0}
             initialFocus
             className={cn('p-2 sm:p-3 pointer-events-auto')}
           />
