@@ -80,8 +80,8 @@
   --sidebar-ring: oklch(0.541 0.281 293.009);
   --text-muted: oklch(0.967 0.001 286.375);
   --text-secondary: #41dbc3;
-  --bg-accen: #000;
-  --border-top: 16px 16px 0 0;
+  --bg-accent: #000;
+  --rounded-top: 16px 16px 0 0;
   --bg-content: hsl(231 50% 5% / 1);
   --rounded-form: 16px;
 }

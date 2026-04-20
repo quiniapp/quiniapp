@@ -218,15 +218,15 @@ const UserGroupsContent = () => {
       </HeaderSection>
 
       <FlexCol className={'py-[36px]'}>
-        <Box className={'grid grid-cols-2 gap-8'}>
+        <Box className={'grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8'}>
           <FlexCol>
             <HeaderTitleSection
               title={'Grupos'}
               icon={<Users2Icon size="24px" />}
               className={'!mb-[36px]'}
             />
-            <Flex className={'border border-dark-lighter rounded-lg overflow-hidden w-full'}>
-              <Table>
+            <div className="border border-dark-lighter rounded-lg overflow-x-auto w-full">
+              <Table className="min-w-[300px]">
                 <TableHeader className="bg-dark-light">
                   <TableRow>
                     <TableHead className="text-white">Nombre</TableHead>
@@ -289,7 +289,7 @@ const UserGroupsContent = () => {
                   )}
                 </TableBody>
               </Table>
-            </Flex>
+            </div>
           </FlexCol>
 
           <FlexCol>
@@ -316,8 +316,8 @@ const UserGroupsContent = () => {
                 <p className="text-sm text-muted-foreground">
                   Grupo: <strong>{selectedGroup.name}</strong> - Los usuarios asignados solo verán datos de este grupo.
                 </p>
-                <Flex className={'border border-dark-lighter rounded-lg overflow-hidden w-full'}>
-                  <Table>
+                <div className="border border-dark-lighter rounded-lg overflow-x-auto w-full">
+                  <Table className="min-w-[300px]">
                     <TableHeader className="bg-dark-light">
                       <TableRow>
                         <TableHead className="text-white">Número</TableHead>
@@ -363,7 +363,7 @@ const UserGroupsContent = () => {
                       )}
                     </TableBody>
                   </Table>
-                </Flex>
+                </div>
               </div>
             ) : (
               <div className="border border-dark-lighter rounded-lg p-4 text-center text-muted-foreground min-h-[160px] flex items-center justify-center">

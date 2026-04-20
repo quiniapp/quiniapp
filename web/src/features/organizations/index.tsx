@@ -181,12 +181,12 @@ const OrganizationsContent = () => {
         )}
 
         {!isLoading && !error && organizations && organizations.length > 0 && (
-          <div className="rounded-md border">
-            <table className="w-full">
+          <div className="rounded-md border overflow-x-auto w-full">
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="h-12 px-4 text-left align-middle font-medium">Nombre</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium">ID</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium hidden sm:table-cell">ID</th>
                   <th className="h-12 px-4 text-right align-middle font-medium">Acciones</th>
                 </tr>
               </thead>
@@ -194,37 +194,37 @@ const OrganizationsContent = () => {
                 {organizations.map((org) => (
                   <tr key={org.organization_id} className="border-b hover:bg-muted/50">
                     <td className="p-4 align-middle font-medium">{org.name}</td>
-                    <td className="p-4 align-middle text-sm text-muted-foreground">
-                      {org.organization_id}
+                    <td className="p-4 align-middle text-sm text-muted-foreground hidden sm:table-cell">
+                      <span title={org.organization_id}>{org.organization_id.slice(0, 8)}...</span>
                     </td>
                     <td className="p-4 align-middle text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1 sm:gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(org)}
-                          className="gap-2"
+                          className="gap-1 sm:gap-2"
                         >
                           <Pencil className="h-4 w-4" />
-                          Editar
+                          <span className="hidden sm:inline">Editar</span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleResetPassword(org)}
-                          className="gap-2 text-yellow-600 hover:text-yellow-500"
+                          className="gap-1 sm:gap-2 text-yellow-600 hover:text-yellow-500"
                         >
                           <KeyRound className="h-4 w-4" />
-                          Resetear Contraseña
+                          <span className="hidden sm:inline">Resetear Contraseña</span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(org)}
-                          className="gap-2 text-destructive hover:text-destructive"
+                          className="gap-1 sm:gap-2 text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Eliminar
+                          <span className="hidden sm:inline">Eliminar</span>
                         </Button>
                       </div>
                     </td>

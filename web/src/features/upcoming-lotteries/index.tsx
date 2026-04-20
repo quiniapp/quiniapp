@@ -86,6 +86,7 @@ const hasUnsavedChanges = (current: DayMap, server: DayMap): boolean => {
 const UpcomingLotteriesContent = () => {
   const { role } = useAuth();
   const canEdit = role !== USER_TYPE.ADMIN;
+  const is1440 = useMediaQuery('(min-width: 1440px)');
 
   const [savedData, setSavedData] = useState<DayMap>({});
   const [serverData, setServerData] = useState<DayMap>({});
@@ -196,22 +197,22 @@ const UpcomingLotteriesContent = () => {
           <div className="rounded-xl p-4 space-y-4">
             <div className="bg-dark-light rounded-xl space-y-6">
               <div className="space-y-6">
-                <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
+                <div className="border bg-card rounded-lg px-3 py-3 sm:px-4 sm:py-4 1440:py-8">
                   <HeaderTitleSection
                     title={'Día'}
-                    icon={<Calendar size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-                    size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
+                    icon={<Calendar size={is1440 ? '24px' : '16px'} />}
+                    size={is1440 ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
                     />
 
                   <DayRadioList selectedDay={selectedDay} handleDay={handleDay} />
                 </div>
 
-                <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
+                <div className="border bg-card rounded-lg px-3 py-3 sm:px-4 sm:py-4 1440:py-8">
                   <HeaderTitleSection
                     title={'Turno Seleccionado'}
-                    icon={<Clock size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-                    size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
+                    icon={<Clock size={is1440 ? '24px' : '16px'} />}
+                    size={is1440 ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
                     />
 
@@ -221,11 +222,11 @@ const UpcomingLotteriesContent = () => {
                     />
                 </div>
 
-                <div className="border bg-card rounded-lg px-4 py-4 1440:py-8">
+                <div className="border bg-card rounded-lg px-3 py-3 sm:px-4 sm:py-4 1440:py-8">
                   <HeaderTitleSection
                     title={'Quinielas'}
-                    icon={<Ticket size={useMediaQuery('(min-width: 1440px)') ? '24px' : '16px'} />}
-                    size={useMediaQuery('(min-width: 1440px)') ? 'lg' : 'sm'}
+                    icon={<Ticket size={is1440 ? '24px' : '16px'} />}
+                    size={is1440 ? 'lg' : 'sm'}
                     className={'!mb-[36px]'}
                     />
 
@@ -245,7 +246,7 @@ const UpcomingLotteriesContent = () => {
                     <Button
                       type="submit"
                       variant={'default'}
-                      className=" w-[200px]   hover:bg-dark text-white"
+                      className="w-full sm:w-[200px] hover:bg-dark text-white"
                       onClick={handleSave}
                       disabled={isPendingSave}
                       >
