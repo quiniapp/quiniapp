@@ -143,19 +143,19 @@ const CurrentAccountContent = () => {
               Exportar Cobros y Pagos
             </Button>
             <Button variant={'outline'} onClick={() => { setDailySummaryKey((k) => k + 1); setOpenDailySummary(true); }} disabled={printing}>
-              Totales CC (A4)
+              Resumen Cuenta Corriente
             </Button>
             <Button variant={'outline'} onClick={() => { setSubtotalsKey((k) => k + 1); setOpenSubtotals(true); }} disabled={printing}>
-              Imprimir Subtotales
-            </Button>
-            <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
-              Actualizar
+              Exportar subtotales
             </Button>
             {role !== USER_TYPE.ADMIN && (
               <Button variant={'outline'} onClick={handleGenerateLiquidation}>
                 Generar Liquidación
               </Button>
             )}
+            <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
+              Actualizar
+            </Button>
           </Box>
         </IsRoleCashier>
       </HeaderSection>
