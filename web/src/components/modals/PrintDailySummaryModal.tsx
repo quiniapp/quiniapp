@@ -15,7 +15,9 @@ import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 import { fetchCurrentAccountDailySummary } from '@/hooks/fetchs/current-account/useGetCurrentAccountDailySummary';
-import { downloadCurrentAccountDailySummaryPDF } from '@/functions/printLiquidationAdmin';
+import { downloadCurrentAccountDailySummaryPDF } from '@/functions/resumeCuentaCorrientePDF';
+import { downloadCurrentAccountGroupSummaryPDF } from '@/functions/resumeGrupoCuentaCorrientePDF';
+import { fetchCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { BACKEND_ROUTES } from '../../../routes/routes';
 
@@ -61,12 +63,21 @@ const PrintDailySummaryModal = ({
   const handlePrint = async () => {
     try {
       setPrinting(true);
-      const data = await fetchCurrentAccountDailySummary(dateFrom, dateTo, effectiveGroupId);
-      if (!data.length) {
-        toast.error('Sin datos para ese período.');
-        return;
+      if (effectiveGroupId && selectedGroup) {
+        const data = await fetchCurrentAccount(dateTo, effectiveGroupId);
+        if (!data.length) {
+          toast.error('Sin datos para esa fecha.');
+          return;
+        }
+        await downloadCurrentAccountGroupSummaryPDF({ date: dateTo, data, groupName: selectedGroup.name });
+      } else {
+        const data = await fetchCurrentAccountDailySummary(dateFrom, dateTo, effectiveGroupId);
+        if (!data.length) {
+          toast.error('Sin datos para ese período.');
+          return;
+        }
+        await downloadCurrentAccountDailySummaryPDF({ date_from: dateFrom, date_to: dateTo, data, groupName: selectedGroup?.name });
       }
-      await downloadCurrentAccountDailySummaryPDF({ date_from: dateFrom, date_to: dateTo, data, groupName: selectedGroup?.name });
       toast.success('PDF generado.');
       onClose();
     } catch {
@@ -77,7 +88,7 @@ const PrintDailySummaryModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Totales Cuenta Corriente (A4)" className="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Resumen Cuenta Corriente" className="max-w-md">
       <div className="space-y-4">
         {groups && groups.length > 0 && (
           <div className="space-y-1">
@@ -98,24 +109,38 @@ const PrintDailySummaryModal = ({
           </div>
         )}
 
-        <div className="space-y-1">
-          <Label>Desde</Label>
-          <SelectDayToSearch
-            selectedDay={dateFrom}
-            onDayChange={(d) => d && setDateFrom(d)}
-            toDate={dayjs().toDate()}
-            className="w-full"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label>Hasta</Label>
-          <SelectDayToSearch
-            selectedDay={dateTo}
-            onDayChange={(d) => d && setDateTo(d)}
-            toDate={dayjs().toDate()}
-            className="w-full"
-          />
-        </div>
+        {effectiveGroupId ? (
+          <div className="space-y-1">
+            <Label>Fecha</Label>
+            <SelectDayToSearch
+              selectedDay={dateTo}
+              onDayChange={(d) => d && setDateTo(d)}
+              toDate={dayjs().toDate()}
+              className="w-full"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <Label>Desde</Label>
+              <SelectDayToSearch
+                selectedDay={dateFrom}
+                onDayChange={(d) => d && setDateFrom(d)}
+                toDate={dayjs().toDate()}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Hasta</Label>
+              <SelectDayToSearch
+                selectedDay={dateTo}
+                onDayChange={(d) => d && setDateTo(d)}
+                toDate={dayjs().toDate()}
+                className="w-full"
+              />
+            </div>
+          </>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose} disabled={printing}>
