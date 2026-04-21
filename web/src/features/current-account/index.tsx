@@ -1,7 +1,7 @@
 import Box from '@/components/box';
 import { Button } from '@/components/ui/button';
 import HeaderSection from '@/components/header-section';
-import { FileText, FileDown, CreditCard, BarChart2, List, Receipt, RefreshCw, Wallet } from 'lucide-react';
+import { FileText, FileDown, CreditCard, BarChart2, List, RefreshCw, Wallet } from 'lucide-react';
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
 
 import IsRoleCashier from '@/components/is-role-cashier';
@@ -13,15 +13,9 @@ import { USER_TYPE } from '@helper/types/user.type';
 import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 import React, { Suspense, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { betsKey, fetchBets } from '@/hooks/fetchs/plays/useBets';
-import {
-  currentAccountKey,
-  fetchCurrentAccount,
-} from '@/hooks/fetchs/current-account/useGetCurrentAccount';
-import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
-import { downloadCurrentAccountTablePDF } from '@/functions/printLiquidationAdmin';
-import { printUserSlipPDF } from '@/functions/printLiquidationCashier';
+import { exportDiario } from './handlers/exportDiario';
+import { exportLiquidacion } from './handlers/exportLiquidacion';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
 
 const CurrentAccountContent = () => {
@@ -54,79 +48,8 @@ const CurrentAccountContent = () => {
   const handleGenerateLiquidation = () => {
     setOpen(true);
   };
-  const handlePrintLiquidationCashier = async () => {
-    try {
-      setPrinting(true);
-
-      // 1) Traer cuentas (caché o fetch)
-      const accounts = await queryClient.fetchQuery({
-        queryKey: currentAccountKey(date),
-        queryFn: () => fetchCurrentAccount(date),
-      });
-
-      if (!accounts?.length) {
-        toast.error('No hay cuentas a liquidar.');
-        return;
-      }
-
-      // 2) Por cada cuenta, traer bets (SIN hooks) y generar PDF
-      for (const acc of accounts) {
-        const bKey = betsKey({
-          date: acc.date,
-          cashier_id: acc.user_id,
-          winners: 'true',
-        });
-
-        const bets = await queryClient.fetchQuery({
-          queryKey: bKey,
-          queryFn: () =>
-            fetchBets({
-              date: acc.date,
-              cashier_id: acc.user_id,
-              winners: 'true',
-            }),
-        });
-
-        await printUserSlipPDF({
-          account: acc,
-          date: acc.date,
-          bets,
-        });
-      }
-
-      toast.success('Liquidaciones exportadas.');
-    } catch (e) {
-      console.error(e);
-      toast.error('Error exportando liquidaciones.');
-    } finally {
-      setPrinting(false);
-    }
-  };
-
-  const handlePrintDiaryLiquidation = async () => {
-    try {
-      setPrinting(true);
-      const rows = await queryClient.fetchQuery({
-        queryKey: currentAccountKey(date),
-        queryFn: () => fetchCurrentAccount(date),
-      });
-
-      if (!rows?.length) {
-        toast.error('No hay datos para exportar.');
-        return;
-      }
-
-      await downloadCurrentAccountTablePDF({
-        data: rows,
-        date: rows[0]?.date ?? dayjs().format('YYYY-MM-DD'),
-      });
-    } catch (e) {
-      console.error(e);
-      toast.error('No se pudo generar el PDF.');
-    } finally {
-      setPrinting(false);
-    }
-  };
+  const handlePrintLiquidationCashier = () => exportLiquidacion(queryClient, date, setPrinting);
+  const handlePrintDiaryLiquidation = () => exportDiario(queryClient, date, setPrinting);
 
   if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable />;
   return (

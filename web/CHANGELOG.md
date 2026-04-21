@@ -16,6 +16,10 @@ All notable changes to the Web workspace are documented in this file.
 
 ### Changed - 2026-04-21
 
+#### Exportar Subtotales — porcentaje capitalista solo en modo rango
+
+- **`web/src/components/modals/PrintSubtotalsModal.tsx`**: Porcentaje capitalista movido dentro del bloque `mode === 'range'`. Modo día solo muestra fecha y gastos; modo rango solo muestra rango de fechas y porcentaje. Removido `percentage` del llamado a `printSubtotalsDayTicket`.
+
 #### Cuenta Corriente — cuadro de impresión
 
 - **`web/src/functions/printLiquidationAdmin.ts`**: `downloadCurrentAccountTablePDF` y `downloadCurrentAccountDailySummaryPDF` usan `printPdfBlob` (cuadro de impresión del navegador) en lugar de `doc.save()` (descarga directa).

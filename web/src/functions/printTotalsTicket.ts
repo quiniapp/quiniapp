@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { DailyTotalEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
 import { DailySummaryEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountDailySummary';
-import { printPdfBlob } from './makeTicket';
+import { openPDFPrintDialog } from './pdf-shared';
 
 const PAPER_W = 58;
 const CHARS = 32;
@@ -115,7 +115,7 @@ export async function printDailyTotalsTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}`);
 }
 
 export async function printRangeTotalsTicket(params: {
@@ -191,7 +191,7 @@ export async function printRangeTotalsTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}`);
 }
 
 export async function printSubtotalsDayTicket(params: {
@@ -238,12 +238,11 @@ export async function printSubtotalsDayTicket(params: {
     lines.push(padLine('Total Gastos:', money(totalExpenses)));
     lines.push(DIVIDER);
     lines.push(padLine('SALDO NETO:', money(saldoNeto)));
-    if (percentage && percentage > 0) {
-      const capitalistaAmount = (saldoNeto * percentage) / 100;
-      lines.push(padLine(`${percentage}% CAPITALISTA:`, money(capitalistaAmount)));
-    }
-  } else if (percentage && percentage > 0) {
-    const capitalistaAmount = (grandTotal * percentage) / 100;
+  }
+
+  if (percentage && percentage > 0) {
+    const base = expenses.length > 0 ? saldoNeto : grandTotal;
+    const capitalistaAmount = (base * percentage) / 100;
     lines.push(DIVIDER);
     lines.push(padLine(`${percentage}% CAPITALISTA:`, money(capitalistaAmount)));
   }
@@ -264,7 +263,7 @@ export async function printSubtotalsDayTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Subtotales${fileSlug(groupName)}_${dateFile}`);
 }
 
 export async function printSubtotalsRangeTicket(params: {
@@ -324,5 +323,5 @@ export async function printSubtotalsRangeTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}`);
 }

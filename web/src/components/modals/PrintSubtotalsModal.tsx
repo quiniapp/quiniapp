@@ -117,7 +117,6 @@ const PrintSubtotalsModal = ({
           orgName,
           groupName: selectedGroup?.name,
           expenses: freshExpenses.map((e) => ({ nombre: e.name, monto: e.amount })),
-          percentage,
         });
       } else {
         const dailySummary = await fetchCurrentAccountDailySummary(dateFrom, dateTo, effectiveGroupId);
@@ -275,20 +274,19 @@ const PrintSubtotalsModal = ({
                 className="w-full"
               />
             </div>
+            <div className="space-y-1">
+              <Label>Porcentaje capitalista (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={percentage}
+                onChange={(e) => setPercentage(Number(e.target.value))}
+                className="w-28"
+              />
+            </div>
           </>
         )}
-
-        <div className="space-y-1">
-          <Label>Porcentaje capitalista (%)</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={percentage}
-            onChange={(e) => setPercentage(Number(e.target.value))}
-            className="w-28"
-          />
-        </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose} disabled={printing}>
