@@ -1,6 +1,7 @@
 import Box from '@/components/box';
 import { Button } from '@/components/ui/button';
 import HeaderSection from '@/components/header-section';
+import { FileText, FileDown, CreditCard, BarChart2, List, Receipt, RefreshCw, Wallet } from 'lucide-react';
 import SettlementPayrollTable from '@/components/settlement-payroll-table';
 
 import IsRoleCashier from '@/components/is-role-cashier';
@@ -132,29 +133,31 @@ const CurrentAccountContent = () => {
     <PageWrapper>
       <HeaderSection title={'Cuenta Corriente'}>
         <IsRoleCashier role={role}>
-          <Box className={'grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4'}>
-            <Button onClick={handlePrintDiaryLiquidation} disabled={printing}>
-              Exportar Diario
-            </Button>
-            <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing}>
-              Exportar Liquidación
-            </Button>
-            <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing}>
-              Exportar Cobros y Pagos
-            </Button>
-            <Button variant={'outline'} onClick={() => { setDailySummaryKey((k) => k + 1); setOpenDailySummary(true); }} disabled={printing}>
-              Resumen Cuenta Corriente
-            </Button>
-            <Button variant={'outline'} onClick={() => { setSubtotalsKey((k) => k + 1); setOpenSubtotals(true); }} disabled={printing}>
-              Exportar subtotales
-            </Button>
-            {role !== USER_TYPE.ADMIN && (
-              <Button variant={'outline'} onClick={handleGenerateLiquidation}>
-                Generar Liquidación
+          <Box className={'flex flex-col gap-2'}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Button onClick={handlePrintDiaryLiquidation} disabled={printing} className="gap-2">
+                <FileText className="h-4 w-4" /> Exportar Diario
               </Button>
-            )}
-            <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
-              Actualizar
+              <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing} className="gap-2">
+                <FileDown className="h-4 w-4" /> Exportar Liquidación
+              </Button>
+              <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing} className="gap-2">
+                <CreditCard className="h-4 w-4" /> Exportar Cobros y Pagos
+              </Button>
+              <Button variant={'outline'} onClick={() => { setDailySummaryKey((k) => k + 1); setOpenDailySummary(true); }} disabled={printing} className="gap-2">
+                <BarChart2 className="h-4 w-4" /> Resumen Cuenta Corriente
+              </Button>
+              <Button variant={'outline'} onClick={() => { setSubtotalsKey((k) => k + 1); setOpenSubtotals(true); }} disabled={printing} className="gap-2">
+                <List className="h-4 w-4" /> Exportar Subtotales
+              </Button>
+              {role !== USER_TYPE.ADMIN && (
+                <Button variant={'outline'} onClick={handleGenerateLiquidation} className="gap-2">
+                  <Wallet className="h-4 w-4" /> Generar Liquidación
+                </Button>
+              )}
+            </div>
+            <Button variant={'outline'} onClick={handleUpdateCurrentAccount} className="gap-2 w-full">
+              <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
           </Box>
         </IsRoleCashier>

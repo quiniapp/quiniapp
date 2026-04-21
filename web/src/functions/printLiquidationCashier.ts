@@ -177,5 +177,6 @@ export async function printUserSlipPDF(opts: {
     );
   }
 
-  doc.save(`Liquidacion-${dateStr}--${account.user_name}-${account.user_number}.pdf`);
+  const dateFile = dateStr.replace(/\//g, '-');
+  doc.save(`Exportar_Liquidacion_${dateFile}_${account.user_name}-${account.user_number}.pdf`);
 }

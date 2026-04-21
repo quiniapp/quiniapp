@@ -61,10 +61,10 @@ const PrintTotalsModal = ({
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
   const selectedGroup = groups?.find((g) => g.organization_id === groupId);
 
-  // Load existing expenses from DB for selected date
-  const { data: savedExpenses = [] } = useGetOrgExpenses(mode === 'day' ? date : null);
+  // Load existing expenses from DB for selected date and group
+  const { data: savedExpenses = [] } = useGetOrgExpenses(mode === 'day' ? date : null, effectiveGroupId);
   const { mutate: createExpense, isPending: creating } = useCreateOrgExpense();
-  const { mutate: deleteExpense } = useDeleteOrgExpense(date);
+  const { mutate: deleteExpense } = useDeleteOrgExpense(date, effectiveGroupId);
 
   useEffect(() => {
     if (!isOpen || !organizationId) return;
@@ -85,7 +85,7 @@ const PrintTotalsModal = ({
       return;
     }
     createExpense(
-      { date, name, amount },
+      { date, name, amount, group_id: effectiveGroupId },
       {
         onSuccess: () => {
           setNewExpenseName('');
@@ -111,7 +111,7 @@ const PrintTotalsModal = ({
       if (mode === 'day') {
         const [data, freshExpenses] = await Promise.all([
           fetchCurrentAccount(date, effectiveGroupId),
-          fetchOrgExpenses(date),
+          fetchOrgExpenses(date, effectiveGroupId),
         ]);
         if (!data.length) {
           toast.error('Sin datos para esa fecha.');

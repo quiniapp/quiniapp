@@ -3,7 +3,7 @@ import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { orgExpensesKey } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
 
-type CreateExpensePayload = { date: string; name: string; amount: number };
+type CreateExpensePayload = { date: string; name: string; amount: number; group_id?: string | null };
 
 export function useCreateOrgExpense() {
   const queryClient = useQueryClient();
@@ -20,7 +20,9 @@ export function useCreateOrgExpense() {
       return json?.data?.expense;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: orgExpensesKey(variables.date) });
+      queryClient.invalidateQueries({
+        queryKey: orgExpensesKey(variables.date, variables.group_id),
+      });
     },
   });
 }

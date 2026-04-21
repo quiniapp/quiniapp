@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 export interface IOrgExpense {
   expense_id: string;
   organization_id: string;
+  group_id: string | null;
   date: string;
   name: string;
   amount: number;
@@ -12,14 +13,24 @@ export interface IOrgExpense {
 }
 
 export class OrgExpenseRepository {
-  async getByOrgAndDate(organization_id: string, date: string): Promise<IOrgExpense[]> {
-    const { data, error } = await supabase
+  async getByOrgAndDate(
+    organization_id: string,
+    date: string,
+    group_id?: string | null
+  ): Promise<IOrgExpense[]> {
+    let query = supabase
       .from('org_expenses')
       .select('*')
       .eq('organization_id', organization_id)
-      .eq('date', dayjs(date).format('YYYY-MM-DD'))
-      .order('created_at', { ascending: true });
+      .eq('date', dayjs(date).format('YYYY-MM-DD'));
 
+    if (group_id) {
+      query = query.eq('group_id', group_id);
+    } else {
+      query = query.is('group_id', null);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
     return data ?? [];
   }
@@ -50,7 +61,8 @@ export class OrgExpenseRepository {
     organization_id: string,
     date: string,
     name: string,
-    amount: number
+    amount: number,
+    group_id?: string | null
   ): Promise<IOrgExpense> {
     const { data, error } = await supabase
       .from('org_expenses')
@@ -59,6 +71,7 @@ export class OrgExpenseRepository {
         date: dayjs(date).format('YYYY-MM-DD'),
         name,
         amount,
+        group_id: group_id ?? null,
       })
       .select()
       .single();
