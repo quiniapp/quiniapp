@@ -148,6 +148,7 @@ const FormHeaderFilter = () => {
             type="text"
             className=""
             value={inputValue}
+            inputMode="numeric"
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Ej: 20250619..."
           />
