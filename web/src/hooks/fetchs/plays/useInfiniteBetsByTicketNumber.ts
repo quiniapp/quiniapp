@@ -17,12 +17,16 @@ export interface FetchInfiniteBetsByTicketNumberProps {
   limit?: number;
 }
 
+function dateFromTicketNumber(ticket_number: string): string {
+  const raw = ticket_number.slice(0, 8);
+  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+}
+
 export async function fetchPaginatedBetsByTicketNumber(
   props: FetchInfiniteBetsByTicketNumberProps,
   pageParam: number = 1
 ): Promise<IPaginatedBetsResponse<IBetEntityFront>> {
   const {
-    date,
     schedule_id,
     lottery_id,
     cashier_id,
@@ -33,6 +37,8 @@ export async function fetchPaginatedBetsByTicketNumber(
     ticket_number,
     limit = 150,
   } = props;
+
+  const date = ticket_number ? dateFromTicketNumber(ticket_number) : props.date;
 
   if (!date || !ticket_number) {
     return {
@@ -96,7 +102,7 @@ export const useInfiniteBetsByTicketNumber = (props: FetchInfiniteBetsByTicketNu
     getNextPageParam: (lastPage) => {
       return lastPage.pagination.hasMore ? lastPage.pagination.currentPage + 1 : undefined;
     },
-    enabled: Boolean(props.date && props.ticket_number),
+    enabled: Boolean(props.ticket_number),
     initialPageParam: 1,
   });
 };
