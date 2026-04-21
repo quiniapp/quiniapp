@@ -295,6 +295,139 @@ export async function printDiaryLiquidationAdmin(params: {
   doc.save(`LiquidacionGeneral-${dateStr}.pdf`);
 }
 
+/** PDF A4 con totales por fecha (una fila por día, sin detalle por cashier) */
+export async function downloadCurrentAccountDailySummaryPDF(params: {
+  date_from: string;
+  date_to: string;
+  data: import('@/hooks/fetchs/current-account/useGetCurrentAccountDailySummary').DailySummaryEntry[];
+}) {
+  const BASE_FONT = 8;
+  const CELL_PAD = 1;
+  const { jsPDF, autoTable } = await getPDFDeps();
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  const fromStr = dayjs(params.date_from).format('DD/MM/YYYY');
+  const toStr = dayjs(params.date_to).format('DD/MM/YYYY');
+
+  doc.setFontSize(14);
+  doc.text('Totales Cuenta Corriente', 14, 14);
+  doc.setFontSize(10);
+  doc.text(`Período: ${fromStr} al ${toStr}`, 14, 20);
+  doc.setFontSize(BASE_FONT);
+
+  const margin = { left: 14, right: 14 };
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const available = pageWidth - margin.left - margin.right;
+
+  const worstMoney = '-9.999.999,9';
+  const MONEY_W_TEXT = doc.getTextWidth(worstMoney);
+  const minMoneyCol = MONEY_W_TEXT + CELL_PAD * 2 + 0.5;
+
+  const DATE_COL = 22;
+  const MONEY_COL_COUNT = 10;
+
+  let moneyColWidth = Math.ceil(minMoneyCol);
+  let used = DATE_COL + moneyColWidth * MONEY_COL_COUNT;
+  let leftover = available - used;
+
+  if (leftover > 0) {
+    moneyColWidth = Math.floor(moneyColWidth + leftover / MONEY_COL_COUNT);
+    used = DATE_COL + moneyColWidth * MONEY_COL_COUNT;
+    leftover = available - used;
+  }
+
+  const dateColWidth = DATE_COL + Math.max(0, leftover);
+
+  const columnStyles: Record<number, any> = {
+    0: { cellWidth: dateColWidth, halign: 'left', overflow: 'ellipsize' },
+    1: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    2: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    3: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    4: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    5: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    6: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    7: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    8: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    9: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+    10: { cellWidth: moneyColWidth, halign: 'right', overflow: 'hidden' },
+  };
+
+  const baseStyles = {
+    ...BORDER_CELL,
+    fontSize: BASE_FONT,
+    cellPadding: CELL_PAD,
+    overflow: 'linebreak',
+    fillColor: [255, 255, 255],
+    textColor: [0, 0, 0],
+  };
+
+  const HEAD = [['Fecha', 'Pase', 'Aciertos', 'Reclamos', 'Subtotal', 'Deuda', 'Cobros', 'Pagos', 'Total', 'Arrastre', 'Deje']];
+
+  const body = params.data.map((d) => [
+    dayjs(d.date).format('DD/MM/YYYY'),
+    money(d.total_pass),
+    money(d.total_successes),
+    money(d.total_claims),
+    money(d.total_subtotal),
+    money(d.total_previous_balance),
+    money(d.total_collections),
+    money(d.total_paid),
+    money(d.total_total),
+    money(d.total_drag),
+    money(d.total_leave),
+  ]);
+
+  autoTable(doc, {
+    head: HEAD,
+    body,
+    startY: 26,
+    margin,
+    theme: 'grid',
+    ...BORDER_TABLE,
+    styles: baseStyles,
+    headStyles: { ...BORDER_CELL, halign: 'center', fontSize: BASE_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    bodyStyles: { ...BORDER_CELL, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    alternateRowStyles: { fillColor: [255, 255, 255] },
+    columnStyles,
+    tableWidth: available,
+  });
+
+  const finalY = (doc as any).lastAutoTable?.finalY ?? 26;
+
+  const totalsRow = [
+    'Totales',
+    money(params.data.reduce((s, d) => s + d.total_pass, 0)),
+    money(params.data.reduce((s, d) => s + d.total_successes, 0)),
+    money(params.data.reduce((s, d) => s + d.total_claims, 0)),
+    money(params.data.reduce((s, d) => s + d.total_subtotal, 0)),
+    money(params.data.reduce((s, d) => s + d.total_previous_balance, 0)),
+    money(params.data.reduce((s, d) => s + d.total_collections, 0)),
+    money(params.data.reduce((s, d) => s + d.total_paid, 0)),
+    money(params.data.reduce((s, d) => s + d.total_total, 0)),
+    money(params.data.reduce((s, d) => s + d.total_drag, 0)),
+    money(params.data.reduce((s, d) => s + d.total_leave, 0)),
+  ];
+
+  autoTable(doc, {
+    startY: finalY + 6,
+    head: [['', 'Pase', 'Aciertos', 'Reclamos', 'Subtotal', 'Deuda', 'Cobros', 'Pagos', 'Total', 'Arrastre', 'Deje']],
+    body: [totalsRow],
+    margin,
+    theme: 'grid',
+    ...BORDER_TABLE,
+    styles: baseStyles,
+    headStyles: { ...BORDER_CELL, halign: 'center', fontSize: BASE_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    bodyStyles: { ...BORDER_CELL, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    alternateRowStyles: { fillColor: [255, 255, 255] },
+    columnStyles,
+    tableWidth: available,
+  });
+
+  addFooterPageNumbers(doc);
+  doc.save(`TotalesCC_${fromStr.replace(/\//g, '-')}_${toStr.replace(/\//g, '-')}.pdf`);
+}
+
 export const computeTotals = (rows: ICurrentAccountEntityFront[]) =>
   rows.reduce(
     (acc, it) => ({

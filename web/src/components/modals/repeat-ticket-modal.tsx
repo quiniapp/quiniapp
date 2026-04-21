@@ -50,7 +50,11 @@ const RepeatTicketModal = ({ isOpen, title, onClose, handleRecreateBet }: BasicM
   const { data: schedules } = useSchedules();
   const { data: scheduleLottery } = useScheduleLottery();
   const { data: lotteries } = useLotteries({ all: true });
-  const { data } = getTicketByNumber(ticketNumber);
+  const queryTicketNumber =
+    isCashier && ticketNumber && !ticketNumber.includes('-') && user?.number != null
+      ? `${ticketNumber}-${user.number}`
+      : ticketNumber;
+  const { data } = getTicketByNumber(queryTicketNumber || null);
 
   const handleSetBets = () => {
     handleRecreateBet(selectedBets);
@@ -275,13 +279,14 @@ useEffect(() => {
               Ticket N°:
             </Text>
             <Input
-              type="number"
+              type="text"
               value={ticketNumber}
               onChange={(e) => {
                 setTicketNumber(e.target.value);
                 setCustomAmount(null);
               }}
               className="w-full sm:w-64"
+              inputMode='numeric'
               placeholder="Ingrese el número de ticket"
             />
             <Text size="sm" weight="medium" className="text-slate-200 whitespace-nowrap">

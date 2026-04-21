@@ -28,6 +28,10 @@ const CurrentAccountContent = () => {
   const [open, setOpen] = useState<boolean>(false);
   const [openPrintTotals, setOpenPrintTotals] = useState<boolean>(false);
   const [printTotalsKey, setPrintTotalsKey] = useState(0);
+  const [openDailySummary, setOpenDailySummary] = useState<boolean>(false);
+  const [dailySummaryKey, setDailySummaryKey] = useState(0);
+  const [openSubtotals, setOpenSubtotals] = useState<boolean>(false);
+  const [subtotalsKey, setSubtotalsKey] = useState(0);
   const { role } = useAuth();
   const [searchParams] = useSearchParams();
   const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
@@ -128,7 +132,7 @@ const CurrentAccountContent = () => {
     <PageWrapper>
       <HeaderSection title={'Cuenta Corriente'}>
         <IsRoleCashier role={role}>
-          <Box className={'grid grid-cols-2 gap-4'}>
+          <Box className={'grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4'}>
             <Button onClick={handlePrintDiaryLiquidation} disabled={printing}>
               Exportar Diario
             </Button>
@@ -138,14 +142,20 @@ const CurrentAccountContent = () => {
             <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing}>
               Exportar Cobros y Pagos
             </Button>
-            <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
-              Actualizar
+            <Button variant={'outline'} onClick={() => { setDailySummaryKey((k) => k + 1); setOpenDailySummary(true); }} disabled={printing}>
+              Resumen Cuenta Corriente
+            </Button>
+            <Button variant={'outline'} onClick={() => { setSubtotalsKey((k) => k + 1); setOpenSubtotals(true); }} disabled={printing}>
+              Exportar subtotales
             </Button>
             {role !== USER_TYPE.ADMIN && (
               <Button variant={'outline'} onClick={handleGenerateLiquidation}>
                 Generar Liquidación
               </Button>
             )}
+            <Button variant={'outline'} onClick={handleUpdateCurrentAccount}>
+              Actualizar
+            </Button>
           </Box>
         </IsRoleCashier>
       </HeaderSection>
@@ -162,6 +172,24 @@ const CurrentAccountContent = () => {
           initialGroupId={group_id}
         />
       </Suspense>
+      <Suspense>
+        <PrintDailySummaryModal
+          key={dailySummaryKey}
+          isOpen={openDailySummary}
+          onClose={() => setOpenDailySummary(false)}
+          initialDate={date}
+          initialGroupId={group_id}
+        />
+      </Suspense>
+      <Suspense>
+        <PrintSubtotalsModal
+          key={subtotalsKey}
+          isOpen={openSubtotals}
+          onClose={() => setOpenSubtotals(false)}
+          initialDate={date}
+          initialGroupId={group_id}
+        />
+      </Suspense>
     </PageWrapper>
   );
 };
@@ -174,4 +202,12 @@ const GenerateLiquitationModal = React.lazy(
 
 const PrintTotalsModal = React.lazy(
   () => import('../../components/modals/PrintTotalsModal')
+);
+
+const PrintDailySummaryModal = React.lazy(
+  () => import('../../components/modals/PrintDailySummaryModal')
+);
+
+const PrintSubtotalsModal = React.lazy(
+  () => import('../../components/modals/PrintSubtotalsModal')
 );

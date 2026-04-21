@@ -348,4 +348,91 @@ export class CurrentAccountRepository {
         };
       });
   }
+
+  async getDailySummaryByDateRange(
+    organization_id: string,
+    date_from: string,
+    date_to: string,
+    user_ids?: string[]
+  ): Promise<
+    {
+      date: string;
+      total_pass: number;
+      total_successes: number;
+      total_claims: number;
+      total_subtotal: number;
+      total_previous_balance: number;
+      total_collections: number;
+      total_paid: number;
+      total_total: number;
+      total_drag: number;
+      total_leave: number;
+    }[]
+  > {
+    const orgIds = await this.getOrganizationNetworkIds(organization_id);
+
+    let query = supabase
+      .from('current_accounts')
+      .select(
+        'date, pass, successes, claims, subtotal, previous_balance, collections, paid, total, drag, leave'
+      )
+      .in('organization_id', orgIds)
+      .gte('date', dayjs(date_from).format('YYYY-MM-DD'))
+      .lte('date', dayjs(date_to).format('YYYY-MM-DD'))
+      .order('date', { ascending: true });
+
+    if (user_ids && user_ids.length > 0) {
+      query = query.in('user_id', user_ids);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const byDate: Record<
+      string,
+      {
+        total_pass: number;
+        total_successes: number;
+        total_claims: number;
+        total_subtotal: number;
+        total_previous_balance: number;
+        total_collections: number;
+        total_paid: number;
+        total_total: number;
+        total_drag: number;
+        total_leave: number;
+      }
+    > = {};
+
+    for (const row of data ?? []) {
+      if (!byDate[row.date]) {
+        byDate[row.date] = {
+          total_pass: 0,
+          total_successes: 0,
+          total_claims: 0,
+          total_subtotal: 0,
+          total_previous_balance: 0,
+          total_collections: 0,
+          total_paid: 0,
+          total_total: 0,
+          total_drag: 0,
+          total_leave: 0,
+        };
+      }
+      byDate[row.date].total_pass += Number(row.pass) || 0;
+      byDate[row.date].total_successes += Number(row.successes) || 0;
+      byDate[row.date].total_claims += Number(row.claims) || 0;
+      byDate[row.date].total_subtotal += Number(row.subtotal) || 0;
+      byDate[row.date].total_previous_balance += Number(row.previous_balance) || 0;
+      byDate[row.date].total_collections += Number(row.collections) || 0;
+      byDate[row.date].total_paid += Number(row.paid) || 0;
+      byDate[row.date].total_total += Number(row.total) || 0;
+      byDate[row.date].total_drag += Number(row.drag) || 0;
+      byDate[row.date].total_leave += Number(row.leave) || 0;
+    }
+
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, totals]) => ({ date, ...totals }));
+  }
 }

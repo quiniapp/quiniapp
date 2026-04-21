@@ -4,6 +4,13 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-04-20
+
+#### Cuenta Corriente — endpoint daily-summary
+- **`api/src/current-account/repository/current-account.repository.ts`**: Added `getDailySummaryByDateRange` — queries `current_accounts` for all CC fields (pass, successes, claims, subtotal, previous_balance, collections, paid, total, drag, leave), aggregates per date.
+- **`api/src/current-account/controller/current-account.controller.ts`**: Added `getDailySummaryByDateRangeHandler` delegating to repository.
+- **`api/src/current-account/route/current-account.route.ts`**: Added `GET /daily-summary?date_from&date_to&group_id` — same auth/group scoping as `/totals`. Returns `{ data: { summary: DailySummaryEntry[] } }`.
+
 ### Fixed - 2026-04-20
 
 #### Session Management

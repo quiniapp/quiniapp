@@ -4,6 +4,53 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-21
+
+#### Ticket search by number — compatibility with new format
+- **`web/src/hooks/fetchs/tickets/useGetTicketByNumber.ts`**: Changed `length === 17` to `length >= 17` so search works with new ticket format `YYYYMMDDHHmmssSSS-N` (includes cashier number suffix).
+- **`web/src/features/terminal-ticket/form-header-filter.tsx`**: Changed ticket number input `type="number"` → `type="text"` so the dash in the new format is accepted. Cashier users who type only the base number (without `-N` suffix) get it auto-appended from their own `user.number`.
+- **`web/src/components/modals/repeat-ticket-modal.tsx`**: Same fixes — `type="text"` input, and cashier auto-append of `-{user.number}` suffix when missing.
+
+### Added - 2026-04-20
+
+#### UX/UI General — Mobile responsiveness & layout improvements
+- **`web/src/components/mobile-bottom-nav/index.tsx`**: New bottom tab bar for mobile (`md:hidden`). Shows 4 main routes (Jugadas, Aciertos, Ticket, Resultados) + "Más" button that opens the existing sidebar Sheet via `useSidebar().toggleSidebar()`. Fixed at bottom with safe-area inset support.
+- **`web/src/components/layout/index.tsx`**: Added `MobileBottomNav`, max-width container (`max-w-[1440px]`) on content, increased mobile padding (`px-3`), added `pb-16 md:pb-0` to reserve space for bottom nav.
+
+### Changed - 2026-04-20
+
+#### UX/UI General — Mobile responsiveness & layout improvements
+- **`web/src/styles/index.css`**: Fixed CSS variable typos: `--bg-accen` → `--bg-accent`, `--border-top` → `--rounded-top`.
+- **`web/src/components/footer/index.tsx`**: Footer now shows time and date on same line on mobile (flex-row). Reduced clock font size for mobile (`text-xl sm:text-2xl 1440:text-4xl`).
+- **`web/src/components/wrapper/PageWrapper.tsx`**: Increased gap between sections (`gap-2 sm:gap-3 2xl:gap-4`).
+- **`web/src/components/header-section/index.tsx`**: Title now visible on all screen sizes (removed `hidden sm:flex`). Icon hidden on mobile only. Added `bg-background z-10` for sticky behavior. Hoisted `useMediaQuery` call to component top level.
+- **`web/src/components/button/IconButton.tsx`**: Increased mobile touch target (`h-7` → `h-10`).
+- **`web/src/constants/SidebarMenu.tsx`**: Fixed typos "Qunielas y Turnos" → "Quinielas y Turnos" and "Qunielas a jugarse" → "Quinielas a jugarse".
+- **`web/src/components/button/SelectDayToSearch.tsx`**: Calendar now starts on Sunday (`weekStartsOn: 0`).
+- **`web/src/components/modals/PrintTotalsModal.tsx`**: Added `toDate={dayjs().toDate()}` to all calendar pickers — max date is today.
+- **`web/src/components/modals/PrintDailySummaryModal.tsx`**: Added `toDate={dayjs().toDate()}` to dateFrom and dateTo pickers.
+- **`web/src/components/modals/PrintSubtotalsModal.tsx`**: Added `toDate={dayjs().toDate()}` to all calendar pickers.
+- **`web/src/features/upcoming-lotteries/index.tsx`**: Hoisted `useMediaQuery` calls. Save button now responsive (`w-full sm:w-[200px]`). Reduced padding on sections for mobile.
+- **`web/src/features/user-list/user-table.tsx`**: Table wrapper now uses `overflow-x-auto`, table has `min-w-[700px]` — horizontal scroll on mobile.
+- **`web/src/features/groups/index.tsx`**: Two-column grid now responsive (`grid-cols-1 md:grid-cols-2`).
+- **`web/src/features/organizations/index.tsx`**: Table wrapped in `overflow-x-auto`. ID column hidden on mobile (shown on sm+). Action button labels hidden on mobile (icon only). UUID truncated to 8 chars with full UUID as title tooltip.
+- **`web/src/features/current-account/index.tsx`**: Export button grid now `grid-cols-1 sm:grid-cols-2` — single column on mobile for easier tapping.
+- **`web/src/features/make-plays/fill-out-a-ticket.tsx`**: Fixed `flex-col-reverse` → `flex-col` so form appears first on mobile (before lottery checkboxes).
+- **`web/src/features/make-plays/results-overview.tsx`**: Added `border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.3)]` to visually separate sticky action bar from content.
+
+### Added - 2026-04-20
+
+#### Cuenta Corriente — Totales CC (A4) y Subtotales (ticket)
+
+#### Cuenta Corriente — Totales CC (A4) y Subtotales (ticket)
+- **`web/src/hooks/fetchs/current-account/useGetCurrentAccountDailySummary.ts`**: New fetch hook `fetchCurrentAccountDailySummary(date_from, date_to, group_id)` calling `GET /daily-summary`. Returns `DailySummaryEntry[]` with all CC fields aggregated per day.
+- **`web/src/functions/printLiquidationAdmin.ts`**: Added `downloadCurrentAccountDailySummaryPDF` — A4 landscape PDF with one row per date; columns: Fecha, Pase, Aciertos, Reclamos, Subtotal, Deuda, Cobros, Pagos, Total, Arrastre, Deje + totals footer.
+- **`web/src/functions/printTotalsTicket.ts`**: Added `printSubtotalsDayTicket` (per-cashier subtotals for a single day) and `printSubtotalsRangeTicket` (per-day subtotals for a date range).
+- **`web/src/components/modals/PrintDailySummaryModal.tsx`**: Modal for button 1 — date range + group selector, prints A4 daily summary PDF.
+- **`web/src/components/modals/PrintSubtotalsModal.tsx`**: Modal for button 2 — day/range mode + group selector, prints subtotals ticket.
+- **`web/src/features/current-account/index.tsx`**: Added "Totales CC (A4)" and "Imprimir Subtotales" buttons; lazy-loaded new modals.
+- **`web/routes/routes.ts`**: Added `daily_summary` route to `current_account`.
+
 ### Fixed - 2026-04-19
 
 #### Session race condition — concurrent refresh kicks all devices

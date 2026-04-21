@@ -52,14 +52,14 @@ export const MENU_ITEMS: MENU_ITEM[] = [
   },
   {
     id: 'LoteriesAndSchedules',
-    name: 'Qunielas y Turnos',
+    name: 'Quinielas y Turnos',
     route: ROUTES.UPCOMING_LOTTERIES,
     icon: <UserIcon size={20} />,
     roles: ALL_EXCEPT_CASHIER,
     children: [
       {
         id: 'UpcomingLotteries',
-        name: 'Qunielas a jugarse',
+        name: 'Quinielas a jugarse',
         route: ROUTES.UPCOMING_LOTTERIES,
         icon: <FileTextIcon size={20} />,
       },
