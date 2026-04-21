@@ -16,6 +16,10 @@ All notable changes to the Web workspace are documented in this file.
 
 ### Changed - 2026-04-21
 
+#### Resumen Cuenta Corriente — agregar modo día/rango
+
+- **`web/src/components/modals/PrintDailySummaryModal.tsx`**: Agregado selector Día/Rango. Modo día + grupo → PDF por pasadores. Modo rango (con o sin grupo) → PDF por fecha. Antes con grupo seleccionado solo mostraba un único datepicker.
+
 #### Exportar Subtotales — porcentaje capitalista solo en modo rango
 
 - **`web/src/components/modals/PrintSubtotalsModal.tsx`**: Porcentaje capitalista movido dentro del bloque `mode === 'range'`. Modo día solo muestra fecha y gastos; modo rango solo muestra rango de fechas y porcentaje. Removido `percentage` del llamado a `printSubtotalsDayTicket`.
