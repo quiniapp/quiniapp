@@ -4,6 +4,13 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-21
+
+#### Ticket search by number — compatibility with new format
+- **`web/src/hooks/fetchs/tickets/useGetTicketByNumber.ts`**: Changed `length === 17` to `length >= 17` so search works with new ticket format `YYYYMMDDHHmmssSSS-N` (includes cashier number suffix).
+- **`web/src/features/terminal-ticket/form-header-filter.tsx`**: Changed ticket number input `type="number"` → `type="text"` so the dash in the new format is accepted. Cashier users who type only the base number (without `-N` suffix) get it auto-appended from their own `user.number`.
+- **`web/src/components/modals/repeat-ticket-modal.tsx`**: Same fixes — `type="text"` input, and cashier auto-append of `-{user.number}` suffix when missing.
+
 ### Added - 2026-04-20
 
 #### UX/UI General — Mobile responsiveness & layout improvements
