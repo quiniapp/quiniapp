@@ -25,7 +25,7 @@ import { USER_TYPE } from '@helper/types/user.type';
 import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 const FormHeaderFilter = () => {
-  const { role, organizationId } = useAuth();
+  const { role, organizationId, user } = useAuth();
   const { cashier_id, group_id, setDate, toggleCashier, setCashierId, setGroupId, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
   const { data: allCashiers } = useUsers(role);
   const { data: groups } = useGroups(organizationId, role);
@@ -34,7 +34,12 @@ const FormHeaderFilter = () => {
   const [inputValue, setInputValue] = useState('');
 
   const handleSearch = () => {
-    setTicketNumber(inputValue.trim());
+    const trimmed = inputValue.trim();
+    const normalized =
+      role === USER_TYPE.CASHIER && !trimmed.includes('-') && user?.number != null
+        ? `${trimmed}-${user.number}`
+        : trimmed;
+    setTicketNumber(normalized);
     setInputValue('');
   };
 
@@ -140,8 +145,7 @@ const FormHeaderFilter = () => {
       <Fieldset legend="Buscar por número de Ticket:" className="w-full  flex gap-3">
         <FlexCol className="w-full gap-4">
           <Input
-            type="number"
-            inputMode="numeric"
+            type="text"
             className=""
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

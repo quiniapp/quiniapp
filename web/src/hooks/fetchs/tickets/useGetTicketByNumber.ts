@@ -17,5 +17,5 @@ export const getTicketByNumber = (ticket_number: string | null) =>
   useQuery({
     queryKey: ['ticket_number', ticket_number],
     queryFn: () => fetchTicketsByNumber(ticket_number),
-    enabled: !!ticket_number && ticket_number?.length === 17,
+    enabled: !!ticket_number && ticket_number?.length >= 17,
   });
