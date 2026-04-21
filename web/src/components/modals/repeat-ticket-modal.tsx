@@ -286,6 +286,7 @@ useEffect(() => {
                 setCustomAmount(null);
               }}
               className="w-full sm:w-64"
+              inputMode='numeric'
               placeholder="Ingrese el número de ticket"
             />
             <Text size="sm" weight="medium" className="text-slate-200 whitespace-nowrap">
