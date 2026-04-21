@@ -2,6 +2,7 @@
 
 import dayjs from 'dayjs';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
+import { printPdfBlob } from './makeTicket';
 const BASE_LINE = 0.15; // probá 0.15–0.2 hasta que lo veas igual
 const BORDER_CELL = { lineWidth: BASE_LINE, lineColor: [0, 0, 0] as [number, number, number] };
 const BORDER_TABLE = {
@@ -51,6 +52,11 @@ export async function downloadCurrentAccountTablePDF(params: {
   const dateStr = params?.date
     ? dayjs(params.date).format('DD/MM/YYYY')
     : dayjs().format('DD/MM/YYYY');
+  const dateFile = params?.date
+    ? dayjs(params.date).format('DD-MM-YYYY')
+    : dayjs().format('DD-MM-YYYY');
+
+  doc.setProperties({ title: `Exportar_Diario_${dateFile}` });
 
   // Encabezado
   doc.setFontSize(14);
@@ -247,7 +253,7 @@ export async function downloadCurrentAccountTablePDF(params: {
   });
 
   addFooterPageNumbers(doc);
-  doc.save(`Liquidacion_${dateStr}.pdf`);
+  printPdfBlob(doc.output('blob'));
 }
 
 /** PDF de una sola cuenta/usuario (ideal para disparar desde el modal) */
@@ -300,6 +306,7 @@ export async function downloadCurrentAccountDailySummaryPDF(params: {
   date_from: string;
   date_to: string;
   data: import('@/hooks/fetchs/current-account/useGetCurrentAccountDailySummary').DailySummaryEntry[];
+  groupName?: string;
 }) {
   const BASE_FONT = 8;
   const CELL_PAD = 1;
@@ -309,11 +316,18 @@ export async function downloadCurrentAccountDailySummaryPDF(params: {
 
   const fromStr = dayjs(params.date_from).format('DD/MM/YYYY');
   const toStr = dayjs(params.date_to).format('DD/MM/YYYY');
+  const fromFile = dayjs(params.date_from).format('DD-MM-YYYY');
+  const toFile = dayjs(params.date_to).format('DD-MM-YYYY');
+
+  const groupSlug = params.groupName ? `_${params.groupName.trim().replace(/\s+/g, '_')}` : '';
+  doc.setProperties({ title: `Resumen_Cuenta_Corriente${groupSlug}_${fromFile}_${toFile}` });
 
   doc.setFontSize(14);
   doc.text('Totales Cuenta Corriente', 14, 14);
   doc.setFontSize(10);
   doc.text(`Período: ${fromStr} al ${toStr}`, 14, 20);
+  const headerEndY = params.groupName ? 32 : 26;
+  if (params.groupName) doc.text(`Grupo: ${params.groupName}`, 14, 26);
   doc.setFontSize(BASE_FONT);
 
   const margin = { left: 14, right: 14 };
@@ -381,7 +395,7 @@ export async function downloadCurrentAccountDailySummaryPDF(params: {
   autoTable(doc, {
     head: HEAD,
     body,
-    startY: 26,
+    startY: headerEndY,
     margin,
     theme: 'grid',
     ...BORDER_TABLE,
@@ -393,7 +407,7 @@ export async function downloadCurrentAccountDailySummaryPDF(params: {
     tableWidth: available,
   });
 
-  const finalY = (doc as any).lastAutoTable?.finalY ?? 26;
+  const finalY = (doc as any).lastAutoTable?.finalY ?? headerEndY;
 
   const totalsRow = [
     'Totales',
@@ -425,7 +439,7 @@ export async function downloadCurrentAccountDailySummaryPDF(params: {
   });
 
   addFooterPageNumbers(doc);
-  doc.save(`TotalesCC_${fromStr.replace(/\//g, '-')}_${toStr.replace(/\//g, '-')}.pdf`);
+  printPdfBlob(doc.output('blob'));
 }
 
 export const computeTotals = (rows: ICurrentAccountEntityFront[]) =>

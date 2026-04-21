@@ -48,6 +48,7 @@ const PrintDailySummaryModal = ({
   const [orgName, setOrgName] = useState<string>('');
 
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
+  const selectedGroup = groups?.find((g) => g.organization_id === groupId);
 
   useEffect(() => {
     if (!isOpen || !organizationId) return;
@@ -65,7 +66,7 @@ const PrintDailySummaryModal = ({
         toast.error('Sin datos para ese período.');
         return;
       }
-      await downloadCurrentAccountDailySummaryPDF({ date_from: dateFrom, date_to: dateTo, data });
+      await downloadCurrentAccountDailySummaryPDF({ date_from: dateFrom, date_to: dateTo, data, groupName: selectedGroup?.name });
       toast.success('PDF generado.');
       onClose();
     } catch {
