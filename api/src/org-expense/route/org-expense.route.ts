@@ -21,7 +21,7 @@ export class OrgExpenseRouter {
 
   private getByDateHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date } = req.query;
+    const { date, group_id } = req.query;
 
     if (!user?.user || !date || typeof date !== 'string') {
       res
@@ -36,7 +36,11 @@ export class OrgExpenseRouter {
     }
 
     try {
-      const expenses = await this.controller.getByOrgAndDate(req.organization_id!, date);
+      const expenses = await this.controller.getByOrgAndDate(
+        req.organization_id!,
+        date,
+        typeof group_id === 'string' ? group_id : null
+      );
       res.status(200).json({ data: { expenses } });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -46,7 +50,7 @@ export class OrgExpenseRouter {
 
   private createHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, name, amount } = req.body;
+    const { date, name, amount, group_id } = req.body;
 
     if (!user?.user || !date || !name || amount === undefined) {
       res
@@ -65,7 +69,8 @@ export class OrgExpenseRouter {
         req.organization_id!,
         date,
         name,
-        Number(amount)
+        Number(amount),
+        group_id ?? null
       );
       res.status(201).json({ data: { expense } });
     } catch (error) {

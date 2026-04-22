@@ -3,9 +3,13 @@ import { IOrgExpense, OrgExpenseRepository } from '../repository/org-expense.rep
 export class OrgExpenseController {
   private repository = new OrgExpenseRepository();
 
-  getByOrgAndDate = async (organization_id: string, date: string): Promise<IOrgExpense[]> => {
+  getByOrgAndDate = async (
+    organization_id: string,
+    date: string,
+    group_id?: string | null
+  ): Promise<IOrgExpense[]> => {
     try {
-      return await this.repository.getByOrgAndDate(organization_id, date);
+      return await this.repository.getByOrgAndDate(organization_id, date, group_id);
     } catch (error) {
       throw error instanceof Error ? error : new Error('Unknown error');
     }
@@ -15,10 +19,11 @@ export class OrgExpenseController {
     organization_id: string,
     date: string,
     name: string,
-    amount: number
+    amount: number,
+    group_id?: string | null
   ): Promise<IOrgExpense> => {
     try {
-      return await this.repository.create(organization_id, date, name, amount);
+      return await this.repository.create(organization_id, date, name, amount, group_id);
     } catch (error) {
       throw error instanceof Error ? error : new Error('Unknown error');
     }

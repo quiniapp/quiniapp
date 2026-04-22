@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-04-21
+
+#### Org Expenses — soporte de grupo
+
+- **`api/supabase/migrations/20260421095647_add_group_id_to_org_expenses.sql`**: Añade columna `group_id TEXT DEFAULT NULL` a `org_expenses`.
+- **`api/src/org-expense/repository/org-expense.repository.ts`**: `getByOrgAndDate` filtra por `group_id` (o IS NULL si no se pasa). `create` acepta `group_id`.
+- **`api/src/org-expense/controller/org-expense.controller.ts`**: Pasa `group_id` a repository en get y create.
+- **`api/src/org-expense/route/org-expense.route.ts`**: Lee `group_id` de query (GET) y body (POST).
+
 ### Added - 2026-04-20
 
 #### Cuenta Corriente — endpoint daily-summary

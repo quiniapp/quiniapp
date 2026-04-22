@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import { DailyTotalEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
 import { DailySummaryEntry } from '@/hooks/fetchs/current-account/useGetCurrentAccountDailySummary';
-import { printPdfBlob } from './makeTicket';
+import { openPDFPrintDialog } from './pdf-shared';
 
 const PAPER_W = 58;
 const CHARS = 32;
@@ -34,6 +34,8 @@ function centerLine(text: string): string {
 
 const DIVIDER = '- '.repeat(CHARS / 2);
 
+const fileSlug = (s?: string) => s ? `_${s.trim().replace(/\s+/g, '_')}` : '';
+
 export async function printDailyTotalsTicket(params: {
   data: ICurrentAccountEntityFront[];
   date: string;
@@ -52,6 +54,7 @@ export async function printDailyTotalsTicket(params: {
   const saldoDia = totalCollections - totalPaid - totalExpenses;
 
   const dateStr = dayjs(date).format('DD/MM/YYYY');
+  const dateFile = dayjs(date).format('DD-MM-YYYY');
   const timeStr = dayjs().format('HH:mm');
 
   const lines: string[] = [];
@@ -102,6 +105,7 @@ export async function printDailyTotalsTicket(params: {
     format: [PAPER_W, docHeight],
   });
 
+  doc.setProperties({ title: `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}` });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -111,7 +115,7 @@ export async function printDailyTotalsTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}`);
 }
 
 export async function printRangeTotalsTicket(params: {
@@ -131,6 +135,8 @@ export async function printRangeTotalsTicket(params: {
 
   const fromStr = dayjs(date_from).format('DD/MM/YYYY');
   const toStr = dayjs(date_to).format('DD/MM/YYYY');
+  const fromFile = dayjs(date_from).format('DD-MM-YYYY');
+  const toFile = dayjs(date_to).format('DD-MM-YYYY');
   const timeStr = dayjs().format('HH:mm');
 
   const lines: string[] = [];
@@ -175,6 +181,7 @@ export async function printRangeTotalsTicket(params: {
     format: [PAPER_W, docHeight],
   });
 
+  doc.setProperties({ title: `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}` });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -184,7 +191,7 @@ export async function printRangeTotalsTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}`);
 }
 
 export async function printSubtotalsDayTicket(params: {
@@ -192,13 +199,18 @@ export async function printSubtotalsDayTicket(params: {
   date: string;
   orgName: string;
   groupName?: string;
+  expenses?: { nombre: string; monto: number }[];
+  percentage?: number;
 }) {
-  const { data, date, orgName, groupName } = params;
+  const { data, date, orgName, groupName, expenses = [], percentage } = params;
   const { jsPDF } = await getPDFDeps();
 
   const dateStr = dayjs(date).format('DD/MM/YYYY');
+  const dateFile = dayjs(date).format('DD-MM-YYYY');
   const timeStr = dayjs().format('HH:mm');
   const grandTotal = data.reduce((s, a) => s + (a.subtotal ?? 0), 0);
+  const totalExpenses = expenses.reduce((s, e) => s + (e.monto ?? 0), 0);
+  const saldoNeto = grandTotal - totalExpenses;
 
   const lines: string[] = [];
 
@@ -217,12 +229,31 @@ export async function printSubtotalsDayTicket(params: {
 
   lines.push(DIVIDER);
   lines.push(padLine('TOTAL:', money(grandTotal)));
+
+  if (expenses.length > 0) {
+    lines.push(DIVIDER);
+    for (const exp of expenses) {
+      lines.push(padLine(exp.nombre, money(exp.monto)));
+    }
+    lines.push(padLine('Total Gastos:', money(totalExpenses)));
+    lines.push(DIVIDER);
+    lines.push(padLine('SALDO NETO:', money(saldoNeto)));
+  }
+
+  if (percentage && percentage > 0) {
+    const base = expenses.length > 0 ? saldoNeto : grandTotal;
+    const capitalistaAmount = (base * percentage) / 100;
+    lines.push(DIVIDER);
+    lines.push(padLine(`${percentage}% CAPITALISTA:`, money(capitalistaAmount)));
+  }
+
   lines.push(DIVIDER);
   lines.push(DIVIDER);
   lines.push(DIVIDER);
 
   const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
+  doc.setProperties({ title: `Exportar_Subtotales${fileSlug(groupName)}_${dateFile}` });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -232,7 +263,7 @@ export async function printSubtotalsDayTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Subtotales${fileSlug(groupName)}_${dateFile}`);
 }
 
 export async function printSubtotalsRangeTicket(params: {
@@ -241,12 +272,15 @@ export async function printSubtotalsRangeTicket(params: {
   date_to: string;
   orgName: string;
   groupName?: string;
+  percentage?: number;
 }) {
-  const { dailySummary, date_from, date_to, orgName, groupName } = params;
+  const { dailySummary, date_from, date_to, orgName, groupName, percentage } = params;
   const { jsPDF } = await getPDFDeps();
 
   const fromStr = dayjs(date_from).format('DD/MM/YYYY');
   const toStr = dayjs(date_to).format('DD/MM/YYYY');
+  const fromFile = dayjs(date_from).format('DD-MM-YYYY');
+  const toFile = dayjs(date_to).format('DD-MM-YYYY');
   const timeStr = dayjs().format('HH:mm');
   const grandTotal = dailySummary.reduce((s, d) => s + d.total_subtotal, 0);
 
@@ -268,12 +302,18 @@ export async function printSubtotalsRangeTicket(params: {
 
   lines.push(DIVIDER);
   lines.push(padLine('TOTAL:', money(grandTotal)));
+  if (percentage && percentage > 0) {
+    const capitalistaAmount = (grandTotal * percentage) / 100;
+    lines.push(DIVIDER);
+    lines.push(padLine(`${percentage}% CAPITALISTA:`, money(capitalistaAmount)));
+  }
   lines.push(DIVIDER);
   lines.push(DIVIDER);
   lines.push(DIVIDER);
 
   const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
+  doc.setProperties({ title: `Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}` });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -283,5 +323,5 @@ export async function printSubtotalsRangeTicket(params: {
     y += LINE_H;
   }
 
-  printPdfBlob(doc.output('blob'));
+  openPDFPrintDialog(doc, `Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}`);
 }

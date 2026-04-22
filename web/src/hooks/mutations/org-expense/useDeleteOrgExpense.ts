@@ -3,7 +3,7 @@ import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { orgExpensesKey } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
 
-export function useDeleteOrgExpense(date?: string) {
+export function useDeleteOrgExpense(date?: string, groupId?: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -14,7 +14,7 @@ export function useDeleteOrgExpense(date?: string) {
       if (!res.ok) throw new Error('Error deleting expense');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: orgExpensesKey(date) });
+      queryClient.invalidateQueries({ queryKey: orgExpensesKey(date, groupId) });
     },
   });
 }

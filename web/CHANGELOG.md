@@ -4,6 +4,32 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-04-21
+
+#### Cuenta Corriente — mejoras de UI y exportaciones
+
+- **`web/src/features/current-account/index.tsx`**: Reorganización de botones con iconos lucide-react. Exportaciones agrupadas en grid 2 columnas; "Actualizar" separado al final con ancho completo.
+- **`web/src/components/modals/PrintSubtotalsModal.tsx`**: Añadido gestión de gastos (con scope de grupo) y campo % capitalista, igual que `PrintTotalsModal`. Soporta modo día (gastos + % sobre saldo neto) y modo rango (% sobre total).
+- **`web/src/hooks/fetchs/org-expense/useGetOrgExpenses.ts`**: Nuevo parámetro `groupId` en key y fetch — filtra gastos por grupo o nivel-org.
+- **`web/src/hooks/mutations/org-expense/useCreateOrgExpense.ts`**: Acepta `group_id` en payload para vincular gasto a grupo específico.
+- **`web/src/hooks/mutations/org-expense/useDeleteOrgExpense.ts`**: Acepta `groupId` para invalidar cache correctamente con scope de grupo.
+
+### Changed - 2026-04-21
+
+#### Resumen Cuenta Corriente — agregar modo día/rango
+
+- **`web/src/components/modals/PrintDailySummaryModal.tsx`**: Agregado selector Día/Rango. Modo día + grupo → PDF por pasadores. Modo rango (con o sin grupo) → PDF por fecha. Antes con grupo seleccionado solo mostraba un único datepicker.
+
+#### Exportar Subtotales — porcentaje capitalista solo en modo rango
+
+- **`web/src/components/modals/PrintSubtotalsModal.tsx`**: Porcentaje capitalista movido dentro del bloque `mode === 'range'`. Modo día solo muestra fecha y gastos; modo rango solo muestra rango de fechas y porcentaje. Removido `percentage` del llamado a `printSubtotalsDayTicket`.
+
+#### Cuenta Corriente — cuadro de impresión
+
+- **`web/src/functions/printLiquidationAdmin.ts`**: `downloadCurrentAccountTablePDF` y `downloadCurrentAccountDailySummaryPDF` usan `printPdfBlob` (cuadro de impresión del navegador) en lugar de `doc.save()` (descarga directa).
+- **`web/src/functions/printTotalsTicket.ts`**: `printSubtotalsDayTicket` acepta `expenses` y `percentage`; muestra gastos, saldo neto y % capitalista. `printSubtotalsRangeTicket` acepta `percentage`.
+- **`web/src/components/modals/PrintTotalsModal.tsx`**: Gastos filtrados por grupo — pasa `effectiveGroupId` a hooks y fetch.
+
 ### Fixed - 2026-04-21
 
 #### Ticket bets not loading when date in URL differs from ticket date
