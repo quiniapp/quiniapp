@@ -23,6 +23,8 @@ const PrintGroupedBetsButton = () => {
   const quatern = searchParams.get('quatern');
   const isGrouped = searchParams.get('grouped') === 'true';
   const group_id = searchParams.get('group_id');
+  const min_amount_param = searchParams.get('min_amount');
+  const min_amount = min_amount_param ? Math.max(0, parseFloat(min_amount_param) || 0) : undefined;
 
   const { data: bets } = useBets({
     date: isGrouped ? date : null,
@@ -35,6 +37,7 @@ const PrintGroupedBetsButton = () => {
     quatern,
     limit: 9999,
     group_id,
+    min_amount,
   });
 
   const { data: lotteries } = useLotteries();
