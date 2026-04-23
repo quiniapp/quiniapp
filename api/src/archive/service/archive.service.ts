@@ -84,8 +84,11 @@ export class ArchiveService {
 
         // Loop until both bets and tickets for this date are fully archived.
         // Each call processes one batch (p_batch_size rows) to stay within
-        // PostgREST's statement timeout (~8 s). The function signals completion
-        // when bets_remaining + tickets_remaining = 0.
+        // PostgREST's statement timeout (~8 s).
+        // Guard: count rows directly after each batch; if count doesn't
+        // decrease the DB made no progress (e.g. FK blocking deletes) — bail.
+        let previousRemaining = Infinity;
+
         while (true) {
           const { data, error } = await supabase.rpc('archive_data_by_date', {
             p_date: date,
@@ -97,8 +100,22 @@ export class ArchiveService {
           totalBets += data.bets_archived as number;
           totalTickets += data.tickets_archived as number;
 
-          const remaining = (data.bets_remaining as number) + (data.tickets_remaining as number);
+          const [{ count: betsCount }, { count: ticketsCount }] = await Promise.all([
+            supabase.from('bets').select('*', { count: 'exact', head: true }).eq('date', date),
+            supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('date', date),
+          ]);
+
+          const remaining = (betsCount ?? 0) + (ticketsCount ?? 0);
+
           if (remaining === 0) break;
+
+          if (remaining >= previousRemaining) {
+            throw new Error(
+              `Archive stalled on ${date}: ${remaining} rows remaining but no progress made`
+            );
+          }
+
+          previousRemaining = remaining;
         }
 
         const dayResult: IArchiveDayResult = {
