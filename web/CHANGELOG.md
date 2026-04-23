@@ -4,6 +4,12 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-23
+
+#### Exportar Diario — diálogo de impresión se cerraba al cambiar configuración
+
+- **`web/src/functions/pdf-shared.ts`**: `openPDFPrintDialog` usaba `setTimeout` de 1000ms para limpiar el iframe, lo que eliminaba el iframe (y cerraba el diálogo) mientras el usuario todavía interactuaba con la configuración de impresión. Reemplazado por el evento `afterprint` que dispara solo cuando el usuario cierra el diálogo.
+
 ### Added - 2026-04-21
 
 #### Cuenta Corriente — mejoras de UI y exportaciones
