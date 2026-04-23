@@ -6,6 +6,7 @@ import SelectBetType from './select-bet-type';
 import PlayAndHitsToggleSelect from './play-and-hits-toggle-select';
 import PlayAndHitsSelect from './play-and-hits-select';
 import PrintGroupedBetsButton from './print-grouped-bets-button';
+import MinAmountInput from './min-amount-input';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
 import { useState, useCallback } from 'react';
 
@@ -25,6 +26,7 @@ const PlaysAndHitsContent = () => {
         <Flex className="items-center gap-2">
           <PlayAndHitsToggleSelect />
           <PrintGroupedBetsButton />
+          <MinAmountInput />
         </Flex>
         <Flex className="flex-col sm:flex-row w-full">
           <SelectBetType />

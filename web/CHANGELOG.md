@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-04-23
+
+#### Jugadas y Aciertos — filtro cota mínima en modo agrupado
+
+- **`web/src/features/plays-and-hits/min-amount-input.tsx`**: Nuevo input numérico que aparece solo cuando `grouped=true`. Al aplicar (blur o Enter) escribe `min_amount` en los URL params; si el valor es 0 o vacío lo elimina. La tabla ya leía ese param y lo enviaba al RPC (`HAVING SUM >= p_min_amount`).
+- **`web/src/features/plays-and-hits/index.tsx`**: Renderiza `MinAmountInput` junto a `PlayAndHitsToggleSelect` y `PrintGroupedBetsButton`.
+- **`web/src/features/plays-and-hits/play-and-hits-toggle-select.tsx`**: Al desactivar modo agrupado elimina `min_amount` de los URL params para evitar que persista en modo individual.
+
 ### Fixed - 2026-04-23
 
 #### Exportar Diario — diálogo de impresión se cerraba al cambiar configuración
