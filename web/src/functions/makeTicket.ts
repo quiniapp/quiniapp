@@ -206,6 +206,12 @@ export function printPdfBlob(blob: Blob) {
   document.body.appendChild(iframe);
   iframe.onload = () => {
     iframe.contentWindow?.focus();
+    const cleanup = () => {
+      if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      URL.revokeObjectURL(url);
+      iframe.contentWindow?.removeEventListener('afterprint', cleanup);
+    };
+    iframe.contentWindow?.addEventListener('afterprint', cleanup);
     iframe.contentWindow?.print();
   };
 }
