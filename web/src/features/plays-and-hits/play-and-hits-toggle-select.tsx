@@ -25,6 +25,7 @@ const PlayAndHitsToggleSelect = () => {
   const handleChangeGrouped = () => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set('grouped', (!grouped).toString());
+    if (grouped) newParams.delete('min_amount');
     setSearchParams(newParams);
   };
   return (
