@@ -4,6 +4,14 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-23
+
+#### Archive RPC — statement timeout + single-batch loop
+- **`api/src/archive/service/archive.service.ts`**: `archiveOldData` now loops per date until `bets_remaining + tickets_remaining = 0`, passing `p_batch_size: 500` per call. Previous code called the RPC once per date with default batch 5000, which exceeded PostgREST's ~8 s statement timeout on large days.
+
+#### Archive RPC — ambiguous function overload
+- **`api/supabase/migrations/20260423061747_drop_archive_data_by_date_single_param.sql`**: Drops `archive_data_by_date(DATE)` left over from migration `20260415`. Migration `20260422` added a two-param overload `(DATE, INTEGER DEFAULT 5000)` with a different signature so Postgres kept both. RPC calls with only `p_date` got "could not choose best candidate function" error. Removing the old overload leaves only the batch-size version.
+
 ### Added - 2026-04-21
 
 #### Org Expenses — soporte de grupo

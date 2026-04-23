@@ -79,14 +79,32 @@ export class ArchiveService {
 
     for (const date of datesToArchive) {
       try {
-        const { data, error } = await supabase.rpc('archive_data_by_date', { p_date: date });
+        let totalBets = 0;
+        let totalTickets = 0;
 
-        if (error) throw new Error(error.message);
+        // Loop until both bets and tickets for this date are fully archived.
+        // Each call processes one batch (p_batch_size rows) to stay within
+        // PostgREST's statement timeout (~8 s). The function signals completion
+        // when bets_remaining + tickets_remaining = 0.
+        while (true) {
+          const { data, error } = await supabase.rpc('archive_data_by_date', {
+            p_date: date,
+            p_batch_size: 500,
+          });
+
+          if (error) throw new Error(error.message);
+
+          totalBets += data.bets_archived as number;
+          totalTickets += data.tickets_archived as number;
+
+          const remaining = (data.bets_remaining as number) + (data.tickets_remaining as number);
+          if (remaining === 0) break;
+        }
 
         const dayResult: IArchiveDayResult = {
           date,
-          bets_archived: data.bets_archived,
-          tickets_archived: data.tickets_archived,
+          bets_archived: totalBets,
+          tickets_archived: totalTickets,
           success: true,
         };
 
