@@ -14,6 +14,11 @@ All notable changes to the Web workspace are documented in this file.
 
 ### Fixed - 2026-04-23
 
+#### Jugadas Agrupadas — impresión ignoraba filtro min_amount
+
+- **`web/src/hooks/fetchs/plays/useBets.ts`**: Agregado `min_amount` a `FetchBetsProps`, `betsKey` y `fetchBets` para que el hook lo envíe como query param al backend.
+- **`web/src/features/plays-and-hits/print-grouped-bets-button.tsx`**: Lee `min_amount` de los URL params y lo pasa a `useBets`, alineando los datos del PDF con los de la tabla.
+
 #### Exportar Diario — diálogo de impresión se cerraba al cambiar configuración
 
 - **`web/src/functions/pdf-shared.ts`**: `openPDFPrintDialog` usaba `setTimeout` de 1000ms para limpiar el iframe, lo que eliminaba el iframe (y cerraba el diálogo) mientras el usuario todavía interactuaba con la configuración de impresión. Reemplazado por el evento `afterprint` que dispara solo cuando el usuario cierra el diálogo.
