@@ -94,12 +94,14 @@ export function openPDFPrintDialog(doc: any, filename: string) {
     const prev = document.title;
     document.title = filename;
     iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    setTimeout(() => {
+    const cleanup = () => {
       document.title = prev;
-      document.body.removeChild(iframe);
+      if (document.body.contains(iframe)) document.body.removeChild(iframe);
       URL.revokeObjectURL(url);
-    }, 1000);
+      iframe.contentWindow?.removeEventListener('afterprint', cleanup);
+    };
+    iframe.contentWindow?.addEventListener('afterprint', cleanup);
+    iframe.contentWindow?.print();
   };
 }
 
