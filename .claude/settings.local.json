@@ -10,7 +10,9 @@
       "mcp__github__pull_request_read",
       "mcp__filesystem__directory_tree",
       "Skill(code-review:code-review)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__get_advisors"
     ],
     "deny": [
       "Bash(git push:*)"
