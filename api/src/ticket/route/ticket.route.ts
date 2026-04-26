@@ -88,7 +88,7 @@ export class TicketRouter {
     // Zod valida automáticamente y lanza error si falla
     newTicketSchema.parse(newTicket);
 
-    const ticket = await this.controller.create(newTicket, req.organization_id!);
+    const ticket = await this.controller.create(newTicket, req.organization_id!, req.user!);
     const response: APIResponse<ITicketEntityFront> = {
       data: {
         ticket: ticket,
