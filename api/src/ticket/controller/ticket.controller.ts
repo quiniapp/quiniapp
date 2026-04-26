@@ -12,7 +12,7 @@ import {
 import { ticketBase } from '../helper/ticketBase';
 import { parseTicket } from '../helper/parseTicket';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { USER_TYPE } from '@helper/types/user.type';
+import { USER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { NotFoundError, InvalidDeleteTimeError } from '@helper/errors';
 import { betBase } from 'src/bet/helper/betBase';
@@ -21,11 +21,19 @@ import { IPaginatedResponse } from '@helper/request/pagination.request';
 export class TicketController {
   private repository = new TicketRepository();
 
-  create = async (props: INewTicketEntity, organization_id: string) => {
-    const newTicket = ticketBase(props);
+  create = async (
+    props: INewTicketEntity,
+    organization_id: string,
+    tokenUser: { user: IUserEntityFront }
+  ) => {
+    const isCashier = tokenUser.user.user_type === USER_TYPE.CASHIER;
+    const resolvedProps = isCashier
+      ? { ...props, user_id: tokenUser.user.user_id, user_number: tokenUser.user.number }
+      : props;
+    const newTicket = ticketBase(resolvedProps);
     const result = await this.repository.create({
       ...newTicket,
-      organization_id: organization_id,
+      organization_id,
     });
     return parseTicket(result);
   };
