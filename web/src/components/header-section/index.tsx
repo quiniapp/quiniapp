@@ -24,7 +24,7 @@ const HeaderSection = ({ title, children, className }: HeaderSectionProps) => {
             size={isLarge ? '24px' : '16px'}
           />
         </span>
-        <p className={'1440:text-2xl text-sm sm:text-base font-medium text-nowrap'}>{title}</p>
+        <p className={'1440:text-2xl hidden sm:block text-sm sm:text-base font-medium text-nowrap'}>{title}</p>
       </Flex>
       {children}
     </Flex>
