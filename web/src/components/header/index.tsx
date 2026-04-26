@@ -28,6 +28,10 @@ const Header = memo(function Header({ setIsOpen }: HeaderProps) {
         <LayoutIcon />
       </div>
 
+      {__COMMIT_DATE__ && (
+        <span className="text-xs text-white/60">v{__COMMIT_DATE__}</span>
+      )}
+
       <div className="flex gap-[16px]">
         <div className="flex items-center gap-3 text-muted">
           <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">

@@ -1,11 +1,24 @@
 import path from 'path';
+import { execSync } from 'child_process';
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
 import { visualizer } from 'rollup-plugin-visualizer';
 
+const commitDate = (() => {
+  try {
+    return execSync('git log -1 --format=%cd --date=format:"%d/%m/%Y"').toString().trim();
+  } catch {
+    return '';
+  }
+})();
+
 export default defineConfig({
+  define: {
+    __COMMIT_DATE__: JSON.stringify(commitDate),
+  },
+
   plugins: [
     react(),
     // Bundle analyzer - genera stats.html en dist/
