@@ -221,7 +221,7 @@ const FillOutATicket = () => {
   return (
     <FlexCol className={'h-fit w-full max-w-full'}>
       <Flex className={'flex-col sm:flex-row gap-1 sm:gap-2 lg:gap-3 sm:items-stretch w-full'}>
-        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[260px] lg:max-w-[320px] w-full'}>
+        <Flex className={'flex-1 sm:max-w-[280px] md:max-w-[260px] lg:max-w-[320px] w-full order-2 sm:order-1'}>
           <form className={'w-full'}>
             <FlexCol className={'space-y-1 sm:space-y-3 lg:space-y-1 h-full border p-2 sm:p-3 lg:p-1.5 bg-card rounded-[--rounded-form] justify-between'}>
               <Box className={'grid grid-cols-2 items-center gap-1 sm:gap-2 lg:gap-0.5'}>
@@ -319,7 +319,7 @@ const FillOutATicket = () => {
             </FlexCol>
           </form>
         </Flex>
-        <GameTurns />
+        <div className="order-1 sm:order-2 w-full sm:w-auto sm:flex-1"><GameTurns /></div>
       </Flex>
     </FlexCol>
   );
