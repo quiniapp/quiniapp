@@ -5,7 +5,6 @@ import { Outlet, useNavigation } from 'react-router-dom';
 import Footer from '../footer';
 import Header from '../header';
 import Aside from '@/components/aside';
-import MobileBottomNav from '@/components/mobile-bottom-nav';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Flex, FlexCol } from '../flex';
 import { cn } from '@/lib/utils';
@@ -49,7 +48,6 @@ const Layout = () => {
             </div>
           </main>
           <Footer />
-          <MobileBottomNav />
         </FlexCol>
       </Flex>
     </SidebarProvider>
