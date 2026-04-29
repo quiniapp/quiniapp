@@ -2,8 +2,17 @@ import { z } from 'zod';
 import { dateRegex } from '../functions/dateRegex';
 export const newResultsSchema = z.object({
   results: z
-    .array(z.string().regex(/^\d{4}$/, { message: 'Debe tener exactamente 4 dígitos' }))
-    .length(20, { message: 'Debe haber exactamente 20 números de 4 cifras' }),
+    .array(z.string().regex(/^\d{3,4}$/, { message: 'Debe tener 3 o 4 dígitos' }))
+    .length(20, { message: 'Debe haber exactamente 20 números' })
+    .superRefine((arr, ctx) => {
+      const lengths = new Set(arr.map((r) => r.length));
+      if (lengths.size > 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Todos los resultados deben tener la misma cantidad de cifras (3 o 4)',
+        });
+      }
+    }),
   lottery_id: z.string(),
   schedule_id: z.string(),
   date: z
@@ -17,8 +26,17 @@ export const newResultsSchema = z.object({
 
 export const editResultsSchema = z.object({
   results: z
-    .array(z.string().regex(/^\d{4}$/, { message: 'Debe tener exactamente 4 dígitos' }))
-    .length(20, { message: 'Debe haber exactamente 20 números de 4 cifras' })
+    .array(z.string().regex(/^\d{3,4}$/, { message: 'Debe tener 3 o 4 dígitos' }))
+    .length(20, { message: 'Debe haber exactamente 20 números' })
+    .superRefine((arr, ctx) => {
+      const lengths = new Set(arr.map((r) => r.length));
+      if (lengths.size > 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Todos los resultados deben tener la misma cantidad de cifras (3 o 4)',
+        });
+      }
+    })
     .optional(),
   lottery_id: z.string().optional(),
   schedule_id: z.string().optional(),
