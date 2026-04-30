@@ -4,6 +4,12 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-04-29
+
+#### Resultados — soporte de 3 o 4 cifras (longitud uniforme)
+
+- **`web/src/features/results/provider/ResultsProvider.tsx`**: `canSave` y validación en `handleSave` actualizados para aceptar 20 resultados de 3 dígitos o 20 de 4 dígitos. Longitudes mixtas siguen siendo inválidas.
+
 ### Added - 2026-04-23
 
 #### Jugadas y Aciertos — filtro cota mínima en modo agrupado

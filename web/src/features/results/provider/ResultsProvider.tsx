@@ -67,10 +67,10 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
   const handleSave = useCallback(() => {
     if (!selectedSchedule || !selectedLottery) return;
 
-    // Validate that all results have exactly 4 digits
-    const allValid = results.every((result) => result.length === 4);
-    if (!allValid) {
-      toast.error('Todos los resultados deben tener exactamente 4 cifras');
+    const allLength3 = results.every((result) => result.length === 3);
+    const allLength4 = results.every((result) => result.length === 4);
+    if (!allLength3 && !allLength4) {
+      toast.error('Todos los resultados deben tener la misma cantidad de cifras (3 o 4)');
       return;
     }
 
@@ -135,10 +135,12 @@ export const ResultsProvider: React.FC<React.PropsWithChildren> = ({ children })
   }, [getResults?.results_id, selectedDate, selectedLottery, selectedSchedule, deleteResults]);
 
   // ---- Derived state
-  const canSave = useMemo(
-    () => onEdit && results.every((result) => result.length === 4),
-    [onEdit, results]
-  );
+  const canSave = useMemo(() => {
+    if (!onEdit) return false;
+    const allLength3 = results.every((r) => r.length === 3);
+    const allLength4 = results.every((r) => r.length === 4);
+    return allLength3 || allLength4;
+  }, [onEdit, results]);
 
   // ---- Effects
   useEffect(() => {
