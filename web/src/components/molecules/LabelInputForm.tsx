@@ -39,11 +39,20 @@ function LabelInputForm<T extends FieldValues>({
       <div className="relative">
         <Input
           id={id}
-          type={type}
+          type={isNumber ? 'text' : type}
+          inputMode={isNumber ? 'decimal' : undefined}
           readOnly={readOnly}
           disabled={disabled}
           className={`${inputClassName} text-white`}
-          {...register(name, { valueAsNumber: isNumber })}
+          {...register(name, {
+            setValueAs: isNumber
+              ? (v) => {
+                  if (v === '' || v === null || v === undefined) return 0;
+                  const parsed = parseFloat(String(v).replace(',', '.'));
+                  return isNaN(parsed) ? 0 : parsed;
+                }
+              : undefined,
+          })}
         />
         {suffix && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">

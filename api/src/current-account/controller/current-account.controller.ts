@@ -34,7 +34,12 @@ type AllowedManualKeys =
   | 'collections'
   | 'bills'
   | 'previous_balance'
-  | 'previous_drag';
+  | 'previous_drag'
+  | 'pass'
+  | 'successes'
+  | 'drag'
+  | 'revenue'
+  | 'leave';
 
 type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys>>;
 export class CurrentAccountController {
@@ -107,6 +112,11 @@ export class CurrentAccountController {
       if (props.previous_drag !== undefined) payload.previous_drag = Number(props.previous_drag);
       if (props.previous_balance !== undefined)
         payload.previous_balance = Number(props.previous_balance);
+      if (props.pass !== undefined) payload.pass = Number(props.pass);
+      if (props.successes !== undefined) payload.successes = Number(props.successes);
+      if (props.drag !== undefined) payload.drag = Number(props.drag);
+      if (props.revenue !== undefined) payload.revenue = Number(props.revenue);
+      if (props.leave !== undefined) payload.leave = Number(props.leave);
       // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
 
       const currentAccount = await this.repository.updateCurrentAccountHandler(
