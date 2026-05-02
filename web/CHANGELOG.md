@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-05-02
+
+#### Liquidación Individual — mejoras de UI y campos editables
+
+- **`web/src/components/modals/UserCurrentAccountModal.tsx`**: Layout del modal ahora apila columnas en mobile (`flex-col sm:flex-row`) para ambas secciones de campos y tablas. Las tablas tienen altura fija con `overflow-y-auto` para scroll independiente en mobile.
+- **`web/src/components/modals/UserCurrentAccountModal.tsx`**: Checkbox "Liquidar deje" tiene `className="border-white bg-white"` para mayor visibilidad.
+- **`web/src/components/modals/UserCurrentAccountModal.tsx`**: Los campos `pass`, `successes`, `drag`, `revenue` ahora se envían al backend en el submit (coincide con cambios en API).
+
 ### Fixed - 2026-04-30
 
 #### Cuenta Corriente — invalidación de caché para todos los días
