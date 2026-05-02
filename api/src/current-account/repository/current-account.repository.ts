@@ -96,6 +96,26 @@ export class CurrentAccountRepository {
     return Object.values(byUser);
   }
 
+  async cascadeCurrentAccountFromDateHandler(
+    organization_id: string,
+    date?: string,
+    user_id?: string
+  ): Promise<void> {
+    let dateToProcess: string;
+    if (!date) {
+      dateToProcess = dayjs().tz('America/Argentina/Buenos_Aires').format('DD-MM-YYYY');
+    } else {
+      dateToProcess = dayjs(date).format('DD-MM-YYYY');
+    }
+
+    const { error } = await supabase.rpc('cascade_current_account_from_date', {
+      p_from_date_text: dateToProcess,
+      p_organization_id: organization_id,
+      p_user_id: user_id ?? null,
+    });
+    if (error) throw error;
+  }
+
   async updateCurrentAccountHandler(
     current_account_id: string,
     organization_id: string,
