@@ -54,6 +54,8 @@ export class CurrentAccountController {
         liquidated
       );
 
+      await this.repository.cascadeCurrentAccountFromDateHandler(organization_id, date);
+
       return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));
     } catch (error) {
       console.error('Creation error:', error);
@@ -112,6 +114,12 @@ export class CurrentAccountController {
         organization_id,
         payload,
         leave
+      );
+
+      await this.repository.cascadeCurrentAccountFromDateHandler(
+        organization_id,
+        currentAccount.date,
+        currentAccount.user_id
       );
 
       return parseCurrentAccount(currentAccount);
@@ -187,6 +195,11 @@ export class CurrentAccountController {
         date,
         leave,
         liquidated
+      );
+
+      const orgIds = await this.repository.getOrganizationNetworkIds(organization_id);
+      await Promise.all(
+        orgIds.map((orgId) => this.repository.cascadeCurrentAccountFromDateHandler(orgId, date))
       );
 
       return results.map((res: ICurrentAccountEntityBack) => parseCurrentAccount(res));

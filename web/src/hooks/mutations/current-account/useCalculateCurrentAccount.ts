@@ -25,9 +25,8 @@ export const useCalculateCurrentAccount = () => {
 
   return useMutation({
     mutationFn: (date?: string | null) => calculateCurrentAccount(date),
-    onSuccess: async () => {
-      // Refetch forzado de cuenta corriente para garantizar datos frescos
-      await queryClient.refetchQueries({ queryKey: ['getCurrentAccount'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['getCurrentAccount'] });
     },
   });
 };

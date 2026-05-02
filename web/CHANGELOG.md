@@ -4,6 +4,12 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-04-30
+
+#### Cuenta Corriente — invalidación de caché para todos los días
+
+- **`web/src/hooks/mutations/current-account/useCalculateCurrentAccount.ts`**: `onSuccess` cambiado de `refetchQueries` a `invalidateQueries({ queryKey: ['getCurrentAccount'] })`. El cambio asegura que todos los días cacheados se marquen como stale tras el cálculo/cascade, no solo el día activo en pantalla.
+
 ### Changed - 2026-04-29
 
 #### Resultados — soporte de 3 o 4 cifras (longitud uniforme)

@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-04-30
+
+#### Cuenta Corriente — recálculo en cascada de días posteriores
+
+- **`api/supabase/migrations/20260430120000_rpc_cascade_current_account_from_date.sql`**: Nueva función `cascade_current_account_from_date(p_from_date_text TEXT, p_organization_id UUID, p_user_id UUID DEFAULT NULL)`. Cuando se actualiza un día pasado, propaga el nuevo `total` y `drag` hacia todos los días siguientes del usuario (o todos los usuarios de la org si `p_user_id` es NULL), actualizando `previous_balance`, `previous_drag`, `total`, `drag` y `leave` (si estaba calculado) en cascada.
+- **`api/src/current-account/repository/current-account.repository.ts`**: Nuevo método `cascadeCurrentAccountFromDateHandler(organization_id, date?, user_id?)` que llama al RPC `cascade_current_account_from_date`.
+- **`api/src/current-account/controller/current-account.controller.ts`**: `calculateCurrentAccountHandler` llama a cascade después de calcular (scope: todos los usuarios de la org). `updateCurrentAccountHandler` llama a cascade para el usuario específico cuyo registro fue editado. `calculateCurrentAccountNetworkHandler` llama a cascade para cada org en la red.
+- **Why**: Al cargar reclamos, pagos o cobros de un día pasado (ej: viernes) en fecha posterior (ej: sábado), el `saldo anterior` del sábado quedaba desactualizado. Ahora cualquier modificación propaga automáticamente el nuevo saldo hacia los días siguientes.
+
 ### Fixed - 2026-04-23
 
 #### Archive RPC — statement timeout + single-batch loop
