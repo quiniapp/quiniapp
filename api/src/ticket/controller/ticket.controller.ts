@@ -165,25 +165,7 @@ export class TicketController {
   };
 
   paid = async ({ ticket_number, user_id, organization_id }: IPayTicketEntity) => {
-    try {
-      // payTicket only works on main table (archive is read-only)
-      const result = await this.repository.payTicket({ ticket_number, user_id, organization_id });
-      return result;
-    } catch (error) {
-      // If ticket not found in main table, check if it's in archive
-      if (error instanceof Error && error.message === 'TICKET_NOT_FOUND') {
-        // Repository getByNumber searches both main and archive
-        const archivedTicket = await this.repository.getByNumber(ticket_number, organization_id);
-
-        if (archivedTicket) {
-          // Ticket exists but is archived (too old to pay)
-          throw new Error(
-            'TICKET_ARCHIVED: Este ticket está archivado y ya no puede ser pagado. Por favor contacte al administrador.'
-          );
-        }
-      }
-      // Re-throw original error if not archive-related
-      throw error;
-    }
+    const result = await this.repository.payTicket({ ticket_number, user_id, organization_id });
+    return result;
   };
 }
