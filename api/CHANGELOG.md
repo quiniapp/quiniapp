@@ -10,6 +10,14 @@ All notable changes to the API workspace are documented in this file.
 
 - **`api/src/current-account/controller/current-account.controller.ts`**: `AllowedManualKeys` ahora incluye `pass`, `successes`, `drag`, `revenue`. El payload de `updateCurrentAccountHandler` pasa estos campos al RPC si vienen en el request.
 - **`api/supabase/migrations/20260502120000_update_rpc_manual_override_pass_successes_drag_revenue.sql`**: RPC `update_current_account_recompute` acepta overrides manuales para `pass` (reemplaza cálculo desde tickets), `successes` (reemplaza premios desde tickets), `revenue` (reemplaza subtotal calculado), `drag` (reemplaza cálculo por fee_plus). Si no vienen en `p_props`, el comportamiento anterior se mantiene.
+### Fixed - 2026-05-06
+
+#### Archive tickets — `bet_order` faltante en RPC y pago desde archivo
+
+- **`api/supabase/migrations/20260506120000_fix_archive_rpc_bet_order.sql`**: Actualiza `ticket_full_json_plpgsql_archive` para incluir `bet_order` en cada bet del JSON (igual que la versión regular desde `20260102194200`). También alinea el `DISTINCT ON` a `(ticket_id, bet_order, schedule_id, lottery_id)`. Sin el `bet_order`, el modal de repetir ticket asignaba la clave `"undefined"` a todas las apuestas y solo guardaba la primera.
+- **`api/supabase/migrations/20260506120001_add_pay_ticket_archive.sql`**: Nueva función `pay_ticket_archive(p_ticket_number TEXT, p_user_id UUID, p_organization_id UUID)`. Misma lógica que `pay_ticket` pero opera sobre `tickets_archive` y `bets_archive`. Permite pagar tickets ganadores archivados (> 2 días).
+- **`api/src/ticket/repository/ticket.repository.ts`** — `payTicket()`: Si `pay_ticket` RPC lanza `TICKET_NOT_FOUND`, reintenta con `pay_ticket_archive` antes de propagar el error. Así el fallback es transparente para el caller.
+- **`api/src/ticket/controller/ticket.controller.ts`** — `paid()`: Eliminado el try/catch roto que bloqueaba el pago de tickets archivados con error `TICKET_ARCHIVED`. El repository ahora maneja el fallback internamente.
 
 ### Added - 2026-04-30
 
