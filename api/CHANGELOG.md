@@ -12,6 +12,10 @@ All notable changes to the API workspace are documented in this file.
 - **`api/supabase/migrations/20260502120000_update_rpc_manual_override_pass_successes_drag_revenue.sql`**: RPC `update_current_account_recompute` acepta overrides manuales para `pass` (reemplaza cálculo desde tickets), `successes` (reemplaza premios desde tickets), `revenue` (reemplaza subtotal calculado), `drag` (reemplaza cálculo por fee_plus). Si no vienen en `p_props`, el comportamiento anterior se mantiene.
 ### Fixed - 2026-05-06
 
+#### Archive tickets — jugadas no cargaban en terminal-ticket para tickets viejos
+
+- **`api/src/bet/repository/bet.repository.ts`** — `getAllBets()`: Al buscar el `ticket_id` por `ticket_number`, ahora usa `getTableName(date, 'tickets')` para consultar `tickets_archive` cuando la fecha es antigua. Antes siempre consultaba `tickets`, retornando `null` para tickets archivados y por ende 0 jugadas. También cambia `.single()` por `.maybeSingle()` para evitar error cuando no existe.
+
 #### Archive tickets — `bet_order` faltante en RPC y pago desde archivo
 
 - **`api/supabase/migrations/20260506120000_fix_archive_rpc_bet_order.sql`**: Actualiza `ticket_full_json_plpgsql_archive` para incluir `bet_order` en cada bet del JSON (igual que la versión regular desde `20260102194200`). También alinea el `DISTINCT ON` a `(ticket_id, bet_order, schedule_id, lottery_id)`. Sin el `bet_order`, el modal de repetir ticket asignaba la clave `"undefined"` a todas las apuestas y solo guardaba la primera.
