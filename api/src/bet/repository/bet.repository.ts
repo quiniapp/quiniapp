@@ -48,12 +48,13 @@ export class BetRepository {
       .range(from, to);
 
     if (ticket_number) {
+      const ticketsTable = getTableName(date, 'tickets');
       const { data: ticket, error: errorTicketNumber } = await supabase
-        .from('tickets')
+        .from(ticketsTable)
         .select('ticket_id')
         .eq('ticket_number', ticket_number)
         .in('organization_id', organization_ids)
-        .single();
+        .maybeSingle();
       if (errorTicketNumber) throw errorTicketNumber;
       query = query.eq('ticket_id', ticket?.ticket_id);
     }
