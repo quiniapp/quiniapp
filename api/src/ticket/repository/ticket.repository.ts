@@ -284,6 +284,18 @@ export class TicketRepository {
     });
 
     if (error) {
+      if (error.message === 'TICKET_NOT_FOUND') {
+        const { data: archiveData, error: archiveError } = await supabase.rpc(
+          'pay_ticket_archive',
+          {
+            p_ticket_number: ticket_number,
+            p_user_id: user_id,
+            p_organization_id: organization_id,
+          }
+        );
+        if (archiveError) throw archiveError;
+        return archiveData;
+      }
       throw error;
     }
 
