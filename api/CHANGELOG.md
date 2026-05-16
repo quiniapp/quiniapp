@@ -4,12 +4,20 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-05-16
+
+#### Current Account
+- **Leave in subtotal drag bug**: When `p_leave_in_subtotal = TRUE`, drag was incorrectly recalculated as `prev_drag + subtotal` (where subtotal already had leave deducted), reducing the drag carry-over by the leave amount
+  - Fix: drag always stored as `prev_drag + revenue` regardless of `p_leave_in_subtotal`; only `subtotal` absorbs the leave deduction
+  - Migration: `api/supabase/migrations/20260516140000_fix_leave_in_subtotal_drag.sql`
+  - Functions fixed: `update_current_account_recompute`, `calculate_current_account`
+
 ### Added - 2026-05-16
 
 #### Current Account
 - **Leave in subtotal**: New `leave_in_subtotal=true` query param on `PUT /api/private/current_account/:id`
-  - When enabled: stores `subtotal = revenue - leave` and `drag = prev_drag + subtotal`
-  - Total is mathematically identical; difference propagates via drag to subsequent days
+  - When enabled: stores `subtotal = revenue - leave` and `drag = prev_drag + revenue` (leave absorbed in subtotal only)
+  - Total changes because subtotal changes; drag carries full revenue forward to subsequent days
   - RPC: `update_current_account_recompute` updated with `p_leave_in_subtotal` param
   - Files: `api/src/current-account/route/current-account.route.ts`, `controller/current-account.controller.ts`, `repository/current-account.repository.ts`
 
