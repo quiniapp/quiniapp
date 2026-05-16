@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-05-16
+
+#### Current Account
+- **Leave in subtotal**: New `leave_in_subtotal=true` query param on `PUT /api/private/current_account/:id`
+  - When enabled: stores `subtotal = revenue - leave` and `drag = prev_drag + subtotal`
+  - Total is mathematically identical; difference propagates via drag to subsequent days
+  - RPC: `update_current_account_recompute` updated with `p_leave_in_subtotal` param
+  - Files: `api/src/current-account/route/current-account.route.ts`, `controller/current-account.controller.ts`, `repository/current-account.repository.ts`
+
 ### Changed - 2026-05-16
 
 #### Auth
