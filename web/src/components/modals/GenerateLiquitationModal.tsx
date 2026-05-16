@@ -42,6 +42,7 @@ export interface editPayloadObject {
 const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalProps) => {
   if (!isOpen) return null;
   const [calcLeave, setCalcLeave] = useState<boolean>(false);
+  const [leaveInSubtotal, setLeaveInSubtotal] = useState<boolean>(false);
   const [editPayload, setEditPayload] = useState<Map<string, editPayloadObject>>(new Map());
   const [searchParams] = useSearchParams();
   const { data, isLoading, isPending } = useGetCurrentAccount(searchParams.get('date'), searchParams.get('group_id'));
@@ -58,9 +59,10 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
   const handleGenerate = async () => {
     mutate(
       {
-        updateCurrentAccount: editPayload, // Map<string, editPayloadObject>
+        updateCurrentAccount: editPayload,
         date: data?.[0].date ?? '',
         leave: calcLeave,
+        leaveInSubtotal: calcLeave && leaveInSubtotal,
       },
       {
         onSuccess: () => {
@@ -108,15 +110,28 @@ const GenerateLiquitationModal = ({ isOpen, onClose }: GenerateLiquitationModalP
       onClose={onClose}
       className="flex flex-col items-center !max-w-[95vw] sm:!max-w-[90vw] md:!max-w-[980px] w-full m-auto bg-[#060813] pt-4 sm:pt-6 md:pt-[36px]"
     >
-      <Flex
-        className="gap-1 sm:gap-3"
-        onClick={() => {
-          setCalcLeave((prev) => !prev);
-        }}
-      >
-        <Checkbox checked={calcLeave} />
-
-        <Label>Liquidar todos los dejes</Label>
+      <Flex className="flex-col gap-1 sm:gap-2">
+        <Flex
+          className="gap-1 sm:gap-3 cursor-pointer"
+          onClick={() => {
+            setCalcLeave((prev) => {
+              if (prev) setLeaveInSubtotal(false);
+              return !prev;
+            });
+          }}
+        >
+          <Checkbox checked={calcLeave} />
+          <Label>Liquidar todos los dejes</Label>
+        </Flex>
+        {calcLeave && (
+          <Flex
+            className="gap-1 sm:gap-3 ml-4 cursor-pointer"
+            onClick={() => setLeaveInSubtotal((v) => !v)}
+          >
+            <Checkbox checked={leaveInSubtotal} />
+            <Label className="text-white/80 text-sm">Descontar del subtotal</Label>
+          </Flex>
+        )}
       </Flex>
       <FlexCol className="p-1 sm:p-3 gap-1 sm:gap-3 items-center w-full">
         <div className="overflow-x-auto w-full">

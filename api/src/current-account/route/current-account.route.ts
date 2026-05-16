@@ -377,9 +377,10 @@ export class CurrentAccountRouter {
 
   private bulkUpdateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, leave } = req.query; // DD-MM-YYYY
+    const { date, leave, leave_in_subtotal } = req.query; // DD-MM-YYYY
 
     const leaveFlag = toBool(leave);
+    const leaveInSubtotalFlag = toBool(leave_in_subtotal);
 
     const body = req.body as {
       updateCurrentAccount?: Record<
@@ -465,7 +466,8 @@ export class CurrentAccountRouter {
         req.organization_id!,
         String(date),
         leaveFlag,
-        true
+        true,
+        leaveInSubtotalFlag
       );
 
       const statusCode = failed.length ? 207 : 200;
