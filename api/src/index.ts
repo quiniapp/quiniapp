@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
@@ -100,10 +100,16 @@ morgan.token('error-info', (req, res) => {
   return '';
 });
 
-// Formato custom que incluye error-info para producción
+// Custom Morgan token para mostrar el username del usuario autenticado
+morgan.token('username', (req) => {
+  const expressReq = req as unknown as Request;
+  return expressReq.user?.user?.username ?? '-';
+});
+
+// Formato custom que incluye username y error-info
 const morganFormat = IS_LOCAL
-  ? 'dev'
-  : ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] :error-info ":referrer" ":user-agent"';
+  ? ':method :url :status :response-time ms - :username'
+  : ':remote-addr - :username [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] :error-info ":referrer" ":user-agent"';
 
 app.use(morgan(morganFormat));
 

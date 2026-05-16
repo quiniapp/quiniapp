@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-05-16 (Auth)
+
+#### Rate Limit 429 Resilience
+- **`web/src/lib/apiClient.ts`**: `refreshAccessToken()` now returns `true` on HTTP 429 instead of `false`
+  - Previous behavior: 429 from `/api/auth/refresh` triggered immediate logout
+  - New behavior: rate-limited refresh is treated as success; session stays alive; periodic `validate()` (5 min) handles actual expiration
+  - Why: CGNAT means many users share the same IP; if the AUTH hard cap is hit, users should not be disconnected
+
 ### Added - 2026-05-16 (Security)
 
 #### CSRF Header
