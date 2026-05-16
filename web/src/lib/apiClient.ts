@@ -25,13 +25,28 @@ type PendingRequest = {
   reject: (error: unknown) => void;
 };
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 class ApiClient {
   private baseURL: string;
   private isRefreshing = false;
   private refreshQueue: PendingRequest[] = [];
+  private csrfToken: string | null = null;
 
   constructor(baseURL: string = '') {
     this.baseURL = baseURL;
+  }
+
+  private async fetchCsrfToken(): Promise<string> {
+    const res = await fetch('/api/csrf-token', { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch CSRF token');
+    const data = (await res.json()) as { token: string };
+    this.csrfToken = data.token;
+    return data.token;
+  }
+
+  private getCsrfToken(): Promise<string> {
+    return this.csrfToken ? Promise.resolve(this.csrfToken) : this.fetchCsrfToken();
   }
 
   /**
@@ -92,6 +107,10 @@ class ApiClient {
     const { params, _skipRefreshRetry, ...fetchConfig } = config;
 
     const url = this.buildURL(endpoint, params);
+    const method = ((fetchConfig.method ?? 'GET') as string).toUpperCase();
+    const csrfHeader: Record<string, string> = SAFE_METHODS.has(method)
+      ? {}
+      : { 'X-CSRF-Token': await this.getCsrfToken() };
 
     try {
       const response = await fetch(url, {
@@ -99,6 +118,7 @@ class ApiClient {
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          ...csrfHeader,
           ...fetchConfig.headers,
         },
         ...fetchConfig,
@@ -232,10 +252,16 @@ class ApiClient {
   }
 
   async fetchRaw(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const method = ((init?.method ?? 'GET') as string).toUpperCase();
+    const csrfHeader: Record<string, string> = SAFE_METHODS.has(method)
+      ? {}
+      : { 'X-CSRF-Token': await this.getCsrfToken() };
+
     const merged: RequestInit = {
       ...init,
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
+        ...csrfHeader,
         ...(init?.headers as Record<string, string> | undefined),
       },
     };

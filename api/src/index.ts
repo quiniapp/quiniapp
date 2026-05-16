@@ -21,7 +21,7 @@ import {
   publicSlowDown,
   privateSlowDown,
 } from './middlewares/rate-limit.middleware';
-import { csrfProtection } from './middlewares/csrf.middleware';
+import { doubleCsrf } from 'csrf-csrf';
 
 import {
   PORT,
@@ -41,6 +41,15 @@ const app = express();
 
 // Si estás detrás de Vercel/NGINX/Cloudflare: cookies Secure y X-Forwarded-* correctos
 app.set('trust proxy', 1);
+
+// ---- CSRF (double-submit cookie, recognized by CodeQL js/missing-token-validation) ----
+const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET ?? 'csrf-dev-secret-change-in-prod',
+  getSessionIdentifier: (req) => (req as express.Request).ip ?? '',
+  cookieName: 'csrf',
+  cookieOptions: { httpOnly: true, sameSite: 'lax', secure: IS_PRODUCTION, path: '/' },
+  size: 64,
+});
 
 // ---- CORS ----
 const baseAllowedOrigins = [
@@ -74,7 +83,7 @@ const corsMiddleware = cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
 });
 
 // Añadimos Vary para caches
@@ -108,9 +117,11 @@ app.use(morgan(morganFormat));
 
 app.use(cookieParser());
 
-// CSRF protection: all state-changing requests must include X-Requested-With: XMLHttpRequest.
-// Combined with sameSite='lax' cookies, this prevents cross-origin form submissions.
-app.use(csrfProtection);
+// ---- CSRF token endpoint (must be before doubleCsrfProtection) ----
+app.get('/api/csrf-token', (req, res) => {
+  const token = generateCsrfToken(req, res);
+  res.json({ token });
+});
 
 // ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
 // slow-down: adds delay on repeated requests (silent DDoS mitigation)
@@ -121,6 +132,7 @@ app.use('/api/auth', authSlowDown, authRateLimit);
 // ---- Body parsers por ruta ----
 app.use(
   '/api/private',
+  doubleCsrfProtection,
   privateSlowDown,
   privateRateLimit,
   express.json({ limit: '5mb' }),
