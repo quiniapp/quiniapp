@@ -12,6 +12,10 @@ import { startDeviceStatsJob, flushDeviceStats } from './analytics/job/device-st
 import { getCronService } from './cron/service/cron.service';
 import { initializeActiveDaysCache } from './archive/helper/archive-helper';
 import {
+  loginRateLimit,
+  authRateLimit,
+  publicRateLimit,
+  privateRateLimit,
   loginSlowDown,
   authSlowDown,
   publicSlowDown,
@@ -110,12 +114,21 @@ app.use(morgan(morganFormat));
 app.use(cookieParser());
 
 // ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
-app.use('/api/auth/login', loginSlowDown);
-app.use('/api/auth', authSlowDown);
+// slow-down: adds delay on repeated requests (silent DDoS mitigation)
+// rate-limit: hard cap at very high thresholds (extreme abuse only)
+app.use('/api/auth/login', loginSlowDown, loginRateLimit);
+app.use('/api/auth', authSlowDown, authRateLimit);
 
 // ---- Body parsers por ruta ----
-app.use('/api/private', privateSlowDown, express.json({ limit: '5mb' }), isAuthenticated, router);
-app.use('/api', publicSlowDown, express.json({ limit: '200kb' }), publicRouter);
+app.use(
+  '/api/private',
+  privateSlowDown,
+  privateRateLimit,
+  express.json({ limit: '5mb' }),
+  isAuthenticated,
+  router
+);
+app.use('/api', publicSlowDown, publicRateLimit, express.json({ limit: '200kb' }), publicRouter);
 
 // ---- 404 Handler ----
 app.use((req, res) => {

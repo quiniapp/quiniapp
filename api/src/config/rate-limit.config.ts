@@ -3,6 +3,27 @@ const parseIntEnv = (key: string, defaultValue: number): number => {
   return value ? parseInt(value, 10) : defaultValue;
 };
 
+// Permissive hard caps — only trigger under extreme abuse, not normal usage.
+// Primary DDoS mitigation is express-slow-down (adds delay); these are last-resort blocks.
+export const RATE_LIMIT_CONFIG = {
+  LOGIN: {
+    windowMs: 15 * 60 * 1000, // 15 min
+    max: parseIntEnv('RATE_LIMIT_LOGIN_MAX', 100),
+  },
+  AUTH: {
+    windowMs: 15 * 60 * 1000,
+    max: parseIntEnv('RATE_LIMIT_AUTH_MAX', 500),
+  },
+  PUBLIC: {
+    windowMs: 15 * 60 * 1000,
+    max: parseIntEnv('RATE_LIMIT_PUBLIC_MAX', 2000),
+  },
+  PRIVATE: {
+    windowMs: 15 * 60 * 1000,
+    max: parseIntEnv('RATE_LIMIT_PRIVATE_MAX', 2000),
+  },
+};
+
 export const SLOW_DOWN_CONFIG = {
   // Login: tight window — 5 req / 5 s → 5 s delay (bot detection)
   LOGIN: {
