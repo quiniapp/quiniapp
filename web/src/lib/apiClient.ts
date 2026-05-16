@@ -55,8 +55,7 @@ class ApiClient {
         },
       });
 
-      // If no refresh token is available (old session), return false
-      // This will trigger logout in the handler
+      if (response.status === 429) return true; // rate limited — session likely valid, let validate() handle expiry
       if (!response.ok) {
         return false;
       }
