@@ -4,6 +4,40 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-05-16
+
+#### Current Account
+- **Leave in subtotal**: New `leave_in_subtotal=true` query param on `PUT /api/private/current_account/:id`
+  - When enabled: stores `subtotal = revenue - leave` and `drag = prev_drag + subtotal`
+  - Total is mathematically identical; difference propagates via drag to subsequent days
+  - RPC: `update_current_account_recompute` updated with `p_leave_in_subtotal` param
+  - Files: `api/src/current-account/route/current-account.route.ts`, `controller/current-account.controller.ts`, `repository/current-account.repository.ts`
+
+### Added - 2026-05-16 (Security)
+
+#### CSRF Protection
+- **CSRF middleware**: `api/src/middlewares/csrf.middleware.ts` — validates `X-Requested-With: XMLHttpRequest` on all state-changing requests (POST/PUT/PATCH/DELETE)
+  - Returns 403 `FORBIDDEN` if header is absent
+  - Safe methods (GET/HEAD/OPTIONS) bypass the check
+  - Applied globally in `api/src/index.ts` after `cookieParser()`
+- **Hard-cap rate limiters**: Added permissive `express-rate-limit` alongside slow-down to satisfy CodeQL `js/missing-rate-limiting`
+  - Limits: login 100/15min, auth 500/15min, public/private 2000/15min
+  - All configurable via env vars (`RATE_LIMIT_*_MAX`)
+  - Files: `api/src/config/rate-limit.config.ts`, `api/src/middlewares/rate-limit.middleware.ts`, `api/src/index.ts`
+
+### Changed - 2026-05-16
+
+#### Auth
+- **Rate Limiting**: Replaced all rate limiters with silent slow-down middleware (`express-slow-down`)
+  - Removed: `loginRateLimiter`, `authRateLimiter`, `publicApiRateLimiter`, `privateApiRateLimiter`
+  - Added: slow-down per tier (login: 5 req/5s → 5s delay; auth: 15 req/10s → 3s; public: 40 req/10s → 2s; private: 80 req/10s → 2s)
+  - Files: `api/src/config/rate-limit.config.ts`, `api/src/middlewares/rate-limit.middleware.ts`, `api/src/index.ts`
+- **Account Lockout**: Removed account locking on failed password attempts
+  - Wrong password no longer increments failed attempt counter or locks account
+  - Users can enter wrong password unlimited times without any block
+  - Removed: `MAX_FAILED_ATTEMPTS`, `LOCKOUT_DURATION` from `session.config.ts`
+  - Files: `api/src/auth/controller/auth.controller.ts`, `api/src/config/session.config.ts`
+
 ### Changed - 2026-05-02
 
 #### Liquidación Individual — campos manuales expandidos

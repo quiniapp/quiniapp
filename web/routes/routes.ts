@@ -67,6 +67,7 @@ export const BACKEND_ROUTES = {
   },
   settings: {
     storage: `${PRIVATE}/settings/storage`,
+    cleanup: `${PRIVATE}/settings/cleanup`,
   },
   org_expense: {
     base: `${PRIVATE}/org_expense`,

@@ -13,27 +13,27 @@ export const logger = winston.createLogger({
   format: logFormat,
   defaultMeta: { service: 'quiniapp-api' },
   transports: [
-    // Errores en archivo separado
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
+    // Consola siempre activa — en Vercel el filesystem es efímero y no persiste
+    new winston.transports.Console({
+      format: IS_PRODUCTION
+        ? logFormat
+        : winston.format.combine(winston.format.colorize(), winston.format.simple()),
     }),
-    // Todos los logs
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-      maxsize: 5242880,
-      maxFiles: 5,
-    }),
+    // Archivos solo en desarrollo (en producción/serverless no tienen utilidad)
+    ...(!IS_PRODUCTION
+      ? [
+          new winston.transports.File({
+            filename: 'logs/error.log',
+            level: 'error',
+            maxsize: 5242880,
+            maxFiles: 5,
+          }),
+          new winston.transports.File({
+            filename: 'logs/combined.log',
+            maxsize: 5242880,
+            maxFiles: 5,
+          }),
+        ]
+      : []),
   ],
 });
-
-// En desarrollo, también log a consola con formato legible
-if (!IS_PRODUCTION) {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
-    })
-  );
-}

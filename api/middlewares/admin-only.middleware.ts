@@ -34,3 +34,21 @@ export const requireNonCashier = asyncHandler(
  * Alias for requireNonCashier - more semantic for admin endpoints
  */
 export const requireAdmin = requireNonCashier;
+
+/**
+ * Middleware to restrict access to OWNER users only
+ * Must be used after isAuthenticated middleware
+ */
+export const requireOwner = asyncHandler(
+  async (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user?.user) {
+      throw new ForbiddenError('Usuario no autenticado');
+    }
+
+    if (req.user.user.user_type !== USER_TYPE.OWNER) {
+      throw new ForbiddenError('Solo el propietario puede realizar esta acción');
+    }
+
+    next();
+  }
+);

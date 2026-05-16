@@ -4,6 +4,27 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-05-16 (Security)
+
+#### CSRF Header
+- **`web/src/lib/apiClient.ts`**: All outbound requests now include `X-Requested-With: XMLHttpRequest` header
+  - Added to `request()` default headers (covers all `get/post/put/delete/patch` calls)
+  - Added to `fetchRaw()` merged headers (covers all `fetchWithAuth` hooks)
+  - Added to `refreshAccessToken()` direct fetch call
+
+### Added - 2026-05-16
+
+#### Current Account — "Descontar del subtotal" al liquidar deje
+
+- **`web/src/components/modals/UserCurrentAccountModal.tsx`**: Nuevo checkbox "Descontar del subtotal" que aparece cuando "Liquidar deje" está activo. Al marcar ambos, envía `leave_in_subtotal=true` al backend.
+- **`web/src/hooks/mutations/current-account/useUpdateCurrentAccoutnByUser.ts`**: Agregado `leaveInSubtotal` a `UpdateVars` y al URL de la petición.
+
+#### Settings — cleanup button conectado
+
+- **`web/src/hooks/mutations/settings/useCleanupOldData.ts`**: Hook `useMutation` que llama `POST /api/private/settings/cleanup`. Invalida `storageStatus` en `onSuccess`.
+- **`web/src/features/settings/index.tsx`**: Reemplazado mock `handleCleanup` por mutación real. Botón muestra "Limpiando..." durante la petición. Toast muestra conteo de apuestas y tickets eliminados. Removido selector de período (la API usa 65 días fijos).
+- **`web/routes/routes.ts`**: Agregada ruta `settings.cleanup`.
+
 ### Changed - 2026-05-02
 
 #### Liquidación Individual — mejoras de UI y campos editables

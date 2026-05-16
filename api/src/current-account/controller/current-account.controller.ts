@@ -99,11 +99,10 @@ export class CurrentAccountController {
     current_account_id: string,
     props: IUpdateCurrentAccountEntity,
     organization_id: string,
-    leave?: boolean
+    leave?: boolean,
+    leaveInSubtotal?: boolean
   ): Promise<ICurrentAccountEntityFront> => {
     try {
-      // Construye payload solo con las keys permitidas y definidas
-
       const payload: UpdatePayload = {};
       if (props.claims !== undefined) payload.claims = Number(props.claims);
       if (props.paid !== undefined) payload.paid = Number(props.paid);
@@ -117,13 +116,13 @@ export class CurrentAccountController {
       if (props.drag !== undefined) payload.drag = Number(props.drag);
       if (props.revenue !== undefined) payload.revenue = Number(props.revenue);
       if (props.leave !== undefined) payload.leave = Number(props.leave);
-      // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
 
       const currentAccount = await this.repository.updateCurrentAccountHandler(
         current_account_id,
         organization_id,
         payload,
-        leave
+        leave,
+        leaveInSubtotal
       );
 
       await this.repository.cascadeCurrentAccountFromDateHandler(
