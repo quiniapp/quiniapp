@@ -4,6 +4,19 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-05-16
+
+#### Auth
+- **Rate Limiting**: Replaced all rate limiters with silent slow-down middleware (`express-slow-down`)
+  - Removed: `loginRateLimiter`, `authRateLimiter`, `publicApiRateLimiter`, `privateApiRateLimiter`
+  - Added: slow-down per tier (login: 5 req/5s → 5s delay; auth: 15 req/10s → 3s; public: 40 req/10s → 2s; private: 80 req/10s → 2s)
+  - Files: `api/src/config/rate-limit.config.ts`, `api/src/middlewares/rate-limit.middleware.ts`, `api/src/index.ts`
+- **Account Lockout**: Removed account locking on failed password attempts
+  - Wrong password no longer increments failed attempt counter or locks account
+  - Users can enter wrong password unlimited times without any block
+  - Removed: `MAX_FAILED_ATTEMPTS`, `LOCKOUT_DURATION` from `session.config.ts`
+  - Files: `api/src/auth/controller/auth.controller.ts`, `api/src/config/session.config.ts`
+
 ### Changed - 2026-05-02
 
 #### Liquidación Individual — campos manuales expandidos

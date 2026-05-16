@@ -62,23 +62,7 @@ export class AuthController {
       throw new UnauthorizedError('Usuario o contraseña incorrectos');
     }
 
-    // 2. Check if account is locked
-    if (userData.locked_until && new Date(userData.locked_until) > new Date()) {
-      await this.auditRepository.log({
-        user_id: userData.user_id,
-        username,
-        event_type: 'login_failed',
-        success: false,
-        error_message: 'Account locked',
-        ip_address: ipAddress,
-        user_agent: userAgent,
-      });
-      throw new UnauthorizedError(
-        'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
-      );
-    }
-
-    // 3. Check if password hash exists
+    // 2. Check if password hash exists
     if (!userData.password_hash) {
       await this.auditRepository.log({
         user_id: userData.user_id,
@@ -95,33 +79,6 @@ export class AuthController {
     // 4. Verify password
     const isValidPassword = await comparePassword(password, userData.password_hash);
     if (!isValidPassword) {
-      // Increment failed attempts
-      await this.repository.incrementFailedAttempts(userData.user_id);
-
-      const newFailedAttempts = (userData?.failed_login_attempts ?? 0) + 1;
-      const remainingAttempts = SESSION_CONFIG.MAX_FAILED_ATTEMPTS - newFailedAttempts;
-
-      // Lock account if max attempts reached
-      if (newFailedAttempts >= SESSION_CONFIG.MAX_FAILED_ATTEMPTS) {
-        const lockUntil = new Date(Date.now() + SESSION_CONFIG.LOCKOUT_DURATION);
-        await this.repository.lockAccount(userData.user_id, lockUntil);
-
-        await this.auditRepository.log({
-          user_id: userData.user_id,
-          username,
-          event_type: 'account_locked',
-          success: false,
-          error_message: 'Account locked due to multiple failed attempts',
-          ip_address: ipAddress,
-          user_agent: userAgent,
-        });
-
-        throw new UnauthorizedError(
-          'Cuenta bloqueada por múltiples intentos fallidos. Por favor, contacta al administrador para desbloquear tu cuenta.'
-        );
-      }
-
-      // Log failed login
       await this.auditRepository.log({
         user_id: userData.user_id,
         username,
@@ -131,10 +88,7 @@ export class AuthController {
         ip_address: ipAddress,
         user_agent: userAgent,
       });
-
-      throw new UnauthorizedError(
-        `Contraseña incorrecta. Te quedan ${remainingAttempts} ${remainingAttempts === 1 ? 'intento' : 'intentos'}.`
-      );
+      throw new UnauthorizedError('Usuario o contraseña incorrectos');
     }
 
     // 5. Create session atomically — enforces concurrent session limit inside one DB transaction
@@ -181,10 +135,9 @@ export class AuthController {
     deviceStatsCache.increment(`device:${detectDevice(userAgent)}`);
     clientStatsCache.increment(parseUA(userAgent));
 
-    // 8, 9, 10. Run independent post-login updates in parallel
+    // 8, 9. Run independent post-login updates in parallel
     await Promise.all([
       this.repository.updateLoginMetadata(userData.user_id, ipAddress || null),
-      this.repository.resetFailedAttempts(userData.user_id),
       this.auditRepository.log({
         user_id: userData.user_id,
         session_id: session.session_id,
