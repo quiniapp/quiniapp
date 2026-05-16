@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-05-16
+
+#### Settings — cleanup button conectado
+
+- **`web/src/hooks/mutations/settings/useCleanupOldData.ts`**: Hook `useMutation` que llama `POST /api/private/settings/cleanup`. Invalida `storageStatus` en `onSuccess`.
+- **`web/src/features/settings/index.tsx`**: Reemplazado mock `handleCleanup` por mutación real. Botón muestra "Limpiando..." durante la petición. Toast muestra conteo de apuestas y tickets eliminados. Removido selector de período (la API usa 65 días fijos).
+- **`web/routes/routes.ts`**: Agregada ruta `settings.cleanup`.
+
 ### Changed - 2026-05-02
 
 #### Liquidación Individual — mejoras de UI y campos editables
