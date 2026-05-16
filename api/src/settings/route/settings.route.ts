@@ -3,6 +3,7 @@ import { SettingsController } from '../controller/settings.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
+import { requireOwner } from '../../../middlewares/admin-only.middleware';
 
 export class SettingsLotteryRouter {
   public router: Router;
@@ -15,7 +16,24 @@ export class SettingsLotteryRouter {
 
   private setupRoutes() {
     this.router.get('/storage', this.getStorageSettingsHandler);
+    this.router.post('/cleanup', requireOwner, this.cleanupOldArchiveHandler);
   }
+
+  private cleanupOldArchiveHandler: RequestHandler = async (_req: Request, res: Response) => {
+    try {
+      const result = await this.controller.cleanupOldArchiveData();
+      res.status(200).json({ data: result });
+    } catch (error) {
+      console.error('[SettingsRoute] cleanupOldArchive error:', error);
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.AUTH_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(500).json(response);
+    }
+  };
 
   private getStorageSettingsHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
