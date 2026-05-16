@@ -31,22 +31,13 @@ class ApiClient {
   private baseURL: string;
   private isRefreshing = false;
   private refreshQueue: PendingRequest[] = [];
-  private csrfToken: string | null = null;
-
   constructor(baseURL: string = '') {
     this.baseURL = baseURL;
   }
 
-  private async fetchCsrfToken(): Promise<string> {
-    const res = await fetch('/api/csrf-token', { credentials: 'include' });
-    if (!res.ok) throw new Error('Failed to fetch CSRF token');
-    const data = (await res.json()) as { token: string };
-    this.csrfToken = data.token;
-    return data.token;
-  }
-
-  private getCsrfToken(): Promise<string> {
-    return this.csrfToken ? Promise.resolve(this.csrfToken) : this.fetchCsrfToken();
+  private getXsrfToken(): string {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
   }
 
   /**
@@ -60,6 +51,7 @@ class ApiClient {
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'X-XSRF-TOKEN': this.getXsrfToken(),
         },
       });
 
@@ -110,7 +102,7 @@ class ApiClient {
     const method = ((fetchConfig.method ?? 'GET') as string).toUpperCase();
     const csrfHeader: Record<string, string> = SAFE_METHODS.has(method)
       ? {}
-      : { 'X-CSRF-Token': await this.getCsrfToken() };
+      : { 'X-XSRF-TOKEN': this.getXsrfToken() };
 
     try {
       const response = await fetch(url, {
@@ -255,7 +247,7 @@ class ApiClient {
     const method = ((init?.method ?? 'GET') as string).toUpperCase();
     const csrfHeader: Record<string, string> = SAFE_METHODS.has(method)
       ? {}
-      : { 'X-CSRF-Token': await this.getCsrfToken() };
+      : { 'X-XSRF-TOKEN': this.getXsrfToken() };
 
     const merged: RequestInit = {
       ...init,

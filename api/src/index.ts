@@ -21,7 +21,8 @@ import {
   publicSlowDown,
   privateSlowDown,
 } from './middlewares/rate-limit.middleware';
-import { doubleCsrf } from 'csrf-csrf';
+import expressSession from 'express-session';
+import lusca from 'lusca';
 
 import {
   PORT,
@@ -41,15 +42,6 @@ const app = express();
 
 // Si estás detrás de Vercel/NGINX/Cloudflare: cookies Secure y X-Forwarded-* correctos
 app.set('trust proxy', 1);
-
-// ---- CSRF (double-submit cookie, recognized by CodeQL js/missing-token-validation) ----
-const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET ?? 'csrf-dev-secret-change-in-prod',
-  getSessionIdentifier: (req) => (req as express.Request).ip ?? '',
-  cookieName: 'csrf',
-  cookieOptions: { httpOnly: true, sameSite: 'lax', secure: IS_PRODUCTION, path: '/' },
-  size: 64,
-});
 
 // ---- CORS ----
 const baseAllowedOrigins = [
@@ -83,7 +75,7 @@ const corsMiddleware = cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-Requested-With'],
 });
 
 // Añadimos Vary para caches
@@ -117,11 +109,19 @@ app.use(morgan(morganFormat));
 
 app.use(cookieParser());
 
-// ---- CSRF token endpoint (must be before doubleCsrfProtection) ----
-app.get('/api/csrf-token', (req, res) => {
-  const token = generateCsrfToken(req, res);
-  res.json({ token });
-});
+// ---- Session (required by lusca CSRF) ----
+app.use(
+  expressSession({
+    secret: process.env.SESSION_SECRET ?? 'session-dev-secret-change-in-prod',
+    resave: false,
+    saveUninitialized: true,
+    name: 'sid',
+    cookie: { httpOnly: true, sameSite: 'lax', secure: IS_PRODUCTION },
+  })
+);
+
+// ---- CSRF (lusca angular mode: sets XSRF-TOKEN cookie, validates X-XSRF-TOKEN header) ----
+app.use(lusca.csrf({ angular: true }));
 
 // ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
 // slow-down: adds delay on repeated requests (silent DDoS mitigation)
@@ -132,7 +132,6 @@ app.use('/api/auth', authSlowDown, authRateLimit);
 // ---- Body parsers por ruta ----
 app.use(
   '/api/private',
-  doubleCsrfProtection,
   privateSlowDown,
   privateRateLimit,
   express.json({ limit: '5mb' }),
