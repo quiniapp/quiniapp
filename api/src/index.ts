@@ -12,11 +12,17 @@ import { startDeviceStatsJob, flushDeviceStats } from './analytics/job/device-st
 import { getCronService } from './cron/service/cron.service';
 import { initializeActiveDaysCache } from './archive/helper/archive-helper';
 import {
-  loginRateLimiter,
-  authRateLimiter,
-  publicApiRateLimiter,
-  privateApiRateLimiter,
+  loginRateLimit,
+  authRateLimit,
+  publicRateLimit,
+  privateRateLimit,
+  loginSlowDown,
+  authSlowDown,
+  publicSlowDown,
+  privateSlowDown,
 } from './middlewares/rate-limit.middleware';
+import expressSession from 'express-session';
+import lusca from 'lusca';
 
 import {
   PORT,
@@ -69,7 +75,7 @@ const corsMiddleware = cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-Requested-With'],
 });
 
 // Añadimos Vary para caches
@@ -101,27 +107,38 @@ const morganFormat = IS_LOCAL
 
 app.use(morgan(morganFormat));
 
-// CSRF Protection Note:
-// We use sameSite='lax' cookie policy (configured in config/session.config.ts) which provides
-// automatic CSRF protection for cookie-based authentication. This is sufficient for our architecture
-// where the frontend uses a Vercel proxy, making all requests same-origin from the browser's perspective.
-// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
-// lgtm[js/missing-token-validation]
 app.use(cookieParser());
 
-// ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
-app.use('/api/auth/login', loginRateLimiter); // Login (más estricto)
-app.use('/api/auth', authRateLimiter); // Otros endpoints de auth
+// ---- Session (required by lusca CSRF) ----
+app.use(
+  expressSession({
+    secret: process.env.SESSION_SECRET ?? 'session-dev-secret-change-in-prod',
+    resave: false,
+    saveUninitialized: true,
+    name: 'sid',
+    cookie: { httpOnly: true, sameSite: 'lax', secure: IS_PRODUCTION },
+  })
+);
 
-// ---- Body parsers por ruta (con rate limiters) ----
+// ---- CSRF (lusca angular mode: sets XSRF-TOKEN cookie, validates X-XSRF-TOKEN header) ----
+app.use(lusca.csrf({ angular: true }));
+
+// ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
+// slow-down: adds delay on repeated requests (silent DDoS mitigation)
+// rate-limit: hard cap at very high thresholds (extreme abuse only)
+app.use('/api/auth/login', loginSlowDown, loginRateLimit);
+app.use('/api/auth', authSlowDown, authRateLimit);
+
+// ---- Body parsers por ruta ----
 app.use(
   '/api/private',
-  privateApiRateLimiter,
+  privateSlowDown,
+  privateRateLimit,
   express.json({ limit: '5mb' }),
   isAuthenticated,
   router
 );
-app.use('/api', publicApiRateLimiter, express.json({ limit: '200kb' }), publicRouter);
+app.use('/api', publicSlowDown, publicRateLimit, express.json({ limit: '200kb' }), publicRouter);
 
 // ---- 404 Handler ----
 app.use((req, res) => {

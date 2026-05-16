@@ -259,7 +259,7 @@ export class CurrentAccountRouter {
     const { user } = req;
     const { id: current_account_id } = req.params;
     const { updateCurrentAccount } = req.body;
-    const { leave } = req.query;
+    const { leave, leave_in_subtotal } = req.query;
     if (!user?.user || !updateCurrentAccount) {
       const response: APIResponse<null> = {
         error: {
@@ -287,7 +287,8 @@ export class CurrentAccountRouter {
         current_account_id,
         updateCurrentAccount,
         req.organization_id!,
-        typeof leave === 'string' && leave === 'true'
+        typeof leave === 'string' && leave === 'true',
+        typeof leave_in_subtotal === 'string' && leave_in_subtotal === 'true'
       );
 
       const response: APIResponse<ICurrentAccountEntityFront> = {
@@ -376,9 +377,10 @@ export class CurrentAccountRouter {
 
   private bulkUpdateCurrentAccountHandler: RequestHandler = async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, leave } = req.query; // DD-MM-YYYY
+    const { date, leave, leave_in_subtotal } = req.query; // DD-MM-YYYY
 
     const leaveFlag = toBool(leave);
+    const leaveInSubtotalFlag = toBool(leave_in_subtotal);
 
     const body = req.body as {
       updateCurrentAccount?: Record<
@@ -464,7 +466,8 @@ export class CurrentAccountRouter {
         req.organization_id!,
         String(date),
         leaveFlag,
-        true
+        true,
+        leaveInSubtotalFlag
       );
 
       const statusCode = failed.length ? 207 : 200;
@@ -691,14 +694,12 @@ export class CurrentAccountRouter {
     }
 
     if (!date_from || !date_to || typeof date_from !== 'string' || typeof date_to !== 'string') {
-      res
-        .status(400)
-        .json({
-          error: {
-            error: ERROR_TYPE.BAD_REQUEST,
-            message: 'Query params "date_from" and "date_to" (YYYY-MM-DD) are required',
-          },
-        });
+      res.status(400).json({
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: 'Query params "date_from" and "date_to" (YYYY-MM-DD) are required',
+        },
+      });
       return;
     }
 

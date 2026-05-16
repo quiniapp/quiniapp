@@ -34,7 +34,12 @@ type AllowedManualKeys =
   | 'collections'
   | 'bills'
   | 'previous_balance'
-  | 'previous_drag';
+  | 'previous_drag'
+  | 'pass'
+  | 'successes'
+  | 'drag'
+  | 'revenue'
+  | 'leave';
 
 type UpdatePayload = Partial<Pick<IUpdateCurrentAccountEntity, AllowedManualKeys>>;
 export class CurrentAccountController {
@@ -44,14 +49,16 @@ export class CurrentAccountController {
     organization_id: string,
     date?: string,
     leave?: boolean,
-    liquidated?: boolean
+    liquidated?: boolean,
+    leaveInSubtotal?: boolean
   ) => {
     try {
       const results = await this.repository.calculateCurrentAccountHandler(
         organization_id,
         date,
         leave,
-        liquidated
+        liquidated,
+        leaveInSubtotal
       );
 
       await this.repository.cascadeCurrentAccountFromDateHandler(organization_id, date);
@@ -94,11 +101,10 @@ export class CurrentAccountController {
     current_account_id: string,
     props: IUpdateCurrentAccountEntity,
     organization_id: string,
-    leave?: boolean
+    leave?: boolean,
+    leaveInSubtotal?: boolean
   ): Promise<ICurrentAccountEntityFront> => {
     try {
-      // Construye payload solo con las keys permitidas y definidas
-
       const payload: UpdatePayload = {};
       if (props.claims !== undefined) payload.claims = Number(props.claims);
       if (props.paid !== undefined) payload.paid = Number(props.paid);
@@ -107,13 +113,18 @@ export class CurrentAccountController {
       if (props.previous_drag !== undefined) payload.previous_drag = Number(props.previous_drag);
       if (props.previous_balance !== undefined)
         payload.previous_balance = Number(props.previous_balance);
-      // Llama a tu repo (que a su vez llama al RPC update_current_account_recompute)
+      if (props.pass !== undefined) payload.pass = Number(props.pass);
+      if (props.successes !== undefined) payload.successes = Number(props.successes);
+      if (props.drag !== undefined) payload.drag = Number(props.drag);
+      if (props.revenue !== undefined) payload.revenue = Number(props.revenue);
+      if (props.leave !== undefined) payload.leave = Number(props.leave);
 
       const currentAccount = await this.repository.updateCurrentAccountHandler(
         current_account_id,
         organization_id,
         payload,
-        leave
+        leave,
+        leaveInSubtotal
       );
 
       await this.repository.cascadeCurrentAccountFromDateHandler(

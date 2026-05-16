@@ -25,13 +25,19 @@ type PendingRequest = {
   reject: (error: unknown) => void;
 };
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 class ApiClient {
   private baseURL: string;
   private isRefreshing = false;
   private refreshQueue: PendingRequest[] = [];
-
   constructor(baseURL: string = '') {
     this.baseURL = baseURL;
+  }
+
+  private getXsrfToken(): string {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
   }
 
   /**
@@ -44,6 +50,8 @@ class ApiClient {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-XSRF-TOKEN': this.getXsrfToken(),
         },
       });
 
@@ -91,12 +99,18 @@ class ApiClient {
     const { params, _skipRefreshRetry, ...fetchConfig } = config;
 
     const url = this.buildURL(endpoint, params);
+    const method = ((fetchConfig.method ?? 'GET') as string).toUpperCase();
+    const csrfHeader: Record<string, string> = SAFE_METHODS.has(method)
+      ? {}
+      : { 'X-XSRF-TOKEN': this.getXsrfToken() };
 
     try {
       const response = await fetch(url, {
         credentials: 'include', // Siempre incluir cookies
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...csrfHeader,
           ...fetchConfig.headers,
         },
         ...fetchConfig,
@@ -230,14 +244,28 @@ class ApiClient {
   }
 
   async fetchRaw(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    const res = await fetch(input, { credentials: 'include', ...init });
+    const method = ((init?.method ?? 'GET') as string).toUpperCase();
+    const csrfHeader: Record<string, string> = SAFE_METHODS.has(method)
+      ? {}
+      : { 'X-XSRF-TOKEN': this.getXsrfToken() };
+
+    const merged: RequestInit = {
+      ...init,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...csrfHeader,
+        ...(init?.headers as Record<string, string> | undefined),
+      },
+    };
+
+    const res = await fetch(input, { credentials: 'include', ...merged });
     if (res.status !== 401) return res;
 
     if (this.isRefreshing) {
       await new Promise<void>((resolve, reject) => {
         this.refreshQueue.push({ resolve: () => resolve(), reject });
       });
-      return fetch(input, { credentials: 'include', ...init });
+      return fetch(input, { credentials: 'include', ...merged });
     }
 
     this.isRefreshing = true;
@@ -245,7 +273,7 @@ class ApiClient {
       const success = await this.refreshAccessToken();
       if (success) {
         this.processPendingRequests(null);
-        return fetch(input, { credentials: 'include', ...init });
+        return fetch(input, { credentials: 'include', ...merged });
       } else {
         dispatchAuthExpired();
         const error = new Error('Sesión expirada');

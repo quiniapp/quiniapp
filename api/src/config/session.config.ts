@@ -41,8 +41,6 @@ export const SESSION_CONFIG = {
   CLEANUP_INTERVAL: parseTime(process.env.SESSION_CLEANUP_INTERVAL || '1h'), // 1 hour
 
   // Security Settings
-  MAX_FAILED_ATTEMPTS: parseInt(process.env.MAX_FAILED_LOGIN_ATTEMPTS || '5'), // 5 attempts
-  LOCKOUT_DURATION: parseTime(process.env.ACCOUNT_LOCKOUT_DURATION || '15m'), // 15 minutes
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || '12'), // 12 rounds
   MAX_CONCURRENT_SESSIONS: parseInt(process.env.MAX_CONCURRENT_SESSIONS || '0'), // 0 = unlimited
 

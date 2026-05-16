@@ -31,7 +31,8 @@ export class CurrentAccountRepository {
     organization_id: string,
     date?: string,
     leave?: boolean,
-    liquidated?: boolean
+    liquidated?: boolean,
+    leaveInSubtotal?: boolean
   ) {
     let dateToProcess: string;
     if (!date) {
@@ -45,6 +46,7 @@ export class CurrentAccountRepository {
       p_calculate_leave: leave,
       p_liquidated: liquidated,
       p_organization_id: organization_id,
+      p_leave_in_subtotal: leaveInSubtotal ?? false,
     });
     if (error) throw error;
     return data;
@@ -120,13 +122,15 @@ export class CurrentAccountRepository {
     current_account_id: string,
     organization_id: string,
     props: IUpdateCurrentAccountEntity,
-    leave?: boolean
+    leave?: boolean,
+    leaveInSubtotal?: boolean
   ) {
     const { data, error } = await supabase.rpc('update_current_account_recompute', {
       p_current_account_id: current_account_id,
       p_props: props,
       p_calculate_leave: leave,
       p_organization_id: organization_id,
+      p_leave_in_subtotal: leaveInSubtotal ?? false,
     });
     if (error) throw error;
     return data;

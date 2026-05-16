@@ -35,6 +35,7 @@ const UserCurrentAccountModal = ({
 }: UserCurrentAccountModalProps) => {
   if (!isOpen) return null;
   const [calcLeave, setCalcLeave] = useState<boolean>(false);
+  const [leaveInSubtotal, setLeaveInSubtotal] = useState<boolean>(false);
   const methods = useForm<ICurrentAccountEntityFront>({
     values: currentAccount
       ? { ...currentAccount }
@@ -83,15 +84,17 @@ const UserCurrentAccountModal = ({
       current_account_id: currentAccount?.current_account_id ?? '',
       updateCurrentAccount: values,
       leave: calcLeave,
+      leaveInSubtotal: calcLeave && leaveInSubtotal,
     });
     onClose();
   };
   const handleCalcLeave = (enable: boolean) => {
     if (enable) {
       setValue('leave', 0);
+      setLeaveInSubtotal(false);
     } else {
       const feePlus = cashier?.user_type === USER_TYPE.CASHIER ? cashier.fee_plus : 0;
-      setValue('leave', getValues('drag') * feePlus / 100);
+      setValue('leave', (getValues('drag') * feePlus) / 100);
     }
     setCalcLeave(!enable);
   };
@@ -105,7 +108,7 @@ const UserCurrentAccountModal = ({
     >
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="w-full">
-          <Flex className="justify-center gap-1 sm:gap-3">
+          <Flex className="justify-center gap-1 sm:gap-3 flex-col sm:flex-row">
             <FlexCol className="items-between pt-2">
               <LabelInputForm<ICurrentAccountEntityFront> name="pass" label="Pase" type="number" />
               <LabelInputForm<ICurrentAccountEntityFront>
@@ -162,98 +165,115 @@ const UserCurrentAccountModal = ({
                 label="Arrastre nuevo"
                 type="number"
               />
-              <Flex className="items-center gap-1 sm:gap-3" onClick={() => {}}>
-                <Checkbox checked={calcLeave} onClick={() => handleCalcLeave(calcLeave)} />
+              <Flex className="items-center gap-1 sm:gap-3 px-1 py-1">
+                <Checkbox
+                  checked={calcLeave}
+                  onClick={() => handleCalcLeave(calcLeave)}
+                  className="border-white bg-white"
+                />
                 <Label>Liquidar deje</Label>
               </Flex>
+              {calcLeave && (
+                <Flex className="items-center gap-1 sm:gap-3 ml-4" onClick={() => {}}>
+                  <Checkbox
+                    checked={leaveInSubtotal}
+                    onClick={() => setLeaveInSubtotal((v) => !v)}
+                  />
+                  <Label className="text-white/80 text-sm">Descontar del subtotal</Label>
+                </Flex>
+              )}
               <LabelInputForm<ICurrentAccountEntityFront> name="leave" label="Deje" type="number" />
             </FlexCol>
           </Flex>
 
-          <Flex className="h-60 gap-1 sm:gap-3 ">
-            <FlexCol>
-              <span className="text-nowrap">Tickets a liquidar</span>
-              <Table className="overflow-hidden">
-                <TableHeader className="border overflow-hidden">
-                  <TableRow>
-                    <TableHead>Número </TableHead>
-                    <TableHead>Monto </TableHead>
-                  </TableRow>
-                </TableHeader>
+          <Flex className="gap-1 sm:gap-3 flex-col sm:flex-row mt-2">
+            <FlexCol className="flex-1 min-w-0">
+              <span className="text-nowrap text-sm mb-1">Tickets a liquidar</span>
+              <div className="h-48 sm:h-60 overflow-y-auto">
+                <Table className="overflow-hidden">
+                  <TableHeader className="border overflow-hidden">
+                    <TableRow>
+                      <TableHead>Número </TableHead>
+                      <TableHead>Monto </TableHead>
+                    </TableRow>
+                  </TableHeader>
 
-                <TableBody className="border">
-                  {isLoadingTickets ? (
-                    <TableRow>
-                      <TableCell colSpan={3}>
-                        <SkeletonList />
-                      </TableCell>
-                    </TableRow>
-                  ) : tickets?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={14} className="text-center">
-                        <FlexCol className="items-center justify-center gap-1">
-                          <Text size="lg" weight="semibold">No se encontraron tickets</Text>
-                        </FlexCol>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    tickets?.map((ticket: ITicketEntityFront) => (
-                      <TableRow key={ticket.ticket_id}>
-                        <TableCell>{ticket.ticket_number}</TableCell>
-                        <TableCell>{ticket.total}</TableCell>
+                  <TableBody className="border">
+                    {isLoadingTickets ? (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <SkeletonList />
+                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : tickets?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={14} className="text-center">
+                          <FlexCol className="items-center justify-center gap-1">
+                            <Text size="lg" weight="semibold">No se encontraron tickets</Text>
+                          </FlexCol>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      tickets?.map((ticket: ITicketEntityFront) => (
+                        <TableRow key={ticket.ticket_id}>
+                          <TableCell>{ticket.ticket_number}</TableCell>
+                          <TableCell>{ticket.total}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </FlexCol>
-            <FlexCol>
-              <span className="text-nowrap">Aciertos a liquidar</span>
-              <Table className="overflow-hidden">
-                <TableHeader className="border overflow-hidden">
-                  <TableRow>
-                    <TableHead>Jugada </TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Quiniela </TableHead>
-                    <TableHead>Turno</TableHead>
-                    <TableHead>Aciertos</TableHead>
-                    <TableHead>Premio</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <FlexCol className="flex-1 min-w-0">
+              <span className="text-nowrap text-sm mb-1">Aciertos a liquidar</span>
+              <div className="h-48 sm:h-60 overflow-y-auto overflow-x-auto">
+                <Table className="overflow-hidden">
+                  <TableHeader className="border overflow-hidden">
+                    <TableRow>
+                      <TableHead>Jugada </TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Quiniela </TableHead>
+                      <TableHead>Turno</TableHead>
+                      <TableHead>Aciertos</TableHead>
+                      <TableHead>Premio</TableHead>
+                    </TableRow>
+                  </TableHeader>
 
-                <TableBody className="border">
-                  {isLoadingBets ? (
-                    <TableRow>
-                      <TableCell colSpan={3}>
-                        <SkeletonList />
-                      </TableCell>
-                    </TableRow>
-                  ) : bets?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={14} className="text-center">
-                        <FlexCol className="items-center justify-center gap-1">
-                          <Text size="lg" weight="semibold">
-                            No se encontraron jugadas ganadoras
-                          </Text>
-                        </FlexCol>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    bets?.map((bet: IBetEntityFront) => (
-                      <TableRow key={bet.ticket_id}>
-                        <TableCell>{bet.number}</TableCell>
-                        <TableCell>{bet.amount}</TableCell>
-                        <TableCell>{betPlaceDictionary[bet.place]}</TableCell>
-                        <TableCell>{bet.lottery.name}</TableCell>
-                        <TableCell>{bet.schedule.name}</TableCell>
-                        <TableCell>{bet.hits}</TableCell>
-                        <TableCell>{bet.prize}</TableCell>
+                  <TableBody className="border">
+                    {isLoadingBets ? (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <SkeletonList />
+                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : bets?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={14} className="text-center">
+                          <FlexCol className="items-center justify-center gap-1">
+                            <Text size="lg" weight="semibold">
+                              No se encontraron jugadas ganadoras
+                            </Text>
+                          </FlexCol>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      bets?.map((bet: IBetEntityFront) => (
+                        <TableRow key={bet.ticket_id}>
+                          <TableCell>{bet.number}</TableCell>
+                          <TableCell>{bet.amount}</TableCell>
+                          <TableCell>{betPlaceDictionary[bet.place]}</TableCell>
+                          <TableCell>{bet.lottery.name}</TableCell>
+                          <TableCell>{bet.schedule.name}</TableCell>
+                          <TableCell>{bet.hits}</TableCell>
+                          <TableCell>{bet.prize}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </FlexCol>
           </Flex>
           <Flex className="justify-center gap-2 mt-6 flex-col sm:flex-row w-full px-2 sm:px-4">

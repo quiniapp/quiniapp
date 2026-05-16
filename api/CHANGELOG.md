@@ -4,6 +4,60 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-05-16
+
+#### Current Account
+- **Leave in subtotal drag bug**: When `p_leave_in_subtotal = TRUE`, drag was incorrectly recalculated as `prev_drag + subtotal` (where subtotal already had leave deducted), reducing the drag carry-over by the leave amount
+  - Fix: drag always stored as `prev_drag + revenue` regardless of `p_leave_in_subtotal`; only `subtotal` absorbs the leave deduction
+  - Migration: `api/supabase/migrations/20260516140000_fix_leave_in_subtotal_drag.sql`
+  - Functions fixed: `update_current_account_recompute`, `calculate_current_account`
+
+### Added - 2026-05-16
+
+#### Current Account
+- **Leave in subtotal**: New `leave_in_subtotal=true` query param on `PUT /api/private/current_account/:id`
+  - When enabled: stores `subtotal = revenue - leave` and `drag = prev_drag + revenue` (leave absorbed in subtotal only)
+  - Total changes because subtotal changes; drag carries full revenue forward to subsequent days
+  - RPC: `update_current_account_recompute` updated with `p_leave_in_subtotal` param
+  - Files: `api/src/current-account/route/current-account.route.ts`, `controller/current-account.controller.ts`, `repository/current-account.repository.ts`
+
+### Added - 2026-05-16 (Security)
+
+#### CSRF Protection
+- **CSRF middleware**: `api/src/middlewares/csrf.middleware.ts` — validates `X-Requested-With: XMLHttpRequest` on all state-changing requests (POST/PUT/PATCH/DELETE)
+  - Returns 403 `FORBIDDEN` if header is absent
+  - Safe methods (GET/HEAD/OPTIONS) bypass the check
+  - Applied globally in `api/src/index.ts` after `cookieParser()`
+- **Hard-cap rate limiters**: Added permissive `express-rate-limit` alongside slow-down to satisfy CodeQL `js/missing-rate-limiting`
+  - Limits: login 100/15min, auth 500/15min, public/private 2000/15min
+  - All configurable via env vars (`RATE_LIMIT_*_MAX`)
+  - Files: `api/src/config/rate-limit.config.ts`, `api/src/middlewares/rate-limit.middleware.ts`, `api/src/index.ts`
+
+### Changed - 2026-05-16
+
+#### Auth
+- **Rate Limiting**: Replaced all rate limiters with silent slow-down middleware (`express-slow-down`)
+  - Removed: `loginRateLimiter`, `authRateLimiter`, `publicApiRateLimiter`, `privateApiRateLimiter`
+  - Added: slow-down per tier (login: 5 req/5s → 5s delay; auth: 15 req/10s → 3s; public: 40 req/10s → 2s; private: 80 req/10s → 2s)
+  - Files: `api/src/config/rate-limit.config.ts`, `api/src/middlewares/rate-limit.middleware.ts`, `api/src/index.ts`
+- **Account Lockout**: Removed account locking on failed password attempts
+  - Wrong password no longer increments failed attempt counter or locks account
+  - Users can enter wrong password unlimited times without any block
+  - Removed: `MAX_FAILED_ATTEMPTS`, `LOCKOUT_DURATION` from `session.config.ts`
+  - Files: `api/src/auth/controller/auth.controller.ts`, `api/src/config/session.config.ts`
+
+### Changed - 2026-05-02
+
+#### Liquidación Individual — campos manuales expandidos
+
+- **`api/src/current-account/controller/current-account.controller.ts`**: `AllowedManualKeys` ahora incluye `pass`, `successes`, `drag`, `revenue`. El payload de `updateCurrentAccountHandler` pasa estos campos al RPC si vienen en el request.
+- **`api/supabase/migrations/20260502120000_update_rpc_manual_override_pass_successes_drag_revenue.sql`**: RPC `update_current_account_recompute` acepta overrides manuales para `pass` (reemplaza cálculo desde tickets), `successes` (reemplaza premios desde tickets), `revenue` (reemplaza subtotal calculado), `drag` (reemplaza cálculo por fee_plus). Si no vienen en `p_props`, el comportamiento anterior se mantiene.
+### Fixed - 2026-05-06
+
+#### Archive tickets — jugadas no cargaban en terminal-ticket para tickets viejos
+
+- **`api/src/bet/repository/bet.repository.ts`** — `getAllBets()`: Al buscar el `ticket_id` por `ticket_number`, ahora usa `getTableName(date, 'tickets')` para consultar `tickets_archive` cuando la fecha es antigua. Antes siempre consultaba `tickets`, retornando `null` para tickets archivados y por ende 0 jugadas. También cambia `.single()` por `.maybeSingle()` para evitar error cuando no existe.
+
 ### Fixed - 2026-05-06
 
 #### Archive tickets — `bet_order` faltante en RPC y pago desde archivo
