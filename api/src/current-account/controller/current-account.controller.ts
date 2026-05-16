@@ -49,14 +49,16 @@ export class CurrentAccountController {
     organization_id: string,
     date?: string,
     leave?: boolean,
-    liquidated?: boolean
+    liquidated?: boolean,
+    leaveInSubtotal?: boolean
   ) => {
     try {
       const results = await this.repository.calculateCurrentAccountHandler(
         organization_id,
         date,
         leave,
-        liquidated
+        liquidated,
+        leaveInSubtotal
       );
 
       await this.repository.cascadeCurrentAccountFromDateHandler(organization_id, date);

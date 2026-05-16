@@ -7,6 +7,7 @@ type BulkVars = {
   updateCurrentAccount: Map<string, editPayloadObject>;
   date: string; // en formato DD-MM-YYYY
   leave?: boolean;
+  leaveInSubtotal?: boolean;
 };
 
 type BulkResult = {
@@ -18,9 +19,9 @@ async function bulkUpdateCurrentAccount({
   updateCurrentAccount,
   date,
   leave,
+  leaveInSubtotal,
 }: BulkVars): Promise<BulkResult> {
-  
-  const url = `${BACKEND_ROUTES.current_account.bulk}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}`;
+  const url = `${BACKEND_ROUTES.current_account.bulk}?date=${encodeURIComponent(date)}${leave ? '&leave=true' : ''}${leaveInSubtotal ? '&leave_in_subtotal=true' : ''}`;
   const body = {
     updateCurrentAccount: Object.fromEntries(updateCurrentAccount), // { [id]: {claims, paid, collections} }
   };
