@@ -6,6 +6,11 @@ All notable changes to the Web workspace are documented in this file.
 
 ### Added - 2026-05-16
 
+#### Current Account — "Descontar del subtotal" al liquidar deje
+
+- **`web/src/components/modals/UserCurrentAccountModal.tsx`**: Nuevo checkbox "Descontar del subtotal" que aparece cuando "Liquidar deje" está activo. Al marcar ambos, envía `leave_in_subtotal=true` al backend.
+- **`web/src/hooks/mutations/current-account/useUpdateCurrentAccoutnByUser.ts`**: Agregado `leaveInSubtotal` a `UpdateVars` y al URL de la petición.
+
 #### Settings — cleanup button conectado
 
 - **`web/src/hooks/mutations/settings/useCleanupOldData.ts`**: Hook `useMutation` que llama `POST /api/private/settings/cleanup`. Invalida `storageStatus` en `onSuccess`.

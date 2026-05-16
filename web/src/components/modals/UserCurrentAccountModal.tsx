@@ -35,6 +35,7 @@ const UserCurrentAccountModal = ({
 }: UserCurrentAccountModalProps) => {
   if (!isOpen) return null;
   const [calcLeave, setCalcLeave] = useState<boolean>(false);
+  const [leaveInSubtotal, setLeaveInSubtotal] = useState<boolean>(false);
   const methods = useForm<ICurrentAccountEntityFront>({
     values: currentAccount
       ? { ...currentAccount }
@@ -83,15 +84,17 @@ const UserCurrentAccountModal = ({
       current_account_id: currentAccount?.current_account_id ?? '',
       updateCurrentAccount: values,
       leave: calcLeave,
+      leaveInSubtotal: calcLeave && leaveInSubtotal,
     });
     onClose();
   };
   const handleCalcLeave = (enable: boolean) => {
     if (enable) {
       setValue('leave', 0);
+      setLeaveInSubtotal(false);
     } else {
       const feePlus = cashier?.user_type === USER_TYPE.CASHIER ? cashier.fee_plus : 0;
-      setValue('leave', getValues('drag') * feePlus / 100);
+      setValue('leave', (getValues('drag') * feePlus) / 100);
     }
     setCalcLeave(!enable);
   };
@@ -170,6 +173,15 @@ const UserCurrentAccountModal = ({
                 />
                 <Label>Liquidar deje</Label>
               </Flex>
+              {calcLeave && (
+                <Flex className="items-center gap-1 sm:gap-3 ml-4" onClick={() => {}}>
+                  <Checkbox
+                    checked={leaveInSubtotal}
+                    onClick={() => setLeaveInSubtotal((v) => !v)}
+                  />
+                  <Label className="text-white/80 text-sm">Descontar del subtotal</Label>
+                </Flex>
+              )}
               <LabelInputForm<ICurrentAccountEntityFront> name="leave" label="Deje" type="number" />
             </FlexCol>
           </Flex>
