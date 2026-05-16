@@ -4,6 +4,16 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-05-16 (Rate Limiting)
+
+#### Rate Limit Tuning — CGNAT tolerance
+- **`api/src/config/rate-limit.config.ts`**: Adjusted hard caps and slow-down thresholds to prevent false positives for users sharing IPs via CGNAT
+  - PRIVATE hard cap: 2000 → 5000 / 5 min (was 15 min)
+  - PUBLIC hard cap: 2000 → 3000 / 5 min (was 15 min)
+  - LOGIN slow-down: 5 req/5s → 20 req/30s (wider window for fast typers)
+  - PUBLIC slow-down: 40 req/10s → 60 req/10s
+  - Why: lottery agencies in same ISP area share the same public IP (CGNAT); previous limits triggered disconnections under concurrent normal usage
+
 ### Fixed - 2026-05-16
 
 #### Current Account
