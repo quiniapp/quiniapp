@@ -21,8 +21,7 @@ import {
   publicSlowDown,
   privateSlowDown,
 } from './middlewares/rate-limit.middleware';
-import expressSession from 'express-session';
-import lusca from 'lusca';
+import { csrfProtection } from './middlewares/csrf.middleware';
 
 import {
   PORT,
@@ -115,19 +114,8 @@ app.use(morgan(morganFormat));
 
 app.use(cookieParser());
 
-// ---- Session (required by lusca CSRF) ----
-app.use(
-  expressSession({
-    secret: process.env.SESSION_SECRET ?? 'session-dev-secret-change-in-prod',
-    resave: false,
-    saveUninitialized: true,
-    name: 'sid',
-    cookie: { httpOnly: true, sameSite: 'lax', secure: IS_PRODUCTION },
-  })
-);
-
-// ---- CSRF (lusca angular mode: sets XSRF-TOKEN cookie, validates X-XSRF-TOKEN header) ----
-app.use(lusca.csrf({ angular: true }));
+// ---- CSRF (stateless: validates X-Requested-With: XMLHttpRequest header) ----
+app.use(csrfProtection);
 
 // ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
 // slow-down: adds delay on repeated requests (silent DDoS mitigation)
