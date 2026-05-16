@@ -44,6 +44,7 @@ class ApiClient {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
       });
 
@@ -97,6 +98,7 @@ class ApiClient {
         credentials: 'include', // Siempre incluir cookies
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           ...fetchConfig.headers,
         },
         ...fetchConfig,
@@ -230,14 +232,22 @@ class ApiClient {
   }
 
   async fetchRaw(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    const res = await fetch(input, { credentials: 'include', ...init });
+    const merged: RequestInit = {
+      ...init,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(init?.headers as Record<string, string> | undefined),
+      },
+    };
+
+    const res = await fetch(input, { credentials: 'include', ...merged });
     if (res.status !== 401) return res;
 
     if (this.isRefreshing) {
       await new Promise<void>((resolve, reject) => {
         this.refreshQueue.push({ resolve: () => resolve(), reject });
       });
-      return fetch(input, { credentials: 'include', ...init });
+      return fetch(input, { credentials: 'include', ...merged });
     }
 
     this.isRefreshing = true;
@@ -245,7 +255,7 @@ class ApiClient {
       const success = await this.refreshAccessToken();
       if (success) {
         this.processPendingRequests(null);
-        return fetch(input, { credentials: 'include', ...init });
+        return fetch(input, { credentials: 'include', ...merged });
       } else {
         dispatchAuthExpired();
         const error = new Error('Sesión expirada');

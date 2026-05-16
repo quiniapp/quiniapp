@@ -21,6 +21,7 @@ import {
   publicSlowDown,
   privateSlowDown,
 } from './middlewares/rate-limit.middleware';
+import { csrfProtection } from './middlewares/csrf.middleware';
 
 import {
   PORT,
@@ -105,13 +106,11 @@ const morganFormat = IS_LOCAL
 
 app.use(morgan(morganFormat));
 
-// CSRF Protection Note:
-// We use sameSite='lax' cookie policy (configured in config/session.config.ts) which provides
-// automatic CSRF protection for cookie-based authentication. This is sufficient for our architecture
-// where the frontend uses a Vercel proxy, making all requests same-origin from the browser's perspective.
-// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
-// lgtm[js/missing-token-validation]
 app.use(cookieParser());
+
+// CSRF protection: all state-changing requests must include X-Requested-With: XMLHttpRequest.
+// Combined with sameSite='lax' cookies, this prevents cross-origin form submissions.
+app.use(csrfProtection);
 
 // ---- Rate Limiters (ANTES de body parsers, más específicos primero) ----
 // slow-down: adds delay on repeated requests (silent DDoS mitigation)

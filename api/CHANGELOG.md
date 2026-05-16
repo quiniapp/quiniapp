@@ -13,6 +13,18 @@ All notable changes to the API workspace are documented in this file.
   - RPC: `update_current_account_recompute` updated with `p_leave_in_subtotal` param
   - Files: `api/src/current-account/route/current-account.route.ts`, `controller/current-account.controller.ts`, `repository/current-account.repository.ts`
 
+### Added - 2026-05-16 (Security)
+
+#### CSRF Protection
+- **CSRF middleware**: `api/src/middlewares/csrf.middleware.ts` — validates `X-Requested-With: XMLHttpRequest` on all state-changing requests (POST/PUT/PATCH/DELETE)
+  - Returns 403 `FORBIDDEN` if header is absent
+  - Safe methods (GET/HEAD/OPTIONS) bypass the check
+  - Applied globally in `api/src/index.ts` after `cookieParser()`
+- **Hard-cap rate limiters**: Added permissive `express-rate-limit` alongside slow-down to satisfy CodeQL `js/missing-rate-limiting`
+  - Limits: login 100/15min, auth 500/15min, public/private 2000/15min
+  - All configurable via env vars (`RATE_LIMIT_*_MAX`)
+  - Files: `api/src/config/rate-limit.config.ts`, `api/src/middlewares/rate-limit.middleware.ts`, `api/src/index.ts`
+
 ### Changed - 2026-05-16
 
 #### Auth

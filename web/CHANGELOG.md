@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-05-16 (Security)
+
+#### CSRF Header
+- **`web/src/lib/apiClient.ts`**: All outbound requests now include `X-Requested-With: XMLHttpRequest` header
+  - Added to `request()` default headers (covers all `get/post/put/delete/patch` calls)
+  - Added to `fetchRaw()` merged headers (covers all `fetchWithAuth` hooks)
+  - Added to `refreshAccessToken()` direct fetch call
+
 ### Added - 2026-05-16
 
 #### Current Account — "Descontar del subtotal" al liquidar deje
