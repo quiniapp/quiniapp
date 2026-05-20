@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.status(resp.status);
 
   resp.headers.forEach((value, key) => {
-    if (!['transfer-encoding', 'content-length', 'set-cookie'].includes(key.toLowerCase())) {
+    if (!['transfer-encoding', 'content-length', 'set-cookie', 'content-encoding'].includes(key.toLowerCase())) {
       res.setHeader(key, value);
     }
   });
