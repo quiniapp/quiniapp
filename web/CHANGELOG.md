@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-06-11
+
+#### Dependencies
+- **`@vercel/speed-insights`**: Actualizado de `^1.2.0` a `^2.0.0`
+  - API sin cambios: `<SpeedInsights />` desde `@vercel/speed-insights/react` (verificado: export `/react` se mantiene en v2, compatible con React 18)
+  - v2 soporta `sampleRate` y `beforeSend` para control de muestreo/costos
+  - Build de producción verificado sin errores
+
 ### Fixed - 2026-05-16 (Auth)
 
 #### Rate Limit 429 Resilience
