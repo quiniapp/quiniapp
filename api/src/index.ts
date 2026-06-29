@@ -11,6 +11,8 @@ import { startSessionMonitorJob, flushActivityCache } from './session/job/sessio
 import { startDeviceStatsJob, flushDeviceStats } from './analytics/job/device-stats.job';
 import { getCronService } from './cron/service/cron.service';
 import { initializeActiveDaysCache } from './archive/helper/archive-helper';
+import { startKeepWarmJob } from './utils/keep-warm.job';
+import { healthRouter } from './health/health.route';
 import {
   loginRateLimit,
   authRateLimit,
@@ -33,6 +35,8 @@ import {
   FRONT_URL_DEV,
   ALLOW_VERCEL_PREVIEWS,
   CORS_EXTRA_ORIGINS,
+  ENABLE_BACKGROUND_JOBS,
+  INSTANCE_NAME,
 } from 'api/envs';
 import { URL } from 'url';
 import { ARCHIVE_DAYS_TO_KEEP } from 'api/envs';
@@ -84,6 +88,10 @@ app.use((req, res, next) => {
 });
 app.use(corsMiddleware);
 app.options('*', corsMiddleware); // preflight
+
+// ---- Health (público, sin auth/csrf/rate-limit/logging) ----
+// Antes de morgan para no llenar logs con los pings del keep-warm/uptime monitors.
+app.use(healthRouter);
 
 // ---- Middlewares globales ----
 // Custom Morgan token para mostrar info de errores en logs
@@ -158,12 +166,15 @@ app.use(errorHandler);
 // Solo iniciar servidor si no estamos en entorno de test
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, async () => {
-    console.log(`Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}]`);
+    console.log(
+      `Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}] [instance=${INSTANCE_NAME}]`
+    );
     console.log('[CORS] allowed origins:', baseAllowedOrigins);
     if (ALLOW_VERCEL_PREVIEWS) console.log('[CORS] Vercel previews habilitadas (*.vercel.app)');
 
-    // Start session cleanup job (runs every hour)
-    startSessionCleanupJob();
+    // ---- Flush jobs por-instancia (corren en CADA instancia) ----
+    // Cada instancia persiste su propio buffer en memoria de los requests que sirvió.
+    // Esto importa cuando el backup (Render) recibe tráfico durante un failover.
 
     // Start session monitor job (flushes activity cache + checks revocations every 30 min)
     startSessionMonitorJob();
@@ -174,10 +185,22 @@ if (process.env.NODE_ENV !== 'test') {
     // Initialize active days cache (for query routing)
     await initializeActiveDaysCache();
 
-    // Start archive cron job (runs daily at 3:00 AM Argentina Time)
-    const cronService = getCronService(ARCHIVE_DAYS_TO_KEEP);
-    cronService.startArchiveCron();
-    console.log('[Archive] Cron job initialized - Daily archiving of old bets/tickets');
+    // ---- Jobs singleton (deben correr en UNA sola instancia: la main) ----
+    // Gated por ENABLE_BACKGROUND_JOBS para evitar doble ejecución con el backup activo.
+    if (ENABLE_BACKGROUND_JOBS) {
+      // Start session cleanup job (runs every hour)
+      startSessionCleanupJob();
+
+      // Start archive cron job (runs daily at 3:00 AM Argentina Time)
+      const cronService = getCronService(ARCHIVE_DAYS_TO_KEEP);
+      cronService.startArchiveCron();
+      console.log('[Archive] Cron job initialized - Daily archiving of old bets/tickets');
+
+      // Keep the backup instance warm by pinging its /health (no-op if BACKUP_HEALTH_URL unset)
+      startKeepWarmJob();
+    } else {
+      console.log('[Jobs] ENABLE_BACKGROUND_JOBS=false — singleton jobs disabled (passive backup)');
+    }
   });
 }
 

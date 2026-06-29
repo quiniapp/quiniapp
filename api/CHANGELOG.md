@@ -4,6 +4,29 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-06-27 (High Availability)
+
+#### Backup backend / transparent failover (Railway main + Render backup)
+- **Health endpoints** — `api/src/health/health.route.ts` (mounted in `api/src/index.ts` before
+  auth/csrf/rate-limit/logging):
+  - `GET /health` — shallow liveness `{ status, instance, uptime }`. Used by the keep-warm pinger
+    and uptime monitors. Reachable directly on the backend host, not only via the Vercel proxy.
+  - `GET /health/deep` — verifies Supabase connectivity (cheap `SELECT`), returns 200/503.
+- **Job gating** — `api/src/index.ts`: singleton jobs (archive cron + session cleanup) now run only
+  when `ENABLE_BACKGROUND_JOBS=true`, so the passive backup doesn't double-execute them. Per-instance
+  flush jobs (session monitor + device stats) keep running on every instance so each persists the
+  buffer of requests it served (matters when the backup serves traffic during a failover).
+- **Keep-warm job** — `api/src/utils/keep-warm.job.ts`: the main instance pings the backup's `/health`
+  every 10 min (gated by `ENABLE_BACKGROUND_JOBS`, no-op when `BACKUP_HEALTH_URL` unset) to keep
+  Render's free tier from sleeping.
+- **New envs** — `api/envs.ts` + `.env.example`: `INSTANCE_NAME` (default `main`),
+  `ENABLE_BACKGROUND_JOBS` (default `true`), `BACKUP_HEALTH_URL` (optional).
+- **Production start script** — `api/package.json`: added `start: tsx src/index.ts` (no compiled
+  dist/ exists and the project uses tsconfig path aliases, so tsx is the runtime, same as dev).
+- **Deploy** — `render.yaml` (repo root): free-tier web service for the backup with
+  `ENABLE_BACKGROUND_JOBS=false`. **Requires identical JWT secrets, Supabase config and cookie
+  settings as Railway** so sessions survive the switch.
+
 ### Changed - 2026-05-16 (Rate Limiting)
 
 #### Rate Limit Tuning — CGNAT tolerance

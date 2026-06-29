@@ -1,0 +1,64 @@
+# Render Blueprint — backup backend for QuiniApp (free tier).
+#
+# Passive standby for the main Railway backend. Shares the SAME Supabase DB and the SAME JWT
+# secrets so sessions minted by Railway validate here (transparent failover via the Vercel proxy).
+#
+# NOTE: `npm install` (not `npm ci --omit=dev`) is used on purpose — the start command runs `tsx`,
+# which is a devDependency. The project has no compiled dist/ output and relies on tsconfig path
+# aliases, so tsx is the runtime (same as local dev).
+services:
+  - type: web
+    name: quiniapp-api-backup
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm --workspace api run start
+    healthCheckPath: /health
+    envVars:
+      # ---- HA / instance config ----
+      - key: INSTANCE_NAME
+        value: render
+      - key: ENABLE_BACKGROUND_JOBS # passive backup: do NOT run singleton jobs (archive/cleanup)
+        value: "false"
+
+      # ---- Environment flags ----
+      - key: ENVIROMENT
+        value: PRODUCTION
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_ENVIROMENT
+        value: REMOTE
+      - key: FRONT_URL_ENVIROMENT
+        value: PRODUCTION
+
+      # ---- Cookies (MUST match Railway so tokens are accepted across instances) ----
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAME_SITE
+        value: lax
+      - key: COOKIE_DOMAIN
+        value: "" # host-only; cookies live on the Vercel domain via the proxy
+
+      # ---- URL of this Render service (required by envs.ts BACKEND_URL) ----
+      - key: URL
+        sync: false # e.g. https://quiniapp-api-backup.onrender.com
+
+      # ---- Frontend / CORS (same value as Railway) ----
+      - key: FRONT_URL_PRODUCTION
+        sync: false
+
+      # ---- Secrets: set in the Render dashboard, identical to Railway ----
+      - key: JWT_SECRET_ACCESS
+        sync: false
+      - key: JWT_SECRET_REFRESH
+        sync: false
+      - key: JWT_SECRET_SUPABASE
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DEFAULT_ORG_ID
+        sync: false

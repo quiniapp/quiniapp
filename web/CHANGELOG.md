@@ -4,6 +4,23 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-06-27 (High Availability)
+
+#### Transparent backend failover in the Vercel proxy
+- **`web/api/api-proxy.ts`**: the serverless proxy now fails over from the main backend
+  (`API_BASE_URL`, Railway) to a backup (`API_BASE_URL_BACKUP`, Render) when the main is
+  unreachable. The switch is invisible to the browser — same-origin cookies are preserved, so the
+  session survives (both backends share Supabase + JWT secrets).
+  - Conservative failover: GET/HEAD retry on any primary failure (connection error, 4s timeout, 5xx);
+    mutations (POST/PUT/PATCH/DELETE) retry **only** on connection-level errors that prove the
+    request never reached the primary (ECONNREFUSED/DNS/TLS) — never on timeout/5xx — to avoid
+    duplicate writes.
+  - Request body is buffered once and reused across both attempts.
+  - In-instance circuit breaker skips the primary for 30s after a connection failure (avoids paying
+    the timeout on every request during a sustained outage).
+  - Returns `502 { error: { code: 'BACKEND_UNAVAILABLE' } }` when both backends are unreachable.
+- **New env (Vercel)**: `API_BASE_URL_BACKUP` = public URL of the Render backup.
+
 ### Changed - 2026-06-11
 
 #### Dependencies
