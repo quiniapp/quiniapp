@@ -77,3 +77,20 @@ function must<T extends string | undefined>(val: T, name: string): string {
 export const DEFAULT_ORG_ID = must(process.env.DEFAULT_ORG_ID, 'DEFAULT_ORG_ID');
 
 export const ARCHIVE_DAYS_TO_KEEP = parseInt(process.env.ARCHIVE_DAYS_TO_KEEP || '2');
+
+// =====================================
+// High Availability (Railway main + Render backup)
+// =====================================
+
+// Human-readable identifier for this instance (e.g. 'railway' | 'render'). Surfaced by /health.
+export const INSTANCE_NAME = process.env.INSTANCE_NAME ?? 'main';
+
+// Whether this instance runs the singleton background jobs (archive cron, session cleanup).
+// Default true so the existing single-instance deploy is unaffected. Set to false on the
+// passive backup (Render) so those jobs only run on the main (Railway) instance.
+export const ENABLE_BACKGROUND_JOBS =
+  (process.env.ENABLE_BACKGROUND_JOBS ?? 'true').toLowerCase() === 'true';
+
+// Public /health URL of the backup instance. The main instance pings it periodically to keep
+// the Render free tier warm. Optional — keep-warm is skipped when unset.
+export const BACKUP_HEALTH_URL = process.env.BACKUP_HEALTH_URL ?? '';
