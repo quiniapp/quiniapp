@@ -10,6 +10,8 @@ import { USER_TYPE } from '@helper/types/user.type';
 
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
+import { SelectDayToSearch } from '@/components/button/SelectDayToSearch';
 import {
   Select,
   SelectContent,
@@ -29,6 +31,17 @@ const HeaderPlayDetail = () => {
   const { cashier, userNumber, setUserNumber, handleRecreateBet, handleEditTicket } = usePlayDetails();
   const [selectedValue, setSelectedValue] = useState<string>('');
   const { role } = useAuth();
+
+  // Fecha de la jugada (solo roles no-cajero): query param `date`, default hoy
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dateParam = searchParams.get('date') ?? dayjs().format('YYYY-MM-DD');
+
+  const handleDayChange = (date?: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (date) params.set('date', date);
+    else params.delete('date');
+    setSearchParams(params);
+  };
 
   // 👇 Estado local para abrir/cerrar el modal
   const [isRepeatOpen, setIsRepeatOpen] = useState(false);
@@ -70,7 +83,7 @@ const HeaderPlayDetail = () => {
 
   const { data: tickets } = useGetTicketsNumber({
     user_id: cashier?.user_id,
-    date: dayjs().format('YYYY-MM-DD'),
+    date: dateParam,
     enabled: !!cashier?.user_id,
   });
 
@@ -88,8 +101,17 @@ const HeaderPlayDetail = () => {
   return (
     <HeaderSection title={' Realizar Jugadas'} className='gap-2'>
       {role !== USER_TYPE.CASHIER && (
-        <Flex className=" w-full  justify-start sm:justify-end gap-1 sm:gap-2 xl:gap-3 ">
-          <Flex className={'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
+        <Flex className=" w-full flex-wrap items-center justify-start sm:justify-end gap-1 sm:gap-2 xl:gap-3 ">
+          <SelectDayToSearch
+            selectedDay={dateParam}
+            onDayChange={handleDayChange}
+            className="shrink-0"
+          />
+          <Flex
+            className={
+              'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 flex-1 min-w-0 sm:flex-initial sm:w-auto'
+            }
+          >
             <Label htmlFor={'user'} className="hidden sm:inline text-xs sm:text-sm lg:text-base whitespace-nowrap"> Usuario</Label>
             <Input
               type={'number'}

@@ -5,6 +5,8 @@ import { IUserEntityFront, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
+import { dateRegex } from '@helper/functions/dateRegex';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
@@ -20,6 +22,19 @@ import { MakePlaysContext, MakePlaysContextType } from '../context/MakePlaysCont
 export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user } = useAuth();
   const { isScheduleEnabled } = useClockFunctions();
+  const [searchParams] = useSearchParams();
+
+  // Fecha del ticket: roles no-cajero pueden backdatear via query param `date`.
+  // Cajeros y valores inválidos/futuros caen a hoy (el server re-valida igual).
+  const getEffectiveDate = useCallback(() => {
+    const today = dayjs().format('YYYY-MM-DD');
+    if (user?.user_type === USER_TYPE.CASHIER) return today;
+    const rawDate = searchParams.get('date');
+    if (rawDate && dateRegex.test(rawDate) && !dayjs(rawDate).isAfter(dayjs(), 'day')) {
+      return rawDate;
+    }
+    return today;
+  }, [searchParams, user?.user_type]);
 
   // ---- state
   const [ticketId, setTicketId] = useState<string | undefined>(undefined);
@@ -191,10 +206,9 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
 
     isSubmittingRef.current = true;
     setIsEnabledCreateBet(false);
-    const today = dayjs().format('YYYY-MM-DD');
 
     const payload = {
-      date: today,
+      date: getEffectiveDate(),
       user_id: cashier?.user_id ?? user!.user_id,
       user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
       user_number: cashier?.number ?? user!.number,
@@ -287,7 +301,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
         }
       );
     }
-  }, [bets, cashier, createTicket, editTicket, ticketId, user, detectClosedSchedules]);
+  }, [bets, cashier, createTicket, editTicket, ticketId, user, detectClosedSchedules, getEffectiveDate]);
 
   const handleEditTicket = useCallback((ticket_id: string) => {
     setTicketId(ticket_id);
@@ -351,10 +365,9 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       clientRequestIdRef.current = crypto.randomUUID();
     }
     setIsEnabledCreateBet(false);
-    const today = dayjs().format('YYYY-MM-DD');
 
     const payload = {
-      date: today,
+      date: getEffectiveDate(),
       user_id: cashier?.user_id ?? user!.user_id,
       user_name: `${cashier?.name ?? user!.name}-${cashier?.number ?? user!.number}`,
       user_number: cashier?.number ?? user!.number,
@@ -453,6 +466,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
     computeTotal,
     createTicket,
     editTicket,
+    getEffectiveDate,
   ]);
 
   const isEnabledCreateBetByAdmin = useMemo(

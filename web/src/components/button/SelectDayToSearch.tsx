@@ -23,7 +23,7 @@ export function SelectDayToSearch({
   selectedDay,
   onDayChange,
   className,
-  toDate,
+  toDate = dayjs().toDate(),
 }: SelectDayToSearchProps) {
   // Maintain internal Date state synced with selectedDay prop
   const [date, setDate] = useState<Date | undefined>(
@@ -69,11 +69,16 @@ export function SelectDayToSearch({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className="w-auto max-w-[calc(100vw-16px)] p-0"
+        align="start"
+        collisionPadding={8}
+      >
         <Suspense fallback={null}>
           <Calendar
             mode="single"
             selected={date}
+            defaultMonth={date}
             onSelect={handleSelect}
             locale={es}
             toDate={toDate}

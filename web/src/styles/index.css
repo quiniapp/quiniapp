@@ -102,6 +102,17 @@
   tr:nth-child(even) {
     background-color: #007bff11;
   }
+
+  /* El calendario (react-day-picker) usa <table>: sin el padding global
+     las celdas quedan en 36px y la tabla entra en viewports de 320px.
+     También se anula el rayado de filas pares de las tablas de datos. */
+  .rdp th,
+  .rdp td {
+    padding: 0 !important;
+  }
+  .rdp tr:nth-child(even) {
+    background-color: transparent;
+  }
   thead {
     background-color: var(--bg-card);
     height: 36px;

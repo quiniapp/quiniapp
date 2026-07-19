@@ -1,8 +1,15 @@
-# Changelog
+# Changelog 
 
 All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
+
+### Added - 2026-07-19 (Backdated tickets)
+
+#### `ticketBase` honra la fecha enviada para roles no-cajero
+- **`api/src/ticket/helper/ticketBase.ts`**: nueva opción `{ allowCustomDate }`. Cuando es `true` y el `date` del payload cumple `YYYY-MM-DD` (`dateRegex` de helper) y no es futuro (comparado contra hoy en `America/Argentina/Buenos_Aires`), se persiste esa fecha en `date`; en cualquier otro caso se fuerza hoy (comportamiento previo). `created_at` y `ticket_number` siguen generándose SIEMPRE con el timestamp real de creación (rastro de auditoría).
+- **`api/src/ticket/controller/ticket.controller.ts`**: `create` pasa `allowCustomDate: !isCashier` — un cajero nunca puede backdatear aunque manipule el payload; defensa en profundidad respecto del guard de UI.
+- Sin migración SQL: la RPC `create_ticket_with_bets` ya insertaba `(ticket->>'date')::date`; el server era quien la pisaba.
 
 ### Added - 2026-07-19 (Log Sanitization)
 
