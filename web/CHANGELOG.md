@@ -6,6 +6,9 @@ All notable changes to the Web workspace are documented in this file.
 
 ### Changed - 2026-07-19 (Calendario mobile)
 
+#### Header de Realizar Jugadas en pantallas chicas
+- **`web/src/features/make-plays/header-play-detail.tsx`**: el header no-cajero desbordaba en mobile y el select de Ticket quedaba fuera de pantalla. Ahora la fila hace `flex-wrap`: fecha + buscador de usuario en la primera línea (el nombre del cajero trunca con `min-w-0`), select de Ticket a ancho completo en la segunda. En `sm:`+ queda igual que antes.
+
 #### Targets táctiles más grandes en el calendario
 - **`web/src/components/ui/calendar.tsx`**: en mobile los días pasan de 32px (`size-8`) a 40px (`size-10`), flechas de navegación a `size-9`, texto de días/encabezados/caption más grande y caption capitalizado. En `sm:` y superior mantiene el tamaño compacto anterior. Aplica a todos los date pickers (usan este componente base).
 - **`web/src/components/button/SelectDayToSearch.tsx`**: `collisionPadding={8}` en el `PopoverContent` para que el calendario no quede pegado al borde de la pantalla en viewports angostos.
