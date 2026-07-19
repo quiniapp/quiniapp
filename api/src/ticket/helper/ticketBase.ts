@@ -2,6 +2,7 @@ import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/reque
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';
+import { dateRegex } from '@helper/functions/dateRegex';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
@@ -9,7 +10,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const ticketBase = (
-  ticket: INewTicketEntity
+  ticket: INewTicketEntity,
+  options?: { allowCustomDate?: boolean }
 ): Omit<INewTicketBaseEntity, 'organization_id'> => {
   const timestamp = dayjs().tz('America/Argentina/Buenos_Aires');
   const ticket_id = uuidv4();
@@ -17,6 +19,15 @@ export const ticketBase = (
   const ticket_number = ticket.user_number != null ? `${base}-${ticket.user_number}` : base;
 
   const total = ticket.bets.reduce((prev, curr) => prev + curr.amount, 0);
+
+  // Roles no-cajero pueden backdatear el ticket; nunca fechas futuras.
+  // created_at y ticket_number siempre reflejan el momento real de creación (auditoría).
+  const serverToday = timestamp.format('YYYY-MM-DD');
+  const useCustomDate =
+    options?.allowCustomDate === true &&
+    typeof ticket.date === 'string' &&
+    dateRegex.test(ticket.date) &&
+    !dayjs(ticket.date).isAfter(serverToday, 'day');
 
   return {
     ...ticket,
@@ -31,6 +42,6 @@ export const ticketBase = (
     deleted_by: null,
     total_prize: 0,
     hits: 0,
-    date: timestamp.format('YYYY-MM-DD'),
+    date: useCustomDate ? ticket.date : serverToday,
   };
 };

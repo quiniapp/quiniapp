@@ -30,7 +30,7 @@ export class TicketController {
     const resolvedProps = isCashier
       ? { ...props, user_id: tokenUser.user.user_id, user_number: tokenUser.user.number }
       : props;
-    const newTicket = ticketBase(resolvedProps);
+    const newTicket = ticketBase(resolvedProps, { allowCustomDate: !isCashier });
     const result = await this.repository.create({
       ...newTicket,
       organization_id,

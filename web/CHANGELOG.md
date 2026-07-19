@@ -4,6 +4,22 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-07-19 (Jugadas con fecha pasada para admin+)
+
+#### Selector de fecha en Realizar Jugadas (solo roles no-cajero)
+- **`web/src/features/make-plays/header-play-detail.tsx`**: nuevo `SelectDayToSearch` visible solo para ADMIN/SUPERADMIN/CAPITALIST/OWNER, manejado por query param `date` (sin param = hoy). Permite crear tickets fechados en el pasado. El select "Ticket" ahora lista los tickets del día elegido (antes siempre hoy).
+- **`web/src/features/make-plays/provider/MakePlaysProvider.tsx`**: los dos builders de payload (`handleCreateBet`, `handleConfirmClosedSchedules`) usan `getEffectiveDate()`: lee el query param `date` para roles no-cajero, con fallback a hoy si falta, es inválido (regex `YYYY-MM-DD` de `@helper/functions/dateRegex`) o es futuro. Cajeros siempre envían hoy (y el server lo fuerza igual).
+
+### Fixed - 2026-07-19 (Calendarios)
+
+#### SelectDayToSearch — mes inicial y cap de fechas futuras
+- **`web/src/components/button/SelectDayToSearch.tsx`**:
+  - `defaultMonth={date}`: al abrir el calendario con una fecha seleccionada de otro mes, ahora muestra ese mes (antes siempre abría en el mes actual, porque react-day-picker v8 sin `defaultMonth`/`month` cae al mes de hoy y el Calendar se monta fresco en cada apertura del Popover).
+  - `toDate` ahora tiene default `dayjs().toDate()`: ningún date picker permite seleccionar fechas futuras aunque el caller no pase `toDate`. Esto capa el calendario de Resultados (`features/results/index.tsx`), el único que no lo pasaba.
+
+### Removed - 2026-07-19
+- **`web/src/features/plays-and-hits/select-day-to-search.tsx`**: duplicado muerto de `SelectDayToSearch` sin ningún import.
+
 ### Added - 2026-06-27 (High Availability)
 
 #### Transparent backend failover in the Vercel proxy

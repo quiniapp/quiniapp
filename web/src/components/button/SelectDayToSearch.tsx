@@ -23,7 +23,7 @@ export function SelectDayToSearch({
   selectedDay,
   onDayChange,
   className,
-  toDate,
+  toDate = dayjs().toDate(),
 }: SelectDayToSearchProps) {
   // Maintain internal Date state synced with selectedDay prop
   const [date, setDate] = useState<Date | undefined>(
@@ -74,6 +74,7 @@ export function SelectDayToSearch({
           <Calendar
             mode="single"
             selected={date}
+            defaultMonth={date}
             onSelect={handleSelect}
             locale={es}
             toDate={toDate}
