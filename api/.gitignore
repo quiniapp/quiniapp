@@ -142,3 +142,6 @@ bun.lockb
 
 # .md locales
 *.mdlogs/
+
+# data dumps
+data

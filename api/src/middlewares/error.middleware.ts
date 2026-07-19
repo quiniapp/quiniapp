@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { AppError } from '@helper/errors';
 import { APIResponse } from '@helper/response/api_response.response';
 import { logger } from '../utils/logger';
+import { sanitizeForLog } from '../utils/sanitize-log';
 import { IS_PRODUCTION } from '../../envs';
 
 /**
@@ -24,9 +25,9 @@ export const errorHandler = (
     stack: err.stack,
     path: req.path,
     method: req.method,
-    body: req.body,
-    params: req.params,
-    query: req.query,
+    body: sanitizeForLog(req.body),
+    params: sanitizeForLog(req.params),
+    query: sanitizeForLog(req.query),
   });
 
   // Manejar errores de validación Zod
