@@ -4,6 +4,12 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-07-19 (Calendario mobile)
+
+#### Targets táctiles más grandes en el calendario
+- **`web/src/components/ui/calendar.tsx`**: en mobile los días pasan de 32px (`size-8`) a 40px (`size-10`), flechas de navegación a `size-9`, texto de días/encabezados/caption más grande y caption capitalizado. En `sm:` y superior mantiene el tamaño compacto anterior. Aplica a todos los date pickers (usan este componente base).
+- **`web/src/components/button/SelectDayToSearch.tsx`**: `collisionPadding={8}` en el `PopoverContent` para que el calendario no quede pegado al borde de la pantalla en viewports angostos.
+
 ### Added - 2026-07-19 (Jugadas con fecha pasada para admin+)
 
 #### Selector de fecha en Realizar Jugadas (solo roles no-cajero)

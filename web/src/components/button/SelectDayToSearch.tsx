@@ -69,7 +69,7 @@ export function SelectDayToSearch({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align="start" collisionPadding={8}>
         <Suspense fallback={null}>
           <Calendar
             mode="single"
