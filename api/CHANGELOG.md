@@ -4,6 +4,32 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-07-19 (Log Sanitization)
+
+#### Sensitive data redaction in error logs (ISO 27001 A.8.15 / A.8.12)
+- **`api/src/utils/sanitize-log.ts`** — `sanitizeForLog()` deep-copies any value replacing fields whose key contains `password`, `token`, `secret`, `authorization`, `cookie` or `refresh` (case-insensitive) with `[REDACTED]`. Tests in `sanitize-log.test.ts` (node:test, 6 cases).
+- **`api/src/middlewares/error.middleware.ts`** — the error handler now passes `req.body`, `req.params` and `req.query` through `sanitizeForLog` before logging. Previously a failed login logged the plaintext password in the request body.
+
+### Added - 2026-07-18 (Schema Cleanup)
+
+#### Migration `20260718213215_schema_cleanup_indexes_types.sql`
+Part 2 of the schema audit (out-of-scope items from the security hardening migration).
+- **Dropped 16 redundant indexes**: exact duplicates (`idx_sessions_refresh_token_hash` vs the UNIQUE constraint, `idx_bets_archive_bet_id`/`idx_tickets_archive_ticket_id` vs their PKs), prefixes of wider composite indexes (`idx_bets_schedule_date`, `idx_bets_organization_id`, `idx_bets_user_id`, `idx_tpt_date`, `idx_tpt_date_schedule`, `idx_schedule_lotteries_org_day`, `idx_schedule_lotteries_organization_id`, `idx_schedule_lotteries_org_schedule`, `idx_results_lottery_id`, `idx_results_schedule_id`, `idx_users_username_active`), and low-selectivity boolean indexes (`idx_bets_paid`, `idx_sessions_is_active`). Reduces write amplification on `bets`/`tickets`.
+- **Type consistency**: `schedules.created_at/edited_at` converted from `timestamp` to `timestamptz` (values reinterpreted as UTC; JSON output now carries an explicit offset); `bets.prize`, `bets_archive.prize`, `tickets.total_prize`, `tickets_archive.total_prize` converted from bare `numeric` to `numeric(12,2)` to match the other money columns.
+- **Dropped legacy `users.password` column** — replaced by `password_hash` long ago; the API only touches `password_hash`. The migration aborts with an exception if any row still holds a non-empty value.
+- **Fixed `hard_delete_organization`** — it failed on organizations with expenses (`fk_org_expenses_organization` is `ON DELETE RESTRICT`) because it never deleted `org_expenses`; it also left orphan rows in `bets_archive`/`tickets_archive` (no FK on `organization_id` there). Both now deleted explicitly.
+
+### Added - 2026-07-18 (Security Hardening)
+
+#### Migration `20260718153406_security_hardening_revoke_grants.sql`
+Findings from full schema audit of the develop database dump (pre-migration to the new Supabase project). The API talks to the database only with the `service_role` key, so nothing here affects the backend.
+- **RLS enabled** on `org_expenses`, `analytics_client_stats`, `analytics_device_stats` — they were the only tables without it while being granted to `anon` (readable/writable through the Data API with the anon key).
+- **Dropped `process_bets()`** — legacy winners calculation, no organization awareness, wrong loop bounds for `place = TWENTY` (1..10 instead of 1..20) and REDOUBLE multipliers inconsistent with `calculate_redouble_payout`. Superseded by `generate_winners`.
+- **Dropped `pay_ticket(text, uuid)`** — legacy overload without organization filter; `ticket_number` is unique per org, so it could pay another org's ticket.
+- **Fixed `pay_ticket(text, uuid, uuid)`** — restored `FOR UPDATE` (lost vs. the legacy version) to serialize concurrent payment attempts; also pinned `search_path`.
+- **Pinned `search_path` on `create_ticket_with_bets`** — it is `SECURITY DEFINER` and was the only one without it (search-path hijack risk).
+- **Revoked all privileges** on tables/sequences/functions in `public` from `anon` and `authenticated`, plus `EXECUTE` from `PUBLIC` (blocks anon-key RPC calls to `SECURITY DEFINER` functions like `hard_delete_organization`). Default privileges reset so future objects are not auto-granted.
+
 ### Added - 2026-06-27 (High Availability)
 
 #### Backup backend / transparent failover (Railway main + Render backup)
