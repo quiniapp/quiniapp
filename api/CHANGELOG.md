@@ -4,6 +4,12 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-07-19 (Log Sanitization)
+
+#### Sensitive data redaction in error logs (ISO 27001 A.8.15 / A.8.12)
+- **`api/src/utils/sanitize-log.ts`** — `sanitizeForLog()` deep-copies any value replacing fields whose key contains `password`, `token`, `secret`, `authorization`, `cookie` or `refresh` (case-insensitive) with `[REDACTED]`. Tests in `sanitize-log.test.ts` (node:test, 6 cases).
+- **`api/src/middlewares/error.middleware.ts`** — the error handler now passes `req.body`, `req.params` and `req.query` through `sanitizeForLog` before logging. Previously a failed login logged the plaintext password in the request body.
+
 ### Added - 2026-07-18 (Schema Cleanup)
 
 #### Migration `20260718213215_schema_cleanup_indexes_types.sql`
