@@ -12,6 +12,7 @@ All notable changes to the Web workspace are documented in this file.
 #### Targets táctiles más grandes en el calendario
 - **`web/src/components/ui/calendar.tsx`**: en mobile los días pasan de 32px (`size-8`) a 36px (`size-9`), flechas de navegación a `size-8`, texto de días/encabezados/caption más grande y caption capitalizado. En `sm:` y superior mantiene el tamaño compacto anterior. Aplica a todos los date pickers (usan este componente base).
 - **`web/src/components/button/SelectDayToSearch.tsx`**: `collisionPadding={8}` y `max-w-[calc(100vw-16px)]` en el `PopoverContent` para que el calendario nunca desborde el viewport en pantallas angostas.
+- **`web/src/styles/index.css`**: el CSS global de tablas (`th, td { padding: 8px !important }` + rayado de filas pares) pisaba el `p-0` del calendario — celdas de 52px, tabla de 364px que desbordaba viewports de 320px, y franjas azules en las semanas. Se agregó excepción scoped `.rdp th/td { padding: 0 !important }` y `.rdp tr:nth-child(even)` transparente. Verificado con Playwright a 320×480: tabla 252px, celdas 36px. Las tablas de datos no cambian.
 
 ### Added - 2026-07-19 (Jugadas con fecha pasada para admin+)
 
