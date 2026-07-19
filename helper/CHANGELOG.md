@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-07-19
+
+#### Ticket Schema
+- **`helper/schemas/ticket.schema.ts`**: `newTicketSchema.date` pasa de `z.string()` a `z.string().regex(dateRegex)` (importado de `helper/functions/dateRegex.ts`). El cliente siempre envió `YYYY-MM-DD`; ahora el formato queda validado en el borde. Soporta la feature de tickets backdateados por admin.
+
 ### Changed - 2026-04-29
 
 #### Results Schema — soporte de 3 o 4 cifras
