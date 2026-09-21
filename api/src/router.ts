@@ -13,6 +13,8 @@ import { SettingsLotteryRouter } from './settings/route/settings.route';
 import { OrganizationRouter } from './organization/route/organization.route';
 import archiveRouter from './archive/route/archive.route';
 import { OrgExpenseRouter } from './org-expense/route/org-expense.route';
+import { PollaEditionRouter } from './polla-edition/route/polla-edition.route';
+import { PollaBetRouter } from './polla-bet/route/polla-bet.route';
 
 export const router = Router();
 export const publicRouter = Router();
@@ -37,6 +39,8 @@ router.use('/settings', new SettingsLotteryRouter().router);
 router.use('/organization', new OrganizationRouter().router);
 router.use('/archive', archiveRouter);
 router.use('/org_expense', new OrgExpenseRouter().router);
+router.use('/polla_edition', new PollaEditionRouter().router);
+router.use('/polla_bet', new PollaBetRouter().router);
 router.use('/test', (req, res) => {
   res.send('ok');
 });

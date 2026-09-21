@@ -4,6 +4,22 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-09-20 (Juego Polla)
+
+#### Nuevo juego de pozo compartido: Polla
+Primer juego del sistema con pozo compartido entre varios ganadores (hasta ahora todo el modelo era premio fijo por apuesta individual). El jugador elige 10 números de 2 cifras (00-99); se juega día a día entre `start_date` y `end_date` de una edición contra los resultados de una quiniela+turno; gana quien primero acumula 10 aciertos (pueden ser varios el mismo día, reparten el pozo en partes iguales).
+
+- **Migraciones nuevas** (`api/supabase/migrations/`):
+  - `20260920100000_create_polla_tables.sql`: tablas `polla_editions` (config de una edición: quiniela, turno, `start_date`/`end_date`/`load_limit_date`, `pool_amount`, `ticket_price`, `status`) y `polla_bets` (una jugada = un ticket; `numbers`/`hit_numbers`/`hits` acumulados día a día, datos del pasador denormalizados para no depender de que el ticket de carga siga existiendo). Constraint `EXCLUDE USING gist` (requiere `btree_gist`) evita ediciones con fechas solapadas para la misma quiniela+turno. RLS habilitado en ambas tablas (el backend usa `service_role` y no se ve afectado).
+  - `20260920100100_create_polla_bet_rpc.sql`: RPC `create_polla_bet` — cada jugada de 10 números genera su propio ticket (nunca se mezcla con jugadas de quiniela normal), con `total = ticket_price` de la edición.
+  - `20260920100200_process_polla_hits.sql`: RPC `process_polla_edition_hits`/`process_polla_editions_for_schedule_date` — acumulan aciertos día a día comparando las 2 últimas cifras de los 20 resultados del día contra los números de cada jugada activa. Al llegar a 10 aciertos, reparte el pozo en partes iguales entre las jugadas ganadoras de ese día y cierra la edición; si se llega a `end_date` sin ganador, la edición queda `FINISHED` sin repartir (el admin decide manualmente sumar el sobrante al pozo de la próxima edición).
+  - `20260920100300_hook_polla_into_generate_winners.sql`: engancha el procesamiento de Polla dentro de `generate_winners_and_calculate_accounts`, entre `generate_winners` y `calculate_current_account` — sin tocar ningún archivo TypeScript, `POST /winners/:id?date=` ya dispara todo.
+  - **Liquidación**: el pase se imputa el día de carga (ticket normal, ya lo capta `calculate_current_account` de ese día). El premio se paga con un **ticket nuevo** dado de alta el día que se determina el ganador (no retroactivo al día de carga) para que quede incluido en la misma liquidación diaria junto a los demás premios.
+- **Módulos nuevos**: `api/src/polla-edition/` (CRUD admin de ediciones, no-CASHIER) y `api/src/polla-bet/` (carga y consulta de jugadas), registrados en `api/src/router.ts` como `/polla_edition` y `/polla_bet`.
+- `20260920100400_polla_bet_edit_delete.sql`: soft-delete (`polla_bets.deleted_at/deleted_by`) + RPCs `update_polla_bet_numbers`/`delete_polla_bet` — admin/owner puede editar los 10 números o borrar una jugada mientras no haya pasado `load_limit_date` de la edición y la jugada no sea ganadora (borrar también soft-elimina el ticket asociado). `process_polla_edition_hits` actualizado para ignorar jugadas borradas. Rutas `PUT/DELETE /polla_bet/:id` (no-CASHIER).
+- `20260920100500_add_ticket_number_to_polla_bets.sql`: denormaliza `ticket_number` en `polla_bets` (igual que `user_id`/`user_name`) para poder mostrarlo/reportarlo sin JOIN a `tickets`.
+- `PollaBetRepository.getAll` acepta `lottery_id`/`schedule_id`/`date` para resolver automáticamente qué ediciones de Polla están vigentes ese día — usado por la pantalla "Jugadas y Aciertos" del frontend para listar también las jugadas de Polla.
+
 ### Added - 2026-07-19 (Backdated tickets)
 
 #### `ticketBase` honra la fecha enviada para roles no-cajero

@@ -26,12 +26,12 @@ const PrintGroupedBetsButton = () => {
   const min_amount_param = searchParams.get('min_amount');
   const min_amount = min_amount_param ? Math.max(0, parseFloat(min_amount_param) || 0) : undefined;
 
-  const { data: bets } = useBets({
-    date: isGrouped ? date : null,
+  const { data: bets, isFetching } = useBets({
+    date,
     schedule_id,
     lottery_id,
     cashier_id,
-    grouped: 'true',
+    grouped: isGrouped ? 'true' : 'false',
     winners,
     tern,
     quatern,
@@ -42,7 +42,7 @@ const PrintGroupedBetsButton = () => {
 
   const { data: lotteries } = useLotteries();
   const { data: schedules } = useSchedules();
-  const { data: users } = useUsers(isGrouped ? role : undefined);
+  const { data: users } = useUsers(role);
 
   const handlePrint = async () => {
     if (!bets?.length) return;
@@ -52,7 +52,7 @@ const PrintGroupedBetsButton = () => {
       const lotteryName = lotteries?.find((l) => l.lottery_id === lottery_id)?.name ?? null;
       const cashierName = users?.find((u) => u.user_id === cashier_id)?.name ?? null;
 
-      await printGroupedBetsPDF({ bets, date, scheduleName, lotteryName, cashierName });
+      await printGroupedBetsPDF({ bets, date, scheduleName, lotteryName, cashierName, grouped: isGrouped });
     } finally {
       setIsPrinting(false);
     }
@@ -61,7 +61,7 @@ const PrintGroupedBetsButton = () => {
   return (
     <Button
       onClick={handlePrint}
-      disabled={!isGrouped || isPrinting}
+      disabled={isPrinting || isFetching || !bets?.length}
       variant="outline"
       size="sm"
       className="gap-2"

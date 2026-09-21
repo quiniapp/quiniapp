@@ -4,6 +4,37 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-09-21 (Página dedicada de Polla)
+
+#### Toda la operatoria de Polla se consolida en `/polla`
+Antes estaba repartida: botón de carga en "Realizar Jugadas", tabla de seguimiento en "Jugadas y Aciertos", y edición/borrado de jugadas en la página admin de ediciones. Ahora vive todo en una pantalla nueva bajo el menú "Jugadas".
+
+- **`web/src/features/polla/index.tsx`** (`web/src/pages/Polla.tsx`, ruta `ROUTES.POLLA` = `/polla`): selector de edición + selector de pasador (admin/owner; cajero ve solo lo suyo, mismo patrón que `PlayAndHitsSelect`) + switch **Cargadas/Jugando**. "Cargadas" lista ticket/pasador/números/fecha con editar y borrar inline (admin/owner, antes de `load_limit_date`, jugada no ganadora). "Jugando" ordena por aciertos descendente y pinta cada uno de los 10 números en verde si ya salió (`hit_numbers`), mostrando "Ganador · $premio" o "En juego". Botón "Cargar Jugada" (deshabilitado sin pasador elegido) abre `CreatePollaBetModal`.
+- Entrada de menú "Polla" agregada dentro de "Jugadas" (`web/src/constants/SidebarMenu.tsx`), junto a Realizar Jugadas/Jugadas y Aciertos/Revisar Ticket.
+- **Removido** (superseded por la página nueva): botón "Cargar Polla" y modal en `header-play-detail.tsx`; `web/src/features/plays-and-hits/polla-plays-table.tsx`; `web/src/components/modals/PollaBetsListModal.tsx` y el botón "Ver jugadas" en `features/polla-editions` (esa página ahora solo maneja la configuración de la edición: fechas, pozo, valor de ticket).
+- `GET /polla_bet` ahora también acepta `ticket_number` (usado por "Revisar Ticket" para mostrar la jugada de Polla de un ticket).
+
+### Added - 2026-09-20 (Juego Polla)
+
+#### Página admin de configuración de Polla
+- **`web/src/pages/PollaEditions.tsx`** / **`web/src/features/polla-editions/index.tsx`**: listado de ediciones de Polla (quiniela, turno, fechas, pozo, valor de ticket, estado), calcado del patrón de `features/lotteries`. Modales lazy `CreatePollaEditionModal`/`UpdatePollaEditionModal`/`DeletePollaEditionModal` en `web/src/components/modals/`.
+- Hooks nuevos: `web/src/hooks/fetchs/polla-edition/usePollaEditions.ts`, `web/src/hooks/mutations/polla-edition/{useCreatePollaEdition,useUpdatePollaEdition,useDeletePollaEdition}.ts`.
+- Ruta `ROUTES.POLLA_EDITIONS` (`/polla-editions`) registrada en `web/src/routes/route.tsx` y en el menú lateral (`web/src/constants/SidebarMenu.tsx`, junto a "Loterias").
+
+#### Carga de jugada de Polla (todos los roles)
+- **`web/src/components/PollaNumberGrid.tsx`**: grilla compartida de números 00-99 (usada por carga y edición).
+- **`web/src/components/modals/CreatePollaBetModal.tsx`**: elegir 10 números; lista solo ediciones con carga abierta (`load_limit_date >= hoy`). Cada confirmación genera un ticket independiente (no se mezcla con el ticket de quiniela normal). Resuelve el dueño de la jugada igual que la carga de tickets normales (`cashier` buscado o uno mismo).
+- **`web/src/features/make-plays/header-play-detail.tsx`**: botón "Cargar Polla" visible para todos los roles (antes solo cajero), integrado en la misma fila de controles (no en línea aparte); en mobile muestra solo el texto "Polla" sin ícono.
+- Hook nuevo: `web/src/hooks/mutations/polla-bet/useCreatePollaBet.ts`.
+- Ruta `polla_edition`/`polla_bet` agregadas a `web/routes/routes.ts`.
+
+#### Editar/borrar jugadas de Polla (admin/owner)
+- **`web/src/components/modals/PollaBetsListModal.tsx`**: lista las jugadas de una edición con edición inline de números y borrado con confirmación, habilitado solo mientras no pasó `load_limit_date` y la jugada no ganó. Accesible desde un botón nuevo en cada tarjeta de `features/polla-editions`.
+- Hooks nuevos: `web/src/hooks/fetchs/polla-bet/usePollaBets.ts`, `web/src/hooks/mutations/polla-bet/{useUpdatePollaBet,useDeletePollaBet}.ts`.
+
+#### Jugadas de Polla en "Jugadas y Aciertos"
+- **`web/src/features/plays-and-hits/polla-plays-table.tsx`**: tabla adicional (números, aciertos, premio, ticket, usuario) que aparece bajo la tabla de quiniela normal cuando hay quiniela+turno seleccionados y existen jugadas de Polla para esa fecha.
+
 ### Changed - 2026-07-19 (Calendario mobile)
 
 #### Header de Realizar Jugadas en pantallas chicas

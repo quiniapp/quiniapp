@@ -13,8 +13,10 @@ import { useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { formatBetNumber } from '@helper/functions/formatBetNumber';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useTerminalTicket } from './provider/TerminalTicketProvider';
+import { usePollaBetForTicket } from './usePollaBetForTicket';
 
 interface Props {
   maxBodyHeightClass?: string;
@@ -49,6 +51,9 @@ const TerminalTicketMatchesTable = ({
       winners: 'true',
       limit: 50,
     });
+  const { bet: pollaBet, lotteryName: pollaLottery, scheduleName: pollaSchedule } =
+    usePollaBetForTicket(ticket_number);
+  const pollaWinner = pollaBet?.winner ? pollaBet : undefined;
 
   const bets = useMemo(() => {
     const flat = data?.pages.flatMap((p) => p.data) ?? [];
@@ -88,12 +93,21 @@ const TerminalTicketMatchesTable = ({
         <div ref={rootRef} className={`overflow-y-auto ${maxBodyHeightClass}`}>
           <Table className="min-w-full table-fixed">
             <TableBody>
+              {pollaWinner && (
+                <TableRow>
+                  <TableCell className="font-mono">{pollaWinner.numbers.join('-')}</TableCell>
+                  <TableCell>${pollaWinner.prize}</TableCell>
+                  <TableCell>{pollaLottery ?? '-'}</TableCell>
+                  <TableCell>POLLA</TableCell>
+                  <TableCell>{pollaSchedule ?? '-'}</TableCell>
+                </TableRow>
+              )}
               {bets.map((bet, index) => (
                 <TableRow
                   key={String(bet.bet_id)}
                   ref={index === triggerIndex ? setTriggerRef : undefined}
                 >
-                  <TableCell>{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
+                  <TableCell>{formatBetNumber(bet.number, bet.bet_type)}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
                   <TableCell>${bet.amount}</TableCell>
                   <TableCell>{bet.lottery.name}</TableCell>
                   <TableCell>{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>

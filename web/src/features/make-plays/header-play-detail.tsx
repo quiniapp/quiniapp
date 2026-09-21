@@ -129,7 +129,7 @@ const HeaderPlayDetail = () => {
               <Label htmlFor={'user'} className="text-xs w-20 sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
             </div>
           </Flex>
-          
+
           <Flex className={'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
             <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">Ticket</Label>
             <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
