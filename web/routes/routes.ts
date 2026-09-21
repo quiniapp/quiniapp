@@ -79,4 +79,11 @@ export const BACKEND_ROUTES = {
     children: (id: string) => `${PRIVATE}/organization/${id}/children`,
     createSub: (id: string) => `${PRIVATE}/organization/${id}/sub`,
   },
+  polla_edition: {
+    base: `${PRIVATE}/polla_edition`,
+    id: (id: string) => `${PRIVATE}/polla_edition/${id}`,
+  },
+  polla_bet: {
+    base: `${PRIVATE}/polla_bet`,
+  },
 };

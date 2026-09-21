@@ -4,6 +4,18 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-09-20 (Juego Polla)
+
+#### Tipos, requests, responses y schemas de Polla
+- **`helper/types/polla-edition.type.ts`**: `POLLA_EDITION_STATUS` enum, `IPollaEditionEntityBack`/`IPollaEditionEntityFront`.
+- **`helper/types/polla-bet.type.ts`**: `IPollaBetEntityBack`/`IPollaBetEntityFront` (numbers, hit_numbers, hits, winner, prize).
+- **`helper/request/polla-edition.request.ts`**, **`helper/request/polla-bet.request.ts`**.
+- **`helper/response/polla-edition.response.ts`**, **`helper/response/polla-bet.response.ts`**.
+- **`helper/schemas/polla-edition.schema.ts`**: `newPollaEditionSchema`/`updatePollaEditionSchema` con `superRefine` cross-field (`load_limit_date < start_date`, `start_date <= end_date`).
+- **`helper/schemas/polla-bet.schema.ts`**: `newPollaBetSchema`/`updatePollaBetSchema` — array de 10 strings `/^\d{2}$/` con validación de unicidad.
+- **`helper/types/polla-bet.type.ts`**: agrega `ticket_number`, `deleted_at`, `deleted_by` a `IPollaBetEntityBack` (los dos últimos excluidos del tipo Front).
+- **`helper/request/polla-bet.request.ts`**: agrega `IUpdatePollaBetEntity`/`IDeletePollaBetEntity` para edición/borrado de jugadas.
+
 ### Changed - 2026-07-19
 
 #### Ticket Schema

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteBets } from '@/hooks/fetchs/plays/useInfiniteBets';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { formatBetNumber } from '@helper/functions/formatBetNumber';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 type Props = {
@@ -290,7 +291,7 @@ const BetRowDesktop = memo<{
     return (
       <TableRow ref={triggerRef}>
         <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg font-semibold">
-          {bet.number}
+          {formatBetNumber(bet.number, bet.bet_type)}
           {`${bet?.with ? ` - ${bet.with}` : ''}`}
         </TableCell>
         <TableCell className="px-2 sm:px-3 whitespace-nowrap text-sm md:text-base lg:text-lg">
@@ -344,7 +345,7 @@ const BetRowMobile = memo<{
               Jugada
             </span>
             <p className="text-lg font-bold text-white">
-              {bet.number}
+              {formatBetNumber(bet.number, bet.bet_type)}
               {`${bet?.with ? ` - ${bet.with}` : ''}`}
             </p>
           </div>

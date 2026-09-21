@@ -41,6 +41,12 @@ export const MENU_ITEMS: MENU_ITEM[] = [
         route: ROUTES.TERMINAL_TICKET,
         icon: <TicketIcon size={20} />,
       },
+      {
+        id: 'Polla',
+        name: 'Polla',
+        route: ROUTES.POLLA,
+        icon: <TicketIcon size={20} />,
+      },
     ],
   },
 
@@ -73,6 +79,12 @@ export const MENU_ITEMS: MENU_ITEM[] = [
         id: 'Loteries',
         name: 'Loterias',
         route: ROUTES.LOTTERIES,
+        icon: <TicketIcon size={20} />,
+      },
+      {
+        id: 'PollaEditions',
+        name: 'Polla',
+        route: ROUTES.POLLA_EDITIONS,
         icon: <TicketIcon size={20} />,
       },
     ],
