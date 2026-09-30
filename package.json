@@ -6,7 +6,8 @@
   "workspaces": [
     "api",
     "web",
-    "helper"
+    "helper",
+    "polla-web"
   ],
   "scripts": {
     "api-install": "npm install --workspace api",
@@ -16,7 +17,9 @@
     "lint": "npm run lint --workspaces",
     "format": "npm run format --workspaces",
     "build": "npm run build --workspaces",
-    "prepare": "node scripts/prepare.js"
+    "prepare": "node scripts/prepare.js",
+    "polla-web": "npm run dev --workspace polla-web",
+    "polla-web-install": "npm install --workspace polla-web"
   },
   "repository": {
     "type": "git",

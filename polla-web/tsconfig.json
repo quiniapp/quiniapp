@@ -1,0 +1,22 @@
+{
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }],
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "esnext",
+    "lib": ["dom", "esnext"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@helper/*": ["../helper/*"]
+    }
+  }
+}

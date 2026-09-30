@@ -11,7 +11,6 @@ import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
 import { formatBetNumber } from '@helper/functions/formatBetNumber';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useTerminalTicket } from './provider/TerminalTicketProvider';
-import { usePollaBetForTicket } from './usePollaBetForTicket';
 
 interface Props {
   amount:number
@@ -62,8 +61,6 @@ const TerminalTicketPlayTable = ({
   } = useInfiniteBetsByTicketNumber({
     date, ticket_number, limit: 50,
   });
-  const { bet: pollaBet, ticketAmount: pollaAmount, lotteryName: pollaLottery, scheduleName: pollaSchedule } =
-    usePollaBetForTicket(ticket_number);
 
   const bets = useMemo(() => {
     const flat = data?.pages.flatMap((p) => p.data) ?? [];
@@ -102,15 +99,6 @@ const TerminalTicketPlayTable = ({
         <div ref={rootRef} className={`overflow-y-auto ${maxBodyHeightClass}`}>
           <Table className="table-fixed">
             <TableBody>
-              {pollaBet && (
-                <TableRow>
-                  <TableCell className="truncate font-mono">{pollaBet.numbers.join('-')}</TableCell>
-                  <TableCell className="whitespace-nowrap">${pollaAmount ?? '-'}</TableCell>
-                  <TableCell className="truncate">{pollaLottery ?? '-'}</TableCell>
-                  <TableCell className="truncate">POLLA</TableCell>
-                  <TableCell className="truncate">{pollaSchedule ?? '-'}</TableCell>
-                </TableRow>
-              )}
               {bets.map((bet, index) => (
                 <BetRowMemoized
                   key={String(bet.bet_id)}

@@ -34,8 +34,6 @@ const NewUserPage = lazy(() => import('@/pages/new-user.tsx'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const OrganizationsPage = lazy(() => import('@/pages/organizations'));
 const LotteriesPage = lazy(() => import('@/pages/Lotteries'));
-const PollaEditionsPage = lazy(() => import('@/pages/PollaEditions'));
-const PollaPage = lazy(() => import('@/pages/Polla'));
 
 // Helper para envolver componentes lazy con Suspense
 function withSuspense(Component: React.LazyExoticComponent<any>) {
@@ -82,11 +80,6 @@ export const RoutesContent = [
         path: ROUTES.TERMINAL_TICKET,
         id: 'TerminalTicket',
         element: withSuspense(TerminalTicketPage),
-      },
-      {
-        path: ROUTES.POLLA,
-        id: 'Polla',
-        element: withSuspense(PollaPage),
       },
       {
         path: ROUTES.RESULTS,
@@ -152,11 +145,6 @@ export const RoutesContent = [
         path: ROUTES.LOTTERIES,
         id: 'Lotteries',
         element: withSuspense(LotteriesPage),
-      },
-      {
-        path: ROUTES.POLLA_EDITIONS,
-        id: 'PollaEditions',
-        element: withSuspense(PollaEditionsPage),
       },
     ],
   },

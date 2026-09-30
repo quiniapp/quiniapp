@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import { isAuthenticated } from '../middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { publicRouter, router } from './router';
+import { pollaPublicRouter, pollaRouter } from './polla/router';
+import { isPollaAuthenticated } from './polla/middleware/polla-auth.middleware';
 import { startSessionCleanupJob } from './utils/session-cleanup.job';
 import { startSessionMonitorJob, flushActivityCache } from './session/job/session-monitor.job';
 import { startDeviceStatsJob, flushDeviceStats } from './analytics/job/device-stats.job';
@@ -50,24 +52,34 @@ app.set('trust proxy', 1);
 const baseAllowedOrigins = [
   FRONT_URL, // tu front principal (prod o dev según env)
   !IS_PRODUCTION ? FRONT_URL_DEV : undefined, // vite dev server solo si no es prod
-  !IS_PRODUCTION ? 'http://localhost:3000' : undefined, // otra app local si necesitás
-  !IS_PRODUCTION ? 'http://127.0.0.1:5173' : undefined,
   ...CORS_EXTRA_ORIGINS, // extras por env
 ].filter(Boolean) as string[];
+
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 
 const isAllowedOrigin = (origin?: string | null) => {
   if (!origin) return true; // para requests server->server, curl, etc.
   if (baseAllowedOrigins.includes(origin)) return true;
 
-  // Opcional: permitir previews *.vercel.app
-  if (ALLOW_VERCEL_PREVIEWS) {
-    try {
-      const u = new URL(origin);
-      if (u.hostname.endsWith('.vercel.app')) return true;
-    } catch {
-      /* ignore */
-    }
+  let url: URL | null = null;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
   }
+
+  // En dev vale cualquier puerto local: con varias apps (QuiniApp 5173,
+  // Polla 5174) Vite se corre de puerto si está ocupado, y el browser manda
+  // `localhost` o `127.0.0.1` según cómo abriste la página.
+  if (!IS_PRODUCTION && LOCAL_HOSTNAMES.has(url.hostname.replace(/^\[|\]$/g, ''))) {
+    return true;
+  }
+
+  // Opcional: permitir previews *.vercel.app
+  if (ALLOW_VERCEL_PREVIEWS && url.hostname.endsWith('.vercel.app')) {
+    return true;
+  }
+
   return false;
 };
 
@@ -130,8 +142,29 @@ app.use(csrfProtection);
 // rate-limit: hard cap at very high thresholds (extreme abuse only)
 app.use('/api/auth/login', loginSlowDown, loginRateLimit);
 app.use('/api/auth', authSlowDown, authRateLimit);
+app.use('/api/polla/auth/login', loginSlowDown, loginRateLimit);
+app.use('/api/polla/auth', authSlowDown, authRateLimit);
 
 // ---- Body parsers por ruta ----
+// Polla es un sistema aparte: auth propia, cookies propias, esquema polla_*.
+// Se monta antes que QuiniApp y con /private primero, porque Express matchea
+// por prefijo en orden de registro ('/api/polla' también matchea /api/polla/private).
+app.use(
+  '/api/polla/private',
+  privateSlowDown,
+  privateRateLimit,
+  express.json({ limit: '1mb' }),
+  isPollaAuthenticated,
+  pollaRouter
+);
+app.use(
+  '/api/polla',
+  publicSlowDown,
+  publicRateLimit,
+  express.json({ limit: '200kb' }),
+  pollaPublicRouter
+);
+
 app.use(
   '/api/private',
   privateSlowDown,

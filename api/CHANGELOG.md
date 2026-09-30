@@ -4,6 +4,28 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-09-28 (Polla se separa de QuiniApp)
+
+#### La Polla pasa a ser un sistema propio sobre el mismo deploy de backend
+La Polla estaba embebida en QuiniApp: cada jugada era un `tickets` del sistema principal, dependía de sus usuarios, catálogos y tenant, y no había lugar para el rol *jugador*. Ahora es un sistema paralelo con esquema `polla_*`, autenticación propia y su propio frontend (`polla-web/`). Se reutiliza únicamente el proceso Express y la base Supabase.
+
+**El tenant es el capitalist**: una fila de `polla_organizations` = un capitalist, con sus propias quinielas, turnos, usuarios, ediciones, resultados, pozo y liquidación. Dentro de una organización no hay separación: todos ven todas las jugadas (el jugador, anonimizadas); grupo y pasador son filtros, no permisos. Solo el OWNER cruza organizaciones.
+
+- **Migraciones nuevas** (`api/supabase/migrations/`):
+  - `20260928100000_polla_drop_legacy.sql`: restaura `generate_winners_and_calculate_accounts` sin la rama de Polla y dropea las tablas, funciones y el tipo de la Polla vieja. Los tickets que generó quedan intactos (ya estaban liquidados).
+  - `20260928100100_polla_core_tables.sql`: `polla_organizations`, `polla_groups` (tabla real, no la sub-organización de QuiniApp), `polla_users` (jerarquía `OWNER → CAPITALIST → SUPERADMIN → ADMIN → CASHIER → PLAYER`, con `parent_polla_user_id` para colgar un jugador de su pasador y `credit_balance`), `polla_sessions`, `polla_lotteries` y `polla_schedules`. Triggers que validan que el padre de un jugador sea un CASHIER activo de la misma organización y que el grupo pertenezca a esa organización.
+  - `20260928100200_polla_game_tables.sql`: `polla_editions` (con contadores denormalizados `bets_count`/`collected_amount` y `EXCLUDE USING gist` por organización + quiniela + turno + rango de fechas), `polla_results` (carga manual, único por organización), `polla_bets` (sin tabla de tickets: `ticket_number` propio, `cashier_polla_user_id` para la imputación y organización/grupo/nombres denormalizados), `polla_credit_movements` (ledger con `balance_after`) y `polla_current_accounts`.
+  - `20260928100300_polla_indexes.sql`: índices parciales que calcan los predicados exactos, incluido el compuesto `(polla_edition_id, created_at DESC, polla_bet_id DESC)` que sirve la paginación keyset del feed, y los dos de liquidación `(cashier_polla_user_id, load_date)` y `(cashier_polla_user_id, hit_date) WHERE winner`. `ANALYZE` al cierre.
+  - `20260928100400_polla_functions.sql`: `polla_adjust_credits`, `polla_create_bet` (debita créditos al jugador y le imputa la jugada al pasador padre), `polla_update_bet_numbers`, `polla_delete_bet` (devuelve créditos), `polla_process_edition_hits` (acumulación set-based; solo toca ediciones `ACTIVE` que cubran la fecha, así una edición ya ganada no vuelve a calcularse), `polla_calculate_current_account` (misma fórmula que `calculate_current_account`, con pases y premios tomados directo de `polla_bets`), `polla_update_current_account_recompute`, `polla_cascade_current_account_from_date` y el orquestador `polla_process_results_and_accounts`.
+  - `20260928100500_polla_seed_owner.sql`: organización de sistema + usuario OWNER (`owner` / `polla2026`, con `password_reset_required = TRUE`). **Cambiar la contraseña en el primer login.**
+  - `20260928100600_fix_polla_create_bet_credit_link.sql`: `polla_create_bet` enlaza el movimiento de crédito con la jugada usando el id que devuelve `polla_adjust_credits`, en vez de buscar "el último movimiento BET sin jugada" del jugador (con dos cargas simultáneas del mismo jugador esa subconsulta podía elegir el movimiento de la otra).
+- **Módulo nuevo `api/src/polla/`**: auth propia (cookies `polla_access_token`/`polla_refresh_token`, secretos `POLLA_JWT_SECRET_*` derivados de los de QuiniApp si no se definen), `middleware/` con `isPollaAuthenticated` y un `requirePollaRole(...)` genérico (QuiniApp hace estos chequeos inline en cada router), y los módulos `catalog` (router genérico para organizaciones, grupos, quinielas y turnos), `user` (ABM + créditos), `edition`, `bet`, `result` y `current-account`. Montado en `/api/polla` (público) y `/api/polla/private` (autenticado), registrado **antes** que QuiniApp porque Express matchea por prefijo en orden de registro.
+- **Todos los `getAll` paginados**: `page`/`limit` (default 50, máximo 200) con el envelope `IPaginatedResponse` existente; el `COUNT` exacto se pide solo en la primera página y el feed de jugadas acepta además `cursor` (keyset).
+- **Visibilidad server-side**: el jugador recibe una proyección recortada (sin nombres, sin pasador, sin organización) salvo en sus propias jugadas y en las ganadoras, y sus filtros se ignoran en el backend. ADMIN y superiores pueden editar o borrar jugadas incluso pasada la fecha límite (`p_force`).
+- **Módulos eliminados**: `api/src/polla-edition/` y `api/src/polla-bet/`, y sus rutas en `api/src/router.ts`.
+- **`api/.env.example`**: documenta `POLLA_JWT_SECRET_ACCESS`, `POLLA_JWT_SECRET_REFRESH`, `POLLA_JWT_ACCESS_EXPIRATION` y `POLLA_JWT_REFRESH_EXPIRATION` (todos opcionales).
+
+
 ### Added - 2026-09-20 (Juego Polla)
 
 #### Nuevo juego de pozo compartido: Polla
