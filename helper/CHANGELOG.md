@@ -4,6 +4,19 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-09-28 (Polla se separa de QuiniApp)
+
+#### Namespace propio `helper/polla/`
+Los tipos de Polla dejan de mezclarse con los de QuiniApp: el sistema ahora tiene usuarios, organizaciones y catálogos propios, así que su contrato compartido vive en su propio árbol.
+
+- **`helper/polla/types/user.type.ts`**: `POLLA_USER_TYPE` (suma `PLAYER` a la jerarquía), `POLLA_USER_HIERARCHY`, helpers `isPollaAdminRole`/`isPollaStaffRole`, entidades y `IPollaSessionUser`.
+- **`helper/polla/types/catalog.type.ts`**: organizaciones, grupos, quinielas y turnos.
+- **`helper/polla/types/game.type.ts`**: ediciones, resultados, jugadas (incluida la proyección anónima `IPollaBetAnonymous` que recibe un jugador), movimientos de crédito y cuenta corriente.
+- **`helper/polla/schemas/`**: `auth`, `catalog`, `user` (con validación de signo por tipo de movimiento de crédito) y `game` (ediciones con reglas cruzadas de fechas, resultados de 20 números del mismo largo, jugadas de 10 números distintos, cuenta corriente). Los tipos de payload se infieren con `z.infer` en vez de duplicarse en `request/`.
+- **`helper/polla/config/session.config.ts`**: nombres de cookie (distintos de los de QuiniApp a propósito: las dos apps pegan al mismo dominio de API), TTLs, intervalos de validación y tamaños de página.
+- **Eliminados**: `types/polla-bet.type.ts`, `types/polla-edition.type.ts`, `request/polla-*.ts`, `response/polla-*.ts` y `schemas/polla-*.ts`.
+
+
 ### Added - 2026-09-20 (Juego Polla)
 
 #### Tipos, requests, responses y schemas de Polla

@@ -14,8 +14,6 @@ export enum ROUTES {
   LOGIN = '/login',
   UPCOMING_LOTTERIES = '/upcoming-lotteries',
   LOTTERIES = '/lotteries',
-  POLLA_EDITIONS = '/polla-editions',
-  POLLA = '/polla',
   CURRENT_ACCOUNT = '/current-account',
   GROUPS = '/groups',
   NEW_USER = '/new-user',

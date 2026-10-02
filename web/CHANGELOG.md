@@ -4,6 +4,24 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Removed - 2026-09-28 (Polla se separa de QuiniApp)
+
+#### Se saca toda la Polla de QuiniApp
+La Polla pasa a ser un sistema aparte con su propio frontend (`polla-web/`), así que QuiniApp queda sin rastro de ella.
+
+- Eliminados: `src/features/polla/`, `src/features/polla-editions/`, `src/pages/Polla.tsx`, `src/pages/PollaEditions.tsx`, `src/components/PollaNumberGrid.tsx`, los cuatro modales `*Polla*`, `src/hooks/{fetchs,mutations}/polla-*/` y `src/features/terminal-ticket/usePollaBetForTicket.ts`.
+- `src/functions/makePollaTicket.ts` se movió a `polla-web/src/functions/`.
+- Sacadas las filas de Polla de `termina-ticket-play-table.tsx` y `terminal-ticket-matches-table.tsx`, las rutas `POLLA`/`POLLA_EDITIONS` de `src/types/routes.type.ts`, `src/routes/route.tsx` y `src/constants/SidebarMenu.tsx`, y los endpoints `polla_edition`/`polla_bet` de `routes/routes.ts`.
+
+
+### Added - 2026-09-21 (Impresión de ticket de Polla)
+
+#### Modelo de impresión térmica 58mm para tickets de Polla
+- **`web/src/functions/makePollaTicket.ts`**: `makePollaTicketPdf`, mismas convenciones que `makeTicket.ts` (58mm, monoespaciado Courier, 32 caracteres por línea, altura calculada en base al contenido). Los 10 números se imprimen en grilla de 2 columnas x 5 filas numeradas (`1. xx   2. xx` / `3. xx   4. xx` / ...), más quiniela/turno, semana de juego, valor de ticket y pozo.
+- **`web/src/components/modals/CreatePollaBetModal.tsx`**: al cargar una jugada, imprime (desktop) o comparte (mobile, mismo criterio que la carga de tickets normales) el comprobante automáticamente.
+- **`web/src/features/polla/index.tsx`**: botón "Imprimir" en cada fila para reimprimir cualquier jugada ya cargada.
+- `useCreatePollaBet` ahora tipa la respuesta (`{ data: { bet } }`) en vez de `unknown`, necesario para poder armar el PDF con los datos que devuelve la creación.
+
 ### Changed - 2026-09-21 (Página dedicada de Polla)
 
 #### Toda la operatoria de Polla se consolida en `/polla`
