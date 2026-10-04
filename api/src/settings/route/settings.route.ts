@@ -21,7 +21,7 @@ export class SettingsLotteryRouter {
 
   private cleanupOldArchiveHandler: RequestHandler = async (_req: Request, res: Response) => {
     try {
-      const result = await this.controller.cleanupOldArchiveData();
+      const result = await this.controller.cleanupOldArchiveDataBatch();
       res.status(200).json({ data: result });
     } catch (error) {
       console.error('[SettingsRoute] cleanupOldArchive error:', error);

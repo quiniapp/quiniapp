@@ -4,6 +4,11 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-10-04 (Configuración)
+
+- **`src/hooks/mutations/settings/useCleanupOldData.ts`**: el backend ahora borra el archivo viejo de a lotes, así que el hook repite `POST /settings/cleanup` hasta `done`, acumula lo borrado, informa el progreso con `onProgress` y reintenta hasta 3 fallas seguidas (borrar es idempotente; un 502 del proxy no significa que el lote no se haya borrado). Invalida `storageStatus` en `onSettled`, también si falla a mitad de camino.
+- **`src/features/settings/index.tsx`**: muestra el progreso del borrado. Corrige el porcentaje de uso: calculaba `GB / 7` (0.45 en vez de 45%), así que la barra de `Progress` quedaba casi vacía. También agrega la unidad "GB".
+
 ### Removed - 2026-09-28 (Polla se separa de QuiniApp)
 
 #### Se saca toda la Polla de QuiniApp

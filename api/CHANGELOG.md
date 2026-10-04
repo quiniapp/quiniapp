@@ -4,6 +4,16 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-10-04 (Borrado de archivo y tamaño de base)
+
+#### "Borrar datos" fallaba por statement timeout
+`cleanup_old_archive_data` borraba en un solo `DELETE` todo lo de `bets_archive`/`tickets_archive` con más de 65 días. Con meses acumulados superaba el `statement_timeout` de PostgREST (`canceling statement due to statement timeout`), y antes de eso el proxy de Vercel ya cortaba el POST a los 4s y devolvía `BACKEND_UNAVAILABLE`.
+- **Migración `20261004100730_cleanup_archive_batched_and_db_size_view.sql`**: reemplaza la función por `cleanup_old_archive_data_batch(p_days, p_batch_size)`, que borra un lote por llamada (primero las apuestas y, cuando ya no quedan apuestas viejas, los tickets) y devuelve `{ cutoff_date, bets_deleted, tickets_deleted, done }`. Es el mismo patrón que `archive_data_by_date`. Solo `service_role` tiene `EXECUTE`.
+- **`src/settings/`**: `POST /api/private/settings/cleanup` ahora borra **un lote** (5000 filas, 65 días) y responde con el resultado de ese lote. El cliente repite hasta que llega `done: true`. **Cambio incompatible**: la respuesta ya no trae `success` y suma `done`.
+
+#### `total_storage_view` medía de menos
+Sumaba solo las tablas de `public` y dejaba afuera auth, storage, otros esquemas y los catálogos. Ahora usa `pg_database_size(current_database())`, que es el tamaño contra el que se aplica el límite del plan de Supabase. Las columnas (`total_bytes`, `total_mb`, `total_gb`) no cambian. Ojo: después de borrar filas, Postgres no achica los archivos (el espacio queda libre para reusar), así que el número no baja enseguida.
+
 ### Changed - 2026-09-28 (Polla se separa de QuiniApp)
 
 #### La Polla pasa a ser un sistema propio sobre el mismo deploy de backend

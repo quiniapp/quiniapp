@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 import HeaderSection from '@/components/header-section';
@@ -18,7 +18,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
 import { useGetUsedStorage } from '@/hooks/fetchs/settings/useGetUsedStorage';
-import { useCleanupOldData } from '@/hooks/mutations/settings/useCleanupOldData';
+import {
+  type ICleanupResult,
+  useCleanupOldData,
+} from '@/hooks/mutations/settings/useCleanupOldData';
 
 type UsageCard = {
   id: string;
@@ -35,9 +38,12 @@ const SettingsContent = () => {
   const { role } = useAuth();
 
   const { data: usedStorage } = useGetUsedStorage();
-  const { mutate: cleanupOldData, isPending: isCleaningUp } = useCleanupOldData();
+  const [cleanupProgress, setCleanupProgress] = useState<ICleanupResult | null>(null);
+  const { mutate: cleanupOldData, isPending: isCleaningUp } =
+    useCleanupOldData(setCleanupProgress);
 
   const handleCleanup = () => {
+    setCleanupProgress(null);
     cleanupOldData(undefined, {
       onSuccess: (data) => {
         toast.success(
@@ -51,10 +57,10 @@ const SettingsContent = () => {
   };
 
 
-  const usedPercentage = useMemo(()=>{
-    if(usedStorage)
-    return String(usedStorage/7).slice(0,5)
-  },[usedStorage])
+  const usedPercentage = useMemo(() => {
+    if (usedStorage == null) return undefined;
+    return ((Number(usedStorage) / 7) * 100).toFixed(1);
+  }, [usedStorage]);
   return (
     <PageWrapper>
       <HeaderSection title="Configuración" />
@@ -79,7 +85,7 @@ const SettingsContent = () => {
 
             <CardContent className="space-y-3 text-white">
               <div>
-                <div className="text-xl font-semibold leading-6 text-white">{`${usedStorage} usados de 7 GB`}</div>
+                <div className="text-xl font-semibold leading-6 text-white">{usedStorage == null ? '—' : `${usedStorage} GB usados de 7 GB`}</div>
                 {usedPercentage&&<div className="text-sm text-white/70">{`(${usedPercentage}% usado)`}</div>}
               </div>
 
@@ -130,6 +136,11 @@ const SettingsContent = () => {
               >
                 {isCleaningUp ? 'Limpiando...' : 'Borrar datos'}
               </Button>
+              {isCleaningUp && cleanupProgress && (
+                <span className="text-xs text-white/70">
+                  {`${cleanupProgress.bets_deleted} apuestas y ${cleanupProgress.tickets_deleted} tickets eliminados`}
+                </span>
+              )}
             </CardFooter>
           </Card>
         )}
