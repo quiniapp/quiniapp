@@ -1,4 +1,8 @@
-import { ICleanupResult, SettingsRepository } from '../repository/settings.repository';
+import { ICleanupBatchResult, SettingsRepository } from '../repository/settings.repository';
+
+const CLEANUP_DAYS = 65;
+// Cada request tiene que volver antes del timeout de 4s del proxy de Vercel.
+const CLEANUP_BATCH_SIZE = 5000;
 
 export class SettingsController {
   private repository = new SettingsRepository();
@@ -12,11 +16,11 @@ export class SettingsController {
     }
   };
 
-  cleanupOldArchiveData = async (): Promise<ICleanupResult> => {
+  cleanupOldArchiveDataBatch = async (): Promise<ICleanupBatchResult> => {
     try {
-      return await this.repository.cleanupOldArchiveData(65);
+      return await this.repository.cleanupOldArchiveDataBatch(CLEANUP_DAYS, CLEANUP_BATCH_SIZE);
     } catch (error) {
-      console.error('cleanupOldArchiveData error:', error);
+      console.error('cleanupOldArchiveDataBatch error:', error);
       throw error instanceof Error ? error : new Error('Unknown error');
     }
   };
