@@ -45,7 +45,10 @@ export async function printGroupedBetsPDF(opts: {
   const HEAD_H = 8;       // altura del header de tabla
 
   const HEADER_H = 40;    // área de encabezado fija por página
-  const ROWS_PER_COL = Math.floor((pageH - HEADER_H - MB - HEAD_H) / ROW_H) - 1;
+  const SUMMARY_H = 22;   // resumen de totales, solo en la primera página
+  const rowsPerCol = (top: number) => Math.floor((pageH - top - MB - HEAD_H) / ROW_H) - 1;
+  const ROWS_PER_COL = rowsPerCol(HEADER_H);
+  const FIRST_ROWS_PER_COL = rowsPerCol(HEADER_H + SUMMARY_H);
 
   const dateStr = date ? dayjs(date).format('D/M/YYYY') : dayjs().format('D/M/YYYY');
   const printedAt = dayjs().format('D/M/YYYY HH:mm');
@@ -70,9 +73,22 @@ export async function printGroupedBetsPDF(opts: {
   const totalHits = bets.reduce((acc, b) => acc + (b.hits ?? 0), 0);
   const totalsRow: string[] = ['', `Tot: ${money(totalAmount)}`, '', '', '', String(totalHits)];
 
+  // Resumen sobre las jugadas recibidas: ya vienen con todos los filtros de la página aplicados.
+  const winnerBets = bets.filter((b) => b.winner || Number(b.prize ?? 0) > 0);
+  const totalPrize = winnerBets.reduce((acc, b) => acc + Number(b.prize ?? 0), 0);
+  const ticketCount = new Set(bets.map((b) => b.ticket_id ?? b.ticket_number).filter(Boolean))
+    .size;
+
   const allRows: string[][] = [...bets.map(betToRow), totalsRow];
   const totalsRowIndex = allRows.length - 1;
-  const totalPagesNeeded = Math.ceil(allRows.length / (ROWS_PER_COL * 2)) || 1;
+
+  // La primera página tiene menos filas porque lleva el resumen arriba de la tabla.
+  const pages: { start: number; rows: number; top: number }[] = [];
+  for (let start = 0, p = 0; start < allRows.length || p === 0; p++) {
+    const rows = p === 0 ? FIRST_ROWS_PER_COL : ROWS_PER_COL;
+    pages.push({ start, rows, top: p === 0 ? HEADER_H + SUMMARY_H : HEADER_H });
+    start += rows * 2;
+  }
 
   const headStyles = {
     halign: 'center' as const,
@@ -106,13 +122,25 @@ export async function printGroupedBetsPDF(opts: {
     doc.line(ML, 36, pageW - MR, 36);
   };
 
-  for (let p = 0; p < totalPagesNeeded; p++) {
+  const drawSummary = () => {
+    const y = HEADER_H;
+    doc.setFontSize(10);
+    doc.text('Resumen', ML, y);
+    doc.setFontSize(9);
+    doc.text(`Apuestas: ${bets.length}    Monto total: $${money(totalAmount)}`, ML, y + 6);
+    doc.text(`Premios: ${winnerBets.length}    Monto en premios: $${money(totalPrize)}`, ML, y + 12);
+    // Agrupadas, cada fila junta jugadas de varios tickets: el conteo no aplica.
+    if (!grouped) doc.text(`Tickets: ${ticketCount}`, ML, y + 18);
+    doc.line(ML, y + SUMMARY_H - 3, pageW - MR, y + SUMMARY_H - 3);
+  };
+
+  pages.forEach(({ start: chunkStart, rows: perCol, top }, p) => {
     if (p > 0) doc.addPage();
     drawHeader();
+    if (p === 0) drawSummary();
 
-    const chunkStart = p * ROWS_PER_COL * 2;
-    const leftRows = allRows.slice(chunkStart, chunkStart + ROWS_PER_COL);
-    const rightRows = allRows.slice(chunkStart + ROWS_PER_COL, chunkStart + ROWS_PER_COL * 2);
+    const leftRows = allRows.slice(chunkStart, chunkStart + perCol);
+    const rightRows = allRows.slice(chunkStart + perCol, chunkStart + perCol * 2);
 
     const makeDidParseCell = (colOffset: number) => (data: any) => {
       const globalIdx = chunkStart + colOffset + data.row.index;
@@ -124,7 +152,7 @@ export async function printGroupedBetsPDF(opts: {
     // Columna izquierda
     if (leftRows.length > 0) {
       autoTable(doc, {
-        startY: HEADER_H,
+        startY: top,
         head,
         body: leftRows,
         theme: 'grid',
@@ -140,7 +168,7 @@ export async function printGroupedBetsPDF(opts: {
     // Columna derecha
     if (rightRows.length > 0) {
       autoTable(doc, {
-        startY: HEADER_H,
+        startY: top,
         head,
         body: rightRows,
         theme: 'grid',
@@ -149,10 +177,10 @@ export async function printGroupedBetsPDF(opts: {
         headStyles,
         columnStyles,
         tableWidth: halfW,
-        didParseCell: makeDidParseCell(ROWS_PER_COL),
+        didParseCell: makeDidParseCell(perCol),
       });
     }
-  }
+  });
 
   // Footer paginación
   const totalDocPages = doc.getNumberOfPages();
