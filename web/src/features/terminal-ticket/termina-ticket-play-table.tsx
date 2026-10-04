@@ -8,6 +8,7 @@ import { useMemo, useRef, memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { formatBetNumber } from '@helper/functions/formatBetNumber';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
@@ -37,7 +38,7 @@ const BetRowMemoized = memo<{
       key={String(bet.bet_id)}
       ref={triggerRef}
     >
-      <TableCell className="truncate">{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
+      <TableCell className="truncate">{formatBetNumber(bet.number, bet.bet_type)}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
       <TableCell className="whitespace-nowrap">${bet.amount}</TableCell>
       <TableCell className="truncate">{bet.lottery.name}</TableCell>
       <TableCell className="truncate">{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>

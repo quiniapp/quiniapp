@@ -4,6 +4,54 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-10-04 (Borrado de archivo y tamaño de base)
+
+#### "Borrar datos" fallaba por statement timeout
+`cleanup_old_archive_data` borraba en un solo `DELETE` todo lo de `bets_archive`/`tickets_archive` con más de 65 días. Con meses acumulados superaba el `statement_timeout` de PostgREST (`canceling statement due to statement timeout`), y antes de eso el proxy de Vercel ya cortaba el POST a los 4s y devolvía `BACKEND_UNAVAILABLE`.
+- **Migración `20261004100730_cleanup_archive_batched_and_db_size_view.sql`**: reemplaza la función por `cleanup_old_archive_data_batch(p_days, p_batch_size)`, que borra un lote por llamada (primero las apuestas y, cuando ya no quedan apuestas viejas, los tickets) y devuelve `{ cutoff_date, bets_deleted, tickets_deleted, done }`. Es el mismo patrón que `archive_data_by_date`. Solo `service_role` tiene `EXECUTE`.
+- **`src/settings/`**: `POST /api/private/settings/cleanup` ahora borra **un lote** (5000 filas, 65 días) y responde con el resultado de ese lote. El cliente repite hasta que llega `done: true`. **Cambio incompatible**: la respuesta ya no trae `success` y suma `done`.
+
+#### `total_storage_view` medía de menos
+Sumaba solo las tablas de `public` y dejaba afuera auth, storage, otros esquemas y los catálogos. Ahora usa `pg_database_size(current_database())`, que es el tamaño contra el que se aplica el límite del plan de Supabase. Las columnas (`total_bytes`, `total_mb`, `total_gb`) no cambian. Ojo: después de borrar filas, Postgres no achica los archivos (el espacio queda libre para reusar), así que el número no baja enseguida.
+
+### Changed - 2026-09-28 (Polla se separa de QuiniApp)
+
+#### La Polla pasa a ser un sistema propio sobre el mismo deploy de backend
+La Polla estaba embebida en QuiniApp: cada jugada era un `tickets` del sistema principal, dependía de sus usuarios, catálogos y tenant, y no había lugar para el rol *jugador*. Ahora es un sistema paralelo con esquema `polla_*`, autenticación propia y su propio frontend (`polla-web/`). Se reutiliza únicamente el proceso Express y la base Supabase.
+
+**El tenant es el capitalist**: una fila de `polla_organizations` = un capitalist, con sus propias quinielas, turnos, usuarios, ediciones, resultados, pozo y liquidación. Dentro de una organización no hay separación: todos ven todas las jugadas (el jugador, anonimizadas); grupo y pasador son filtros, no permisos. Solo el OWNER cruza organizaciones.
+
+- **Migraciones nuevas** (`api/supabase/migrations/`):
+  - `20260928100000_polla_drop_legacy.sql`: restaura `generate_winners_and_calculate_accounts` sin la rama de Polla y dropea las tablas, funciones y el tipo de la Polla vieja. Los tickets que generó quedan intactos (ya estaban liquidados).
+  - `20260928100100_polla_core_tables.sql`: `polla_organizations`, `polla_groups` (tabla real, no la sub-organización de QuiniApp), `polla_users` (jerarquía `OWNER → CAPITALIST → SUPERADMIN → ADMIN → CASHIER → PLAYER`, con `parent_polla_user_id` para colgar un jugador de su pasador y `credit_balance`), `polla_sessions`, `polla_lotteries` y `polla_schedules`. Triggers que validan que el padre de un jugador sea un CASHIER activo de la misma organización y que el grupo pertenezca a esa organización.
+  - `20260928100200_polla_game_tables.sql`: `polla_editions` (con contadores denormalizados `bets_count`/`collected_amount` y `EXCLUDE USING gist` por organización + quiniela + turno + rango de fechas), `polla_results` (carga manual, único por organización), `polla_bets` (sin tabla de tickets: `ticket_number` propio, `cashier_polla_user_id` para la imputación y organización/grupo/nombres denormalizados), `polla_credit_movements` (ledger con `balance_after`) y `polla_current_accounts`.
+  - `20260928100300_polla_indexes.sql`: índices parciales que calcan los predicados exactos, incluido el compuesto `(polla_edition_id, created_at DESC, polla_bet_id DESC)` que sirve la paginación keyset del feed, y los dos de liquidación `(cashier_polla_user_id, load_date)` y `(cashier_polla_user_id, hit_date) WHERE winner`. `ANALYZE` al cierre.
+  - `20260928100400_polla_functions.sql`: `polla_adjust_credits`, `polla_create_bet` (debita créditos al jugador y le imputa la jugada al pasador padre), `polla_update_bet_numbers`, `polla_delete_bet` (devuelve créditos), `polla_process_edition_hits` (acumulación set-based; solo toca ediciones `ACTIVE` que cubran la fecha, así una edición ya ganada no vuelve a calcularse), `polla_calculate_current_account` (misma fórmula que `calculate_current_account`, con pases y premios tomados directo de `polla_bets`), `polla_update_current_account_recompute`, `polla_cascade_current_account_from_date` y el orquestador `polla_process_results_and_accounts`.
+  - `20260928100500_polla_seed_owner.sql`: organización de sistema + usuario OWNER (`owner` / `polla2026`, con `password_reset_required = TRUE`). **Cambiar la contraseña en el primer login.**
+  - `20260928100600_fix_polla_create_bet_credit_link.sql`: `polla_create_bet` enlaza el movimiento de crédito con la jugada usando el id que devuelve `polla_adjust_credits`, en vez de buscar "el último movimiento BET sin jugada" del jugador (con dos cargas simultáneas del mismo jugador esa subconsulta podía elegir el movimiento de la otra).
+- **Módulo nuevo `api/src/polla/`**: auth propia (cookies `polla_access_token`/`polla_refresh_token`, secretos `POLLA_JWT_SECRET_*` derivados de los de QuiniApp si no se definen), `middleware/` con `isPollaAuthenticated` y un `requirePollaRole(...)` genérico (QuiniApp hace estos chequeos inline en cada router), y los módulos `catalog` (router genérico para organizaciones, grupos, quinielas y turnos), `user` (ABM + créditos), `edition`, `bet`, `result` y `current-account`. Montado en `/api/polla` (público) y `/api/polla/private` (autenticado), registrado **antes** que QuiniApp porque Express matchea por prefijo en orden de registro.
+- **Todos los `getAll` paginados**: `page`/`limit` (default 50, máximo 200) con el envelope `IPaginatedResponse` existente; el `COUNT` exacto se pide solo en la primera página y el feed de jugadas acepta además `cursor` (keyset).
+- **Visibilidad server-side**: el jugador recibe una proyección recortada (sin nombres, sin pasador, sin organización) salvo en sus propias jugadas y en las ganadoras, y sus filtros se ignoran en el backend. ADMIN y superiores pueden editar o borrar jugadas incluso pasada la fecha límite (`p_force`).
+- **Módulos eliminados**: `api/src/polla-edition/` y `api/src/polla-bet/`, y sus rutas en `api/src/router.ts`.
+- **`api/.env.example`**: documenta `POLLA_JWT_SECRET_ACCESS`, `POLLA_JWT_SECRET_REFRESH`, `POLLA_JWT_ACCESS_EXPIRATION` y `POLLA_JWT_REFRESH_EXPIRATION` (todos opcionales).
+
+
+### Added - 2026-09-20 (Juego Polla)
+
+#### Nuevo juego de pozo compartido: Polla
+Primer juego del sistema con pozo compartido entre varios ganadores (hasta ahora todo el modelo era premio fijo por apuesta individual). El jugador elige 10 números de 2 cifras (00-99); se juega día a día entre `start_date` y `end_date` de una edición contra los resultados de una quiniela+turno; gana quien primero acumula 10 aciertos (pueden ser varios el mismo día, reparten el pozo en partes iguales).
+
+- **Migraciones nuevas** (`api/supabase/migrations/`):
+  - `20260920100000_create_polla_tables.sql`: tablas `polla_editions` (config de una edición: quiniela, turno, `start_date`/`end_date`/`load_limit_date`, `pool_amount`, `ticket_price`, `status`) y `polla_bets` (una jugada = un ticket; `numbers`/`hit_numbers`/`hits` acumulados día a día, datos del pasador denormalizados para no depender de que el ticket de carga siga existiendo). Constraint `EXCLUDE USING gist` (requiere `btree_gist`) evita ediciones con fechas solapadas para la misma quiniela+turno. RLS habilitado en ambas tablas (el backend usa `service_role` y no se ve afectado).
+  - `20260920100100_create_polla_bet_rpc.sql`: RPC `create_polla_bet` — cada jugada de 10 números genera su propio ticket (nunca se mezcla con jugadas de quiniela normal), con `total = ticket_price` de la edición.
+  - `20260920100200_process_polla_hits.sql`: RPC `process_polla_edition_hits`/`process_polla_editions_for_schedule_date` — acumulan aciertos día a día comparando las 2 últimas cifras de los 20 resultados del día contra los números de cada jugada activa. Al llegar a 10 aciertos, reparte el pozo en partes iguales entre las jugadas ganadoras de ese día y cierra la edición; si se llega a `end_date` sin ganador, la edición queda `FINISHED` sin repartir (el admin decide manualmente sumar el sobrante al pozo de la próxima edición).
+  - `20260920100300_hook_polla_into_generate_winners.sql`: engancha el procesamiento de Polla dentro de `generate_winners_and_calculate_accounts`, entre `generate_winners` y `calculate_current_account` — sin tocar ningún archivo TypeScript, `POST /winners/:id?date=` ya dispara todo.
+  - **Liquidación**: el pase se imputa el día de carga (ticket normal, ya lo capta `calculate_current_account` de ese día). El premio se paga con un **ticket nuevo** dado de alta el día que se determina el ganador (no retroactivo al día de carga) para que quede incluido en la misma liquidación diaria junto a los demás premios.
+- **Módulos nuevos**: `api/src/polla-edition/` (CRUD admin de ediciones, no-CASHIER) y `api/src/polla-bet/` (carga y consulta de jugadas), registrados en `api/src/router.ts` como `/polla_edition` y `/polla_bet`.
+- `20260920100400_polla_bet_edit_delete.sql`: soft-delete (`polla_bets.deleted_at/deleted_by`) + RPCs `update_polla_bet_numbers`/`delete_polla_bet` — admin/owner puede editar los 10 números o borrar una jugada mientras no haya pasado `load_limit_date` de la edición y la jugada no sea ganadora (borrar también soft-elimina el ticket asociado). `process_polla_edition_hits` actualizado para ignorar jugadas borradas. Rutas `PUT/DELETE /polla_bet/:id` (no-CASHIER).
+- `20260920100500_add_ticket_number_to_polla_bets.sql`: denormaliza `ticket_number` en `polla_bets` (igual que `user_id`/`user_name`) para poder mostrarlo/reportarlo sin JOIN a `tickets`.
+- `PollaBetRepository.getAll` acepta `lottery_id`/`schedule_id`/`date` para resolver automáticamente qué ediciones de Polla están vigentes ese día — usado por la pantalla "Jugadas y Aciertos" del frontend para listar también las jugadas de Polla.
+
 ### Added - 2026-07-19 (Backdated tickets)
 
 #### `ticketBase` honra la fecha enviada para roles no-cajero

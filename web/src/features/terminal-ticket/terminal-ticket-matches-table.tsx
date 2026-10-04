@@ -13,6 +13,7 @@ import { useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteBetsByTicketNumber } from '@/hooks/fetchs/plays/useInfiniteBetsByTicketNumber';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { formatBetNumber } from '@helper/functions/formatBetNumber';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
@@ -93,7 +94,7 @@ const TerminalTicketMatchesTable = ({
                   key={String(bet.bet_id)}
                   ref={index === triggerIndex ? setTriggerRef : undefined}
                 >
-                  <TableCell>{bet.number}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
+                  <TableCell>{formatBetNumber(bet.number, bet.bet_type)}{`${bet?.with? ` - ${bet.with}` : ''}`}</TableCell>
                   <TableCell>${bet.amount}</TableCell>
                   <TableCell>{bet.lottery.name}</TableCell>
                   <TableCell>{betTypeAndPlaceLabel(bet.bet_type,bet.place,bet.position)}</TableCell>

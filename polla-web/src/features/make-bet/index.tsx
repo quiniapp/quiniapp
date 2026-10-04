@@ -1,0 +1,179 @@
+import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
+import { toast } from 'react-hot-toast';
+import { POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
+import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import { useAuth } from '@/providers/AuthContext';
+import { useEditions, useUserOptions } from '@/hooks/fetchs/usePollaData';
+import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
+import { useCreateBet } from '@/hooks/mutations/usePollaMutations';
+import {
+  PollaNumberBoxes,
+  createEmptyPollaNumbers,
+  pollaNumbersError,
+} from '@/components/PollaNumberBoxes';
+import { EmptyState } from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { makePollaTicketPdf } from '@/functions/makePollaTicket';
+import { deliverPdf } from '@/functions/printPdf';
+
+const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
+const fmtMoney = (value: number) =>
+  new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
+
+export const MakeBetPage = () => {
+  const { user, role, organizationId } = useAuth();
+  const today = dayjs().format('YYYY-MM-DD');
+
+  const canManage = Boolean(role && isPollaAdminRole(role));
+
+  const [editionId, setEditionId] = useState('');
+  const [targetUserId, setTargetUserId] = useState('');
+  const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
+
+  const { data: editions } = useEditions({
+    status: POLLA_EDITION_STATUS.ACTIVE,
+    loadable_on: today,
+    polla_organization_id: organizationId ?? undefined,
+  });
+  const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
+  const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
+  // ADMIN+ puede cargar a nombre de un pasador o de un jugador.
+  const { data: targets } = useUserOptions({}, canManage);
+
+  const { mutate: createBet, isPending } = useCreateBet();
+
+  const lotteryById = useMemo(
+    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
+    [lotteries]
+  );
+  const scheduleById = useMemo(
+    () => new Map(schedules?.data.map((s) => [s.polla_schedule_id, s.name])),
+    [schedules]
+  );
+
+  const loadable = editions?.data ?? [];
+  const edition = loadable.find((e) => e.polla_edition_id === editionId);
+
+  const handleSubmit = () => {
+    if (!edition) {
+      toast.error('Elegí una edición');
+      return;
+    }
+
+    const error = pollaNumbersError(numbers);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    createBet(
+      {
+        polla_edition_id: edition.polla_edition_id,
+        numbers,
+        ...(canManage && targetUserId ? { polla_user_id: targetUserId } : {}),
+      },
+      {
+        onSuccess: async (bet) => {
+          setNumbers(createEmptyPollaNumbers());
+
+          const { blob, fileName } = await makePollaTicketPdf({
+            ticket_number: bet.ticket_number,
+            user_name: bet.user_name,
+            cashier_number: bet.cashier_number ?? undefined,
+            numbers: bet.numbers,
+            lotteryName: lotteryById.get(edition.polla_lottery_id) ?? '',
+            scheduleName: scheduleById.get(edition.polla_schedule_id) ?? '',
+            startDate: edition.start_date,
+            endDate: edition.end_date,
+            loadDate: bet.load_date,
+            ticketPrice: Number(bet.amount),
+            poolAmount: Number(edition.pool_amount),
+          });
+
+          await deliverPdf(blob, fileName, `Ticket Polla ${bet.ticket_number}`);
+        },
+      }
+    );
+  };
+
+  return (
+    // Sin encabezado: la pantalla entra completa en 480px de alto y no hace
+    // falta scrollear para llegar al botón de cargar.
+    <div className="mx-auto max-w-2xl">
+      {loadable.length === 0 ? (
+        <EmptyState message="No hay ediciones abiertas para carga en este momento" />
+      ) : (
+        <div className="flex flex-col gap-4 rounded-xl bg-card p-4 sm:gap-5 sm:p-6">
+          <div className="flex flex-col gap-2">
+            <Label>Edición</Label>
+            <Select value={editionId} onValueChange={setEditionId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Elegí una edición" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadable.map((item) => (
+                  <SelectItem key={item.polla_edition_id} value={item.polla_edition_id}>
+                    {lotteryById.get(item.polla_lottery_id) ?? ''} ·{' '}
+                    {scheduleById.get(item.polla_schedule_id) ?? ''} ({fmtDate(item.start_date)} al{' '}
+                    {fmtDate(item.end_date)}) · ${fmtMoney(item.ticket_price)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {edition && (
+              <p className="text-xs text-muted-foreground">
+                Pozo ${fmtMoney(edition.pool_amount)} · cierre de carga{' '}
+                {fmtDate(edition.load_limit_date)}
+              </p>
+            )}
+          </div>
+
+          {canManage && (
+            <div className="flex flex-col gap-2">
+              <Label>Cargar a nombre de</Label>
+              <Select
+                value={targetUserId || 'me'}
+                onValueChange={(v) => setTargetUserId(v === 'me' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Yo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">Yo ({user?.name})</SelectItem>
+                  {targets?.data
+                    .filter(
+                      (u) =>
+                        u.user_type === POLLA_USER_TYPE.CASHIER ||
+                        u.user_type === POLLA_USER_TYPE.PLAYER
+                    )
+                    .map((u) => (
+                      <SelectItem key={u.polla_user_id} value={u.polla_user_id}>
+                        {u.name} · {u.user_type === POLLA_USER_TYPE.PLAYER ? 'jugador' : 'pasador'}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <PollaNumberBoxes values={numbers} onChange={setNumbers} />
+
+          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+            {isPending ? 'Cargando…' : 'Cargar jugada'}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MakeBetPage;

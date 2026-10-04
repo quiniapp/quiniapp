@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import type { IBetEntityFront } from '@helper/types/bet.type';
 import { betTypeAndPlaceLabel } from '@helper/functions/betTypeDictionary';
+import { formatBetNumber } from '@helper/functions/formatBetNumber';
 
 const money = (n?: number | null) =>
   Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -18,9 +19,10 @@ export async function printGroupedBetsPDF(opts: {
   lotteryName?: string | null;
   cashierName?: string | null;
   groupName?: string | null;
+  grouped?: boolean;
 }) {
   const { jsPDF, autoTable } = await getPDFDeps();
-  const { bets, date } = opts;
+  const { bets, date, grouped = true } = opts;
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -56,7 +58,7 @@ export async function printGroupedBetsPDF(opts: {
   const head = [['Jugada', 'Monto', 'Tipo', 'Turno', 'Quiniela', 'Aciert.']];
 
   const betToRow = (b: IBetEntityFront): string[] => [
-    b.number + (b.with ? ` - ${b.with}` : ''),
+    formatBetNumber(b.number, b.bet_type) + (b.with ? ` - ${b.with}` : ''),
     money(b.amount),
     betTypeAndPlaceLabel(b.bet_type, b.place, b.position),
     b.schedule?.name ?? '',
@@ -91,7 +93,7 @@ export async function printGroupedBetsPDF(opts: {
 
   const drawHeader = () => {
     doc.setFontSize(12);
-    doc.text('Jugadas Agrupadas', pageW / 2, 11, { align: 'center' });
+    doc.text(grouped ? 'Jugadas Agrupadas' : 'Jugadas', pageW / 2, 11, { align: 'center' });
 
     doc.setFontSize(9);
     doc.text(`Fecha: ${dateStr}`, ML, 19);
@@ -165,5 +167,5 @@ export async function printGroupedBetsPDF(opts: {
     );
   }
 
-  doc.save(`Jugadas-Agrupadas-${date ?? dayjs().format('YYYY-MM-DD')}.pdf`);
+  doc.save(`${grouped ? 'Jugadas-Agrupadas' : 'Jugadas'}-${date ?? dayjs().format('YYYY-MM-DD')}.pdf`);
 }

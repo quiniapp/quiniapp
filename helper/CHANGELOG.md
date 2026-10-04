@@ -4,6 +4,31 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-09-28 (Polla se separa de QuiniApp)
+
+#### Namespace propio `helper/polla/`
+Los tipos de Polla dejan de mezclarse con los de QuiniApp: el sistema ahora tiene usuarios, organizaciones y catálogos propios, así que su contrato compartido vive en su propio árbol.
+
+- **`helper/polla/types/user.type.ts`**: `POLLA_USER_TYPE` (suma `PLAYER` a la jerarquía), `POLLA_USER_HIERARCHY`, helpers `isPollaAdminRole`/`isPollaStaffRole`, entidades y `IPollaSessionUser`.
+- **`helper/polla/types/catalog.type.ts`**: organizaciones, grupos, quinielas y turnos.
+- **`helper/polla/types/game.type.ts`**: ediciones, resultados, jugadas (incluida la proyección anónima `IPollaBetAnonymous` que recibe un jugador), movimientos de crédito y cuenta corriente.
+- **`helper/polla/schemas/`**: `auth`, `catalog`, `user` (con validación de signo por tipo de movimiento de crédito) y `game` (ediciones con reglas cruzadas de fechas, resultados de 20 números del mismo largo, jugadas de 10 números distintos, cuenta corriente). Los tipos de payload se infieren con `z.infer` en vez de duplicarse en `request/`.
+- **`helper/polla/config/session.config.ts`**: nombres de cookie (distintos de los de QuiniApp a propósito: las dos apps pegan al mismo dominio de API), TTLs, intervalos de validación y tamaños de página.
+- **Eliminados**: `types/polla-bet.type.ts`, `types/polla-edition.type.ts`, `request/polla-*.ts`, `response/polla-*.ts` y `schemas/polla-*.ts`.
+
+
+### Added - 2026-09-20 (Juego Polla)
+
+#### Tipos, requests, responses y schemas de Polla
+- **`helper/types/polla-edition.type.ts`**: `POLLA_EDITION_STATUS` enum, `IPollaEditionEntityBack`/`IPollaEditionEntityFront`.
+- **`helper/types/polla-bet.type.ts`**: `IPollaBetEntityBack`/`IPollaBetEntityFront` (numbers, hit_numbers, hits, winner, prize).
+- **`helper/request/polla-edition.request.ts`**, **`helper/request/polla-bet.request.ts`**.
+- **`helper/response/polla-edition.response.ts`**, **`helper/response/polla-bet.response.ts`**.
+- **`helper/schemas/polla-edition.schema.ts`**: `newPollaEditionSchema`/`updatePollaEditionSchema` con `superRefine` cross-field (`load_limit_date < start_date`, `start_date <= end_date`).
+- **`helper/schemas/polla-bet.schema.ts`**: `newPollaBetSchema`/`updatePollaBetSchema` — array de 10 strings `/^\d{2}$/` con validación de unicidad.
+- **`helper/types/polla-bet.type.ts`**: agrega `ticket_number`, `deleted_at`, `deleted_by` a `IPollaBetEntityBack` (los dos últimos excluidos del tipo Front).
+- **`helper/request/polla-bet.request.ts`**: agrega `IUpdatePollaBetEntity`/`IDeletePollaBetEntity` para edición/borrado de jugadas.
+
 ### Changed - 2026-07-19
 
 #### Ticket Schema
