@@ -4,6 +4,11 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-10-04 (Imprimir jugadas)
+
+- **`src/features/plays-and-hits/print-grouped-bets-button.tsx`**: el botón Imprimir pedía `limit=9999` en un solo request, pero Supabase corta cada respuesta en `max_rows = 1000`. Por eso, con más de 1000 jugadas, el PDF salía incompleto. Ahora busca al hacer click, de a 900 por página (`page`/`limit`, el endpoint ya los aceptaba), hasta que llega una página incompleta, y descarta repetidos por `bet_id`. Usa los mismos filtros que la tabla y el mismo fallback de fecha: sin filtros imprime todas las jugadas del día. Ya no se precarga el listado completo al entrar a la página, y si no hay jugadas avisa con un toast en vez de dejar el botón deshabilitado.
+- **`src/functions/printGroupedBetsPDF.ts`**: la primera página lleva un resumen antes de las jugadas: cantidad de apuestas y monto total, cantidad de premios y monto en premios, y total de tickets (este último solo sin agrupar). Se calcula sobre las jugadas impresas, así respeta todos los filtros. Los agregados del backend ignoran ganadores, terna, cuaterna y monto mínimo. La primera página tiene menos filas para dejar lugar al resumen.
+
 ### Fixed - 2026-10-04 (Configuración)
 
 - **`src/hooks/mutations/settings/useCleanupOldData.ts`**: el backend ahora borra el archivo viejo de a lotes, así que el hook repite `POST /settings/cleanup` hasta `done`, acumula lo borrado, informa el progreso con `onProgress` y reintenta hasta 3 fallas seguidas (borrar es idempotente; un 502 del proxy no significa que el lote no se haya borrado). Invalida `storageStatus` en `onSettled`, también si falla a mitad de camino.
