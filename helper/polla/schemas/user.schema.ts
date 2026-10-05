@@ -21,6 +21,7 @@ export const newPollaUserSchema = z
     polla_organization_id: z.string().uuid().optional(),
     parent_polla_user_id: z.string().uuid().nullable().optional(),
     fee: z.number().min(0).max(100).nullable().optional(),
+    /** La liquidación de Polla no tiene deje: la API lo fuerza a 0. */
     fee_plus: z.number().min(0).max(100).nullable().optional(),
   })
   .superRefine((data, ctx) => {
@@ -30,13 +31,6 @@ export const newPollaUserSchema = z
           code: z.ZodIssueCode.custom,
           path: ['fee'],
           message: 'El pasador necesita un porcentaje de comisión',
-        });
-      }
-      if (data.fee_plus === null || data.fee_plus === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['fee_plus'],
-          message: 'El pasador necesita un porcentaje de recargo',
         });
       }
       if (data.number === null || data.number === undefined) {

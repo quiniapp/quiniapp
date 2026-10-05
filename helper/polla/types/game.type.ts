@@ -37,7 +37,12 @@ export interface IPollaEditionEntityBack {
   deleted_at: string | null;
 }
 
-export type IPollaEditionEntityFront = Omit<IPollaEditionEntityBack, 'deleted_at'>;
+/** `bets_count` y `collected_amount` son totales: la API solo se los manda a un admin. */
+export type IPollaEditionEntityFront = Omit<
+  IPollaEditionEntityBack,
+  'deleted_at' | 'bets_count' | 'collected_amount'
+> &
+  Partial<Pick<IPollaEditionEntityBack, 'bets_count' | 'collected_amount'>>;
 
 // --------------------------------------------------------------- resultados
 
@@ -56,6 +61,24 @@ export interface IPollaResultEntityBack {
 
 export type IPollaResultEntityFront = Omit<IPollaResultEntityBack, 'deleted_at'>;
 
+/** Resultado de procesar los aciertos de un día en una edición. */
+export interface IPollaProcessedEdition {
+  polla_edition_id?: string;
+  skipped?: boolean;
+  bets_updated?: number;
+  winners?: number;
+  winner_date?: string | null;
+  previous_winner_date?: string | null;
+  /** Un reproceso revirtió al ganador: hay que procesar los días siguientes. */
+  reopened?: boolean;
+}
+
+export interface IPollaProcessResult {
+  date: string;
+  editions: IPollaProcessedEdition[];
+  accounts_updated: number;
+}
+
 // ----------------------------------------------------------------- jugadas
 
 export interface IPollaBetEntityBack {
@@ -71,7 +94,14 @@ export interface IPollaBetEntityBack {
   cashier_number: number | null;
   load_date: string;
   amount: number;
+  /** 10 números de 2 cifras; se pueden repetir. */
   numbers: string[];
+  /**
+   * En paralelo a `numbers`: día en que acertó cada casillero (`YYYY-MM-DD`) o
+   * `null` si todavía no acertó. Un número jugado 5 veces necesita salir 5 veces.
+   */
+  hit_dates: (string | null)[];
+  /** Derivado de `hit_dates`: los números de los casilleros acertados. */
   hit_numbers: string[];
   hits: number;
   winner: boolean;
@@ -82,31 +112,53 @@ export interface IPollaBetEntityBack {
   deleted_by: string | null;
 }
 
-export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'>;
+/** Campos que la API agrega a cada jugada que lista. */
+export interface IPollaBetDerivedFields {
+  /** Grupo del pasador (la columna "Coord"). */
+  group_name: string | null;
+  /** Jugador dueño de la jugada; `null` si la jugó el propio pasador. */
+  client_name: string | null;
+}
+
+export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'> &
+  IPollaBetDerivedFields;
 
 /**
- * Proyección que recibe un jugador de las jugadas que no son suyas: sin nombres,
- * sin pasador, sin organización. El backend recorta las columnas; el front nunca
- * "esconde" datos que ya viajaron.
+ * Lo que recibe un pasador o un jugador de cada jugada: números, aciertos y
+ * quién la jugó, sin ids internos ni montos. Los totales son solo de admin.
  */
-export interface IPollaBetAnonymous {
+export interface IPollaBetPublic extends IPollaBetDerivedFields {
   polla_bet_id: string;
   ticket_number: string;
   polla_edition_id: string;
+  cashier_name: string;
+  cashier_number: number | null;
+  load_date: string;
   numbers: string[];
+  hit_dates: (string | null)[];
   hit_numbers: string[];
   hits: number;
   winner: boolean;
   hit_date: string | null;
-  /** Solo viene con nombre si la jugada es del propio jugador o si ya ganó. */
-  user_name?: string;
-  is_mine?: boolean;
+  /** Solo distinto de 0 si la jugada ganó: el premio es público. */
+  prize: number;
+  /** Es del usuario o, para un pasador, está imputada a él (sus jugadores). */
+  is_mine: boolean;
+  /** El usuario es el dueño: puede editarla o borrarla dentro del plazo. */
+  can_edit: boolean;
 }
 
-export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetAnonymous;
+export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
 
-export const isAnonymousPollaBet = (bet: IPollaBetListItem): bet is IPollaBetAnonymous =>
+export const isPublicPollaBet = (bet: IPollaBetListItem): bet is IPollaBetPublic =>
   !('cashier_polla_user_id' in bet);
+
+/** Lo mínimo para repetir un ticket: sus 10 números. */
+export interface IPollaBetToRepeat {
+  ticket_number: string;
+  polla_edition_id: string;
+  numbers: string[];
+}
 
 // ---------------------------------------------------------------- créditos
 

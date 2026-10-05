@@ -5,17 +5,10 @@ import { POLLA_NUMBERS_REQUIRED } from '../types/game.type';
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
 const twoDigitNumber = z.string().regex(/^\d{2}$/, 'Debe ser un número de 2 cifras (00-99)');
 
-const distinctNumbers = z
+/** Se permiten repetidos: cada aparición de un número es un casillero propio. */
+const betNumbers = z
   .array(twoDigitNumber)
-  .length(POLLA_NUMBERS_REQUIRED, `Debe elegir exactamente ${POLLA_NUMBERS_REQUIRED} números`)
-  .superRefine((numbers, ctx) => {
-    if (new Set(numbers).size !== numbers.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Los ${POLLA_NUMBERS_REQUIRED} números deben ser distintos`,
-      });
-    }
-  });
+  .length(POLLA_NUMBERS_REQUIRED, `Debe elegir exactamente ${POLLA_NUMBERS_REQUIRED} números`);
 
 // --------------------------------------------------------------- ediciones
 
@@ -120,12 +113,12 @@ export const newPollaBetSchema = z.object({
   polla_edition_id: z.string().uuid(),
   /** Dueño de la jugada. Si falta, el backend usa al usuario autenticado. */
   polla_user_id: z.string().uuid().optional(),
-  numbers: distinctNumbers,
+  numbers: betNumbers,
   date: isoDate.optional(),
 });
 
 export const updatePollaBetSchema = z.object({
-  numbers: distinctNumbers,
+  numbers: betNumbers,
 });
 
 // -------------------------------------------------------- cuenta corriente

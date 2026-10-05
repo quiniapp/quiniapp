@@ -17,7 +17,6 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_BET_ALREADY_WINNER: () =>
     new ForbiddenError('La jugada ya es ganadora, no se puede modificar'),
   POLLA_NUMBERS_MUST_BE_TEN: () => new BadRequestError('La jugada debe tener 10 números'),
-  POLLA_NUMBERS_NOT_DISTINCT: () => new BadRequestError('Los 10 números deben ser distintos'),
   POLLA_NUMBERS_INVALID: () => new BadRequestError('Los números deben ser de 2 cifras (00-99)'),
   POLLA_USER_NOT_FOUND: () => new NotFoundError('Usuario de Polla'),
   POLLA_USER_NOT_PLAYER: () => new BadRequestError('El usuario no es un jugador'),

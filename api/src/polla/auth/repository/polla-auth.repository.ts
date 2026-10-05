@@ -1,5 +1,9 @@
 import { supabase } from '@database/db.connection';
-import { IPollaSessionUser, IPollaUserEntityBack } from '@helper/polla/types/user.type';
+import {
+  IPollaSessionUser,
+  IPollaUserEntityBack,
+  POLLA_THEME,
+} from '@helper/polla/types/user.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { POLLA_SESSION_CONFIG } from '../../config/polla-session.config';
 
@@ -15,7 +19,7 @@ export interface IPollaSessionRow {
 }
 
 const SESSION_USER_COLUMNS =
-  'polla_user_id, name, last_name, username, number, user_type, polla_organization_id, polla_group_id, parent_polla_user_id, credit_balance, password_reset_required';
+  'polla_user_id, name, last_name, username, number, user_type, polla_organization_id, polla_group_id, parent_polla_user_id, credit_balance, password_reset_required, theme';
 
 export class PollaAuthRepository {
   async getUserByUsername(username: string): Promise<IPollaUserEntityBack | null> {
@@ -175,6 +179,15 @@ export class PollaAuthRepository {
         password_reset_required: false,
         edited_at: new Date().toISOString(),
       })
+      .eq('polla_user_id', pollaUserId);
+
+    throwIfPollaError(error);
+  }
+
+  async updateTheme(pollaUserId: string, theme: POLLA_THEME): Promise<void> {
+    const { error } = await supabase
+      .from('polla_users')
+      .update({ theme, edited_at: new Date().toISOString() })
       .eq('polla_user_id', pollaUserId);
 
     throwIfPollaError(error);

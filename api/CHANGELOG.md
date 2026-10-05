@@ -4,6 +4,41 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-05 (Polla: ajustes del cliente)
+
+#### Números repetidos y aciertos por casillero con fecha
+Una jugada puede repetir números (el 32 cinco veces) y cada aparición necesita su propia salida a lo largo de la edición: las 5 en un mismo sorteo o repartidas entre varios días. Antes los números tenían que ser distintos y los aciertos se guardaban sin fecha, así que no había forma de corregir un sorteo mal cargado.
+- **Migración `20261005120000_polla_repeated_numbers_hit_dates.sql`**:
+  - El trigger `validate_polla_bet_numbers_distinct` se reemplaza por `validate_polla_bet_numbers`, que solo valida el formato `^\d{2}$`.
+  - Columna nueva `polla_bets.hit_dates DATE[]`, en paralelo a `numbers`: día en que acertó cada casillero, o NULL. `hits` y `hit_numbers` pasan a ser derivados (`hit_numbers` ahora incluye repetidos). El backfill le pone a cada casillero ya acertado el primer sorteo de la edición en que salió su número. No cambia ningún `hits`, `winner`, `prize` ni estado de edición.
+  - `polla_process_edition_hits` reescrita. Reprocesar el día D libera solo los casilleros marcados con D y los reasigna con los resultados actuales de D, contando repeticiones dentro del sorteo. Si el resultado se borró, D queda sin aciertos. Las marcas de otros días no se tocan. Los ganadores se derivan de las marcas: una jugada se completa el día de su último acierto y gana quien se completó primero. Así, corregir un resultado que había generado un ganador lo revierte y reabre la edición. También procesa ediciones `FINISHED` cuyo ganador es de D o posterior. Devuelve además `winner_date`, `previous_winner_date` y `reopened`.
+  - `polla_process_results_and_accounts` recorre las ediciones del turno que cubren el día, no los resultados cargados, así un resultado borrado también limpia sus aciertos. Recalcula la cuenta corriente de D y de los días ganadores viejo y nuevo, y arrastra el saldo con `polla_cascade_current_account_from_date`.
+  - `polla_update_bet_numbers` también limpia `hit_dates`.
+  - Índices: se crea `idx_polla_bets_edition_ranking (polla_edition_id, hits DESC, created_at DESC, polla_bet_id DESC)` para el ranking con keyset. Se dropean `idx_polla_bets_edition_hits` (cubierto) e `idx_polla_bets_edition_pending` (el procesamiento ya no filtra por `winner = FALSE`).
+- **`polla-errors.ts`**: se quita `POLLA_NUMBERS_NOT_DISTINCT`.
+
+#### Liquidación sin deje
+- **Migración `20261005120100_polla_settlement_without_leave.sql`**: `fee_plus = 0` para todos los pasadores. Con eso las funciones existentes dejan `drag` y `leave` en 0; el historial no se toca.
+- **`polla-user.route.ts`**: el alta de un pasador guarda `fee_plus = 0` y la edición ignora `fee_plus`.
+- **`polla-current-account.route.ts`**: `calculate`, `liquidate` y la edición por fila calculan siempre con `calculateLeave = false` y `leaveInSubtotal = false`. Los parámetros `leave` y `leave_in_subtotal` se ignoran.
+
+#### Privilegios por rol (como QuiniApp)
+- **`polla-bet.route.ts`**:
+  - Pasadores y jugadores reciben de cada jugada una proyección pública (`toPublicBet`): grupo, pasador, cliente, números, `hit_dates`, aciertos, estado, más `is_mine` y `can_edit`. No reciben ids internos ni montos; el premio solo viene si la jugada ganó. Admin+ recibe la fila completa.
+  - El jugador ya no ve las jugadas anónimas: ve el nombre del jugador y del pasador. Si la jugada es del pasador, `client_name` va en `null`.
+  - `mine=true`: el pasador ve las imputadas a él (las suyas y las de sus jugadores) y el jugador, las propias. La búsqueda por `ticket_number` queda habilitada para todos.
+  - `sort=hits|recent`, por defecto `hits` (ranking), con cursor keyset de tres niveles (`hits|created_at|id`) validado igual que el de dos.
+  - `GET /ganadores` usa la misma proyección.
+- **`polla-bet.repository.ts`**: el grupo viaja embebido (`polla_groups(name)`) y cada fila suma `group_name` y `client_name`.
+- **`polla-edition.route.ts`**: `bets_count` y `collected_amount` (totales) solo se le mandan a admin+.
+
+#### Repetir ticket
+- **`GET /api/polla/private/bet/ticket/:ticketNumber`**: devuelve `{ ticket_number, polla_edition_id, numbers }`. Acepta el número completo, o los 17 dígitos sin `-<pasador>` (búsqueda por prefijo, como QuiniApp). Admin+ busca en la organización, el pasador en lo imputado a él y el jugador en lo propio.
+
+#### Tema por usuario
+- **Migración `20261005120200_polla_user_theme.sql`**: `polla_users.theme` (`'light' | 'dark'`, por defecto `'light'`).
+- **`PUT /api/polla/private/auth/preferences`** (cualquier rol): guarda el tema y devuelve el usuario de sesión. `theme` se suma a `/auth/validate`, login y refresh.
+
 ### Fixed - 2026-10-04 (Borrado de archivo y tamaño de base)
 
 #### "Borrar datos" fallaba por statement timeout

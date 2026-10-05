@@ -140,6 +140,8 @@ export class PollaUserRouter {
 
     const created = await this.repository.create({
       ...rest,
+      // La liquidación de Polla no tiene deje: el pasador no lleva recargo.
+      fee_plus: payload.user_type === POLLA_USER_TYPE.CASHIER ? 0 : null,
       parent_polla_user_id: parentId,
       polla_organization_id: organizationId,
       password_hash: await hashPassword(password),
@@ -154,7 +156,9 @@ export class PollaUserRouter {
     await this.assertReachable(user, req.params.id);
 
     const payload = updatePollaUserSchema.parse(req.body);
-    const { password, ...rest } = payload;
+    // fee_plus no se edita: queda en 0 (la liquidación no tiene deje).
+    const { password, fee_plus: _feePlus, ...rest } = payload;
+    void _feePlus;
 
     const updated = await this.repository.update(req.params.id, {
       ...rest,

@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { ForbiddenError } from '@helper/errors';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
-import { POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
+import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import { IPollaEditionEntityBack, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
 import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaEditionRepository } from '../repository/polla-edition.repository';
@@ -15,6 +15,14 @@ const ADMIN_AND_UP = [
   POLLA_USER_TYPE.SUPERADMIN,
   POLLA_USER_TYPE.ADMIN,
 ];
+
+/** Recaudado y cantidad de jugadas son totales: solo los ve un admin. */
+const withoutTotals = (edition: IPollaEditionEntityBack) => {
+  const { bets_count: _count, collected_amount: _collected, ...rest } = edition;
+  void _count;
+  void _collected;
+  return rest;
+};
 
 export class PollaEditionRouter {
   public router: Router;
@@ -64,12 +72,18 @@ export class PollaEditionRouter {
       pagination
     );
 
-    res.status(200).json({ data: { editions: result } });
+    const data = isPollaAdminRole(user.user_type) ? result.data : result.data.map(withoutTotals);
+
+    res.status(200).json({ data: { editions: { ...result, data } } });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
     const edition = await this.assertScope(req, req.params.id);
-    res.status(200).json({ data: { edition } });
+
+    res.status(200).json({
+      data: { edition: isPollaAdminRole(user.user_type) ? edition : withoutTotals(edition) },
+    });
   });
 
   private createHandler = asyncHandler(async (req: Request, res: Response) => {

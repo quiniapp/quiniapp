@@ -5,32 +5,58 @@ import {
   IPollaSessionUser,
   isPollaAdminRole,
 } from '@helper/polla/types/user.type';
+import { IPollaBetPublic } from '@helper/polla/types/game.type';
 import { newPollaBetSchema, updatePollaBetSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
-import { PollaBetRepository, PollaBetFilters } from '../repository/polla-bet.repository';
+import {
+  PollaBetRepository,
+  PollaBetFilters,
+  PollaBetRow,
+  PollaBetSort,
+  PollaBetTicketScope,
+} from '../repository/polla-bet.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
 import { parsePagination } from '../../helper/pagination';
 import { resolveOptionalOrganizationId } from '../../helper/scope';
 import { getPollaSession } from '../../middleware/polla-auth.middleware';
 
+/** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
+const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
+
+const queryString = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null;
+
+const parseSort = (value: unknown): PollaBetSort => (value === 'recent' ? 'recent' : 'hits');
+
 /**
- * Recorta la fila para un jugador: se queda con los números y los aciertos, y
- * solo revela el nombre si la jugada es suya o si ya ganó.
+ * Lo que ve un pasador o un jugador de cada jugada: quién la jugó y sus
+ * aciertos, sin ids internos ni montos (los totales son solo de admin).
  */
-const anonymize = (row: Record<string, unknown>, viewerId: string) => {
-  const isMine = row.polla_user_id === viewerId;
-  const isWinner = row.winner === true;
+const toPublicBet = (bet: PollaBetRow, viewer: IPollaSessionUser): IPollaBetPublic => ({
+  polla_bet_id: bet.polla_bet_id,
+  ticket_number: bet.ticket_number,
+  polla_edition_id: bet.polla_edition_id,
+  group_name: bet.group_name,
+  cashier_name: bet.cashier_name,
+  cashier_number: bet.cashier_number,
+  client_name: bet.client_name,
+  load_date: bet.load_date,
+  numbers: bet.numbers,
+  hit_dates: bet.hit_dates,
+  hit_numbers: bet.hit_numbers,
+  hits: bet.hits,
+  winner: bet.winner,
+  hit_date: bet.hit_date,
+  prize: bet.winner ? Number(bet.prize) : 0,
+  is_mine:
+    bet.polla_user_id === viewer.polla_user_id ||
+    (viewer.user_type === POLLA_USER_TYPE.CASHIER &&
+      bet.cashier_polla_user_id === viewer.polla_user_id),
+  can_edit: bet.polla_user_id === viewer.polla_user_id,
+});
 
-  const { polla_user_id: _ownerId, user_name, created_at: _createdAt, ...rest } = row;
-  void _ownerId;
-  void _createdAt;
-
-  return {
-    ...rest,
-    is_mine: isMine,
-    ...(isMine || isWinner ? { user_name } : {}),
-  };
-};
+const forViewer = (bet: PollaBetRow, viewer: IPollaSessionUser) =>
+  isPollaAdminRole(viewer.user_type) ? bet : toPublicBet(bet, viewer);
 
 export class PollaBetRouter {
   public router: Router;
@@ -46,6 +72,7 @@ export class PollaBetRouter {
 
   private setupRoutes() {
     this.router.get('/winners', this.getWinnersHandler);
+    this.router.get('/ticket/:ticketNumber', this.getByTicketHandler);
     this.router.get('/', this.getAllHandler);
     this.router.get('/:id', this.getByIdHandler);
     this.router.post('/', this.createHandler);
@@ -69,28 +96,33 @@ export class PollaBetRouter {
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const pagination = parsePagination(req.query as Record<string, unknown>);
-    const isPlayer = user.user_type === POLLA_USER_TYPE.PLAYER;
+    const isAdmin = isPollaAdminRole(user.user_type);
+    const onlyMine = req.query.mine === 'true';
 
-    const editionId =
-      typeof req.query.polla_edition_id === 'string' ? req.query.polla_edition_id : undefined;
+    const editionId = queryString(req.query.polla_edition_id) ?? undefined;
 
     if (editionId) await this.assertEditionScope(user, editionId);
 
-    // El jugador no filtra: solo elige edición y si quiere ver solo las suyas.
-    const filters: PollaBetFilters = isPlayer
+    // Pasadores y jugadores ven todas las jugadas de su organización (con
+    // nombres y aciertos); "solo mías" es, para el pasador, lo imputado a él.
+    const filters: PollaBetFilters = isAdmin
       ? {
           editionId,
-          organizationId: user.polla_organization_id,
-          userId: req.query.mine === 'true' ? user.polla_user_id : null,
+          organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
+          cashierId: queryString(req.query.cashier_polla_user_id),
+          userId: onlyMine ? user.polla_user_id : queryString(req.query.polla_user_id),
+          groupId: queryString(req.query.polla_group_id),
+          ticketNumber: queryString(req.query.ticket_number),
+          loadDate: queryString(req.query.load_date),
+          onlyWinners: req.query.winners === 'true',
         }
       : {
           editionId,
-          organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
-          cashierId: (req.query.cashier_polla_user_id as string) ?? null,
-          userId: (req.query.polla_user_id as string) ?? null,
-          groupId: (req.query.polla_group_id as string) ?? null,
-          ticketNumber: (req.query.ticket_number as string) ?? null,
-          loadDate: (req.query.load_date as string) ?? null,
+          organizationId: user.polla_organization_id,
+          cashierId:
+            onlyMine && user.user_type === POLLA_USER_TYPE.CASHIER ? user.polla_user_id : null,
+          userId: onlyMine && user.user_type === POLLA_USER_TYPE.PLAYER ? user.polla_user_id : null,
+          ticketNumber: queryString(req.query.ticket_number),
           onlyWinners: req.query.winners === 'true',
         };
 
@@ -99,13 +131,11 @@ export class PollaBetRouter {
     }
 
     const result = await this.repository.getAll(filters, pagination, {
-      anonymous: isPlayer,
-      cursor: typeof req.query.cursor === 'string' ? req.query.cursor : null,
+      sort: parseSort(req.query.sort),
+      cursor: queryString(req.query.cursor),
     });
 
-    const data = isPlayer
-      ? result.data.map((row) => anonymize(row, user.polla_user_id))
-      : result.data;
+    const data = result.data.map((bet) => forViewer(bet, user));
 
     res.status(200).json({ data: { bets: { ...result, data } } });
   });
@@ -121,12 +151,30 @@ export class PollaBetRouter {
       throw new ForbiddenError('La jugada pertenece a otra organización');
     }
 
-    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
-      res.status(200).json({
-        data: { bet: anonymize(bet as unknown as Record<string, unknown>, user.polla_user_id) },
-      });
-      return;
+    res.status(200).json({ data: { bet: forViewer(bet, user) } });
+  });
+
+  /** Números de un ticket para repetirlo. Cada rol busca solo en lo suyo. */
+  private getByTicketHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const ticketNumber = req.params.ticketNumber.trim();
+
+    if (!TICKET_SEARCH.test(ticketNumber)) {
+      throw new BadRequestError('Número de ticket inválido');
     }
+
+    let scope: PollaBetTicketScope;
+    if (isPollaAdminRole(user.user_type)) {
+      scope = {
+        organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
+      };
+    } else if (user.user_type === POLLA_USER_TYPE.CASHIER) {
+      scope = { organizationId: user.polla_organization_id, cashierId: user.polla_user_id };
+    } else {
+      scope = { organizationId: user.polla_organization_id, userId: user.polla_user_id };
+    }
+
+    const bet = await this.repository.getByTicketNumber(ticketNumber, scope);
 
     res.status(200).json({ data: { bet } });
   });
@@ -144,10 +192,12 @@ export class PollaBetRouter {
 
     // Los ganadores se muestran con nombre a todos: es el resultado público.
     const result = await this.repository.getAll({ editionId, onlyWinners: true }, pagination, {
-      anonymous: false,
+      sort: 'recent',
     });
 
-    res.status(200).json({ data: { winners: result } });
+    const data = result.data.map((bet) => forViewer(bet, user));
+
+    res.status(200).json({ data: { winners: { ...result, data } } });
   });
 
   private createHandler = asyncHandler(async (req: Request, res: Response) => {
