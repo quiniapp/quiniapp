@@ -21,6 +21,14 @@ const authRepository = new PollaAuthRepository();
 /** Endpoints que no cuentan como actividad del usuario. */
 const PASSIVE_PATHS = ['/auth/validate'];
 
+/** Lo único alcanzable mientras la contraseña siga siendo temporal. */
+const PASSWORD_RESET_PATHS = [
+  '/auth/validate',
+  '/auth/change-password',
+  '/auth/logout',
+  '/auth/logout-all',
+];
+
 export const isPollaAuthenticated = asyncHandler(
   async (req: Request, _res: Response, next: NextFunction) => {
     const accessToken = req.cookies[POLLA_SESSION_CONFIG.ACCESS_TOKEN_COOKIE_NAME];
@@ -59,6 +67,13 @@ export const isPollaAuthenticated = asyncHandler(
     const user = await authRepository.getSessionUserById(decoded.polla_user_id);
     if (!user) {
       throw new UnauthorizedError('Usuario no encontrado');
+    }
+
+    // Con contraseña temporal la sesión solo sirve para cambiarla. Se valida
+    // acá y no solo en el frontend: si no, cualquiera que conozca la
+    // contraseña del seed opera con un token completo.
+    if (user.password_reset_required && !PASSWORD_RESET_PATHS.some((p) => req.path.endsWith(p))) {
+      throw new ForbiddenError('Tenés que cambiar tu contraseña antes de seguir');
     }
 
     req.pollaUser = {
