@@ -4,6 +4,24 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-05 (Compartir ticket como imagen)
+
+#### El cajero elige cómo compartir el comprobante: imagen, PDF o imprimir
+Antes, al crear un ticket (y en "Reimprimir"), el celular compartía siempre el PDF y la compu lo mandaba directo a imprimir. Un PDF en WhatsApp se ve como un ícono con el nombre del archivo, sin vista previa confiable, y no hay forma de controlar esa miniatura desde la app. Una imagen, en cambio, se ve completa en el chat.
+
+- **`src/components/modals/ShareTicketModal.tsx`** (nuevo): se abre al crear un ticket como cajero y al tocar "Reimprimir".
+  - En celular ofrece **Imagen** (opción principal) y **PDF**, y ambas abren la hoja de compartir del sistema. No ofrece "Imprimir" porque Android no puede imprimir un PDF desde un iframe; el PDF se imprime compartiéndolo a la app de la impresora, como hasta ahora.
+  - En la compu ofrece **Imprimir** (opción principal, con el foco puesto: Enter imprime), **Imagen** y **PDF**. Las dos últimas descargan el archivo.
+  - Genera el PNG y el PDF apenas se abre el modal. Así el share sale en el mismo toque, porque Safari lo rechaza (`NotAllowedError`) si en el medio hay una espera. Si igual lo rechaza, pide tocar de nuevo. Si el usuario cancela la hoja de compartir, el modal queda abierto.
+- **`src/functions/makeTicketImage.ts`** (nuevo): `makeTicketImages` dibuja el ticket con Canvas 2D, sin dependencias nuevas. Tiene el mismo contenido que el PDF térmico: blanco y negro, filas en monoespaciado y separadores punteados. Usa escala 2x para que se vea nítido. Los tickets largos se parten en varias imágenes de hasta 2400px de alto, porque WhatsApp achica las fotos a ~1600px y con un ticket muy largo el texto dejaría de leerse. Cada hoja repite el número de ticket y el encabezado del grupo cortado, y lleva "Hoja i de n".
+- **`src/functions/shareFiles.ts`** (nuevo): `shareFiles` (Web Share con archivos; si no hay soporte, descarga) y `downloadFiles`. Comparte **solo** `files`: en iOS, si se agrega `text`, WhatsApp descarta los archivos.
+- **`src/functions/makeTicket.ts`**: el contenido del ticket (líneas de usuario, ticket, fecha, grupos, filas y total) pasa a `buildTicketContent`, que comparten el PDF y la imagen. Se agrega el tipo `PrintableTicket`. El PDF térmico sale idéntico byte a byte (verificado comparando la salida antes y después). La columna de número pasa de medirse con jsPDF a la constante `NUM_COL = 15`, que da el mismo valor.
+- **`src/features/make-plays/*`**: `ticketToShare`/`setTicketToShare` en `MakePlaysContext`. `MakePlaysProvider` ya no genera ni comparte el PDF en `onSuccess`: solo abre el modal. "Reimprimir" (`header-play-detail.tsx`) también abre el modal.
+
+### Removed - 2026-10-05
+
+- **`sharePdfBlob`** (`src/functions/makeTicket.ts`): reemplazado por `shareFiles`. Su respaldo abría `wa.me` solo con texto, sin el archivo adjunto.
+
 ### Fixed - 2026-10-04 (Imprimir jugadas)
 
 - **`src/features/plays-and-hits/print-grouped-bets-button.tsx`**: el botón Imprimir pedía `limit=9999` en un solo request, pero Supabase corta cada respuesta en `max_rows = 1000`. Por eso, con más de 1000 jugadas, el PDF salía incompleto. Ahora busca al hacer click, de a 900 por página (`page`/`limit`, el endpoint ya los aceptaba), hasta que llega una página incompleta, y descarta repetidos por `bet_id`. Usa los mismos filtros que la tabla y el mismo fallback de fecha: sin filtros imprime todas las jugadas del día. Ya no se precarga el listado completo al entrar a la página, y si no hay jugadas avisa con un toast en vez de dejar el botón deshabilitado.
