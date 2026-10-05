@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>html,body,#root{background-color:#151933;margin:0;padding:0;height:100%}</style>
+    <!-- Fondo del tema antes de que cargue el bundle (sin parpadeo). El tema
+         real viene del usuario; esto es la copia local del último usado. -->
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('polla_theme') === 'dark' ? 'dark' : 'light';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
+    <style>
+      html,body,#root{margin:0;padding:0;height:100%}
+      html,body{background-color:hsl(220 20% 95%)}
+      html[data-theme='dark'],html[data-theme='dark'] body{background-color:hsl(222 24% 21%)}
+    </style>
     <title>Polla</title>
   </head>
   <body>

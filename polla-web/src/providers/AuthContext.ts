@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { IPollaSessionUser, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { IPollaSessionUser, POLLA_THEME, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 
 export interface AuthContextValue {
   user: IPollaSessionUser | null;
@@ -9,12 +9,12 @@ export interface AuthContextValue {
   loading: boolean;
   /** Organización sobre la que trabaja el OWNER; null = la propia. */
   activeOrganizationId: string | null;
-  // eslint-disable-next-line no-unused-vars
   setActiveOrganizationId: (id: string | null) => void;
-  // eslint-disable-next-line no-unused-vars
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** Guarda el tema en la DB y lo aplica. */
+  setTheme: (theme: POLLA_THEME) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

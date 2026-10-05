@@ -1,30 +1,32 @@
+import { betNumberClass, hitTitle } from '@/lib/betNumbers';
 import { cn } from '@/lib/utils';
 
 interface BetNumbersProps {
   numbers: string[];
-  hitNumbers: string[];
+  /** En paralelo a `numbers`: fecha del acierto de cada casillero o null. */
+  hitDates?: (string | null)[];
 }
 
-/** Los 10 números, con los acertados resaltados uno por uno. */
-export const BetNumbers = ({ numbers, hitNumbers }: BetNumbersProps) => {
-  const hits = new Set(hitNumbers);
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {numbers.map((number, index) => (
+/**
+ * Los 10 números con la marca de acierto por casillero: si el 32 se jugó 5
+ * veces y salió 2, se marcan 2 de los 5.
+ */
+export const BetNumbers = ({ numbers, hitDates }: BetNumbersProps) => (
+  <div className="flex flex-wrap gap-1">
+    {numbers.map((number, index) => {
+      const hitDate = hitDates?.[index] ?? null;
+      return (
         <span
-          // eslint-disable-next-line react/no-array-index-key
-          key={`${number}-${index}`}
+          key={index}
+          title={hitTitle(hitDate)}
           className={cn(
-            'inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded px-1 font-mono text-xs tabular-nums',
-            hits.has(number)
-              ? 'bg-emerald-600 font-bold text-white'
-              : 'bg-primary/10 text-foreground'
+            'inline-flex h-7 min-w-[2rem] items-center justify-center rounded border px-1 font-mono text-sm tabular-nums',
+            betNumberClass(Boolean(hitDate))
           )}
         >
           {number}
         </span>
-      ))}
-    </div>
-  );
-};
+      );
+    })}
+  </div>
+);

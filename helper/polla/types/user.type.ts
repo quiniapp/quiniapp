@@ -12,6 +12,12 @@ export enum POLLA_USER_TYPE {
   CASHIER = 'CASHIER',
   PLAYER = 'PLAYER',
 }
+
+/** Tema visual que elige cada usuario desde Configuración. */
+export enum POLLA_THEME {
+  LIGHT = 'light',
+  DARK = 'dark',
+}
 /* eslint-enable no-unused-vars */
 
 /** Menor número = más privilegios. */
@@ -63,6 +69,7 @@ export interface IPollaUserEntityBack {
   fee: number | null;
   fee_plus: number | null;
   credit_balance: number;
+  theme: POLLA_THEME;
   disabled: boolean;
   created_at: string;
   edited_at: string;
@@ -87,4 +94,5 @@ export interface IPollaSessionUser {
   parent_polla_user_id: string | null;
   credit_balance: number;
   password_reset_required: boolean;
+  theme: POLLA_THEME;
 }

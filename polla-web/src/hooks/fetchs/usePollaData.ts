@@ -1,7 +1,7 @@
 import { IPollaUserEntityFront } from '@helper/polla/types/user.type';
 import {
-  IPollaBetEntityFront,
   IPollaBetListItem,
+  IPollaBetToRepeat,
   IPollaCreditMovementEntityFront,
   IPollaCurrentAccountEntityFront,
   IPollaEditionEntityFront,
@@ -86,11 +86,21 @@ export const useBets = (params: QueryParams = {}, enabled = true) =>
   });
 
 export const useWinners = (editionId: string | null) =>
-  useApiQuery<PollaPage<IPollaBetEntityFront>>(
+  useApiQuery<PollaPage<IPollaBetListItem>>(
     ['polla-winners', editionId],
     BACKEND_ROUTES.bet.winners,
     { polla_edition_id: editionId },
     { enabled: Boolean(editionId) }
+  );
+
+/** Números de un ticket propio para repetirlo. */
+export const useBetToRepeat = (ticketNumber: string | null) =>
+  useApiQuery<IPollaBetToRepeat>(
+    ['polla-bet-ticket', ticketNumber],
+    ticketNumber ? BACKEND_ROUTES.bet.ticket(ticketNumber) : BACKEND_ROUTES.bet.base,
+    {},
+    // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
+    { enabled: Boolean(ticketNumber), retry: false, placeholderData: undefined }
   );
 
 // -------------------------------------------------------------- resultados
@@ -101,6 +111,23 @@ export const useResults = (params: QueryParams = {}) =>
     BACKEND_ROUTES.result.base,
     params,
     { limit: 25 }
+  );
+
+/** El resultado ya cargado para un día, quiniela y turno (para corregirlo). */
+export const useResultFor = (
+  params: {
+    date: string;
+    polla_lottery_id: string;
+    polla_schedule_id: string;
+    polla_organization_id?: string;
+  },
+  enabled: boolean
+) =>
+  useApiQuery<PollaPage<IPollaResultEntityFront>>(
+    ['polla-results', 'one'],
+    BACKEND_ROUTES.result.base,
+    { ...params, limit: 1 },
+    { enabled, placeholderData: undefined }
   );
 
 // --------------------------------------------------------- cuenta corriente

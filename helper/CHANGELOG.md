@@ -4,6 +4,20 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-05 (Polla: ajustes del cliente)
+
+- **`polla/schemas/game.schema.ts`**: las jugadas aceptan números repetidos (`distinctNumbers` pasa a `betNumbers`, que solo exige 10 números de 2 cifras).
+- **`polla/schemas/user.schema.ts`**: `fee_plus` deja de ser obligatorio para el pasador, porque la liquidación de Polla no tiene deje.
+- **`polla/schemas/auth.schema.ts`**: `updatePollaPreferencesSchema` (`theme`).
+- **`polla/types/user.type.ts`**: enum `POLLA_THEME` (`light`/`dark`) y `theme` en `IPollaUserEntityBack` y `IPollaSessionUser`.
+- **`polla/types/game.type.ts`**:
+  - `IPollaBetEntityBack.hit_dates`: fecha del acierto de cada casillero.
+  - `IPollaBetDerivedFields` (`group_name`, `client_name`).
+  - `IPollaBetAnonymous` pasa a `IPollaBetPublic`, la proyección de pasador y jugador con nombres, `is_mine` y `can_edit`; `isAnonymousPollaBet` pasa a `isPublicPollaBet`.
+  - `IPollaBetToRepeat`.
+  - `IPollaProcessedEdition`/`IPollaProcessResult`.
+  - `IPollaEditionEntityFront` deja `bets_count`/`collected_amount` como opcionales, porque solo admin+ los recibe.
+
 ### Changed - 2026-09-28 (Polla se separa de QuiniApp)
 
 #### Namespace propio `helper/polla/`

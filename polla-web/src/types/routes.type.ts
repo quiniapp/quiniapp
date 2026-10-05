@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 export enum ROUTES {
   LOGIN = '/login',
   BETS = '/jugadas',
@@ -11,6 +10,6 @@ export enum ROUTES {
   ORGANIZATIONS = '/organizaciones',
   CURRENT_ACCOUNT = '/cuenta-corriente',
   CHANGE_PASSWORD = '/cambiar-password',
+  SETTINGS = '/configuracion',
   NOT_FOUND = '/not-found',
 }
-/* eslint-enable no-unused-vars */

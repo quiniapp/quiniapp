@@ -1,7 +1,13 @@
 // tailwind.config.ts
 import type { Config } from 'tailwindcss';
 
+/** Color de un token de `index.css` (canales HSL) con soporte de opacidad. */
+const token = (name: string) => `hsl(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
+  // El tema lo elige cada usuario (Configuración) y se aplica con `data-theme`
+  // en <html>: `dark:` sigue a esa elección, no a la del sistema operativo.
+  darkMode: ['selector', '[data-theme="dark"]'],
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
     './src/styles/**/*.css',
@@ -12,45 +18,61 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: 'var(--border)',
-        input: 'var(--input)',
-        ring: 'var(--ring)',
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
+        border: token('border'),
+        input: {
+          DEFAULT: token('input'),
+          foreground: token('input-foreground'),
+          placeholder: token('input-placeholder'),
+          border: token('input-border'),
+        },
+        ring: token('ring'),
+        background: token('background'),
+        foreground: token('foreground'),
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
+          DEFAULT: token('primary'),
           light: 'hsl(var(--primary) / 0.6)',
-          foreground: 'var(--primary-foreground)',
+          foreground: token('primary-foreground'),
         },
         secondary: {
-          DEFAULT: 'var(--secondary)',
-          foreground: 'var(--secondary-foreground)',
+          DEFAULT: token('secondary'),
+          foreground: token('secondary-foreground'),
         },
         destructive: {
-          DEFAULT: 'var(--destructive)',
-          foreground: 'var(--destructive-foreground)',
+          DEFAULT: token('destructive'),
+          foreground: token('destructive-foreground'),
         },
         muted: {
-          DEFAULT: 'var(--muted)',
-          foreground: 'var(--muted-foreground)',
+          DEFAULT: token('muted'),
+          foreground: token('muted-foreground'),
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          foreground: 'var(--accent-foreground)',
+          DEFAULT: token('accent'),
+          foreground: token('accent-foreground'),
         },
         popover: {
-          DEFAULT: 'var(--popover)',
-          foreground: 'var(--popover-foreground)',
+          DEFAULT: token('popover'),
+          foreground: token('popover-foreground'),
         },
         card: {
-          DEFAULT: 'var(--bg-card)',
-          foreground: 'var(--card-foreground)',
-          bg: 'var(--bg-card)',
+          DEFAULT: token('card'),
+          foreground: token('card-foreground'),
+          bg: token('card'),
         },
         success: {
-          DEFAULT: 'hsl(142 76% 36%)',
-          foreground: 'hsl(142 76% 96%)',
+          DEFAULT: token('success'),
+          foreground: token('success-foreground'),
         },
+        /** Casillero acertado. */
+        hit: {
+          DEFAULT: token('hit'),
+          foreground: token('hit-foreground'),
+        },
+        'nav-active': {
+          DEFAULT: token('nav-active'),
+          foreground: token('nav-active-foreground'),
+        },
+        'table-head': token('table-head'),
+        'row-stripe': token('row-stripe'),
         warning: {
           DEFAULT: 'hsl(38 92% 50%)',
           foreground: 'hsl(38 92% 10%)',

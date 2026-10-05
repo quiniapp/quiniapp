@@ -1,5 +1,5 @@
 import { UnauthorizedError, ForbiddenError, BadRequestError } from '@helper/errors';
-import { IPollaSessionUser } from '@helper/polla/types/user.type';
+import { IPollaSessionUser, POLLA_THEME } from '@helper/polla/types/user.type';
 import { comparePassword, hashPassword } from 'api/helper/password';
 import { PollaAuthRepository } from '../repository/polla-auth.repository';
 import {
@@ -26,6 +26,7 @@ const toSessionUser = (user: {
   parent_polla_user_id: string | null;
   credit_balance: number;
   password_reset_required: boolean;
+  theme: POLLA_THEME;
 }): IPollaSessionUser => ({
   polla_user_id: user.polla_user_id,
   name: user.name,
@@ -38,6 +39,7 @@ const toSessionUser = (user: {
   parent_polla_user_id: user.parent_polla_user_id,
   credit_balance: Number(user.credit_balance ?? 0),
   password_reset_required: user.password_reset_required,
+  theme: user.theme,
 });
 
 export class PollaAuthController {
@@ -177,5 +179,16 @@ export class PollaAuthController {
     }
 
     await this.repository.updatePassword(pollaUserId, await hashPassword(newPassword));
+  }
+
+  async updateTheme(pollaUserId: string, theme: POLLA_THEME): Promise<IPollaSessionUser> {
+    await this.repository.updateTheme(pollaUserId, theme);
+
+    const user = await this.repository.getSessionUserById(pollaUserId);
+    if (!user) {
+      throw new UnauthorizedError('Usuario no encontrado');
+    }
+
+    return toSessionUser(user);
   }
 }

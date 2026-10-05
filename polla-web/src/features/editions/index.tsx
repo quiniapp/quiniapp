@@ -261,7 +261,7 @@ export const EditionsPage = () => {
                       ${fmtMoney(edition.ticket_price)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {edition.bets_count} (${fmtMoney(edition.collected_amount)})
+                      {edition.bets_count ?? 0} (${fmtMoney(edition.collected_amount ?? 0)})
                     </TableCell>
                     <TableCell>
                       {edition.status === POLLA_EDITION_STATUS.ACTIVE ? (

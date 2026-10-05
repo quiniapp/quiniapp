@@ -101,17 +101,13 @@ export class PollaCurrentAccountRouter {
       req.query.polla_organization_id ?? req.body?.polla_organization_id
     );
 
-    const leave = (req.query.leave ?? req.body?.leave) === true || req.query.leave === 'true';
-    const leaveInSubtotal =
-      (req.query.leave_in_subtotal ?? req.body?.leave_in_subtotal) === true ||
-      req.query.leave_in_subtotal === 'true';
-
+    // La liquidación de Polla no tiene deje: nunca se calcula recargo.
     return this.repository.calculate({
       organizationId,
       date,
-      calculateLeave: liquidated ? leave : false,
+      calculateLeave: false,
       liquidated,
-      leaveInSubtotal,
+      leaveInSubtotal: false,
     });
   };
 
@@ -142,8 +138,8 @@ export class PollaCurrentAccountRouter {
       currentAccountId: req.params.id,
       props,
       organizationId: account.polla_organization_id,
-      calculateLeave: req.query.leave === 'true',
-      leaveInSubtotal: req.query.leave_in_subtotal === 'true',
+      calculateLeave: false,
+      leaveInSubtotal: false,
     });
 
     // Una corrección cambia el saldo de los días siguientes.

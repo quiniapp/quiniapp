@@ -16,6 +16,7 @@ const CatalogsPage = lazy(() => import('@/features/catalogs'));
 const OrganizationsPage = lazy(() => import('@/features/organizations'));
 const CurrentAccountPage = lazy(() => import('@/features/current-account'));
 const ChangePasswordPage = lazy(() => import('@/features/change-password'));
+const SettingsPage = lazy(() => import('@/features/settings'));
 
 const ADMIN_AND_UP = [
   POLLA_USER_TYPE.OWNER,
@@ -73,8 +74,9 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Ediciones' } satisfies RouteHandle,
       },
       {
+        // Todos los ven (como en QuiniApp); solo ADMIN+ carga y procesa.
         path: ROUTES.RESULTS,
-        element: guarded(ADMIN_AND_UP, <ResultsPage />),
+        element: withSuspense(<ResultsPage />),
         handle: { title: 'Resultados' } satisfies RouteHandle,
       },
       {
@@ -96,6 +98,11 @@ export const RoutesContent: RouteObject[] = [
         path: ROUTES.ORGANIZATIONS,
         element: guarded([POLLA_USER_TYPE.OWNER], <OrganizationsPage />),
         handle: { title: 'Organizaciones' } satisfies RouteHandle,
+      },
+      {
+        path: ROUTES.SETTINGS,
+        element: withSuspense(<SettingsPage />),
+        handle: { title: 'Configuración' } satisfies RouteHandle,
       },
       {
         path: ROUTES.CHANGE_PASSWORD,

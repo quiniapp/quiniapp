@@ -76,7 +76,7 @@ class ApiClient {
     this.refreshQueue = [];
   }
 
-  private buildURL(endpoint: string, params?: Record<string, any>): string {
+  private buildURL(endpoint: string, params?: Record<string, unknown>): string {
     const url = new URL(endpoint, window.location.origin);
 
     if (params) {

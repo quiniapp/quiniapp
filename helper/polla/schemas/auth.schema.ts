@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { POLLA_THEME } from '../types/user.type';
 
 export const pollaLoginSchema = z.object({
   username: z.string().min(1, 'El usuario es obligatorio'),
@@ -21,5 +22,10 @@ export const pollaChangePasswordSchema = z
     }
   });
 
+export const updatePollaPreferencesSchema = z.object({
+  theme: z.nativeEnum(POLLA_THEME),
+});
+
 export type IPollaLoginPayload = z.infer<typeof pollaLoginSchema>;
 export type IPollaChangePasswordPayload = z.infer<typeof pollaChangePasswordSchema>;
+export type IUpdatePollaPreferencesPayload = z.infer<typeof updatePollaPreferencesSchema>;

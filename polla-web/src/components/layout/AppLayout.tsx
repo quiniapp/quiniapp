@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CreditCard,
   FileText,
+  ListOrdered,
   LogOut,
   Menu,
   Settings,
@@ -47,16 +48,17 @@ const NAV_ITEMS: NavItem[] = [
     roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
   },
   { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: ADMIN_AND_UP },
-  { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText, roles: ADMIN_AND_UP },
+  { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
   { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
   { to: ROUTES.CURRENT_ACCOUNT, label: 'Cuenta corriente', icon: CreditCard, roles: STAFF },
-  { to: ROUTES.CATALOGS, label: 'Quinielas y turnos', icon: Settings, roles: ADMIN_AND_UP },
+  { to: ROUTES.CATALOGS, label: 'Quinielas y turnos', icon: ListOrdered, roles: ADMIN_AND_UP },
   {
     to: ROUTES.ORGANIZATIONS,
     label: 'Organizaciones',
     icon: Building2,
     roles: [POLLA_USER_TYPE.OWNER],
   },
+  { to: ROUTES.SETTINGS, label: 'Configuración', icon: Settings },
 ];
 
 const formatCredits = (value: number) =>
@@ -188,8 +190,8 @@ export const AppLayout = () => {
                     cn(
                       'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
                       isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-primary/10 hover:text-foreground'
+                        ? 'bg-nav-active text-nav-active-foreground'
+                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                     )
                   }
                 >

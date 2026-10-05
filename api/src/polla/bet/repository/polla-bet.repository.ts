@@ -1,16 +1,32 @@
 import { Buffer } from 'node:buffer';
 import { supabase } from '@database/db.connection';
-import { NotFoundError } from '@helper/errors';
+import { BadRequestError, NotFoundError } from '@helper/errors';
 import { IPaginatedResponse } from '@helper/request/pagination.request';
-import { IPollaBetEntityBack } from '@helper/polla/types/game.type';
+import {
+  IPollaBetDerivedFields,
+  IPollaBetEntityBack,
+  IPollaBetToRepeat,
+} from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
 
-/** Columnas mínimas para la vista de jugador: sin PII. */
-const ANONYMOUS_COLUMNS =
-  'polla_bet_id, ticket_number, polla_edition_id, numbers, hit_numbers, hits, winner, hit_date, polla_user_id, user_name, created_at';
+/** El grupo del pasador viaja embebido: es la columna "Coord" del listado. */
+const BET_COLUMNS = '*, polla_groups(name)';
 
-const FULL_COLUMNS = '*';
+/** Jugada tal como la devuelve el repositorio: la fila más los campos derivados. */
+export type PollaBetRow = IPollaBetEntityBack & IPollaBetDerivedFields;
+
+type RawBetRow = IPollaBetEntityBack & { polla_groups: { name: string } | null };
+
+const withDerivedFields = ({ polla_groups: group, ...bet }: RawBetRow): PollaBetRow => ({
+  ...bet,
+  group_name: group?.name ?? null,
+  // Si la jugó el propio pasador no hay cliente.
+  client_name: bet.polla_user_id === bet.cashier_polla_user_id ? null : bet.user_name,
+});
+
+/** Ranking de aciertos (predeterminado) o carga más reciente primero. */
+export type PollaBetSort = 'hits' | 'recent';
 
 export interface PollaBetFilters {
   editionId?: string;
@@ -24,8 +40,8 @@ export interface PollaBetFilters {
 }
 
 export interface PollaBetQueryOptions {
-  anonymous: boolean;
-  /** Keyset: `${created_at}|${polla_bet_id}` de la última fila de la página previa. */
+  sort: PollaBetSort;
+  /** Keyset: posición de la última fila de la página previa (ver `encodeCursor`). */
   cursor?: string | null;
 }
 
@@ -33,17 +49,71 @@ export interface PollaBetPage<T> extends IPaginatedResponse<T> {
   next_cursor?: string | null;
 }
 
-const encodeCursor = (row: { created_at: string; polla_bet_id: string }) =>
-  Buffer.from(`${row.created_at}|${row.polla_bet_id}`).toString('base64url');
+/** Dónde puede buscar un ticket para repetirlo quien lo pide. */
+export interface PollaBetTicketScope {
+  organizationId: string | null;
+  cashierId?: string | null;
+  userId?: string | null;
+}
 
-const decodeCursor = (cursor: string): { createdAt: string; id: string } | null => {
+interface CursorPosition {
+  hits: number;
+  createdAt: string;
+  id: string;
+}
+
+const encodeCursor = (row: PollaBetRow, sort: PollaBetSort) => {
+  const parts =
+    sort === 'hits'
+      ? [row.hits, row.created_at, row.polla_bet_id]
+      : [row.created_at, row.polla_bet_id];
+  return Buffer.from(parts.join('|')).toString('base64url');
+};
+
+// El cursor lo manda el cliente y sus partes se interpolan en un filtro `or=`
+// de PostgREST, que es un mini-lenguaje con comas y paréntesis: sin validar,
+// se pueden inyectar cláusulas extra. Solo se aceptan un entero chico, un
+// timestamp ISO y un UUID, así que no queda ningún carácter con significado en
+// ese lenguaje.
+const CURSOR_HITS = /^\d{1,2}$/;
+const CURSOR_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}:?\d{2}|Z)?$/;
+const CURSOR_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const decodeCursor = (cursor: string, sort: PollaBetSort): CursorPosition => {
+  let decoded: string;
   try {
-    const [createdAt, id] = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
-    if (!createdAt || !id) return null;
-    return { createdAt, id };
+    decoded = Buffer.from(cursor, 'base64url').toString('utf8');
   } catch {
-    return null;
+    throw new BadRequestError('Cursor inválido');
   }
+
+  const parts = decoded.split('|');
+  const [hits, createdAt, id] = sort === 'hits' ? parts : ['0', ...parts];
+
+  if (
+    parts.length !== (sort === 'hits' ? 3 : 2) ||
+    !CURSOR_HITS.test(hits ?? '') ||
+    !CURSOR_TIMESTAMP.test(createdAt ?? '') ||
+    !CURSOR_UUID.test(id ?? '')
+  ) {
+    throw new BadRequestError('Cursor inválido');
+  }
+
+  return { hits: Number(hits), createdAt, id };
+};
+
+/** Filas que van después del cursor, en el mismo orden que el listado. */
+const afterCursor = ({ hits, createdAt, id }: CursorPosition, sort: PollaBetSort) => {
+  if (sort === 'recent') {
+    return `created_at.lt.${createdAt},and(created_at.eq.${createdAt},polla_bet_id.lt.${id})`;
+  }
+
+  return [
+    `hits.lt.${hits}`,
+    `and(hits.eq.${hits},created_at.lt.${createdAt})`,
+    `and(hits.eq.${hits},created_at.eq.${createdAt},polla_bet_id.lt.${id})`,
+  ].join(',');
 };
 
 export class PollaBetRepository {
@@ -51,13 +121,13 @@ export class PollaBetRepository {
     filters: PollaBetFilters,
     pagination: PollaPagination,
     options: PollaBetQueryOptions
-  ): Promise<PollaBetPage<Record<string, unknown>>> {
+  ): Promise<PollaBetPage<PollaBetRow>> {
     const useKeyset = Boolean(options.cursor);
 
     let query = supabase
       .from('polla_bets')
       .select(
-        options.anonymous ? ANONYMOUS_COLUMNS : FULL_COLUMNS,
+        BET_COLUMNS,
         // Con keyset no tiene sentido el COUNT exacto: es lo más caro de la query.
         pagination.withCount && !useKeyset ? { count: 'exact' } : {}
       )
@@ -73,13 +143,10 @@ export class PollaBetRepository {
     if (filters.onlyWinners) query = query.eq('winner', true);
 
     if (useKeyset) {
-      const decoded = decodeCursor(options.cursor!);
-      if (decoded) {
-        query = query.or(
-          `created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},polla_bet_id.lt.${decoded.id})`
-        );
-      }
+      query = query.or(afterCursor(decodeCursor(options.cursor!, options.sort), options.sort));
     }
+
+    if (options.sort === 'hits') query = query.order('hits', { ascending: false });
 
     query = query
       .order('created_at', { ascending: false })
@@ -91,35 +158,66 @@ export class PollaBetRepository {
 
     throwIfPollaError(error);
 
-    const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    const rows = ((data ?? []) as unknown as RawBetRow[]).map(withDerivedFields);
     const page = buildPaginated(
       rows,
       pagination,
       pagination.withCount && !useKeyset ? (count ?? 0) : null
     );
 
-    const last = rows[rows.length - 1] as { created_at: string; polla_bet_id: string } | undefined;
+    const last = rows[rows.length - 1];
 
     return {
       ...page,
       next_cursor:
-        last && rows.length === pagination.limit
-          ? encodeCursor({ created_at: last.created_at, polla_bet_id: last.polla_bet_id })
-          : null,
+        last && rows.length === pagination.limit ? encodeCursor(last, options.sort) : null,
     };
   }
 
-  async getById(betId: string): Promise<IPollaBetEntityBack> {
+  async getById(betId: string): Promise<PollaBetRow> {
     const { data, error } = await supabase
       .from('polla_bets')
-      .select('*')
+      .select(BET_COLUMNS)
       .eq('polla_bet_id', betId)
       .is('deleted_at', null)
       .maybeSingle();
 
     throwIfPollaError(error);
     if (!data) throw new NotFoundError('Jugada de Polla');
-    return data as IPollaBetEntityBack;
+    return withDerivedFields(data as unknown as RawBetRow);
+  }
+
+  /**
+   * Ticket a repetir. Sin el sufijo `-<pasador>` y con los 17 dígitos completos
+   * se busca por prefijo, como en QuiniApp; el alcance evita mezclar pasadores.
+   * `ticketNumber` llega validado (solo dígitos y un guion), así que el LIKE no
+   * recibe comodines.
+   */
+  async getByTicketNumber(
+    ticketNumber: string,
+    scope: PollaBetTicketScope
+  ): Promise<IPollaBetToRepeat> {
+    let query = supabase
+      .from('polla_bets')
+      .select('ticket_number, polla_edition_id, numbers')
+      .is('deleted_at', null);
+
+    query = /^\d{17}$/.test(ticketNumber)
+      ? query.like('ticket_number', `${ticketNumber}-%`)
+      : query.eq('ticket_number', ticketNumber);
+
+    if (scope.organizationId) query = query.eq('polla_organization_id', scope.organizationId);
+    if (scope.cashierId) query = query.eq('cashier_polla_user_id', scope.cashierId);
+    if (scope.userId) query = query.eq('polla_user_id', scope.userId);
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Ticket de Polla');
+    return data as IPollaBetToRepeat;
   }
 
   async create(params: {

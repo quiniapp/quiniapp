@@ -71,7 +71,7 @@ export const CurrentAccountPage = () => {
   return (
     <div>
       <PageHeader
-        description="Pases, premios, comisión y arrastre por pasador y por día."
+        description="Pase, premios y comisión por pasador y por día. La liquidación no tiene deje."
         actions={
           canManage && (
             <div className="flex gap-2">
@@ -83,11 +83,7 @@ export const CurrentAccountPage = () => {
               >
                 {isCalculating ? 'Recalculando…' : 'Recalcular'}
               </Button>
-              <Button
-                type="button"
-                onClick={() => liquidate({ ...body, leave: true })}
-                disabled={isLiquidating}
-              >
+              <Button type="button" onClick={() => liquidate(body)} disabled={isLiquidating}>
                 {isLiquidating ? 'Liquidando…' : 'Liquidar día'}
               </Button>
             </div>
@@ -134,7 +130,7 @@ export const CurrentAccountPage = () => {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
         >
-          <div className="overflow-x-auto rounded-md border">
+          <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -144,8 +140,6 @@ export const CurrentAccountPage = () => {
                   <TableHead className="text-right">Comisión</TableHead>
                   <TableHead className="text-right">Subtotal</TableHead>
                   <TableHead className="text-right">Saldo anterior</TableHead>
-                  <TableHead className="text-right">Arrastre</TableHead>
-                  <TableHead className="text-right">Recargo</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
@@ -170,16 +164,12 @@ export const CurrentAccountPage = () => {
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(row.previous_balance)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">${fmtMoney(row.drag)}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      ${fmtMoney(row.leave)}
-                    </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
                       ${fmtMoney(row.total)}
                     </TableCell>
                     <TableCell>
                       {row.is_liquidated ? (
-                        <Badge className="bg-emerald-600">Liquidado</Badge>
+                        <Badge variant="success">Liquidado</Badge>
                       ) : (
                         <Badge variant="outline">Abierto</Badge>
                       )}
@@ -199,7 +189,7 @@ export const CurrentAccountPage = () => {
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(totals.commission)}
                     </TableCell>
-                    <TableCell colSpan={4} />
+                    <TableCell colSpan={2} />
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(totals.total)}
                     </TableCell>

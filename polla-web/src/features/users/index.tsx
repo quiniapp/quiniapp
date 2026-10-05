@@ -58,7 +58,6 @@ const emptyForm = {
   password: '',
   number: '',
   fee: '',
-  fee_plus: '',
   parent_polla_user_id: '',
   polla_group_id: '',
 };
@@ -223,7 +222,6 @@ export const UsersPage = () => {
 
     if (form.user_type === POLLA_USER_TYPE.CASHIER) {
       payload.fee = Number(form.fee || 0);
-      payload.fee_plus = Number(form.fee_plus || 0);
     }
     if (form.user_type === POLLA_USER_TYPE.PLAYER && !isCashier) {
       payload.parent_polla_user_id = form.parent_polla_user_id || null;
@@ -366,14 +364,6 @@ export const UsersPage = () => {
                           onChange={(e) => setForm({ ...form, fee: e.target.value })}
                         />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <Label>Recargo % (fee plus)</Label>
-                        <Input
-                          inputMode="decimal"
-                          value={form.fee_plus}
-                          onChange={(e) => setForm({ ...form, fee_plus: e.target.value })}
-                        />
-                      </div>
                     </>
                   )}
 
@@ -446,7 +436,7 @@ export const UsersPage = () => {
                     <TableCell>{item.user_type}</TableCell>
                     <TableCell>{item.username ?? '-'}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {item.fee !== null ? `${item.fee}% / ${item.fee_plus}%` : '-'}
+                      {item.fee !== null ? `${item.fee}%` : '-'}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.user_type === POLLA_USER_TYPE.PLAYER
