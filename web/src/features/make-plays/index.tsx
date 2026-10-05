@@ -12,6 +12,7 @@ const ResetPartialModal = React.lazy(() => import('../../components/modals/Reset
 const ClosedSchedulesModal = React.lazy(
   () => import('../../components/modals/ClosedSchedulesModal')
 );
+const ShareTicketModal = React.lazy(() => import('../../components/modals/ShareTicketModal'));
 
 const MakePlaysContent = () => {
   const {
@@ -22,6 +23,8 @@ const MakePlaysContent = () => {
     setOpenClosedSchedulesModal,
     closedSchedules,
     handleConfirmClosedSchedules,
+    ticketToShare,
+    setTicketToShare,
   } = usePlayDetails();
 
   const handleResetPartial = () => {
@@ -47,6 +50,7 @@ const MakePlaysContent = () => {
           onConfirm={handleConfirmClosedSchedules}
           closedSchedules={closedSchedules}
         />
+        <ShareTicketModal ticket={ticketToShare} onClose={() => setTicketToShare(null)} />
       </Suspense>
     </PageWrapper>
   );

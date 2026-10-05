@@ -9,7 +9,7 @@ import { useSearchParams } from 'react-router-dom';
 import { dateRegex } from '@helper/functions/dateRegex';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
+import { PrintableTicket } from '@/functions/makeTicket';
 import { useGetGroupedBetsByTicketId } from '@/hooks/fetchs/tickets/useGetGroupedBetsByTicketId';
 import { useGetUserByNumber } from '@/hooks/fetchs/users/useUsersByNumber';
 import { useEditTicket } from '@/hooks/mutations/tickets/useEditTicket';
@@ -50,6 +50,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
   const [openClosedSchedulesModal, setOpenClosedSchedulesModal] = useState<boolean>(false);
   const [closedSchedules, setClosedSchedules] = useState<IScheduleEntityFront[]>([]);
+  const [ticketToShare, setTicketToShare] = useState<PrintableTicket | null>(null);
 
   // ---- fetch cashier por número
   const { data: cashierByNumber } = useGetUserByNumber(userNumber);
@@ -218,7 +219,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
 
     if (!ticketId) {
       createTicket(payload, {
-        onSuccess: async (res) => {
+        onSuccess: (res) => {
           const lastTicket = {
             bets: [...bets].reverse(),
             ticket: res,
@@ -242,29 +243,8 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
 
-          // 2. Generar e imprimir/compartir PDF (puede tardar; si falla no afecta el estado)
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const pdfToast = toast.loading('Generando comprobante...');
-            try {
-              const { blob, fileName } = await makeTicketPdf(lastTicket);
-              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-              try {
-                if (isMobile) {
-                  await sharePdfBlob(blob, fileName, {
-                    text: `Ticket ${res.ticket_number}`,
-                  });
-                } else {
-                  printPdfBlob(blob);
-                }
-              } catch {
-                printPdfBlob(blob);
-              }
-            } catch {
-              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
-            } finally {
-              toast.dismiss(pdfToast);
-            }
-          }
+          // 2. Ofrecer el comprobante: el cajero elige imagen, PDF o imprimir
+          if (user?.user_type === USER_TYPE.CASHIER) setTicketToShare(lastTicket);
         },
         onError: (err) => {
           console.error(err);
@@ -377,7 +357,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
 
     if (!ticketId) {
       createTicket(payload, {
-        onSuccess: async (res) => {
+        onSuccess: (res) => {
           const lastTicket = {
             bets: [...cleanedBets].reverse(),
             ticket: res,
@@ -399,28 +379,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
           setIsEnabledCreateBet(true);
           toast.success('Ticket creado correctamente');
 
-          if (user?.user_type === USER_TYPE.CASHIER) {
-            const pdfToast = toast.loading('Generando comprobante...');
-            try {
-              const { blob, fileName } = await makeTicketPdf(lastTicket);
-              const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-              try {
-                if (isMobile) {
-                  await sharePdfBlob(blob, fileName, {
-                    text: `Ticket ${res.ticket_number}`,
-                  });
-                } else {
-                  printPdfBlob(blob);
-                }
-              } catch {
-                printPdfBlob(blob);
-              }
-            } catch {
-              toast.error('No se pudo generar el comprobante. Usá "Reimprimir" para intentarlo de nuevo.');
-            } finally {
-              toast.dismiss(pdfToast);
-            }
-          }
+          if (user?.user_type === USER_TYPE.CASHIER) setTicketToShare(lastTicket);
         },
         onError: (err) => {
           console.error(err);
@@ -492,12 +451,14 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       openDeleteModal,
       openClosedSchedulesModal,
       closedSchedules,
+      ticketToShare,
       setBets,
       setTotalAmount,
       setPartialAmount,
       setOpenDeleteModal,
       setOpenClosedSchedulesModal,
       setClosedSchedules,
+      setTicketToShare,
       // derived
       isEnabledCreateBetByAdmin,
       // actions
@@ -529,6 +490,7 @@ export const MakePlaysProvider: React.FC<React.PropsWithChildren> = ({ children 
       openDeleteModal,
       openClosedSchedulesModal,
       closedSchedules,
+      ticketToShare,
       isEnabledCreateBetByAdmin,
       handleRecreateBet,
       handleCreateBet,
