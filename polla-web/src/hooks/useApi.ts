@@ -105,7 +105,6 @@ interface ApiMutationConfig<TVariables> {
   /** Prefijos de query key a invalidar al terminar. */
   invalidate?: string[];
   successMessage?: string;
-  // eslint-disable-next-line no-unused-vars
   buildUrl?: (variables: TVariables) => string;
 }
 

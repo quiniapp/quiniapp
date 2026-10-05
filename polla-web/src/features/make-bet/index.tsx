@@ -1,17 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
+import { Repeat2 } from 'lucide-react';
+import { IPollaEditionEntityFront, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
 import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions, useUserOptions } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useCreateBet } from '@/hooks/mutations/usePollaMutations';
-import {
-  PollaNumberBoxes,
-  createEmptyPollaNumbers,
-  pollaNumbersError,
-} from '@/components/PollaNumberBoxes';
+import { PollaNumberBoxes, PollaNumberBoxesHandle } from '@/components/PollaNumberBoxes';
+import { createEmptyPollaNumbers, pollaNumbersError } from '@/lib/pollaNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -24,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
+import { RepeatBetDialog } from './RepeatBetDialog';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 const fmtMoney = (value: number) =>
@@ -38,6 +37,8 @@ export const MakeBetPage = () => {
   const [editionId, setEditionId] = useState('');
   const [targetUserId, setTargetUserId] = useState('');
   const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const boxesRef = useRef<PollaNumberBoxesHandle>(null);
 
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
@@ -63,13 +64,20 @@ export const MakeBetPage = () => {
   const loadable = editions?.data ?? [];
   const edition = loadable.find((e) => e.polla_edition_id === editionId);
 
-  const handleSubmit = () => {
+  const editionLabel = (item: IPollaEditionEntityFront) =>
+    `${lotteryById.get(item.polla_lottery_id) ?? ''} · ${
+      scheduleById.get(item.polla_schedule_id) ?? ''
+    } (${fmtDate(item.start_date)} al ${fmtDate(item.end_date)}) · $${fmtMoney(item.ticket_price)}`;
+
+  const handleSubmit = (values: string[] = numbers) => {
+    if (isPending) return;
+
     if (!edition) {
       toast.error('Elegí una edición');
       return;
     }
 
-    const error = pollaNumbersError(numbers);
+    const error = pollaNumbersError(values);
     if (error) {
       toast.error(error);
       return;
@@ -78,12 +86,14 @@ export const MakeBetPage = () => {
     createBet(
       {
         polla_edition_id: edition.polla_edition_id,
-        numbers,
+        numbers: values,
         ...(canManage && targetUserId ? { polla_user_id: targetUserId } : {}),
       },
       {
         onSuccess: async (bet) => {
           setNumbers(createEmptyPollaNumbers());
+          // Listo para cargar el próximo ticket sin tocar el mouse.
+          boxesRef.current?.focusFirst();
 
           const { blob, fileName } = await makePollaTicketPdf({
             ticket_number: bet.ticket_number,
@@ -112,9 +122,15 @@ export const MakeBetPage = () => {
       {loadable.length === 0 ? (
         <EmptyState message="No hay ediciones abiertas para carga en este momento" />
       ) : (
-        <div className="flex flex-col gap-4 rounded-xl bg-card p-4 sm:gap-5 sm:p-6">
+        <div className="flex flex-col gap-4 rounded-xl bg-card p-4 text-card-foreground sm:gap-5 sm:p-6">
           <div className="flex flex-col gap-2">
-            <Label>Edición</Label>
+            <div className="flex items-end justify-between gap-2">
+              <Label>Edición</Label>
+              <Button type="button" variant="outline" size="sm" onClick={() => setRepeatOpen(true)}>
+                <Repeat2 />
+                Repetir ticket
+              </Button>
+            </div>
             <Select value={editionId} onValueChange={setEditionId}>
               <SelectTrigger>
                 <SelectValue placeholder="Elegí una edición" />
@@ -122,9 +138,7 @@ export const MakeBetPage = () => {
               <SelectContent>
                 {loadable.map((item) => (
                   <SelectItem key={item.polla_edition_id} value={item.polla_edition_id}>
-                    {lotteryById.get(item.polla_lottery_id) ?? ''} ·{' '}
-                    {scheduleById.get(item.polla_schedule_id) ?? ''} ({fmtDate(item.start_date)} al{' '}
-                    {fmtDate(item.end_date)}) · ${fmtMoney(item.ticket_price)}
+                    {editionLabel(item)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -165,12 +179,31 @@ export const MakeBetPage = () => {
             </div>
           )}
 
-          <PollaNumberBoxes values={numbers} onChange={setNumbers} />
+          <PollaNumberBoxes
+            ref={boxesRef}
+            values={numbers}
+            onChange={setNumbers}
+            onSubmit={handleSubmit}
+          />
 
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+          <Button type="button" onClick={() => handleSubmit()} disabled={isPending}>
             {isPending ? 'Cargando…' : 'Cargar jugada'}
           </Button>
         </div>
+      )}
+
+      {repeatOpen && (
+        <RepeatBetDialog
+          open={repeatOpen}
+          onClose={() => setRepeatOpen(false)}
+          editions={loadable}
+          editionLabel={editionLabel}
+          defaultEditionId={editionId}
+          onApply={(repeat) => {
+            setEditionId(repeat.editionId);
+            setNumbers(repeat.numbers);
+          }}
+        />
       )}
     </div>
   );

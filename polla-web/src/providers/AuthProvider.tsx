@@ -1,12 +1,13 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { IPollaSessionUser } from '@helper/polla/types/user.type';
+import { IPollaSessionUser, POLLA_THEME } from '@helper/polla/types/user.type';
 import {
   POLLA_VALIDATE_INTERVAL_MS,
   POLLA_REFRESH_INTERVAL_MS,
 } from '@helper/polla/config/session.config';
 import { apiClient } from '@/lib/apiClient';
 import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
+import { applyTheme } from '@/lib/theme';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { AuthContext } from './AuthContext';
 
@@ -68,6 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [user, validate, clearSession]);
 
+  // El tema viaja en el usuario: se aplica al validar, loguear o cambiarlo.
+  useEffect(() => {
+    if (user?.theme) applyTheme(user.theme);
+  }, [user?.theme]);
+
   // El apiClient avisa por evento cuando el refresh falló definitivamente.
   useEffect(() => {
     const handler = () => clearSession();
@@ -93,6 +99,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [clearSession]);
 
+  const setTheme = useCallback(async (theme: POLLA_THEME) => {
+    const updated = await apiClient.put<IPollaSessionUser>(BACKEND_ROUTES.auth.preferences, {
+      theme,
+    });
+    setUser(updated);
+  }, []);
+
   const setActiveOrganizationId = useCallback(
     (id: string | null) => {
       setActiveOrganizationIdState(id);
@@ -115,8 +128,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       refreshUser: validate,
+      setTheme,
     }),
-    [user, loading, activeOrganizationId, setActiveOrganizationId, login, logout, validate]
+    [
+      user,
+      loading,
+      activeOrganizationId,
+      setActiveOrganizationId,
+      login,
+      logout,
+      validate,
+      setTheme,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

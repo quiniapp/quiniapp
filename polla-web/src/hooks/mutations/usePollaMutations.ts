@@ -1,4 +1,4 @@
-import { IPollaBetEntityFront } from '@helper/polla/types/game.type';
+import { IPollaBetEntityFront, IPollaProcessResult } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
 
@@ -159,7 +159,10 @@ export const useDeleteResult = () =>
   });
 
 export const useProcessResults = () =>
-  useApiMutation('post', BACKEND_ROUTES.result.process, {
+  useApiMutation<
+    IPollaProcessResult,
+    { polla_schedule_id: string; date: string; polla_organization_id?: string }
+  >('post', BACKEND_ROUTES.result.process, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-winners', 'polla-current-accounts'],
     successMessage: 'Aciertos procesados',
   });

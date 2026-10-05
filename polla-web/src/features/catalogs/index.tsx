@@ -38,9 +38,7 @@ const CatalogCard = ({
 }: {
   title: string;
   rows: SimpleRow[];
-  // eslint-disable-next-line no-unused-vars
   onCreate: (name: string, time?: string) => void;
-  // eslint-disable-next-line no-unused-vars
   onDelete: (id: string) => void;
   withTime?: boolean;
 }) => {

@@ -2,105 +2,117 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --radius: 0.75rem;
-  --background: #151933;
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --bg-card: #1c2340;
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #3664fd;
-  --primary-800: #151c47;
-  --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.606 0.25 292.717);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.606 0.25 292.717);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.606 0.25 292.717);
+/*
+ * Tokens de color en canales HSL ("H S% L%"): Tailwind los usa como
+ * `hsl(var(--x) / <alpha-value>)`, así funcionan los modificadores de opacidad
+ * (`bg-primary/10`).
+ *
+ * Dos temas, elegidos por cada usuario desde Configuración y aplicados con
+ * `data-theme` en <html>. Cada fondo tiene su texto con contraste AA (≥ 4.5:1)
+ * y el texto principal ≥ 7:1; los inputs tienen su propio par fondo/texto.
+ */
 
-  --isActive: oklch(0.606 0.25 292.717);
-  --text-muted: oklch(0.967 0.001 286.375);
-  --text-secondary: #41dbc3;
+/* Claro (predeterminado). También por selector: la vista previa de
+   Configuración muestra cada tema dentro de un contenedor con `data-theme`. */
+:root,
+[data-theme='light'] {
+  --radius: 0.75rem;
+
+  --background: 220 20% 95%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  --primary: 224 76% 44%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 16% 90%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 16% 92%;
+  --muted-foreground: 220 12% 34%;
+  --accent: 220 16% 90%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 74% 40%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 220 14% 80%;
+  --input: 0 0% 100%;
+  --input-foreground: 222 47% 11%;
+  --input-placeholder: 220 10% 40%;
+  --input-border: 220 10% 55%;
+  --ring: 224 76% 44%;
+
+  --success: 161 94% 24%;
+  --success-foreground: 0 0% 100%;
+  /* Casillero acertado: amarillo con texto casi negro, como la planilla. */
+  --hit: 45 100% 51%;
+  --hit-foreground: 222 47% 11%;
+
+  --row-stripe: 220 20% 96%;
+  --table-head: 220 16% 90%;
+  --nav-active: 224 76% 44%;
+  --nav-active-foreground: 0 0% 100%;
+
+  color-scheme: light;
 }
 
-.dark {
-  --background: #151933;
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: #232b45;
-  --bg-card-light: #1e222d88;
-  --bg-card: #1c2340;
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: 226 98% 60%;
-  --primary-dark: #151c47;
-  --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(0.34 0.01 286);
-  --ring: #007bff;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.541 0.281 293.009);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.541 0.281 293.009);
-  --text-muted: oklch(0.967 0.001 286.375);
-  --text-secondary: #41dbc3;
-  --bg-accent: #000;
-  --rounded-top: 16px 16px 0 0;
-  --bg-content: hsl(231 50% 5% / 1);
-  --rounded-form: 16px;
+/* Oscuro aclarado: más claro que el azul noche original, con texto blanco. */
+[data-theme='dark'] {
+  --background: 222 24% 21%;
+  --foreground: 0 0% 100%;
+  --card: 222 22% 27%;
+  --card-foreground: 0 0% 100%;
+  --popover: 222 22% 27%;
+  --popover-foreground: 0 0% 100%;
+
+  --primary: 213 94% 72%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 222 18% 36%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 222 18% 33%;
+  --muted-foreground: 220 20% 86%;
+  --accent: 222 18% 36%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 90% 79%;
+  --destructive-foreground: 222 47% 11%;
+
+  --border: 222 14% 46%;
+  /* Inputs claros con texto negro también en el tema oscuro. */
+  --input: 220 20% 97%;
+  --input-foreground: 222 47% 11%;
+  --input-placeholder: 220 10% 40%;
+  --input-border: 220 14% 70%;
+  --ring: 213 94% 72%;
+
+  --success: 161 94% 24%;
+  --success-foreground: 0 0% 100%;
+  --hit: 45 100% 51%;
+  --hit-foreground: 222 47% 11%;
+
+  --row-stripe: 222 22% 31%;
+  --table-head: 222 20% 35%;
+  --nav-active: 213 94% 72%;
+  --nav-active-foreground: 222 47% 11%;
+
+  color-scheme: dark;
 }
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: hsl(var(--border));
   }
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
   th,
   td {
     padding: 8px 8px !important;
   }
 
-  tr:nth-child(even) {
-    background-color: #007bff11;
+  tbody tr:nth-child(even) {
+    background-color: hsl(var(--row-stripe));
   }
 
   /* El calendario (react-day-picker) usa <table>: sin el padding global
@@ -114,34 +126,34 @@
     background-color: transparent;
   }
   thead {
-    background-color: var(--bg-card);
+    background-color: hsl(var(--table-head));
     height: 36px;
   }
   fieldset {
-    border-color: var(--sidebar-border);
+    border-color: hsl(var(--border));
     border-radius: 8px;
   }
   legend {
-    color: var(--muted-foreground);
+    color: hsl(var(--muted-foreground));
     font-size: 10px;
   }
 
   ::-webkit-scrollbar {
-    background-color: hsl(231 50% 5% / 1);
+    background-color: hsl(var(--muted));
     width: 8px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: var(--primary);
+    background-color: hsl(var(--primary));
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-track {
-    background-color: hsl(231 50% 5% / 1);
+    background-color: hsl(var(--muted));
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in srgb, var(--primary) 80%, black);
+    background-color: hsl(var(--primary) / 0.8);
   }
 }
 @layer base {

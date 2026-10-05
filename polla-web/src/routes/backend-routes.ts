@@ -14,6 +14,7 @@ export const BACKEND_ROUTES = {
     logout: `${PRIVATE}/auth/logout`,
     logoutAll: `${PRIVATE}/auth/logout-all`,
     changePassword: `${PRIVATE}/auth/change-password`,
+    preferences: `${PRIVATE}/auth/preferences`,
   },
   organization: {
     base: `${PRIVATE}/organization`,
@@ -45,6 +46,7 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/bet`,
     id: (id: string) => `${PRIVATE}/bet/${id}`,
     winners: `${PRIVATE}/bet/winners`,
+    ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
   },
   result: {
     base: `${PRIVATE}/result`,
