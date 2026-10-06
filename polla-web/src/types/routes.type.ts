@@ -3,6 +3,7 @@ export enum ROUTES {
   BETS = '/jugadas',
   MY_BETS = '/mis-jugadas',
   MAKE_BET = '/cargar-jugada',
+  SALES = '/ventas',
   EDITIONS = '/ediciones',
   RESULTS = '/resultados',
   USERS = '/usuarios',

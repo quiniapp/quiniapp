@@ -19,6 +19,7 @@ import { InfiniteList } from '@/components/InfiniteList';
 import { flattenPages } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -38,7 +39,13 @@ import {
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 const RESULTS_COUNT = 20;
+const RESULT_DIGITS = 4;
 const emptyResults = () => Array<string>(RESULTS_COUNT).fill('');
+/** Como en la quiniela: 1 a 10 en la primera columna y 11 a 20 en la segunda. */
+const COLUMNS = [
+  Array.from({ length: 10 }, (_, i) => i),
+  Array.from({ length: 10 }, (_, i) => i + 10),
+];
 
 export const ResultsPage = () => {
   const { role, organizationId } = useAuth();
@@ -51,6 +58,8 @@ export const ResultsPage = () => {
   const [lotteryId, setLotteryId] = useState('');
   const [scheduleId, setScheduleId] = useState('');
   const [numbers, setNumbers] = useState<string[]>(emptyResults);
+  // Cajas en las que se apretó Enter sin las 4 cifras.
+  const [incomplete, setIncomplete] = useState<Set<number>>(new Set());
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useResults({
@@ -75,6 +84,7 @@ export const ResultsPage = () => {
 
   useEffect(() => {
     setNumbers(existing ? [...existing.results] : emptyResults());
+    setIncomplete(new Set());
   }, [existing?.polla_result_id, existing?.edited_at]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { mutate: createResult, isPending: isCreating } = useCreateResult();
@@ -93,8 +103,15 @@ export const ResultsPage = () => {
 
   const handleNumberChange = (index: number, raw: string) => {
     const next = [...numbers];
-    next[index] = raw.replace(/\D/g, '').slice(0, 4);
+    next[index] = raw.replace(/\D/g, '').slice(0, RESULT_DIGITS);
     setNumbers(next);
+    if (incomplete.has(index) && next[index].length === RESULT_DIGITS) {
+      setIncomplete((prev) => {
+        const rest = new Set(prev);
+        rest.delete(index);
+        return rest;
+      });
+    }
   };
 
   const handleSave = () => {
@@ -107,6 +124,11 @@ export const ResultsPage = () => {
     });
 
     if (!parsed.success) {
+      const missing = numbers
+        .map((value, index) => (value.length === RESULT_DIGITS ? -1 : index))
+        .filter((index) => index >= 0);
+      setIncomplete(new Set(missing));
+      inputRefs.current[missing[0]]?.focus();
       toast.error(parsed.error.errors[0]?.message ?? 'Revisá los resultados');
       return;
     }
@@ -125,11 +147,16 @@ export const ResultsPage = () => {
     createResult(parsed.data);
   };
 
-  // Igual que la carga de resultados de QuiniApp: Enter pasa al siguiente y
-  // en el último guarda.
+  // Como en la quiniela: se escriben las 4 cifras (0088 incluido) y Enter pasa
+  // al siguiente; en el último guarda. Con menos de 4 cifras no avanza.
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
+
+    if (numbers[index].length !== RESULT_DIGITS) {
+      setIncomplete((prev) => new Set(prev).add(index));
+      return;
+    }
 
     if (index < RESULTS_COUNT - 1) inputRefs.current[index + 1]?.focus();
     else handleSave();
@@ -176,7 +203,7 @@ export const ResultsPage = () => {
         description={
           canManage
             ? 'Cargá o corregí los 20 números del día y procesá los aciertos de las ediciones en juego.'
-            : 'Los 20 números de cada sorteo.'
+            : 'Los 20 números de cada sorteo. En la Polla cuentan las 2 últimas cifras.'
         }
       />
 
@@ -240,26 +267,41 @@ export const ResultsPage = () => {
             </p>
           )}
 
-          <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-2">
-            {numbers.map((value, index) => (
-              <div key={index} className="flex flex-col items-center gap-1">
-                <span className="text-[10px] leading-none text-muted-foreground">{index + 1}</span>
-                <Input
-                  ref={(el) => {
-                    inputRefs.current[index] = el;
-                  }}
-                  inputMode="numeric"
-                  enterKeyHint={index < RESULTS_COUNT - 1 ? 'next' : 'done'}
-                  maxLength={4}
-                  value={value}
-                  aria-label={`Resultado ${index + 1}`}
-                  onChange={(e) => handleNumberChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="text-center font-mono tabular-nums"
-                />
+          <div className="grid max-w-md grid-cols-2 gap-x-4 gap-y-1.5 sm:gap-x-8">
+            {COLUMNS.map((column, columnIndex) => (
+              <div key={columnIndex} className="flex flex-col gap-1.5">
+                {column.map((index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="w-6 text-right text-sm font-bold tabular-nums text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <Input
+                      ref={(el) => {
+                        inputRefs.current[index] = el;
+                      }}
+                      inputMode="numeric"
+                      enterKeyHint={index < RESULTS_COUNT - 1 ? 'next' : 'done'}
+                      maxLength={RESULT_DIGITS}
+                      value={numbers[index]}
+                      aria-label={`Resultado ${index + 1}`}
+                      aria-invalid={incomplete.has(index)}
+                      onChange={(e) => handleNumberChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      className={cn(
+                        'h-10 text-center font-mono text-lg font-bold tabular-nums',
+                        incomplete.has(index) && 'border-2 border-destructive'
+                      )}
+                    />
+                  </div>
+                ))}
               </div>
             ))}
           </div>
+          {incomplete.size > 0 && (
+            <p className="text-sm text-destructive" role="alert">
+              Cada resultado lleva 4 cifras (por ejemplo 0088).
+            </p>
+          )}
         </div>
       )}
 

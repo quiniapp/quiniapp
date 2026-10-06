@@ -3,9 +3,13 @@ import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Repeat2 } from 'lucide-react';
 import { IPollaEditionEntityFront, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
-import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import {
+  IPollaUserByNumber,
+  POLLA_USER_TYPE,
+  isPollaAdminRole,
+} from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useEditions, useUserOptions } from '@/hooks/fetchs/usePollaData';
+import { useEditions } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useCreateBet } from '@/hooks/mutations/usePollaMutations';
 import { PollaNumberBoxes, PollaNumberBoxesHandle } from '@/components/PollaNumberBoxes';
@@ -23,19 +27,26 @@ import {
 import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
 import { RepeatBetDialog } from './RepeatBetDialog';
+import { TargetUserByNumber } from './TargetUserByNumber';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
 export const MakeBetPage = () => {
-  const { user, role, organizationId } = useAuth();
+  const { role, organizationId } = useAuth();
   const today = dayjs().format('YYYY-MM-DD');
 
   const canManage = Boolean(role && isPollaAdminRole(role));
+  const isCashier = role === POLLA_USER_TYPE.CASHIER;
+  const isPlayer = role === POLLA_USER_TYPE.PLAYER;
+  // ADMIN+ no juega a su nombre: siempre carga para un pasador o un jugador.
+  // El pasador carga a su nombre o al de uno de sus jugadores.
+  const pickTarget = canManage || isCashier;
 
   const [editionId, setEditionId] = useState('');
-  const [targetUserId, setTargetUserId] = useState('');
+  const [targetNumber, setTargetNumber] = useState('');
+  const [target, setTarget] = useState<IPollaUserByNumber | null>(null);
   const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
   const [repeatOpen, setRepeatOpen] = useState(false);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
@@ -47,8 +58,6 @@ export const MakeBetPage = () => {
   });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
-  // ADMIN+ puede cargar a nombre de un pasador o de un jugador.
-  const { data: targets } = useUserOptions({}, canManage);
 
   const { mutate: createBet, isPending } = useCreateBet();
 
@@ -77,6 +86,16 @@ export const MakeBetPage = () => {
       return;
     }
 
+    if (canManage && !target) {
+      toast.error('Escribí el número del pasador o jugador');
+      return;
+    }
+
+    if (isCashier && targetNumber && !target) {
+      toast.error('No hay un jugador tuyo con ese número');
+      return;
+    }
+
     const error = pollaNumbersError(values);
     if (error) {
       toast.error(error);
@@ -87,7 +106,7 @@ export const MakeBetPage = () => {
       {
         polla_edition_id: edition.polla_edition_id,
         numbers: values,
-        ...(canManage && targetUserId ? { polla_user_id: targetUserId } : {}),
+        ...(pickTarget && target ? { polla_user_id: target.polla_user_id } : {}),
       },
       {
         onSuccess: async (bet) => {
@@ -128,7 +147,7 @@ export const MakeBetPage = () => {
               <Label>Edición</Label>
               <Button type="button" variant="outline" size="sm" onClick={() => setRepeatOpen(true)}>
                 <Repeat2 />
-                Repetir ticket
+                {isPlayer ? 'Repetir última jugada' : 'Repetir ticket'}
               </Button>
             </div>
             <Select value={editionId} onValueChange={setEditionId}>
@@ -151,32 +170,19 @@ export const MakeBetPage = () => {
             )}
           </div>
 
-          {canManage && (
-            <div className="flex flex-col gap-2">
-              <Label>Cargar a nombre de</Label>
-              <Select
-                value={targetUserId || 'me'}
-                onValueChange={(v) => setTargetUserId(v === 'me' ? '' : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Yo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="me">Yo ({user?.name})</SelectItem>
-                  {targets?.data
-                    .filter(
-                      (u) =>
-                        u.user_type === POLLA_USER_TYPE.CASHIER ||
-                        u.user_type === POLLA_USER_TYPE.PLAYER
-                    )
-                    .map((u) => (
-                      <SelectItem key={u.polla_user_id} value={u.polla_user_id}>
-                        {u.name} · {u.user_type === POLLA_USER_TYPE.PLAYER ? 'jugador' : 'pasador'}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {pickTarget && (
+            <TargetUserByNumber
+              value={targetNumber}
+              onChange={setTargetNumber}
+              onResolved={setTarget}
+              organizationId={organizationId}
+              emptyHint={
+                canManage
+                  ? 'Escribí el número del pasador o jugador'
+                  : 'Vacío: la jugada va a tu nombre'
+              }
+              onEnter={() => boxesRef.current?.focusFirst()}
+            />
           )}
 
           <PollaNumberBoxes
@@ -195,6 +201,7 @@ export const MakeBetPage = () => {
       {repeatOpen && (
         <RepeatBetDialog
           open={repeatOpen}
+          mode={isPlayer ? 'last' : 'ticket'}
           onClose={() => setRepeatOpen(false)}
           editions={loadable}
           editionLabel={editionLabel}

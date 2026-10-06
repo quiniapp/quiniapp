@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react';
 import { NavLink, Outlet, useMatches, useNavigate } from 'react-router-dom';
 import {
+  BarChart3,
   CalendarDays,
   CreditCard,
   FileText,
   ListOrdered,
   LogOut,
   Menu,
+  PlusCircle,
   Settings,
   Ticket,
   Users,
-  Wallet,
   Building2,
 } from 'lucide-react';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_USER_TYPE, POLLA_USER_TYPE_LABEL } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import type { RouteHandle } from '@/routes/route';
 import { ROUTES } from '@/types/routes.type';
@@ -40,13 +41,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
-  { to: ROUTES.MY_BETS, label: 'Mis jugadas', icon: Wallet, roles: [POLLA_USER_TYPE.PLAYER] },
   {
     to: ROUTES.MAKE_BET,
     label: 'Cargar jugada',
-    icon: Ticket,
+    icon: PlusCircle,
     roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
   },
+  { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },
   { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: ADMIN_AND_UP },
   { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
   { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
@@ -60,9 +61,6 @@ const NAV_ITEMS: NavItem[] = [
   },
   { to: ROUTES.SETTINGS, label: 'Configuración', icon: Settings },
 ];
-
-const formatCredits = (value: number) =>
-  new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(value);
 
 /** Solo el OWNER cambia de capitalist; el resto queda fijo a su organización. */
 const OrganizationPicker = () => {
@@ -138,15 +136,20 @@ export const AppLayout = () => {
         </h1>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          {role === POLLA_USER_TYPE.PLAYER && (
-            <span className="rounded-md bg-primary/10 px-2 py-1 text-xs text-foreground sm:px-3 sm:text-sm">
-              ${formatCredits(user?.credit_balance ?? 0)}
+          {__COMMIT_DATE__ && (
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              v{__COMMIT_DATE__}
             </span>
           )}
 
-          <span className="hidden text-sm text-muted-foreground lg:block">
-            {user?.name} · {role}
-          </span>
+          <div className="flex min-w-0 flex-col items-end leading-tight">
+            <span className="max-w-[9rem] truncate text-sm font-medium text-foreground sm:max-w-none">
+              {user?.name}
+            </span>
+            {role && (
+              <span className="text-xs text-muted-foreground">{POLLA_USER_TYPE_LABEL[role]}</span>
+            )}
+          </div>
 
           <Button type="button" variant="outline" size="sm" onClick={handleLogout}>
             <LogOut />
@@ -180,6 +183,9 @@ export const AppLayout = () => {
             menuOpen ? 'block' : 'hidden md:block'
           )}
         >
+          {__COMMIT_DATE__ && (
+            <p className="mb-2 px-3 text-xs text-muted-foreground sm:hidden">v{__COMMIT_DATE__}</p>
+          )}
           <ul className="flex flex-col gap-1">
             {items.map(({ to, label, icon: Icon }) => (
               <li key={to}>

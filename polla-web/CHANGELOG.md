@@ -4,6 +4,51 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-06 (Segunda tanda del cliente)
+
+#### Roles y versión
+- Los tipos de usuario se muestran en español (`POLLA_USER_TYPE_LABEL`) en Usuarios y en el header. El header muestra el nombre y, abajo, el rol del usuario logueado (Dueño, Capitalista, Superadministrador, Administrador, Pasador o Jugador).
+- **Versión** como en QuiniApp: `vite.config.ts` define `__COMMIT_DATE__` (la fecha del último commit, declarada en `src/vite-env.d.ts`) y se muestra en el header, el menú mobile y el login.
+
+#### Usuarios
+- Solo el pasador crea jugadores: los demás roles ya no tienen la opción "Jugador" ni el select de pasador.
+- El número se pide para pasadores y jugadores. Apellido en el alta.
+- **`EditUserDialog`**: editar nombre, apellido, usuario, número, grupo, comisión (no la del propio pasador) y deshabilitado. Los deshabilitados se listan para poder volver a habilitarlos.
+- **`components/ResetPasswordDialog`**: blanquear la contraseña. Es temporal: el usuario la cambia al entrar.
+- El OWNER tiene que elegir una organización antes de dar de alta usuarios.
+- Se saca todo lo de créditos: columna, diálogo, saldo del header, `features/my-bets` y sus hooks y rutas.
+
+#### Organizaciones (como QuiniApp)
+- Alta de la organización con su capitalista (nombre, apellido, usuario, contraseña, email, teléfono). La tabla muestra el capitalista y tiene las acciones Trabajar acá, Editar, Blanquear contraseña y Eliminar.
+
+#### Cargar jugada
+- **`TargetUserByNumber`**: "Cargar a nombre de" se busca por número y muestra "Nombre · jugador de Pasador" o "No existe". Para ADMIN+ es obligatorio; para el pasador es opcional (vacío = a su nombre) y solo encuentra a sus jugadores. Enter pasa a los números.
+- El jugador tiene "Repetir última jugada": `RepeatBetDialog` en modo `last` trae su última jugada y deja elegir la edición vigente. ADMIN+ y pasador siguen con "Repetir ticket".
+
+#### Jugadas
+- Pasador y jugador eligen entre "Mis jugadas" (por defecto; para el pasador, las suyas y las de sus jugadores) y "Jugando" (todas las del capitalista). Las ajenas llevan el badge "Jugando".
+- Eliminar depende de `can_delete`: el pasador da de baja en el día lo que no le pagaron. `/mis-jugadas` redirige a `/jugadas?mine=1`.
+
+#### Ventas del día
+- **`features/sales`** (`/ventas`, staff): boletas vendidas y recaudado del día. Superadmin y admin ven además el desglose por grupo; el pasador ve lo suyo.
+
+#### Resultados
+- Como en la quiniela: 4 cifras exactas y Enter avanza solo con las 4 (con menos, la caja queda marcada). Dos columnas, 1–10 y 11–20, con el número de posición.
+- Pasador y jugador ven las 2 últimas cifras.
+
+#### Cuenta corriente (como QuiniApp, sin Arrastre ni Deje)
+- **Admin+**:
+  - Botones: Exportar diario, Exportar liquidación, Exportar cobros y pagos, Resumen cuenta corriente, Exportar subtotales, Generar liquidación y Actualizar.
+  - Filtros: fecha, grupo y nº de pasador.
+  - Planilla: Liquidar · Número · Nombre · Pase · Aciertos · Reclamos · Subtotal · Saldo anterior · Cobros · Pagos · Total · Grupo, con total general del día. En mobile, tarjetas.
+- **Diálogos**:
+  - `LiquidateCashierDialog`: reclamos, gastos, saldo anterior, cobro y pago, más los tickets del día y las ganadoras.
+  - `GenerateLiquidationDialog`: reclamos, cobros y pagos de todos; después liquida el día.
+  - `ReportDialog`: cobros y pagos, resumen y subtotales, por día o rango, con grupo, gastos guardados y porcentaje.
+- **Pasador**: `CashierAccountView` con su liquidación del día, los tickets y las ganadoras, y "Imprimir liquidación".
+- **PDFs** en `functions/current-account/`, adaptados de QuiniApp sin Arrastre ni Deje: planilla diaria, resumen por período, liquidaciones (una página por pasador, en un solo PDF) y tickets térmicos de cobros y pagos y de subtotales.
+- Dependencia nueva `jspdf-autotable` (^5.0.2, la misma que `web/`).
+
 ### Added - 2026-10-05 (ESLint)
 
 #### Config de ESLint propia
