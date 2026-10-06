@@ -1,6 +1,11 @@
 import { Request, Response, Router } from 'express';
 import { ForbiddenError } from '@helper/errors';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import {
+  IPollaSessionUser,
+  POLLA_USER_TYPE,
+  isPollaAdminRole,
+} from '@helper/polla/types/user.type';
+import { IPollaResultEntityBack } from '@helper/polla/types/game.type';
 import {
   newPollaResultSchema,
   updatePollaResultSchema,
@@ -18,6 +23,15 @@ const ADMIN_AND_UP = [
   POLLA_USER_TYPE.SUPERADMIN,
   POLLA_USER_TYPE.ADMIN,
 ];
+
+/**
+ * La Polla se juega con las 2 últimas cifras: pasadores y jugadores ven solo
+ * eso. ADMIN+ recibe las 4 porque las carga y las corrige.
+ */
+const forViewer = (result: IPollaResultEntityBack, viewer: IPollaSessionUser) =>
+  isPollaAdminRole(viewer.user_type)
+    ? result
+    : { ...result, results: result.results.map((number) => number.slice(-2)) };
 
 export class PollaResultRouter {
   public router: Router;
@@ -70,12 +84,15 @@ export class PollaResultRouter {
       pagination
     );
 
-    res.status(200).json({ data: { results: result } });
+    res.status(200).json({
+      data: { results: { ...result, data: result.data.map((row) => forViewer(row, user)) } },
+    });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
     const result = await this.assertScope(req, req.params.id);
-    res.status(200).json({ data: { result } });
+    res.status(200).json({ data: { result: forViewer(result, user) } });
   });
 
   private createHandler = asyncHandler(async (req: Request, res: Response) => {

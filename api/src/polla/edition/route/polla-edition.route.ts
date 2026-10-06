@@ -1,5 +1,5 @@
 import { Request, Response, Router } from 'express';
-import { ForbiddenError } from '@helper/errors';
+import { BadRequestError, ForbiddenError } from '@helper/errors';
 import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
 import { IPollaEditionEntityBack, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
 import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/schemas/game.schema';
@@ -99,8 +99,21 @@ export class PollaEditionRouter {
   });
 
   private updateHandler = asyncHandler(async (req: Request, res: Response) => {
-    await this.assertScope(req, req.params.id);
+    const edition = await this.assertScope(req, req.params.id);
     const payload = updatePollaEditionSchema.parse(req.body);
+
+    // Cada jugada guarda el precio con el que se cargó y la cuenta corriente
+    // suma ese monto: cambiar el precio con jugadas cargadas desfasa el pase.
+    if (
+      payload.ticket_price !== undefined &&
+      Number(payload.ticket_price) !== Number(edition.ticket_price) &&
+      edition.bets_count > 0
+    ) {
+      throw new BadRequestError(
+        'No se puede cambiar el precio del ticket: la edición ya tiene jugadas cargadas'
+      );
+    }
+
     const updated = await this.repository.update(req.params.id, payload);
     res.status(200).json({ data: { edition: updated } });
   });

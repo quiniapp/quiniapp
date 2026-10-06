@@ -6,9 +6,11 @@ import {
   IPollaBetDerivedFields,
   IPollaBetEntityBack,
   IPollaBetToRepeat,
+  IPollaDailySalesGroup,
 } from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
+import { pollaToday } from '../../helper/date';
 
 /** El grupo del pasador viaja embebido: es la columna "Coord" del listado. */
 const BET_COLUMNS = '*, polla_groups(name)';
@@ -36,6 +38,8 @@ export interface PollaBetFilters {
   groupId?: string | null;
   ticketNumber?: string | null;
   loadDate?: string | null;
+  /** Día en que se completó (ganadoras de ese día, para la liquidación). */
+  hitDate?: string | null;
   onlyWinners?: boolean;
 }
 
@@ -140,6 +144,7 @@ export class PollaBetRepository {
     if (filters.groupId) query = query.eq('polla_group_id', filters.groupId);
     if (filters.ticketNumber) query = query.eq('ticket_number', filters.ticketNumber);
     if (filters.loadDate) query = query.eq('load_date', filters.loadDate);
+    if (filters.hitDate) query = query.eq('hit_date', filters.hitDate);
     if (filters.onlyWinners) query = query.eq('winner', true);
 
     if (useKeyset) {
@@ -220,6 +225,49 @@ export class PollaBetRepository {
     return data as IPollaBetToRepeat;
   }
 
+  /**
+   * Última jugada que cargó el propio usuario a su nombre, para repetirla. Las
+   * que le cargó su pasador no cuentan; las anteriores a `created_by` sí.
+   * `pollaUserId` sale de la sesión (un UUID), así que el filtro `or` es seguro.
+   */
+  async getLastByUser(pollaUserId: string): Promise<IPollaBetToRepeat> {
+    const { data, error } = await supabase
+      .from('polla_bets')
+      .select('ticket_number, polla_edition_id, numbers')
+      .eq('polla_user_id', pollaUserId)
+      .or(`created_by.eq.${pollaUserId},created_by.is.null`)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      // El número de ticket arranca con la hora de carga: desempata en el mismo instante.
+      .order('ticket_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Jugada anterior');
+    return data as IPollaBetToRepeat;
+  }
+
+  /** Boletas vendidas en el día por grupo; con `cashierId`, solo las de ese pasador. */
+  async getDailySales(
+    organizationId: string,
+    date: string,
+    cashierId: string | null
+  ): Promise<IPollaDailySalesGroup[]> {
+    const { data, error } = await supabase.rpc('polla_daily_sales', {
+      p_organization_id: organizationId,
+      p_date: date,
+      p_cashier_id: cashierId,
+    });
+
+    throwIfPollaError(error);
+    return ((data ?? []) as IPollaDailySalesGroup[]).map((row) => ({
+      ...row,
+      bets_count: Number(row.bets_count),
+      amount: Number(row.amount),
+    }));
+  }
+
   async create(params: {
     editionId: string;
     actorId: string;
@@ -233,7 +281,7 @@ export class PollaBetRepository {
       p_actor_user_id: params.actorId,
       p_target_user_id: params.targetUserId,
       p_numbers: params.numbers,
-      p_date: params.date ?? new Date().toISOString().slice(0, 10),
+      p_date: params.date ?? pollaToday(),
       p_force: params.force,
     });
 

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { IPollaEditionEntityFront } from '@helper/polla/types/game.type';
-import { useBetToRepeat } from '@/hooks/fetchs/usePollaData';
+import { useBetToRepeat, useLastBet } from '@/hooks/fetchs/usePollaData';
 import { BetNumbers } from '@/components/BetNumbers';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,11 @@ import {
 
 interface RepeatBetDialogProps {
   open: boolean;
+  /**
+   * `ticket`: se busca un ticket por número (admin+ y pasador).
+   * `last`: la última jugada propia (jugador).
+   */
+  mode: 'ticket' | 'last';
   onClose: () => void;
   /** Ediciones que aceptan carga hoy. */
   editions: IPollaEditionEntityFront[];
@@ -32,12 +37,13 @@ interface RepeatBetDialogProps {
 }
 
 /**
- * Repetir un ticket, como en QuiniApp: se busca por número, se ven sus 10
- * números y se elige en qué edición cargarlos. Los números pasan al formulario
- * para revisarlos antes de cargar.
+ * Repetir un ticket, como en QuiniApp: se busca por número (o se trae la última
+ * jugada propia), se ven sus 10 números y se elige en qué edición vigente
+ * cargarlos. Los números pasan al formulario para revisarlos antes de cargar.
  */
 export const RepeatBetDialog = ({
   open,
+  mode,
   onClose,
   editions,
   editionLabel,
@@ -48,7 +54,9 @@ export const RepeatBetDialog = ({
   const [searched, setSearched] = useState('');
   const [editionId, setEditionId] = useState(defaultEditionId);
 
-  const { data: bet, isFetching, isError } = useBetToRepeat(searched || null);
+  const byTicket = useBetToRepeat(mode === 'ticket' ? searched || null : null);
+  const last = useLastBet(open && mode === 'last');
+  const { data: bet, isFetching, isError } = mode === 'last' ? last : byTicket;
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -65,34 +73,42 @@ export const RepeatBetDialog = ({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-[95vw] sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>Repetir ticket</DialogTitle>
+          <DialogTitle>{mode === 'last' ? 'Repetir última jugada' : 'Repetir ticket'}</DialogTitle>
           <DialogDescription>
-            Buscá el ticket, elegí la edición y los números pasan al formulario.
+            {mode === 'last'
+              ? 'Elegí la edición y los números de tu última jugada pasan al formulario.'
+              : 'Buscá el ticket, elegí la edición y los números pasan al formulario.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSearch} className="flex flex-col gap-2">
-          <Label htmlFor="repeat-ticket">Nº de ticket</Label>
-          <div className="flex gap-2">
-            <Input
-              id="repeat-ticket"
-              autoFocus
-              inputMode="numeric"
-              value={ticketInput}
-              placeholder="Ej. 20261005093140042 o 20261005093140042-557"
-              onChange={(e) => setTicketInput(e.target.value.replace(/[^\d-]/g, ''))}
-            />
-            <Button type="submit" variant="outline" disabled={!ticketInput.trim()}>
-              Buscar
-            </Button>
-          </div>
-        </form>
+        {mode === 'ticket' && (
+          <form onSubmit={handleSearch} className="flex flex-col gap-2">
+            <Label htmlFor="repeat-ticket">Nº de ticket</Label>
+            <div className="flex gap-2">
+              <Input
+                id="repeat-ticket"
+                autoFocus
+                inputMode="numeric"
+                value={ticketInput}
+                placeholder="Ej. 20261005093140042 o 20261005093140042-557"
+                onChange={(e) => setTicketInput(e.target.value.replace(/[^\d-]/g, ''))}
+              />
+              <Button type="submit" variant="outline" disabled={!ticketInput.trim()}>
+                Buscar
+              </Button>
+            </div>
+          </form>
+        )}
 
-        {searched && (
+        {(searched || mode === 'last') && (
           <div className="min-h-[2.5rem]">
             {isFetching && <p className="text-sm text-muted-foreground">Buscando…</p>}
             {!isFetching && isError && (
-              <p className="text-sm text-destructive">No encontramos ese ticket entre los tuyos.</p>
+              <p className="text-sm text-destructive">
+                {mode === 'last'
+                  ? 'Todavía no cargaste ninguna jugada.'
+                  : 'No encontramos ese ticket entre los tuyos.'}
+              </p>
             )}
             {!isFetching && bet && (
               <div className="flex flex-col gap-2">

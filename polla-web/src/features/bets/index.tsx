@@ -62,18 +62,14 @@ const editionLabel = (
 const cashierLabel = (row: IPollaBetListItem) =>
   `${row.cashier_number ? `${row.cashier_number} · ` : ''}${row.cashier_name}`;
 
-interface BetsPageProps {
-  /** Vista "Mis jugadas": fuerza el filtro a las del usuario. */
-  onlyMine?: boolean;
-}
-
-export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
-  const { user, role, organizationId } = useAuth();
+export const BetsPage = () => {
+  const { role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const canManage = Boolean(role && isPollaAdminRole(role));
-  // Pasador y jugador pueden acotar a lo suyo; el admin filtra por pasador.
-  const canFilterMine = !onlyMine && !canManage;
+  // Pasador y jugador eligen entre lo suyo ("Mis jugadas", por defecto) y todo
+  // lo que se está jugando en el capitalista; el admin filtra por pasador.
+  const canFilterMine = !canManage;
 
   const [ticketSearch, setTicketSearch] = useState(searchParams.get('ticket_number') ?? '');
   const [editing, setEditing] = useState<EditableBet | null>(null);
@@ -82,7 +78,7 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
   const editionId = searchParams.get('polla_edition_id') ?? '';
   const cashierId = searchParams.get('cashier_polla_user_id') ?? '';
   const sort = searchParams.get('sort') === 'recent' ? 'recent' : 'hits';
-  const mine = onlyMine || (canFilterMine && searchParams.get('mine') === '1');
+  const mine = canFilterMine && searchParams.get('mine') !== '0';
 
   const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
@@ -178,8 +174,12 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
     if (row.winner) {
       return <Badge variant="success">Ganadora {fmtDate(row.hit_date)}</Badge>;
     }
-    if (isPublicPollaBet(row) && row.is_mine) {
-      return <Badge variant="outline">Mía</Badge>;
+    if (isPublicPollaBet(row)) {
+      return row.is_mine ? (
+        <Badge variant="outline">Mía</Badge>
+      ) : (
+        <Badge variant="secondary">Jugando</Badge>
+      );
     }
     return <span className="text-xs text-muted-foreground">{fmtDate(row.load_date)}</span>;
   };
@@ -187,11 +187,11 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
   const renderActions = (row: IPollaBetListItem) => {
     const isPublic = isPublicPollaBet(row);
     const canPrint = canManage || (isPublic && row.is_mine);
-    const canEdit =
-      !row.winner &&
-      (canManage || (isPublic ? row.can_edit : row.polla_user_id === user?.polla_user_id));
+    const canEdit = !row.winner && (canManage || (isPublic && row.can_edit));
+    // El pasador borra lo que no le pagaron en el día (la API decide `can_delete`).
+    const canDelete = !row.winner && (canManage || (isPublic && row.can_delete));
 
-    if (!canPrint && !canEdit) return null;
+    if (!canPrint && !canEdit && !canDelete) return null;
 
     return (
       <>
@@ -207,30 +207,30 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
           </Button>
         )}
         {canEdit && (
-          <>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              title="Editar"
-              onClick={() => setEditing(row)}
-            >
-              <Pencil />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              title="Eliminar"
-              onClick={() => {
-                if (window.confirm(`¿Eliminar la jugada ${row.ticket_number}?`)) {
-                  deleteBet({ id: row.polla_bet_id });
-                }
-              }}
-            >
-              <Trash2 />
-            </Button>
-          </>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Editar"
+            onClick={() => setEditing(row)}
+          >
+            <Pencil />
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Eliminar"
+            onClick={() => {
+              if (window.confirm(`¿Eliminar la jugada ${row.ticket_number}?`)) {
+                deleteBet({ id: row.polla_bet_id });
+              }
+            }}
+          >
+            <Trash2 />
+          </Button>
         )}
       </>
     );
@@ -325,21 +325,44 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
 
         {canFilterMine && (
           <div className="flex min-w-0 flex-col gap-1">
-            <Label>Mostrar</Label>
-            <Select
-              value={mine ? 'mine' : 'all'}
-              onValueChange={(value) => updateParam('mine', value === 'mine' ? '1' : '')}
+            <Label id="bets-view-label">Ver</Label>
+            <div
+              role="tablist"
+              aria-labelledby="bets-view-label"
+              className="inline-flex rounded-md border bg-card p-1"
             >
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las jugadas</SelectItem>
-                <SelectItem value="mine">
-                  {role === POLLA_USER_TYPE.CASHIER ? 'Mías y de mis jugadores' : 'Solo mías'}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              {[
+                {
+                  value: '1',
+                  label: 'Mis jugadas',
+                  title:
+                    role === POLLA_USER_TYPE.CASHIER
+                      ? 'Las tuyas y las de tus jugadores'
+                      : 'Las que cargaste',
+                },
+                { value: '0', label: 'Jugando', title: 'Todas las que se están jugando' },
+              ].map((tab) => {
+                const active = (mine ? '1' : '0') === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    title={tab.title}
+                    onClick={() => updateParam('mine', tab.value)}
+                    className={cn(
+                      'flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
+                      active
+                        ? 'bg-nav-active text-nav-active-foreground'
+                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

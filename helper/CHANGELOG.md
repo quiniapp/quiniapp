@@ -4,6 +4,28 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-06 (Polla: segunda tanda del cliente)
+
+- **`polla/types/user.type.ts`**:
+  - `POLLA_USER_TYPE_LABEL`: Dueño, Capitalista, Superadministrador, Administrador, Pasador, Jugador.
+  - `IPollaUserByNumber`.
+  - `credit_balance` sale de `IPollaSessionUser` y de `IPollaUserEntityFront` (ya no hay créditos).
+- **`polla/types/game.type.ts`**:
+  - `IPollaBetEntityBack.created_by`.
+  - `IPollaBetPublic` suma `can_delete` y `amount`.
+  - Tipos nuevos: `IPollaDailySales`/`IPollaDailySalesGroup`, `IPollaCurrentAccountDailyTotals` e `IPollaOrgExpenseEntityBack`/`Front`.
+  - Se sacan `POLLA_CREDIT_MOVEMENT_TYPE` y los tipos de movimientos de créditos.
+- **`polla/types/catalog.type.ts`**: `IPollaOrganizationWithCapitalist`.
+- **`polla/schemas/user.schema.ts`**:
+  - El número es obligatorio también para el jugador.
+  - `updatePollaUserSchema` ya no lleva contraseña.
+  - Schemas nuevos: `resetPollaPasswordSchema` y `newPollaOrganizationWithCapitalistSchema`.
+  - Se saca `pollaCreditMovementSchema`.
+- **`polla/schemas/game.schema.ts`**:
+  - Los resultados son exactamente 4 cifras (`0088` es válido); antes se aceptaban 3 o 4.
+  - `pollaCurrentAccountUpdateSchema.liquidate`.
+  - `newPollaOrgExpenseSchema`.
+
 ### Changed - 2026-10-05 (Polla: ajustes del cliente)
 
 - **`polla/schemas/game.schema.ts`**: las jugadas aceptan números repetidos (`distinctNumbers` pasa a `betNumbers`, que solo exige 10 números de 2 cifras).

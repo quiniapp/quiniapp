@@ -1,8 +1,9 @@
 /* eslint-disable no-unused-vars */
 /**
  * Jerarquía de la Polla. Cada nivel ve y administra a los de abajo.
- * PLAYER es el rol nuevo respecto de QuiniApp: cuelga de un CASHIER, juega con
- * créditos y sus jugadas se imputan a la cuenta corriente de ese pasador.
+ * PLAYER es el rol nuevo respecto de QuiniApp: cuelga de un CASHIER y sus
+ * jugadas se imputan a la cuenta corriente de ese pasador, que las cobra por
+ * fuera de la aplicación.
  */
 export enum POLLA_USER_TYPE {
   OWNER = 'OWNER',
@@ -19,6 +20,16 @@ export enum POLLA_THEME {
   DARK = 'dark',
 }
 /* eslint-enable no-unused-vars */
+
+/** Nombre de cada rol tal como se muestra en pantalla. */
+export const POLLA_USER_TYPE_LABEL: Record<POLLA_USER_TYPE, string> = {
+  [POLLA_USER_TYPE.OWNER]: 'Dueño',
+  [POLLA_USER_TYPE.CAPITALIST]: 'Capitalista',
+  [POLLA_USER_TYPE.SUPERADMIN]: 'Superadministrador',
+  [POLLA_USER_TYPE.ADMIN]: 'Administrador',
+  [POLLA_USER_TYPE.CASHIER]: 'Pasador',
+  [POLLA_USER_TYPE.PLAYER]: 'Jugador',
+};
 
 /** Menor número = más privilegios. */
 export const POLLA_USER_HIERARCHY: Record<POLLA_USER_TYPE, number> = {
@@ -68,6 +79,7 @@ export interface IPollaUserEntityBack {
   parent_polla_user_id: string | null;
   fee: number | null;
   fee_plus: number | null;
+  /** Sin uso: las jugadas ya no se pagan con créditos. Queda por el historial. */
   credit_balance: number;
   theme: POLLA_THEME;
   disabled: boolean;
@@ -78,8 +90,24 @@ export interface IPollaUserEntityBack {
 
 export type IPollaUserEntityFront = Omit<
   IPollaUserEntityBack,
-  'password_hash' | 'password_changed_at' | 'failed_login_attempts' | 'last_login_ip' | 'deleted_at'
+  | 'password_hash'
+  | 'password_changed_at'
+  | 'failed_login_attempts'
+  | 'last_login_ip'
+  | 'deleted_at'
+  | 'credit_balance'
 >;
+
+/** Usuario encontrado por número para cargarle una jugada a su nombre. */
+export interface IPollaUserByNumber {
+  polla_user_id: string;
+  name: string;
+  last_name: string | null;
+  number: number;
+  user_type: POLLA_USER_TYPE;
+  /** Pasador del jugador; para un pasador, él mismo. */
+  cashier_name: string;
+}
 
 /** Usuario autenticado tal como lo devuelve /auth/validate. */
 export interface IPollaSessionUser {
@@ -92,7 +120,6 @@ export interface IPollaSessionUser {
   polla_organization_id: string;
   polla_group_id: string | null;
   parent_polla_user_id: string | null;
-  credit_balance: number;
   password_reset_required: boolean;
   theme: POLLA_THEME;
 }

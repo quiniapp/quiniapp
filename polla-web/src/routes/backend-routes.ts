@@ -19,6 +19,7 @@ export const BACKEND_ROUTES = {
   organization: {
     base: `${PRIVATE}/organization`,
     id: (id: string) => `${PRIVATE}/organization/${id}`,
+    resetCapitalist: (id: string) => `${PRIVATE}/organization/${id}/capitalist/reset-password`,
   },
   group: {
     base: `${PRIVATE}/group`,
@@ -35,8 +36,8 @@ export const BACKEND_ROUTES = {
   user: {
     base: `${PRIVATE}/user`,
     id: (id: string) => `${PRIVATE}/user/${id}`,
-    credits: (id: string) => `${PRIVATE}/user/${id}/credits`,
-    ownCredits: `${PRIVATE}/user/me/credits`,
+    byNumber: (number: string) => `${PRIVATE}/user/by-number/${encodeURIComponent(number)}`,
+    resetPassword: (id: string) => `${PRIVATE}/user/${id}/reset-password`,
   },
   edition: {
     base: `${PRIVATE}/edition`,
@@ -46,6 +47,8 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/bet`,
     id: (id: string) => `${PRIVATE}/bet/${id}`,
     winners: `${PRIVATE}/bet/winners`,
+    last: `${PRIVATE}/bet/last`,
+    sales: `${PRIVATE}/bet/sales`,
     ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
   },
   result: {
@@ -59,5 +62,10 @@ export const BACKEND_ROUTES = {
     calculate: `${PRIVATE}/current_account/calculate`,
     liquidate: `${PRIVATE}/current_account/liquidate`,
     bulk: `${PRIVATE}/current_account/bulk`,
+    totals: `${PRIVATE}/current_account/totals`,
+  },
+  expense: {
+    base: `${PRIVATE}/expense`,
+    id: (id: string) => `${PRIVATE}/expense/${id}`,
   },
 };

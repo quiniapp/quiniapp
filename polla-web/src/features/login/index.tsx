@@ -75,6 +75,10 @@ export const LoginPage = () => {
         <Button type="submit" disabled={submitting}>
           {submitting ? 'Ingresando…' : 'Ingresar'}
         </Button>
+
+        {__COMMIT_DATE__ && (
+          <p className="text-center text-xs text-muted-foreground">v{__COMMIT_DATE__}</p>
+        )}
       </form>
     </div>
   );

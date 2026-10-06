@@ -7,7 +7,6 @@ import { ROUTES } from '@/types/routes.type';
 import LoginPage from '@/features/login';
 
 const BetsPage = lazy(() => import('@/features/bets'));
-const MyBetsPage = lazy(() => import('@/features/my-bets'));
 const MakeBetPage = lazy(() => import('@/features/make-bet'));
 const EditionsPage = lazy(() => import('@/features/editions'));
 const ResultsPage = lazy(() => import('@/features/results'));
@@ -17,6 +16,7 @@ const OrganizationsPage = lazy(() => import('@/features/organizations'));
 const CurrentAccountPage = lazy(() => import('@/features/current-account'));
 const ChangePasswordPage = lazy(() => import('@/features/change-password'));
 const SettingsPage = lazy(() => import('@/features/settings'));
+const SalesPage = lazy(() => import('@/features/sales'));
 
 const ADMIN_AND_UP = [
   POLLA_USER_TYPE.OWNER,
@@ -59,14 +59,19 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Jugadas' } satisfies RouteHandle,
       },
       {
+        // Las jugadas propias son una pestaña de Jugadas.
         path: ROUTES.MY_BETS,
-        element: guarded([POLLA_USER_TYPE.PLAYER], <MyBetsPage />),
-        handle: { title: 'Mis jugadas' } satisfies RouteHandle,
+        element: <Navigate to={`${ROUTES.BETS}?mine=1`} replace />,
       },
       {
         path: ROUTES.MAKE_BET,
         element: guarded([POLLA_USER_TYPE.PLAYER, ...STAFF], <MakeBetPage />),
         handle: { title: 'Cargar jugada' } satisfies RouteHandle,
+      },
+      {
+        path: ROUTES.SALES,
+        element: guarded(STAFF, <SalesPage />),
+        handle: { title: 'Ventas del día' } satisfies RouteHandle,
       },
       {
         path: ROUTES.EDITIONS,

@@ -3,14 +3,6 @@ export enum POLLA_EDITION_STATUS {
   ACTIVE = 'ACTIVE',
   FINISHED = 'FINISHED',
 }
-
-export enum POLLA_CREDIT_MOVEMENT_TYPE {
-  LOAD = 'LOAD',
-  WITHDRAW = 'WITHDRAW',
-  BET = 'BET',
-  BET_REFUND = 'BET_REFUND',
-  ADJUSTMENT = 'ADJUSTMENT',
-}
 /* eslint-enable no-unused-vars */
 
 export const POLLA_NUMBERS_REQUIRED = 10;
@@ -107,6 +99,8 @@ export interface IPollaBetEntityBack {
   winner: boolean;
   prize: number;
   hit_date: string | null;
+  /** Quién la cargó (el dueño, su pasador o un admin). */
+  created_by: string | null;
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
@@ -142,10 +136,17 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields {
   hit_date: string | null;
   /** Solo distinto de 0 si la jugada ganó: el premio es público. */
   prize: number;
+  /** Precio del ticket, solo en las propias (o imputadas al pasador). */
+  amount: number | null;
   /** Es del usuario o, para un pasador, está imputada a él (sus jugadores). */
   is_mine: boolean;
-  /** El usuario es el dueño: puede editarla o borrarla dentro del plazo. */
+  /** El usuario es el dueño: puede editar los números dentro del plazo de carga. */
   can_edit: boolean;
+  /**
+   * La puede borrar: es del usuario o, para un pasador, está imputada a él, se
+   * cargó hoy y no ganó (un pasador da de baja lo que no le pagaron en el día).
+   */
+  can_delete: boolean;
 }
 
 export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
@@ -153,30 +154,30 @@ export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
 export const isPublicPollaBet = (bet: IPollaBetListItem): bet is IPollaBetPublic =>
   !('cashier_polla_user_id' in bet);
 
-/** Lo mínimo para repetir un ticket: sus 10 números. */
+/** Lo mínimo para repetir un ticket (o la última jugada propia): sus 10 números. */
 export interface IPollaBetToRepeat {
   ticket_number: string;
   polla_edition_id: string;
   numbers: string[];
 }
 
-// ---------------------------------------------------------------- créditos
+// ----------------------------------------------------------- ventas del día
 
-export interface IPollaCreditMovementEntityBack {
-  polla_credit_movement_id: string;
-  polla_user_id: string;
-  cashier_polla_user_id: string;
-  polla_organization_id: string;
-  created_by_polla_user_id: string | null;
-  type: POLLA_CREDIT_MOVEMENT_TYPE;
+/** Boletas vendidas en un día por un grupo (`polla_group_id` null = sin grupo). */
+export interface IPollaDailySalesGroup {
+  polla_group_id: string | null;
+  group_name: string | null;
+  bets_count: number;
   amount: number;
-  balance_after: number;
-  polla_bet_id: string | null;
-  reason: string | null;
-  created_at: string;
 }
 
-export type IPollaCreditMovementEntityFront = IPollaCreditMovementEntityBack;
+export interface IPollaDailySales {
+  date: string;
+  bets_count: number;
+  amount: number;
+  /** Desglose por grupo: solo admin+. El pasador recibe `null` (ve lo suyo). */
+  groups: IPollaDailySalesGroup[] | null;
+}
 
 // --------------------------------------------------------- cuenta corriente
 
@@ -208,3 +209,41 @@ export interface IPollaCurrentAccountEntityBack {
 }
 
 export type IPollaCurrentAccountEntityFront = IPollaCurrentAccountEntityBack;
+
+/** Totales de la cuenta corriente de un día (pie de la tabla y reportes). */
+export interface IPollaCurrentAccountDailyTotals {
+  date: string;
+  accounts_count: number;
+  total_pass: number;
+  total_successes: number;
+  total_commission: number;
+  total_claims: number;
+  total_bills: number;
+  total_revenue: number;
+  total_subtotal: number;
+  total_previous_balance: number;
+  total_collections: number;
+  total_paid: number;
+  total_total: number;
+  /** Gastos de la organización (o del grupo) cargados para ese día. */
+  total_expenses: number;
+  /** Cobros − pagos − gastos. */
+  net_balance: number;
+}
+
+// ------------------------------------------------------------------ gastos
+
+export interface IPollaOrgExpenseEntityBack {
+  polla_org_expense_id: string;
+  polla_organization_id: string;
+  /** `null` = gasto de la organización; si no, de ese grupo. */
+  polla_group_id: string | null;
+  date: string;
+  name: string;
+  amount: number;
+  created_by: string | null;
+  created_at: string;
+  edited_at: string;
+}
+
+export type IPollaOrgExpenseEntityFront = IPollaOrgExpenseEntityBack;

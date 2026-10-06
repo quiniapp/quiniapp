@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { POLLA_USER_TYPE } from '../types/user.type';
-import { POLLA_CREDIT_MOVEMENT_TYPE as CREDIT_TYPE } from '../types/game.type';
+
+const password = z.string().min(6, 'La contraseña debe tener al menos 6 caracteres');
 
 const baseUser = {
   name: z.string().min(1, 'El nombre es obligatorio').max(120),
@@ -17,7 +18,7 @@ export const newPollaUserSchema = z
   .object({
     ...baseUser,
     user_type: z.nativeEnum(POLLA_USER_TYPE),
-    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    password,
     polla_organization_id: z.string().uuid().optional(),
     parent_polla_user_id: z.string().uuid().nullable().optional(),
     fee: z.number().min(0).max(100).nullable().optional(),
@@ -33,13 +34,21 @@ export const newPollaUserSchema = z
           message: 'El pasador necesita un porcentaje de comisión',
         });
       }
-      if (data.number === null || data.number === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['number'],
-          message: 'El pasador necesita un número',
-        });
-      }
+    }
+
+    // Pasadores y jugadores se buscan por número para cargarles jugadas.
+    if (
+      (data.user_type === POLLA_USER_TYPE.CASHIER || data.user_type === POLLA_USER_TYPE.PLAYER) &&
+      (data.number === null || data.number === undefined)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['number'],
+        message:
+          data.user_type === POLLA_USER_TYPE.CASHIER
+            ? 'El pasador necesita un número'
+            : 'El jugador necesita un número',
+      });
     }
 
     if (data.user_type === POLLA_USER_TYPE.PLAYER && !data.parent_polla_user_id) {
@@ -64,39 +73,29 @@ export const updatePollaUserSchema = z.object({
   parent_polla_user_id: z.string().uuid().nullable().optional(),
   fee: z.number().min(0).max(100).nullable().optional(),
   fee_plus: z.number().min(0).max(100).nullable().optional(),
-  password: z.string().min(6).optional(),
 });
 
-export const pollaCreditMovementSchema = z
-  .object({
-    amount: z.number().refine((v) => v !== 0, 'El monto no puede ser cero'),
-    type: z.nativeEnum(CREDIT_TYPE),
-    reason: z.string().max(200).nullable().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === CREDIT_TYPE.BET || data.type === CREDIT_TYPE.BET_REFUND) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['type'],
-        message: 'Los movimientos por jugada los genera el sistema',
-      });
-    }
-    if (data.type === CREDIT_TYPE.LOAD && data.amount < 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['amount'],
-        message: 'Una carga tiene que ser positiva',
-      });
-    }
-    if (data.type === CREDIT_TYPE.WITHDRAW && data.amount > 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['amount'],
-        message: 'Un retiro tiene que ser negativo',
-      });
-    }
-  });
+/** Blanqueo de contraseña: el usuario tiene que cambiarla al entrar. */
+export const resetPollaPasswordSchema = z.object({ password });
+
+/** Alta de una organización con su capitalista (como QuiniApp). */
+export const newPollaOrganizationWithCapitalistSchema = z.object({
+  organization: z.object({
+    name: z.string().trim().min(1, 'El nombre de la organización es obligatorio').max(120),
+  }),
+  capitalist: z.object({
+    name: baseUser.name,
+    last_name: baseUser.last_name,
+    username: z.string().trim().min(3, 'El usuario necesita al menos 3 caracteres').max(60),
+    password,
+    email: baseUser.email,
+    phone: baseUser.phone,
+  }),
+});
 
 export type INewPollaUserPayload = z.infer<typeof newPollaUserSchema>;
 export type IUpdatePollaUserPayload = z.infer<typeof updatePollaUserSchema>;
-export type IPollaCreditMovementPayload = z.infer<typeof pollaCreditMovementSchema>;
+export type IResetPollaPasswordPayload = z.infer<typeof resetPollaPasswordSchema>;
+export type INewPollaOrganizationWithCapitalistPayload = z.infer<
+  typeof newPollaOrganizationWithCapitalistSchema
+>;

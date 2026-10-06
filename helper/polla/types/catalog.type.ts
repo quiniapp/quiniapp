@@ -11,6 +11,16 @@ export interface IPollaOrganizationEntityBack {
 
 export type IPollaOrganizationEntityFront = Omit<IPollaOrganizationEntityBack, 'deleted_at'>;
 
+/** Organización como la lista el OWNER: con su capitalista. */
+export interface IPollaOrganizationWithCapitalist extends IPollaOrganizationEntityFront {
+  capitalist: {
+    polla_user_id: string;
+    name: string;
+    last_name: string | null;
+    username: string | null;
+  } | null;
+}
+
 export interface IPollaGroupEntityBack {
   polla_group_id: string;
   polla_organization_id: string;

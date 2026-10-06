@@ -4,12 +4,17 @@ import {
   POLLA_USER_TYPE,
   POLLA_USER_HIERARCHY,
   IPollaSessionUser,
+  isPollaAdminRole,
 } from '@helper/polla/types/user.type';
-import { newPollaUserSchema, updatePollaUserSchema } from '@helper/polla/schemas/user.schema';
-import { pollaCreditMovementSchema } from '@helper/polla/schemas/user.schema';
+import {
+  newPollaUserSchema,
+  resetPollaPasswordSchema,
+  updatePollaUserSchema,
+} from '@helper/polla/schemas/user.schema';
 import { hashPassword } from 'api/helper/password';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaUserRepository } from '../repository/polla-user.repository';
+import { PollaAuthRepository } from '../../auth/repository/polla-auth.repository';
 import { parsePagination } from '../../helper/pagination';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
@@ -31,6 +36,8 @@ export class PollaUserRouter {
 
   private repository = new PollaUserRepository();
 
+  private authRepository = new PollaAuthRepository();
+
   constructor() {
     this.router = Router();
     this.setupRoutes();
@@ -45,17 +52,13 @@ export class PollaUserRouter {
       POLLA_USER_TYPE.CASHIER
     );
 
-    // Un jugador solo consulta su propio saldo y sus movimientos.
-    this.router.get('/me/credits', this.getOwnCreditsHandler);
-
     this.router.get('/', staffOnly, this.getAllHandler);
+    this.router.get('/by-number/:number', staffOnly, this.getByNumberHandler);
     this.router.get('/:id', staffOnly, this.getByIdHandler);
     this.router.post('/', staffOnly, this.createHandler);
     this.router.put('/:id', staffOnly, this.updateHandler);
+    this.router.post('/:id/reset-password', staffOnly, this.resetPasswordHandler);
     this.router.delete('/:id', staffOnly, this.deleteHandler);
-
-    this.router.get('/:id/credits', staffOnly, this.getCreditsHandler);
-    this.router.post('/:id/credits', staffOnly, this.adjustCreditsHandler);
   }
 
   /** Un pasador solo alcanza a sus propios jugadores. */
@@ -109,6 +112,32 @@ export class PollaUserRouter {
     res.status(200).json({ data: { users: result } });
   });
 
+  /**
+   * Pasador o jugador por número, para cargarle una jugada. ADMIN+ busca en
+   * toda su organización; el pasador, solo entre sus jugadores.
+   */
+  private getByNumberHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const number = Number(req.params.number);
+
+    if (!/^\d{1,9}$/.test(req.params.number) || !Number.isSafeInteger(number) || number <= 0) {
+      throw new BadRequestError('Número inválido');
+    }
+
+    const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
+
+    const found = await this.repository.getByNumber({
+      organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+      number,
+      userTypes: isCashier
+        ? [POLLA_USER_TYPE.PLAYER]
+        : [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
+      parentId: isCashier ? user.polla_user_id : null,
+    });
+
+    res.status(200).json({ data: { user: found } });
+  });
+
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const target = await this.assertReachable(user, req.params.id);
@@ -119,13 +148,15 @@ export class PollaUserRouter {
     const { user } = getPollaSession(req);
     const body = { ...(req.body ?? {}) };
 
-    // Un pasador solo da de alta jugadores suyos: el padre lo pone el backend,
-    // no el cliente (y así el schema encuentra el campo que exige para PLAYER).
+    // Los jugadores los da de alta solo su pasador: el padre lo pone el
+    // backend, no el cliente (y así el schema encuentra el campo que exige).
     if (user.user_type === POLLA_USER_TYPE.CASHIER) {
       if (body.user_type !== POLLA_USER_TYPE.PLAYER) {
         throw new ForbiddenError('Un pasador solo puede crear jugadores');
       }
       body.parent_polla_user_id = user.polla_user_id;
+    } else if (body.user_type === POLLA_USER_TYPE.PLAYER) {
+      throw new ForbiddenError('Solo un pasador puede crear jugadores');
     }
 
     const payload = newPollaUserSchema.parse(body);
@@ -153,25 +184,40 @@ export class PollaUserRouter {
 
   private updateHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-    await this.assertReachable(user, req.params.id);
+    const target = await this.assertReachable(user, req.params.id);
 
     const payload = updatePollaUserSchema.parse(req.body);
-    // fee_plus no se edita: queda en 0 (la liquidación no tiene deje).
-    const { password, fee_plus: _feePlus, ...rest } = payload;
+    // fee_plus no se edita: queda en 0 (la liquidación no tiene deje). La
+    // contraseña se cambia con el blanqueo, que obliga a cambiarla al entrar.
+    const { fee_plus: _feePlus, parent_polla_user_id: parentId, fee, ...rest } = payload;
     void _feePlus;
 
-    const updated = await this.repository.update(req.params.id, {
-      ...rest,
-      ...(password
-        ? {
-            password_hash: await hashPassword(password),
-            password_changed_at: new Date().toISOString(),
-            password_reset_required: false,
-          }
-        : {}),
-    });
+    const changes: Record<string, unknown> = { ...rest };
+
+    // La comisión es del pasador y la fija un superior; el pasador de un
+    // jugador solo lo cambia un ADMIN+.
+    if (target.user_type === POLLA_USER_TYPE.CASHIER && fee !== undefined) changes.fee = fee;
+    if (
+      target.user_type === POLLA_USER_TYPE.PLAYER &&
+      parentId &&
+      isPollaAdminRole(user.user_type)
+    ) {
+      changes.parent_polla_user_id = parentId;
+    }
+
+    const updated = await this.repository.update(req.params.id, changes);
 
     res.status(200).json({ data: { user: updated } });
+  });
+
+  private resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    await this.assertReachable(user, req.params.id);
+
+    const { password } = resetPollaPasswordSchema.parse(req.body);
+    await this.authRepository.resetPassword(req.params.id, await hashPassword(password));
+
+    res.status(200).json({ data: { success: true } });
   });
 
   private deleteHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -179,44 +225,5 @@ export class PollaUserRouter {
     await this.assertReachable(user, req.params.id);
     await this.repository.softDelete(req.params.id);
     res.status(200).json({ data: { success: true } });
-  });
-
-  private getCreditsHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { user } = getPollaSession(req);
-    await this.assertReachable(user, req.params.id);
-
-    const pagination = parsePagination(req.query as Record<string, unknown>);
-    const result = await this.repository.getCreditMovements(req.params.id, pagination);
-
-    res.status(200).json({ data: { movements: result } });
-  });
-
-  private getOwnCreditsHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { user } = getPollaSession(req);
-    const pagination = parsePagination(req.query as Record<string, unknown>);
-    const result = await this.repository.getCreditMovements(user.polla_user_id, pagination);
-
-    res.status(200).json({ data: { movements: result } });
-  });
-
-  private adjustCreditsHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { user } = getPollaSession(req);
-    const target = await this.assertReachable(user, req.params.id);
-
-    if (target.user_type !== POLLA_USER_TYPE.PLAYER) {
-      throw new BadRequestError('Solo los jugadores tienen créditos');
-    }
-
-    const { amount, type, reason } = pollaCreditMovementSchema.parse(req.body);
-
-    const result = await this.repository.adjustCredits({
-      playerId: req.params.id,
-      amount,
-      type,
-      reason: reason ?? null,
-      actorId: user.polla_user_id,
-    });
-
-    res.status(200).json({ data: { credits: result } });
   });
 }

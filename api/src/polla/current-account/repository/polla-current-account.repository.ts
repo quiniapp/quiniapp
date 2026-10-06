@@ -1,6 +1,9 @@
 import { supabase } from '@database/db.connection';
 import { NotFoundError } from '@helper/errors';
-import { IPollaCurrentAccountEntityBack } from '@helper/polla/types/game.type';
+import {
+  IPollaCurrentAccountDailyTotals,
+  IPollaCurrentAccountEntityBack,
+} from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
 
@@ -10,6 +13,7 @@ export interface PollaCurrentAccountFilters {
   from?: string;
   to?: string;
   userId?: string | null;
+  userNumber?: number | null;
   groupId?: string | null;
 }
 
@@ -30,6 +34,7 @@ export class PollaCurrentAccountRepository {
     if (filters.from) query = query.gte('date', filters.from);
     if (filters.to) query = query.lte('date', filters.to);
     if (filters.userId) query = query.eq('polla_user_id', filters.userId);
+    if (filters.userNumber) query = query.eq('user_number', filters.userNumber);
     if (filters.groupId) query = query.eq('polla_group_id', filters.groupId);
 
     const { data, error, count } = await query
@@ -89,6 +94,47 @@ export class PollaCurrentAccountRepository {
 
     throwIfPollaError(error);
     return data as IPollaCurrentAccountEntityBack;
+  }
+
+  /** Marca la fila como liquidada (Liquidar de un pasador). */
+  async markLiquidated(currentAccountId: string): Promise<IPollaCurrentAccountEntityBack> {
+    const { data, error } = await supabase
+      .from('polla_current_accounts')
+      .update({ is_liquidated: true, edited_at: new Date().toISOString() })
+      .eq('polla_current_account_id', currentAccountId)
+      .select('*')
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Cuenta corriente');
+    return data as IPollaCurrentAccountEntityBack;
+  }
+
+  /** Totales por día (pie de la tabla, cobros y pagos, resumen y subtotales). */
+  async getDailyTotals(params: {
+    organizationId: string;
+    from: string;
+    to: string;
+    groupId: string | null;
+    userId: string | null;
+  }): Promise<IPollaCurrentAccountDailyTotals[]> {
+    const { data, error } = await supabase.rpc('polla_current_account_daily_totals', {
+      p_organization_id: params.organizationId,
+      p_from: params.from,
+      p_to: params.to,
+      p_group_id: params.groupId,
+      p_user_id: params.userId,
+    });
+
+    throwIfPollaError(error);
+
+    // PostgREST devuelve los NUMERIC como texto o número según el tamaño.
+    return ((data ?? []) as Record<string, unknown>[]).map((row) => {
+      const numeric = Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [key, key === 'date' ? value : Number(value)])
+      );
+      return numeric as unknown as IPollaCurrentAccountDailyTotals;
+    });
   }
 
   /** Propaga el arrastre hacia adelante después de una corrección retroactiva. */
