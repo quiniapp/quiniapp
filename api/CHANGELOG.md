@@ -4,6 +4,14 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-10-06 (Polla: pase inflado por ediciones borradas)
+
+- **Causa del pase de $20.000 con 4 jugadas (develop):** borrar una edición solo le ponía `deleted_at` a la edición. Sus jugadas seguían vivas y `polla_calculate_current_account`, que suma por pasador y día, las contaba en el pase. Walter tenía el 05-10 un pase de $22.000: 1 jugada de la edición vigente y 10 de dos ediciones de prueba borradas.
+- **Migración `20261006130000_polla_delete_edition_voids_bets.sql`**:
+  - `polla_delete_edition(edition, actor)`: borra la edición, anula sus jugadas y recalcula la cuenta corriente de cada pasador y día afectado (`polla_refresh_current_account_row`). No borra una edición con ganadores (`POLLA_EDITION_HAS_WINNERS`).
+  - Arreglo de datos: anula las jugadas que quedaron vivas en ediciones ya borradas (con la fecha de borrado de su edición) y recalcula sus cuentas. En develop, Walter pasa de $22.000 a $2.000 y Pasador Prueba de $6.000 a $2.000 el 05-10.
+- **`polla-edition.route.ts`**: `DELETE /edition/:id` usa la RPC y devuelve `voided_bets`.
+
 ### Changed - 2026-10-06 (Polla: segunda tanda del cliente)
 
 #### Jugadas sin créditos, fechas de Argentina y cuenta corriente al día

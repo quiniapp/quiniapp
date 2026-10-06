@@ -11,6 +11,8 @@ import {
 const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_EDITION_NOT_FOUND: () => new NotFoundError('Edición de Polla'),
   POLLA_EDITION_NOT_ACTIVE: () => new BadRequestError('La edición de Polla no está activa'),
+  POLLA_EDITION_HAS_WINNERS: () =>
+    new ForbiddenError('La edición ya tiene ganadores: no se puede eliminar'),
   POLLA_LOAD_LIMIT_EXCEEDED: () =>
     new ForbiddenError('Pasó la fecha límite de carga para esta edición'),
   POLLA_BET_NOT_FOUND: () => new NotFoundError('Jugada de Polla'),

@@ -79,17 +79,18 @@ export class PollaEditionRepository {
     return data;
   }
 
-  async softDelete(editionId: string) {
-    const { data, error } = await supabase
-      .from('polla_editions')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('polla_edition_id', editionId)
-      .is('deleted_at', null)
-      .select('polla_edition_id')
-      .maybeSingle();
+  /**
+   * Borra la edición y anula sus jugadas (si no, la cuenta corriente las sigue
+   * sumando en el pase) y recalcula las cuentas afectadas. No borra una
+   * edición con ganadores.
+   */
+  async remove(editionId: string, actorId: string) {
+    const { data, error } = await supabase.rpc('polla_delete_edition', {
+      p_edition_id: editionId,
+      p_actor_id: actorId,
+    });
 
     throwIfPollaError(error);
-    if (!data) throw new NotFoundError('Edición de Polla');
-    return data;
+    return data as { success: boolean; voided_bets: number };
   }
 }

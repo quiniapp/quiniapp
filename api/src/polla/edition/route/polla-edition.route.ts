@@ -119,8 +119,9 @@ export class PollaEditionRouter {
   });
 
   private deleteHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
     await this.assertScope(req, req.params.id);
-    await this.repository.softDelete(req.params.id);
-    res.status(200).json({ data: { success: true } });
+    const result = await this.repository.remove(req.params.id, user.polla_user_id);
+    res.status(200).json({ data: { success: true, voided_bets: result.voided_bets } });
   });
 }
