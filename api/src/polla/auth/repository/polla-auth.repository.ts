@@ -19,7 +19,7 @@ export interface IPollaSessionRow {
 }
 
 const SESSION_USER_COLUMNS =
-  'polla_user_id, name, last_name, username, number, user_type, polla_organization_id, polla_group_id, parent_polla_user_id, credit_balance, password_reset_required, theme';
+  'polla_user_id, name, last_name, username, number, user_type, polla_organization_id, polla_group_id, parent_polla_user_id, password_reset_required, theme';
 
 export class PollaAuthRepository {
   async getUserByUsername(username: string): Promise<IPollaUserEntityBack | null> {
@@ -182,6 +182,29 @@ export class PollaAuthRepository {
       .eq('polla_user_id', pollaUserId);
 
     throwIfPollaError(error);
+  }
+
+  /**
+   * Blanqueo hecho por un superior: la contraseña nueva es temporal (hay que
+   * cambiarla al entrar), se levanta el bloqueo y se cierran las sesiones.
+   */
+  async resetPassword(pollaUserId: string, passwordHash: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('polla_users')
+      .update({
+        password_hash: passwordHash,
+        password_changed_at: now,
+        password_reset_required: true,
+        failed_login_attempts: 0,
+        locked_until: null,
+        edited_at: now,
+      })
+      .eq('polla_user_id', pollaUserId)
+      .is('deleted_at', null);
+
+    throwIfPollaError(error);
+    await this.revokeAllSessions(pollaUserId);
   }
 
   async updateTheme(pollaUserId: string, theme: POLLA_THEME): Promise<void> {

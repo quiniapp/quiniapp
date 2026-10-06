@@ -3,8 +3,6 @@ import { ZodSchema } from 'zod';
 import { ForbiddenError } from '@helper/errors';
 import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import {
-  newPollaOrganizationSchema,
-  updatePollaOrganizationSchema,
   newPollaGroupSchema,
   updatePollaGroupSchema,
   newPollaLotterySchema,
@@ -127,17 +125,6 @@ const ADMIN_AND_UP = [
   POLLA_USER_TYPE.SUPERADMIN,
   POLLA_USER_TYPE.ADMIN,
 ];
-
-export const pollaOrganizationRouter = createCatalogRouter({
-  table: 'polla_organizations',
-  idColumn: 'polla_organization_id',
-  orgScoped: false,
-  orderBy: { column: 'name', ascending: true },
-  resourceKey: 'organizations',
-  newSchema: newPollaOrganizationSchema,
-  updateSchema: updatePollaOrganizationSchema,
-  writeRoles: [POLLA_USER_TYPE.OWNER],
-});
 
 export const pollaGroupRouter = createCatalogRouter({
   table: 'polla_groups',

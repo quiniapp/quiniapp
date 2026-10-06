@@ -11,6 +11,11 @@ import { parsePagination } from '../../helper/pagination';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const queryString = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null;
+
 const ADMIN_AND_UP = [
   POLLA_USER_TYPE.OWNER,
   POLLA_USER_TYPE.CAPITALIST,
@@ -34,6 +39,7 @@ export class PollaCurrentAccountRouter {
     this.router.post('/calculate', writeGuard, this.calculateHandler);
     this.router.post('/liquidate', writeGuard, this.liquidateHandler);
     this.router.put('/bulk', writeGuard, this.bulkUpdateHandler);
+    this.router.get('/totals', this.getTotalsHandler);
     this.router.get('/', this.getAllHandler);
     this.router.get('/:id', this.getByIdHandler);
     this.router.put('/:id', writeGuard, this.updateHandler);
@@ -59,12 +65,45 @@ export class PollaCurrentAccountRouter {
           user.user_type === POLLA_USER_TYPE.CASHIER
             ? user.polla_user_id
             : ((req.query.polla_user_id as string) ?? null),
+        userNumber: /^\d{1,9}$/.test(String(req.query.user_number ?? ''))
+          ? Number(req.query.user_number)
+          : null,
         groupId: (req.query.polla_group_id as string) ?? null,
       },
       pagination
     );
 
     res.status(200).json({ data: { current_accounts: result } });
+  });
+
+  /**
+   * Totales por día entre `from` y `to`: el pie de la tabla (from = to), el
+   * ticket de cobros y pagos, el resumen y los subtotales. El pasador solo
+   * recibe los suyos.
+   */
+  private getTotalsHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+
+    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
+      throw new ForbiddenError('Los jugadores no tienen cuenta corriente');
+    }
+
+    const from = queryString(req.query.from);
+    const to = queryString(req.query.to) ?? from;
+
+    if (!from || !to || !ISO_DATE.test(from) || !ISO_DATE.test(to) || from > to) {
+      throw new BadRequestError('Rango de fechas inválido (YYYY-MM-DD)');
+    }
+
+    const totals = await this.repository.getDailyTotals({
+      organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+      from,
+      to,
+      groupId: queryString(req.query.polla_group_id),
+      userId: user.user_type === POLLA_USER_TYPE.CASHIER ? user.polla_user_id : null,
+    });
+
+    res.status(200).json({ data: { totals } });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -132,9 +171,9 @@ export class PollaCurrentAccountRouter {
       throw new ForbiddenError('La cuenta pertenece a otra organización');
     }
 
-    const props = pollaCurrentAccountUpdateSchema.parse(req.body);
+    const { liquidate, ...props } = pollaCurrentAccountUpdateSchema.parse(req.body);
 
-    const updated = await this.repository.recompute({
+    let updated = await this.repository.recompute({
       currentAccountId: req.params.id,
       props,
       organizationId: account.polla_organization_id,
@@ -149,6 +188,8 @@ export class PollaCurrentAccountRouter {
       account.polla_user_id
     );
 
+    if (liquidate) updated = await this.repository.markLiquidated(req.params.id);
+
     res.status(200).json({ data: { current_account: updated } });
   });
 
@@ -159,10 +200,12 @@ export class PollaCurrentAccountRouter {
 
     const updated = [];
     for (const item of payload.updates) {
+      const { liquidate: _liquidate, ...props } = item.props;
+      void _liquidate;
       updated.push(
         await this.repository.recompute({
           currentAccountId: item.polla_current_account_id,
-          props: item.props,
+          props,
           organizationId,
           calculateLeave: false,
           leaveInSubtotal: false,

@@ -4,6 +4,63 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-06 (Polla: segunda tanda del cliente)
+
+#### Jugadas sin créditos, fechas de Argentina y cuenta corriente al día
+Cada pasador cobra las jugadas por fuera de la aplicación, así que dejan de existir los créditos.
+- **Migración `20261006120000_polla_bets_without_credits.sql`**:
+  - `polla_today()`: fecha de negocio en Argentina. El servidor y la base corren en UTC, y una jugada cargada después de las 21 caía en el día siguiente.
+  - `polla_create_bet` ya no debita créditos. El número de ticket usa la hora de Argentina (igual que QuiniApp) y el día por defecto es `polla_today()`. Guarda quién cargó la jugada en la columna nueva `polla_bets.created_by`.
+  - `polla_delete_bet` ya no devuelve créditos. Sin `force` (pasador o jugador) solo borra jugadas cargadas hoy (`POLLA_BET_DELETE_ONLY_SAME_DAY`): borrar una de un día anterior cambiaría una liquidación ya hecha.
+  - `polla_update_bet_numbers` controla el límite de carga con `polla_today()`.
+  - `polla_refresh_current_account_row(cashier, date, org)`: si la cuenta corriente del día ya estaba calculada, alta y baja de jugadas la recalculan para ese pasador y arrastran el saldo. Antes el pase quedaba con las jugadas que había al calcular (por ejemplo, $20.000 de pase con 4 jugadas de $2.000 después de borrar otras).
+  - `REVOKE`/`GRANT` a `service_role` en todas las funciones recreadas.
+- **Migración `20261006120100_polla_player_numbers.sql`**: pasadores y jugadores necesitan número (`CHECK polla_users_number_required`), porque se los busca por número para cargarles jugadas. A los que ya existían sin número se les asignan los siguientes libres de su organización.
+- **Migración `20261006120200_polla_sales_and_current_account_reports.sql`**:
+  - Índice `idx_polla_bets_org_load_date`.
+  - `polla_daily_sales(org, date, cashier?)`: boletas y monto del día por grupo.
+  - Tabla `polla_org_expenses`: gastos de la organización o de un grupo por día. Es la de `org_expenses` de QuiniApp.
+  - `polla_current_account_daily_totals(org, from, to, group?, user?)`: totales por día de la cuenta corriente, con gastos y `net_balance` (cobros − pagos − gastos).
+- **Migración `20261006120300_polla_organization_with_capitalist.sql`**: `polla_create_organization_with_capitalist` crea la organización y su capitalista en una sola transacción. Si el usuario está repetido, no queda la organización.
+- **Errores**: `POLLA_BET_DELETE_ONLY_SAME_DAY` y `polla_users_number_required`. Se sacan los de créditos.
+- **`helper/date.ts`**: `pollaToday()`, la fecha de Argentina para Node. `polla-bet.repository.create` la usa por defecto en vez de la fecha UTC.
+
+#### Usuarios
+- **`polla-user.route.ts`**:
+  - Solo un pasador crea jugadores: cualquier otro rol recibe 403 "Solo un pasador puede crear jugadores".
+  - `POST /user/:id/reset-password`: blanqueo con contraseña temporal. Obliga a cambiarla al entrar, levanta el bloqueo y cierra las sesiones (`PollaAuthRepository.resetPassword`).
+  - `GET /user/by-number/:number`: pasador o jugador por número para cargarle una jugada. ADMIN+ busca en su organización y el pasador entre sus jugadores.
+  - `PUT /:id` no cambia la contraseña (se usa el blanqueo). El pasador no puede cambiar la comisión ni el pasador de un jugador.
+  - Se sacan `/me/credits` y `/:id/credits`, y los métodos de créditos del repositorio.
+- **Sesión**: `credit_balance` sale de `/auth/validate`, login y refresh.
+
+#### Jugadas
+- **`polla-bet.route.ts`**:
+  - Carga a nombre de otro: ADMIN+ para cualquier pasador o jugador de la organización, y el pasador para sus jugadores.
+  - Borrado: el pasador también puede borrar las jugadas imputadas a él (las de sus jugadores), siempre que sean del día. La proyección pública suma `can_delete` y `amount` (este último solo en las propias).
+  - `GET /bet/last`: la última jugada que cargó el propio usuario, para "Repetir última jugada".
+  - `GET /bet/sales?date=`: ventas del día. ADMIN+ recibe el total y el desglose por grupo; el pasador, solo lo suyo; el jugador recibe 403.
+  - Filtros `load_date` y `hit_date` para todos los roles. Con alguno de los dos ya no hace falta elegir edición (para la liquidación).
+- **`polla-edition.route.ts`**: no deja cambiar `ticket_price` si la edición ya tiene jugadas. Las jugadas guardan el precio con el que se cargaron, y cambiarlo desfasa el pase.
+
+#### Resultados
+- **`polla-result.route.ts`**: pasador y jugador reciben los resultados con las 2 últimas cifras. ADMIN+ recibe las 4.
+
+#### Organizaciones
+- **`organization/route/polla-organization.route.ts`** (nuevo; reemplaza al router genérico de catálogos para organizaciones):
+  - `GET` devuelve cada organización con su capitalista.
+  - `POST` crea la organización con su capitalista.
+  - `PUT` cambia el nombre y `DELETE` la borra.
+  - `POST /:id/capitalist/reset-password` blanquea la contraseña del capitalista.
+  - Todas las escrituras son solo del OWNER.
+
+#### Cuenta corriente y gastos
+- **`polla-current-account.route.ts`**:
+  - Filtro `user_number`.
+  - `GET /totals?from&to&polla_group_id` (el pasador recibe solo los suyos).
+  - `PUT /:id` acepta `liquidate: true` para marcar la fila como liquidada.
+- **`expense/route/polla-expense.route.ts`** (nuevo, ADMIN+): `GET ?date&polla_group_id`, `POST` y `DELETE /:id` de gastos, montado en `/expense`.
+
 ### Changed - 2026-10-05 (Polla: ajustes del cliente)
 
 #### Números repetidos y aciertos por casillero con fecha

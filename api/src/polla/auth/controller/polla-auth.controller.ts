@@ -24,7 +24,6 @@ const toSessionUser = (user: {
   polla_organization_id: string;
   polla_group_id: string | null;
   parent_polla_user_id: string | null;
-  credit_balance: number;
   password_reset_required: boolean;
   theme: POLLA_THEME;
 }): IPollaSessionUser => ({
@@ -37,7 +36,6 @@ const toSessionUser = (user: {
   polla_organization_id: user.polla_organization_id,
   polla_group_id: user.polla_group_id,
   parent_polla_user_id: user.parent_polla_user_id,
-  credit_balance: Number(user.credit_balance ?? 0),
   password_reset_required: user.password_reset_required,
   theme: user.theme,
 });
@@ -99,7 +97,7 @@ export class PollaAuthController {
         session.polla_session_id,
         session.token_version
       ),
-      user: toSessionUser({ ...user, credit_balance: Number(user.credit_balance ?? 0) }),
+      user: toSessionUser(user),
     };
   }
 
