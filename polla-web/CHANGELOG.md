@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-10-06
+
+- **`features/editions`**: la confirmación de borrado avisa que se anulan las jugadas de la edición. Al borrar se refrescan jugadas, ventas y cuenta corriente.
+
 ### Changed - 2026-10-06 (Segunda tanda del cliente)
 
 #### Roles y versión

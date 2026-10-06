@@ -282,7 +282,11 @@ export const EditionsPage = () => {
                         variant="ghost"
                         title="Eliminar"
                         onClick={() => {
-                          if (window.confirm('¿Eliminar la edición?')) {
+                          if (
+                            window.confirm(
+                              '¿Eliminar la edición? Se anulan todas sus jugadas y salen de la cuenta corriente.'
+                            )
+                          ) {
                             deleteEdition({ id: edition.polla_edition_id });
                           }
                         }}

@@ -127,8 +127,9 @@ export const useUpdateEdition = () =>
 
 export const useDeleteEdition = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.edition.id(id), {
-    invalidate: ['polla-editions'],
-    successMessage: 'Edición eliminada',
+    // Sus jugadas se anulan y la cuenta corriente se recalcula.
+    invalidate: ['polla-editions', 'polla-bets', 'polla-sales', 'polla-current-accounts'],
+    successMessage: 'Edición eliminada y sus jugadas anuladas',
   });
 
 // ---------------------------------------------------------------- jugadas
