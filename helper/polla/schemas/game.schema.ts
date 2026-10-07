@@ -75,10 +75,11 @@ export const updatePollaEditionSchema = z
 
 // -------------------------------------------------------------- resultados
 
-/** Como en la quiniela: 20 números de 4 cifras, como texto (0088 es válido). */
-const resultNumbers = z
-  .array(z.string().regex(/^\d{4}$/, 'Cada resultado debe tener 4 cifras'))
-  .length(20, 'Se cargan exactamente 20 resultados');
+/**
+ * 20 números de 2 cifras (00 a 99), como texto: se comparan tal cual con los
+ * números jugados.
+ */
+const resultNumbers = z.array(twoDigitNumber).length(20, 'Se cargan exactamente 20 resultados');
 
 export const newPollaResultSchema = z.object({
   polla_lottery_id: z.string().uuid(),

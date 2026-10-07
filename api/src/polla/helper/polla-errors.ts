@@ -22,6 +22,7 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new ForbiddenError('Solo se pueden eliminar las jugadas cargadas hoy'),
   POLLA_NUMBERS_MUST_BE_TEN: () => new BadRequestError('La jugada debe tener 10 números'),
   POLLA_NUMBERS_INVALID: () => new BadRequestError('Los números deben ser de 2 cifras (00-99)'),
+  POLLA_RESULTS_INVALID: () => new BadRequestError('Los resultados deben ser de 2 cifras (00-99)'),
   POLLA_USER_NOT_FOUND: () => new NotFoundError('Usuario de Polla'),
   POLLA_USER_NOT_PLAYER: () => new BadRequestError('El usuario no es un jugador'),
   POLLA_USER_CANNOT_BET: () => new ForbiddenError('Este tipo de usuario no puede cargar jugadas'),

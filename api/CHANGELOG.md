@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-06 (Polla: resultados de 2 cifras)
+
+- **Migración `20261006140000_polla_results_two_digits.sql`**:
+  - Los resultados se cargan con 2 cifras (00 a 99) y se comparan tal cual con los números jugados. Antes se cargaban 4 cifras y el procesamiento se quedaba con las 2 últimas.
+  - Los resultados ya cargados se pasan a sus 2 últimas cifras, que es lo mismo que usaba el procesamiento: no cambia ningún acierto.
+  - Trigger `validate_polla_result_numbers`: cada resultado tiene que tener 2 cifras (`POLLA_RESULTS_INVALID`).
+  - `polla_process_edition_hits` compara cada resultado sin `RIGHT()`.
+- **`polla-result.route.ts`**: se saca el recorte a 2 cifras para pasador y jugador, porque todos los resultados ya tienen 2 cifras.
+
 ### Fixed - 2026-10-06 (Polla: pase inflado por ediciones borradas)
 
 - **Causa del pase de $20.000 con 4 jugadas (develop):** borrar una edición solo le ponía `deleted_at` a la edición. Sus jugadas seguían vivas y `polla_calculate_current_account`, que suma por pasador y día, las contaba en el pase. Walter tenía el 05-10 un pase de $22.000: 1 jugada de la edición vigente y 10 de dos ediciones de prueba borradas.

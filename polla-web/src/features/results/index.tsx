@@ -20,6 +20,7 @@ import { flattenPages } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { padPollaNumber } from '@/lib/pollaNumbers';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -39,7 +40,7 @@ import {
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 const RESULTS_COUNT = 20;
-const RESULT_DIGITS = 4;
+const RESULT_DIGITS = 2;
 const emptyResults = () => Array<string>(RESULTS_COUNT).fill('');
 /** Como en la quiniela: 1 a 10 en la primera columna y 11 a 20 en la segunda. */
 const COLUMNS = [
@@ -58,7 +59,7 @@ export const ResultsPage = () => {
   const [lotteryId, setLotteryId] = useState('');
   const [scheduleId, setScheduleId] = useState('');
   const [numbers, setNumbers] = useState<string[]>(emptyResults);
-  // Cajas en las que se apretó Enter sin las 4 cifras.
+  // Cajas que quedaron vacías al apretar Enter o al guardar.
   const [incomplete, setIncomplete] = useState<Set<number>>(new Set());
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -101,11 +102,16 @@ export const ResultsPage = () => {
     [schedules]
   );
 
-  const handleNumberChange = (index: number, raw: string) => {
+  const setNumber = (index: number, value: string) => {
     const next = [...numbers];
-    next[index] = raw.replace(/\D/g, '').slice(0, RESULT_DIGITS);
+    next[index] = value;
     setNumbers(next);
-    if (incomplete.has(index) && next[index].length === RESULT_DIGITS) {
+    return next;
+  };
+
+  const handleNumberChange = (index: number, raw: string) => {
+    const next = setNumber(index, raw.replace(/\D/g, '').slice(0, RESULT_DIGITS));
+    if (incomplete.has(index) && next[index]) {
       setIncomplete((prev) => {
         const rest = new Set(prev);
         rest.delete(index);
@@ -114,17 +120,18 @@ export const ResultsPage = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = (values: string[] = numbers) => {
+    const results = values.map(padPollaNumber);
     const parsed = newPollaResultSchema.safeParse({
       polla_lottery_id: lotteryId,
       polla_schedule_id: scheduleId,
       date,
-      results: numbers,
+      results,
       ...(organizationId ? { polla_organization_id: organizationId } : {}),
     });
 
     if (!parsed.success) {
-      const missing = numbers
+      const missing = results
         .map((value, index) => (value.length === RESULT_DIGITS ? -1 : index))
         .filter((index) => index >= 0);
       setIncomplete(new Set(missing));
@@ -147,19 +154,27 @@ export const ResultsPage = () => {
     createResult(parsed.data);
   };
 
-  // Como en la quiniela: se escriben las 4 cifras (0088 incluido) y Enter pasa
-  // al siguiente; en el último guarda. Con menos de 4 cifras no avanza.
+  // Igual que la carga de jugadas: se escriben las 2 cifras y Enter pasa al
+  // siguiente (una cifra se completa con cero: 7 queda 07); en el último
+  // guarda. Una caja vacía no avanza.
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
 
-    if (numbers[index].length !== RESULT_DIGITS) {
+    if (!numbers[index]) {
       setIncomplete((prev) => new Set(prev).add(index));
       return;
     }
 
+    const next = setNumber(index, padPollaNumber(numbers[index]));
+
     if (index < RESULTS_COUNT - 1) inputRefs.current[index + 1]?.focus();
-    else handleSave();
+    else handleSave(next);
+  };
+
+  const handleBlur = (index: number) => {
+    const padded = padPollaNumber(numbers[index]);
+    if (padded !== numbers[index]) setNumber(index, padded);
   };
 
   const handleProcess = () => {
@@ -202,8 +217,8 @@ export const ResultsPage = () => {
       <PageHeader
         description={
           canManage
-            ? 'Cargá o corregí los 20 números del día y procesá los aciertos de las ediciones en juego.'
-            : 'Los 20 números de cada sorteo. En la Polla cuentan las 2 últimas cifras.'
+            ? 'Cargá o corregí los 20 números del día (2 cifras cada uno) y procesá los aciertos de las ediciones en juego.'
+            : 'Los 20 números de cada sorteo, de 2 cifras.'
         }
       />
 
@@ -246,7 +261,7 @@ export const ResultsPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-              <Button type="button" onClick={handleSave} disabled={isSaving}>
+              <Button type="button" onClick={() => handleSave()} disabled={isSaving}>
                 {isSaving ? 'Guardando…' : existing ? 'Guardar corrección' : 'Guardar'}
               </Button>
               <Button
@@ -267,7 +282,7 @@ export const ResultsPage = () => {
             </p>
           )}
 
-          <div className="grid max-w-md grid-cols-2 gap-x-4 gap-y-1.5 sm:gap-x-8">
+          <div className="grid w-fit grid-cols-2 gap-x-6 gap-y-1.5 sm:gap-x-10">
             {COLUMNS.map((column, columnIndex) => (
               <div key={columnIndex} className="flex flex-col gap-1.5">
                 {column.map((index) => (
@@ -286,9 +301,10 @@ export const ResultsPage = () => {
                       aria-label={`Resultado ${index + 1}`}
                       aria-invalid={incomplete.has(index)}
                       onChange={(e) => handleNumberChange(index, e.target.value)}
+                      onBlur={() => handleBlur(index)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       className={cn(
-                        'h-10 text-center font-mono text-lg font-bold tabular-nums',
+                        'h-10 w-16 text-center font-mono text-lg font-bold tabular-nums',
                         incomplete.has(index) && 'border-2 border-destructive'
                       )}
                     />
@@ -299,7 +315,7 @@ export const ResultsPage = () => {
           </div>
           {incomplete.size > 0 && (
             <p className="text-sm text-destructive" role="alert">
-              Cada resultado lleva 4 cifras (por ejemplo 0088).
+              Completá los 20 resultados, de 2 cifras cada uno (por ejemplo 07).
             </p>
           )}
         </div>
