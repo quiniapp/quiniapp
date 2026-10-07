@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-06 (Polla: resultados de 2 cifras)
+
+- **`polla/schemas/game.schema.ts`**: los resultados son 20 números de 2 cifras (`^\d{2}$`), los mismos que se comparan con las jugadas. Antes eran de 4 cifras.
+
 ### Changed - 2026-10-06 (Polla: segunda tanda del cliente)
 
 - **`polla/types/user.type.ts`**:

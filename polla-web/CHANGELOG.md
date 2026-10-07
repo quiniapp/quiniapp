@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-06 (Resultados de 2 cifras)
+
+- **`features/results`**: se cargan las 2 cifras que se comparan con las jugadas. Enter pasa a la caja siguiente y en la última guarda. Una cifra sola se completa con cero (7 → 07) al apretar Enter o al salir de la caja. Una caja vacía no avanza y queda marcada.
+
 ### Fixed - 2026-10-06
 
 - **`features/editions`**: la confirmación de borrado avisa que se anulan las jugadas de la edición. Al borrar se refrescan jugadas, ventas y cuenta corriente.

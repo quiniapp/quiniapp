@@ -44,6 +44,7 @@ export interface IPollaResultEntityBack {
   polla_lottery_id: string;
   polla_schedule_id: string;
   date: string;
+  /** 20 números de 2 cifras (`'07'`), los que se comparan con las jugadas. */
   results: string[];
   loaded_by: string | null;
   created_at: string;
