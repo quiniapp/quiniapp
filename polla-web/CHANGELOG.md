@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-08 (Resultados como QuiniApp)
+
+- **`features/results`**, con la lógica de `web/src/features/results`:
+  - Enter pasa siempre a la caja siguiente, también con la caja vacía. Una cifra se completa con cero.
+  - En la última caja, Enter guarda si están los 20; si falta alguno, vuelve a la primera vacía.
+  - "Guardar resultados" queda deshabilitado hasta tener quiniela, turno y los 20 números. Debajo de la grilla se muestra cuántos van cargados.
+  - Un resultado ya cargado se trae a la grilla para editarlo y se guarda como corrección.
+  - Guardar no calcula nada: los aciertos y ganadores se calculan con el botón **Generar ganadores** (antes "Procesar aciertos"), que también actualiza la cuenta corriente.
+
 ### Changed - 2026-10-06 (Resultados de 2 cifras)
 
 - **`features/results`**: se cargan las 2 cifras que se comparan con las jugadas. Enter pasa a la caja siguiente y en la última guarda. Una cifra sola se completa con cero (7 → 07) al apretar Enter o al salir de la caja. Una caja vacía no avanza y queda marcada.

@@ -120,6 +120,13 @@ export const ResultsPage = () => {
     }
   };
 
+  // Como en QuiniApp: Guardar se habilita recién con los 20 números cargados
+  // (una cifra sola vale: se completa con cero al guardar).
+  const filledCount = numbers.filter((value) => /^\d{1,2}$/.test(value)).length;
+  const isComplete = filledCount === RESULTS_COUNT;
+  const isSaving = isCreating || isUpdating;
+  const canSave = isComplete && Boolean(lotteryId && scheduleId) && !isSaving;
+
   const handleSave = (values: string[] = numbers) => {
     const results = values.map(padPollaNumber);
     const parsed = newPollaResultSchema.safeParse({
@@ -140,36 +147,42 @@ export const ResultsPage = () => {
       return;
     }
 
+    // Guardar no calcula nada: los aciertos salen de "Generar ganadores".
+    const afterSave = {
+      onSuccess: () =>
+        toast('Para calcular los aciertos del día tocá Generar ganadores', { duration: 6000 }),
+    };
+
     if (existing) {
-      updateResult(
-        { id: existing.polla_result_id, results: parsed.data.results },
-        {
-          onSuccess: () =>
-            toast('Si ya procesaste este día, volvé a procesar los aciertos', { duration: 6000 }),
-        }
-      );
+      updateResult({ id: existing.polla_result_id, results: parsed.data.results }, afterSave);
       return;
     }
 
-    createResult(parsed.data);
+    createResult(parsed.data, afterSave);
   };
 
-  // Igual que la carga de jugadas: se escriben las 2 cifras y Enter pasa al
-  // siguiente (una cifra se completa con cero: 7 queda 07); en el último
-  // guarda. Una caja vacía no avanza.
+  // Como en QuiniApp: Enter pasa siempre a la caja siguiente (una cifra se
+  // completa con cero: 7 queda 07). En la última guarda si están los 20; si
+  // falta alguno, vuelve a la primera vacía.
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
 
-    if (!numbers[index]) {
-      setIncomplete((prev) => new Set(prev).add(index));
+    const next = setNumber(index, padPollaNumber(numbers[index]));
+
+    if (index < RESULTS_COUNT - 1) {
+      inputRefs.current[index + 1]?.focus();
       return;
     }
 
-    const next = setNumber(index, padPollaNumber(numbers[index]));
+    const missing = next.map((value, i) => (value ? -1 : i)).filter((i) => i >= 0);
+    if (missing.length) {
+      setIncomplete(new Set(missing));
+      inputRefs.current[missing[0]]?.focus();
+      return;
+    }
 
-    if (index < RESULTS_COUNT - 1) inputRefs.current[index + 1]?.focus();
-    else handleSave(next);
+    if (lotteryId && scheduleId && !isSaving) handleSave(next);
   };
 
   const handleBlur = (index: number) => {
@@ -177,9 +190,9 @@ export const ResultsPage = () => {
     if (padded !== numbers[index]) setNumber(index, padded);
   };
 
-  const handleProcess = () => {
+  const handleGenerateWinners = () => {
     if (!scheduleId) {
-      toast.error('Elegí un turno para procesar');
+      toast.error('Elegí el turno para generar los ganadores');
       return;
     }
     processResults(
@@ -194,7 +207,7 @@ export const ResultsPage = () => {
           // estaban cargados quedaron sin procesar para esa edición.
           if (result.editions.some((edition) => edition.reopened)) {
             toast(
-              'La corrección anuló al ganador y la edición sigue en juego: procesá los días siguientes que ya tengan resultado.',
+              'La corrección anuló al ganador y la edición sigue en juego: generá los ganadores de los días siguientes que ya tengan resultado.',
               { duration: 10000 }
             );
           }
@@ -210,14 +223,12 @@ export const ResultsPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isSaving = isCreating || isUpdating;
-
   return (
     <div>
       <PageHeader
         description={
           canManage
-            ? 'Cargá o corregí los 20 números del día (2 cifras cada uno) y procesá los aciertos de las ediciones en juego.'
+            ? 'Cargá o corregí los 20 números del día (2 cifras cada uno). Los aciertos se calculan al tocar Generar ganadores.'
             : 'Los 20 números de cada sorteo, de 2 cifras.'
         }
       />
@@ -261,24 +272,35 @@ export const ResultsPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-              <Button type="button" onClick={() => handleSave()} disabled={isSaving}>
-                {isSaving ? 'Guardando…' : existing ? 'Guardar corrección' : 'Guardar'}
+              <Button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={!canSave}
+                title={
+                  !lotteryId || !scheduleId
+                    ? 'Elegí quiniela y turno'
+                    : !isComplete
+                      ? 'Faltan resultados por cargar'
+                      : undefined
+                }
+              >
+                {isSaving ? 'Guardando…' : existing ? 'Guardar corrección' : 'Guardar resultados'}
               </Button>
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleProcess}
+                variant="success"
+                onClick={handleGenerateWinners}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Procesando…' : 'Procesar aciertos'}
+                {isProcessing ? 'Generando…' : 'Generar ganadores'}
               </Button>
             </div>
           </div>
 
           {existing && (
             <p className="text-xs text-muted-foreground">
-              Este día ya tiene resultado cargado: al guardar se corrige. Después procesá los
-              aciertos del día; solo se recalculan los de este día.
+              Este día ya tiene resultado cargado: podés editarlo y guardar la corrección. Después
+              tocá Generar ganadores; solo se recalculan los aciertos de este día.
             </p>
           )}
 
@@ -313,11 +335,17 @@ export const ResultsPage = () => {
               </div>
             ))}
           </div>
-          {incomplete.size > 0 && (
-            <p className="text-sm text-destructive" role="alert">
-              Completá los 20 resultados, de 2 cifras cada uno (por ejemplo 07).
-            </p>
-          )}
+          <p
+            className={cn(
+              'text-sm',
+              incomplete.size > 0 && !isComplete ? 'text-destructive' : 'text-muted-foreground'
+            )}
+            role="status"
+          >
+            {isComplete
+              ? 'Los 20 resultados están cargados.'
+              : `Cargados ${filledCount} de ${RESULTS_COUNT}. Guardar se habilita con los 20 (2 cifras cada uno).`}
+          </p>
         </div>
       )}
 
