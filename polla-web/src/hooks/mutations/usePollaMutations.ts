@@ -183,7 +183,7 @@ export const useProcessResults = () =>
     { polla_schedule_id: string; date: string; polla_organization_id?: string }
   >('post', BACKEND_ROUTES.result.process, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-winners', 'polla-current-accounts'],
-    successMessage: 'Aciertos procesados',
+    successMessage: 'Ganadores generados y cuenta corriente actualizada',
   });
 
 // --------------------------------------------------------- cuenta corriente
