@@ -9,6 +9,8 @@ export enum ROUTES {
   USERS = '/usuarios',
   CATALOGS = '/catalogos',
   ORGANIZATIONS = '/organizaciones',
+  GROUPS = '/grupos',
+  CHECK_TICKET = '/revisar-ticket',
   CURRENT_ACCOUNT = '/cuenta-corriente',
   CHANGE_PASSWORD = '/cambiar-password',
   SETTINGS = '/configuracion',

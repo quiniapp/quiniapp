@@ -34,8 +34,6 @@ const createCatalogRouter = (config: CatalogRouterConfig): Router => {
 
   const assertScope = async (req: Request, id: string) => {
     const { user } = getPollaSession(req);
-    if (user.user_type === POLLA_USER_TYPE.OWNER) return;
-
     const belongs = await repository.assertBelongsToOrganization(id, user.polla_organization_id);
     if (!belongs) {
       throw new ForbiddenError('El registro pertenece a otra organización');
@@ -126,6 +124,7 @@ const ADMIN_AND_UP = [
   POLLA_USER_TYPE.ADMIN,
 ];
 
+/** Los grupos los arman el OWNER y el capitalista, cada uno en su organización. */
 export const pollaGroupRouter = createCatalogRouter({
   table: 'polla_groups',
   idColumn: 'polla_group_id',
@@ -134,7 +133,7 @@ export const pollaGroupRouter = createCatalogRouter({
   resourceKey: 'groups',
   newSchema: newPollaGroupSchema,
   updateSchema: updatePollaGroupSchema,
-  writeRoles: ADMIN_AND_UP,
+  writeRoles: [POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST],
 });
 
 export const pollaLotteryRouter = createCatalogRouter({

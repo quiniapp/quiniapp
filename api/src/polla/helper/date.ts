@@ -13,3 +13,6 @@ const POLLA_TIMEZONE = 'America/Argentina/Buenos_Aires';
  * Es la misma fecha que usa `polla_today()` en la base.
  */
 export const pollaToday = (): string => dayjs().tz(POLLA_TIMEZONE).format('YYYY-MM-DD');
+
+/** Hora actual (`HH:mm:ss`) en Argentina, para comparar con el cierre de carga. */
+export const pollaNowTime = (): string => dayjs().tz(POLLA_TIMEZONE).format('HH:mm:ss');

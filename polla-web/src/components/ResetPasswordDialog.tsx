@@ -22,8 +22,8 @@ interface ResetPasswordDialogProps {
 }
 
 /**
- * Contraseña temporal elegida por un superior. El usuario la tiene que cambiar
- * al entrar y se le cierran las sesiones abiertas.
+ * Contraseña elegida por un superior. Queda definitiva (nadie se la cambia a sí
+ * mismo) y se le cierran las sesiones abiertas.
  */
 export const ResetPasswordDialog = ({
   title,
@@ -56,7 +56,7 @@ export const ResetPasswordDialog = ({
         <DialogHeader>
           <DialogTitle>Blanquear contraseña de {title}</DialogTitle>
           <DialogDescription>
-            Es una contraseña temporal: la va a tener que cambiar cuando entre.
+            Queda como su contraseña y se le cierran las sesiones abiertas.
           </DialogDescription>
         </DialogHeader>
 

@@ -50,6 +50,7 @@ export const BACKEND_ROUTES = {
     last: `${PRIVATE}/bet/last`,
     sales: `${PRIVATE}/bet/sales`,
     ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
+    check: (ticketNumber: string) => `${PRIVATE}/bet/check/${encodeURIComponent(ticketNumber)}`,
   },
   result: {
     base: `${PRIVATE}/result`,

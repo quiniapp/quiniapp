@@ -13,6 +13,7 @@ import { InfiniteList } from '@/components/InfiniteList';
 import { flattenPages } from '@/hooks/useApi';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -40,6 +41,8 @@ import {
 } from '@/components/ui/table';
 
 const fmtDate = (value?: string | null) => (value ? dayjs(value).format('DD-MM-YYYY') : '-');
+/** `HH:mm:ss` de la base → `HH:mm`. */
+const fmtTime = (value?: string | null) => (value ? value.slice(0, 5) : '');
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
@@ -50,6 +53,8 @@ const emptyForm = {
   start_date: '',
   end_date: '',
   load_limit_date: '',
+  /** Pasada esta hora del día de cierre, pasadores y jugadores ya no cargan. */
+  load_limit_time: '21:00',
   pool_amount: '',
   ticket_price: '',
 };
@@ -163,27 +168,36 @@ export const EditionsPage = () => {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <Label>Cierre de carga</Label>
-                  <Input
-                    type="date"
+                  <Label htmlFor="edition-load-limit-date">Cierre de carga (fecha)</Label>
+                  <DateInput
+                    id="edition-load-limit-date"
                     value={form.load_limit_date}
-                    onChange={(e) => setForm({ ...form, load_limit_date: e.target.value })}
+                    onValueChange={(value) => setForm({ ...form, load_limit_date: value })}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label>Inicio</Label>
+                  <Label htmlFor="edition-load-limit-time">Cierre de carga (hora)</Label>
                   <Input
-                    type="date"
+                    id="edition-load-limit-time"
+                    type="time"
+                    value={form.load_limit_time}
+                    onChange={(e) => setForm({ ...form, load_limit_time: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="edition-start-date">Inicio</Label>
+                  <DateInput
+                    id="edition-start-date"
                     value={form.start_date}
-                    onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                    onValueChange={(value) => setForm({ ...form, start_date: value })}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label>Fin</Label>
-                  <Input
-                    type="date"
+                  <Label htmlFor="edition-end-date">Fin</Label>
+                  <DateInput
+                    id="edition-end-date"
                     value={form.end_date}
-                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                    onValueChange={(value) => setForm({ ...form, end_date: value })}
                   />
                 </div>
 
@@ -253,7 +267,9 @@ export const EditionsPage = () => {
                     <TableCell>
                       {fmtDate(edition.start_date)} al {fmtDate(edition.end_date)}
                     </TableCell>
-                    <TableCell>{fmtDate(edition.load_limit_date)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(edition.pool_amount)}
                     </TableCell>

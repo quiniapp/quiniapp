@@ -5,6 +5,8 @@ import { IPollaGroupEntityFront } from '@helper/polla/types/catalog.type';
 import { useOrgExpenses } from '@/hooks/fetchs/usePollaData';
 import { useCreateExpense, useDeleteExpense } from '@/hooks/mutations/usePollaMutations';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
+import { todayIso } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -99,12 +101,7 @@ export const DateField = ({
 }) => (
   <div className="flex flex-col gap-1">
     <Label htmlFor={id}>{label}</Label>
-    <Input
-      id={id}
-      type="date"
-      value={value}
-      onChange={(e) => e.target.value && onChange(e.target.value)}
-    />
+    <DateInput id={id} value={value} max={todayIso()} onValueChange={onChange} />
   </div>
 );
 

@@ -7,7 +7,8 @@ import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DateInput } from '@/components/ui/date-input';
+import { todayIso } from '@/lib/dates';
 import { Label } from '@/components/ui/label';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
@@ -72,12 +73,11 @@ export const CashierAccountView = () => {
 
       <div className="flex flex-col gap-1 sm:w-[200px]">
         <Label htmlFor="cashier-account-date">A la fecha</Label>
-        <Input
+        <DateInput
           id="cashier-account-date"
-          type="date"
           value={date}
-          max={dayjs().format('YYYY-MM-DD')}
-          onChange={(e) => e.target.value && setDate(e.target.value)}
+          max={todayIso()}
+          onValueChange={setDate}
         />
       </div>
 

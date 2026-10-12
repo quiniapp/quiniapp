@@ -18,6 +18,8 @@ export interface IPollaEditionEntityBack {
   start_date: string;
   end_date: string;
   load_limit_date: string;
+  /** Hora de cierre de carga (`HH:mm:ss`, Argentina) del día `load_limit_date`. */
+  load_limit_time: string;
   pool_amount: number;
   ticket_price: number;
   status: POLLA_EDITION_STATUS;
@@ -141,11 +143,9 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields {
   amount: number | null;
   /** Es del usuario o, para un pasador, está imputada a él (sus jugadores). */
   is_mine: boolean;
-  /** El usuario es el dueño: puede editar los números dentro del plazo de carga. */
-  can_edit: boolean;
   /**
-   * La puede borrar: es del usuario o, para un pasador, está imputada a él, se
-   * cargó hoy y no ganó (un pasador da de baja lo que no le pagaron en el día).
+   * Solo un pasador la puede borrar: es suya o de uno de sus jugadores, se cargó
+   * hoy y no ganó (da de baja lo que no le pagaron en el día).
    */
   can_delete: boolean;
 }
@@ -160,6 +160,56 @@ export interface IPollaBetToRepeat {
   ticket_number: string;
   polla_edition_id: string;
   numbers: string[];
+}
+
+// ----------------------------------------------------------- revisar ticket
+
+/** Titular de un ticket: el pasador que lo jugó o un jugador de un pasador. */
+export interface IPollaTicketHolder {
+  type: 'CASHIER' | 'PLAYER';
+  name: string;
+}
+
+export interface IPollaTicketWinner {
+  ticket_number: string;
+  holder: IPollaTicketHolder;
+  cashier_name: string;
+  cashier_number: number | null;
+  prize: number;
+}
+
+/** "Revisar ticket": la jugada, de quién es y cómo se repartió el pozo de su edición. */
+export interface IPollaTicketCheck {
+  bet: Pick<
+    IPollaBetEntityBack,
+    | 'ticket_number'
+    | 'numbers'
+    | 'hit_dates'
+    | 'hits'
+    | 'load_date'
+    | 'winner'
+    | 'prize'
+    | 'hit_date'
+  >;
+  holder: IPollaTicketHolder;
+  /** Pasador al que se imputa la jugada (para un jugador, el suyo). */
+  cashier: { name: string; number: number | null };
+  edition: Pick<
+    IPollaEditionEntityBack,
+    | 'polla_edition_id'
+    | 'polla_lottery_id'
+    | 'polla_schedule_id'
+    | 'name'
+    | 'start_date'
+    | 'end_date'
+    | 'load_limit_date'
+    | 'load_limit_time'
+    | 'pool_amount'
+    | 'ticket_price'
+    | 'status'
+    | 'winner_date'
+  >;
+  winners: IPollaTicketWinner[];
 }
 
 // ----------------------------------------------------------- ventas del día

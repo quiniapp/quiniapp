@@ -185,8 +185,8 @@ export class PollaAuthRepository {
   }
 
   /**
-   * Blanqueo hecho por un superior: la contraseña nueva es temporal (hay que
-   * cambiarla al entrar), se levanta el bloqueo y se cierran las sesiones.
+   * Blanqueo hecho por un superior: la contraseña nueva es definitiva (nadie se
+   * la cambia a sí mismo), se levanta el bloqueo y se cierran las sesiones.
    */
   async resetPassword(pollaUserId: string, passwordHash: string): Promise<void> {
     const now = new Date().toISOString();
@@ -195,7 +195,7 @@ export class PollaAuthRepository {
       .update({
         password_hash: passwordHash,
         password_changed_at: now,
-        password_reset_required: true,
+        password_reset_required: false,
         failed_login_attempts: 0,
         locked_until: null,
         edited_at: now,

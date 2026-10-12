@@ -4,6 +4,15 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
+
+- **`polla/types/user.type.ts`**: `POLLA_CREATABLE_TYPES` y `POLLA_PASSWORD_RESET_TARGETS` (qué crea y a quién blanquea cada rol), con los helpers `canCreatePollaUser` y `canResetPollaPassword`.
+- **`polla/types/game.type.ts`**:
+  - `IPollaEditionEntityBack.load_limit_time`.
+  - `IPollaBetPublic` pierde `can_edit` (solo un admin edita).
+  - Tipos nuevos `IPollaTicketCheck`, `IPollaTicketHolder` e `IPollaTicketWinner` para "Revisar ticket".
+- **`polla/schemas/game.schema.ts`**: `load_limit_time` (`HH:mm` o `HH:mm:ss`), obligatorio en el alta de edición y opcional en la edición.
+
 ### Changed - 2026-10-06 (Polla: resultados de 2 cifras)
 
 - **`polla/schemas/game.schema.ts`**: los resultados son 20 números de 2 cifras (`^\d{2}$`), los mismos que se comparan con las jugadas. Antes eran de 4 cifras.

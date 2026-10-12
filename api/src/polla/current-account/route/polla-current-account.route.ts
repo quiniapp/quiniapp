@@ -110,10 +110,7 @@ export class PollaCurrentAccountRouter {
     const { user } = getPollaSession(req);
     const account = await this.repository.getById(req.params.id);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      account.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (account.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('La cuenta pertenece a otra organización');
     }
 
@@ -164,10 +161,7 @@ export class PollaCurrentAccountRouter {
     const { user } = getPollaSession(req);
     const account = await this.repository.getById(req.params.id);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      account.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (account.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('La cuenta pertenece a otra organización');
     }
 

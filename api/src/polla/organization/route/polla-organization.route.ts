@@ -137,7 +137,7 @@ export class PollaOrganizationRouter {
     res.status(200).json({ data: { success: true } });
   });
 
-  /** Contraseña temporal para el capitalista: la tiene que cambiar al entrar. */
+  /** Blanqueo del capitalista por el OWNER: la contraseña queda definitiva. */
   private resetCapitalistHandler = asyncHandler(async (req: Request, res: Response) => {
     const { password } = resetPollaPasswordSchema.parse(req.body);
 

@@ -13,6 +13,8 @@ const ResultsPage = lazy(() => import('@/features/results'));
 const UsersPage = lazy(() => import('@/features/users'));
 const CatalogsPage = lazy(() => import('@/features/catalogs'));
 const OrganizationsPage = lazy(() => import('@/features/organizations'));
+const GroupsPage = lazy(() => import('@/features/groups'));
+const CheckTicketPage = lazy(() => import('@/features/check-ticket'));
 const CurrentAccountPage = lazy(() => import('@/features/current-account'));
 const ChangePasswordPage = lazy(() => import('@/features/change-password'));
 const SettingsPage = lazy(() => import('@/features/settings'));
@@ -69,6 +71,12 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Cargar jugada' } satisfies RouteHandle,
       },
       {
+        // Todos menos el jugador, siempre dentro de la propia organización.
+        path: ROUTES.CHECK_TICKET,
+        element: guarded(STAFF, <CheckTicketPage />),
+        handle: { title: 'Revisar ticket' } satisfies RouteHandle,
+      },
+      {
         path: ROUTES.SALES,
         element: guarded(STAFF, <SalesPage />),
         handle: { title: 'Ventas del día' } satisfies RouteHandle,
@@ -105,11 +113,18 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Organizaciones' } satisfies RouteHandle,
       },
       {
+        path: ROUTES.GROUPS,
+        element: guarded([POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST], <GroupsPage />),
+        handle: { title: 'Grupos' } satisfies RouteHandle,
+      },
+      {
         path: ROUTES.SETTINGS,
         element: withSuspense(<SettingsPage />),
         handle: { title: 'Configuración' } satisfies RouteHandle,
       },
       {
+        // Solo para la contraseña inicial del OWNER del seed: el resto no se
+        // cambia la contraseña (la pone un superior).
         path: ROUTES.CHANGE_PASSWORD,
         element: withSuspense(<ChangePasswordPage />),
         handle: { title: 'Cambiar contraseña' } satisfies RouteHandle,

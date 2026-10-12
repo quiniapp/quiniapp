@@ -26,8 +26,8 @@ const describe = (user: IPollaUserByNumber) => {
 
 /**
  * "Cargar a nombre de": se escribe el número del pasador o del jugador y se
- * trae el usuario. El backend acota la búsqueda: ADMIN+ en su organización,
- * el pasador entre sus jugadores.
+ * trae el usuario de la organización. Solo lo usan owner, capitalista,
+ * superadmin y admin: pasador y jugador cargan a su nombre.
  */
 export const TargetUserByNumber = ({
   value,

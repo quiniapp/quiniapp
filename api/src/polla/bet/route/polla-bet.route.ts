@@ -2,10 +2,16 @@ import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import {
   POLLA_USER_TYPE,
+  POLLA_STAFF_ROLES,
   IPollaSessionUser,
   isPollaAdminRole,
 } from '@helper/polla/types/user.type';
-import { IPollaBetPublic, IPollaDailySales } from '@helper/polla/types/game.type';
+import {
+  IPollaBetPublic,
+  IPollaDailySales,
+  IPollaTicketCheck,
+  IPollaTicketHolder,
+} from '@helper/polla/types/game.type';
 import { newPollaBetSchema, updatePollaBetSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import {
@@ -16,11 +22,10 @@ import {
   PollaBetTicketScope,
 } from '../repository/polla-bet.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
-import { PollaUserRepository } from '../../user/repository/polla-user.repository';
 import { parsePagination } from '../../helper/pagination';
 import { pollaToday } from '../../helper/date';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
-import { getPollaSession } from '../../middleware/polla-auth.middleware';
+import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
 /** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
 const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
@@ -47,11 +52,21 @@ const isOwnOrImputed = (bet: PollaBetRow, viewer: IPollaSessionUser) =>
     bet.cashier_polla_user_id === viewer.polla_user_id);
 
 /**
- * Pasador y jugador borran lo suyo solo el día que se cargó: el pasador da de
- * baja lo que no le pagaron, sin tocar liquidaciones de días anteriores.
+ * Solo el pasador borra lo suyo (y lo de sus jugadores), y solo el día que se
+ * cargó: da de baja lo que no le pagaron, sin tocar liquidaciones de días
+ * anteriores. El jugador no tiene acciones sobre las jugadas.
  */
 const canDeleteOwn = (bet: PollaBetRow, viewer: IPollaSessionUser) =>
-  isOwnOrImputed(bet, viewer) && !bet.winner && bet.load_date === pollaToday();
+  viewer.user_type === POLLA_USER_TYPE.CASHIER &&
+  isOwnOrImputed(bet, viewer) &&
+  !bet.winner &&
+  bet.load_date === pollaToday();
+
+/** Si la jugó un jugador, el pasador al que se imputa es otro usuario: el suyo. */
+const holderOf = (bet: PollaBetRow): IPollaTicketHolder => ({
+  type: bet.polla_user_id === bet.cashier_polla_user_id ? 'CASHIER' : 'PLAYER',
+  name: bet.user_name,
+});
 
 /**
  * Lo que ve un pasador o un jugador de cada jugada: quién la jugó y sus
@@ -76,7 +91,6 @@ const toPublicBet = (bet: PollaBetRow, viewer: IPollaSessionUser): IPollaBetPubl
   is_mine: isOwnOrImputed(bet, viewer),
   // El monto de lo propio se ve (lo cobra el pasador); el de lo ajeno es un total.
   amount: isOwnOrImputed(bet, viewer) ? Number(bet.amount) : null,
-  can_edit: bet.polla_user_id === viewer.polla_user_id,
   can_delete: canDeleteOwn(bet, viewer),
 });
 
@@ -90,8 +104,6 @@ export class PollaBetRouter {
 
   private editionRepository = new PollaEditionRepository();
 
-  private userRepository = new PollaUserRepository();
-
   constructor() {
     this.router = Router();
     this.setupRoutes();
@@ -102,6 +114,11 @@ export class PollaBetRouter {
     this.router.get('/sales', this.getDailySalesHandler);
     this.router.get('/last', this.getLastHandler);
     this.router.get('/ticket/:ticketNumber', this.getByTicketHandler);
+    this.router.get(
+      '/check/:ticketNumber',
+      requirePollaRole(...POLLA_STAFF_ROLES),
+      this.checkTicketHandler
+    );
     this.router.get('/', this.getAllHandler);
     this.router.get('/:id', this.getByIdHandler);
     this.router.post('/', this.createHandler);
@@ -112,10 +129,7 @@ export class PollaBetRouter {
   private assertEditionScope = async (user: IPollaSessionUser, editionId: string) => {
     const edition = await this.editionRepository.getById(editionId);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      edition.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (edition.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('La edición pertenece a otra organización');
     }
 
@@ -177,10 +191,7 @@ export class PollaBetRouter {
     const { user } = getPollaSession(req);
     const bet = await this.repository.getById(req.params.id);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      bet.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (bet.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('La jugada pertenece a otra organización');
     }
 
@@ -210,6 +221,66 @@ export class PollaBetRouter {
     const bet = await this.repository.getByTicketNumber(ticketNumber, scope);
 
     res.status(200).json({ data: { bet } });
+  });
+
+  /**
+   * "Revisar ticket": la jugada, si ganó y cuánto, de quién es (pasador, o
+   * jugador y su pasador) y cómo se repartió el pozo de su edición. Todos menos
+   * el jugador, siempre dentro de la propia organización.
+   */
+  private checkTicketHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const ticketNumber = req.params.ticketNumber.trim();
+
+    if (!TICKET_SEARCH.test(ticketNumber)) {
+      throw new BadRequestError('Número de ticket inválido');
+    }
+
+    const bet = await this.repository.getForCheck(ticketNumber, user.polla_organization_id);
+    const edition = await this.editionRepository.getById(bet.polla_edition_id);
+    const winners = await this.repository.getAll(
+      { editionId: bet.polla_edition_id, onlyWinners: true },
+      parsePagination({ page: 1, limit: 100 }),
+      { sort: 'recent' }
+    );
+
+    const check: IPollaTicketCheck = {
+      bet: {
+        ticket_number: bet.ticket_number,
+        numbers: bet.numbers,
+        hit_dates: bet.hit_dates,
+        hits: bet.hits,
+        load_date: bet.load_date,
+        winner: bet.winner,
+        prize: bet.winner ? Number(bet.prize) : 0,
+        hit_date: bet.hit_date,
+      },
+      holder: holderOf(bet),
+      cashier: { name: bet.cashier_name, number: bet.cashier_number },
+      edition: {
+        polla_edition_id: edition.polla_edition_id,
+        polla_lottery_id: edition.polla_lottery_id,
+        polla_schedule_id: edition.polla_schedule_id,
+        name: edition.name,
+        start_date: edition.start_date,
+        end_date: edition.end_date,
+        load_limit_date: edition.load_limit_date,
+        load_limit_time: edition.load_limit_time,
+        pool_amount: Number(edition.pool_amount),
+        ticket_price: Number(edition.ticket_price),
+        status: edition.status,
+        winner_date: edition.winner_date,
+      },
+      winners: winners.data.map((winner) => ({
+        ticket_number: winner.ticket_number,
+        holder: holderOf(winner),
+        cashier_name: winner.cashier_name,
+        cashier_number: winner.cashier_number,
+        prize: Number(winner.prize),
+      })),
+    };
+
+    res.status(200).json({ data: { check } });
   });
 
   /** La última jugada propia, para "Repetir última jugada". */
@@ -277,20 +348,13 @@ export class PollaBetRouter {
 
     await this.assertEditionScope(user, payload.polla_edition_id);
 
+    const isAdmin = isPollaAdminRole(user.user_type);
     const targetUserId = payload.polla_user_id ?? user.polla_user_id;
 
     // ADMIN+ carga a nombre de cualquier pasador o jugador de la organización
-    // (la RPC valida la organización); el pasador, a su nombre o al de sus
-    // jugadores; el jugador, solo a su nombre.
-    if (targetUserId !== user.polla_user_id && !isPollaAdminRole(user.user_type)) {
-      if (user.user_type !== POLLA_USER_TYPE.CASHIER) {
-        throw new ForbiddenError('Solo podés cargar jugadas a tu nombre');
-      }
-
-      const target = await this.userRepository.getById(targetUserId);
-      if (target.parent_polla_user_id !== user.polla_user_id) {
-        throw new ForbiddenError('Solo podés cargar jugadas a nombre de tus jugadores');
-      }
+    // (la RPC valida la organización). Pasador y jugador, solo a su nombre.
+    if (targetUserId !== user.polla_user_id && !isAdmin) {
+      throw new ForbiddenError('Solo podés cargar jugadas a tu nombre');
     }
 
     const bet = await this.repository.create({
@@ -298,17 +362,20 @@ export class PollaBetRouter {
       actorId: user.polla_user_id,
       targetUserId,
       numbers: payload.numbers,
-      date: payload.date,
-      force: isPollaAdminRole(user.user_type),
+      // Solo un admin elige el día de carga: para el resto es hoy, y el cierre
+      // de la edición se mide contra la fecha y hora reales.
+      date: isAdmin ? payload.date : undefined,
+      force: isAdmin,
     });
 
     res.status(201).json({ data: { bet } });
   });
 
   /**
-   * ADMIN y superiores pueden editar o borrar cualquier jugada, incluso pasada
-   * la fecha límite. El resto edita solo las propias dentro del plazo, y borra
-   * las propias (o, el pasador, las imputadas a él) solo el día de carga.
+   * ADMIN y superiores pueden editar o borrar cualquier jugada, incluso pasado
+   * el cierre. El pasador solo borra (no edita) las suyas o las de sus
+   * jugadores; el día de carga y el cierre los controla la RPC. El jugador no
+   * tiene acciones.
    */
   private assertCanWrite = async (
     user: IPollaSessionUser,
@@ -317,20 +384,17 @@ export class PollaBetRouter {
   ) => {
     const bet = await this.repository.getById(betId);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      bet.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (bet.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('La jugada pertenece a otra organización');
     }
 
     if (isPollaAdminRole(user.user_type)) return bet;
 
-    if (action === 'edit' && bet.polla_user_id !== user.polla_user_id) {
-      throw new ForbiddenError('Solo podés modificar tus propias jugadas');
+    if (action === 'edit' || user.user_type !== POLLA_USER_TYPE.CASHIER) {
+      throw new ForbiddenError('No podés modificar jugadas');
     }
 
-    if (action === 'delete' && !isOwnOrImputed(bet, user)) {
+    if (!isOwnOrImputed(bet, user)) {
       throw new ForbiddenError('Solo podés eliminar tus jugadas o las de tus jugadores');
     }
 

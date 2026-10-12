@@ -1,34 +1,29 @@
 import { ForbiddenError } from '@helper/errors';
-import { IPollaSessionUser, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { IPollaSessionUser } from '@helper/polla/types/user.type';
 
 /**
- * Resuelve sobre qué organización (capitalist) opera el request.
+ * Resuelve sobre qué organización opera el request.
  *
- * El scope sale SIEMPRE de la sesión. La única excepción es el OWNER, que puede
- * mandar `polla_organization_id` para trabajar sobre otro capitalist: para
- * cualquier otro rol, pedir una organización distinta a la propia es 403.
+ * El scope sale SIEMPRE de la sesión: cada usuario, OWNER incluido, opera solo
+ * sobre su propia organización. Pedir una organización distinta es 403. El
+ * OWNER administra las demás organizaciones (alta, baja y blanqueo de su
+ * capitalista) únicamente desde /organization.
  */
 export const resolveOrganizationId = (user: IPollaSessionUser, requested?: unknown): string => {
   const requestedId = typeof requested === 'string' && requested.length > 0 ? requested : null;
 
-  if (!requestedId) return user.polla_organization_id;
-
-  if (user.user_type === POLLA_USER_TYPE.OWNER) return requestedId;
-
-  if (requestedId !== user.polla_organization_id) {
+  if (requestedId && requestedId !== user.polla_organization_id) {
     throw new ForbiddenError('No podés operar sobre otra organización');
   }
 
-  return requestedId;
+  return user.polla_organization_id;
 };
 
-/** El OWNER puede pedir "todas las organizaciones" omitiendo el filtro. */
+/**
+ * Igual que `resolveOrganizationId`. Antes el OWNER podía omitir el filtro para
+ * ver todas las organizaciones; ahora todos ven solo la suya.
+ */
 export const resolveOptionalOrganizationId = (
   user: IPollaSessionUser,
   requested?: unknown
-): string | null => {
-  if (user.user_type === POLLA_USER_TYPE.OWNER) {
-    return typeof requested === 'string' && requested.length > 0 ? requested : null;
-  }
-  return resolveOrganizationId(user, requested);
-};
+): string | null => resolveOrganizationId(user, requested);

@@ -3,13 +3,15 @@ import { toast } from 'react-hot-toast';
 import { KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { newPollaUserSchema } from '@helper/polla/schemas/user.schema';
 import {
+  POLLA_CREATABLE_TYPES,
   POLLA_USER_TYPE,
   POLLA_USER_HIERARCHY,
   POLLA_USER_TYPE_LABEL,
   IPollaUserEntityFront,
+  canResetPollaPassword,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useUsers } from '@/hooks/fetchs/usePollaData';
+import { useUserOptions, useUsers } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
   useCreateUser,
@@ -58,6 +60,8 @@ const emptyForm = {
   number: '',
   fee: '',
   polla_group_id: '',
+  /** Pasador del jugador, cuando lo crea un superior (el pasador no lo elige). */
+  parent_polla_user_id: '',
 };
 
 /** Pasadores y jugadores se buscan por número para cargarles jugadas. */
@@ -65,7 +69,7 @@ const needsNumber = (type: POLLA_USER_TYPE | '') =>
   type === POLLA_USER_TYPE.CASHIER || type === POLLA_USER_TYPE.PLAYER;
 
 export const UsersPage = () => {
-  const { user, role, organizationId, activeOrganizationId } = useAuth();
+  const { user, role, organizationId } = useAuth();
   const [typeFilter, setTypeFilter] = useState('');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -73,8 +77,8 @@ export const UsersPage = () => {
   const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
 
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
-  // El OWNER da de alta usuarios dentro de la organización en la que trabaja.
-  const needsOrganization = role === POLLA_USER_TYPE.OWNER && !activeOrganizationId;
+  // Un superior que crea un jugador elige a qué pasador pertenece.
+  const picksCashier = open && !isCashier && form.user_type === POLLA_USER_TYPE.PLAYER;
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useUsers({
     user_type: typeFilter || undefined,
@@ -85,6 +89,10 @@ export const UsersPage = () => {
 
   const { rows, totalCount } = flattenPages(data?.pages);
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
+  const { data: cashiers } = useUserOptions(
+    { user_type: POLLA_USER_TYPE.CASHIER, limit: 200 },
+    picksCashier
+  );
 
   const { mutate: createUser, isPending } = useCreateUser();
   const { mutate: deleteUser } = useDeleteUser();
@@ -106,14 +114,8 @@ export const UsersPage = () => {
     [role]
   );
 
-  /** Los jugadores los crea solo su pasador. */
-  const creatableTypes = useMemo(
-    () =>
-      isCashier
-        ? [POLLA_USER_TYPE.PLAYER]
-        : visibleTypes.filter((t) => t !== POLLA_USER_TYPE.PLAYER),
-    [isCashier, visibleTypes]
-  );
+  /** Qué da de alta este rol (ver `POLLA_CREATABLE_TYPES`). */
+  const creatableTypes = role ? POLLA_CREATABLE_TYPES[role] : [];
 
   const openCreate = (next: boolean) => {
     if (next) setForm({ ...emptyForm, user_type: creatableTypes[0] ?? '' });
@@ -136,6 +138,14 @@ export const UsersPage = () => {
       polla_group_id: form.polla_group_id || null,
       ...(organizationId ? { polla_organization_id: organizationId } : {}),
     };
+
+    if (form.user_type === POLLA_USER_TYPE.PLAYER && !isCashier) {
+      if (!form.parent_polla_user_id) {
+        toast.error('Elegí el pasador del jugador');
+        return;
+      }
+      payload.parent_polla_user_id = form.parent_polla_user_id;
+    }
 
     if (form.user_type === POLLA_USER_TYPE.CASHIER) {
       payload.fee = form.fee === '' ? null : Number(form.fee);
@@ -184,11 +194,7 @@ export const UsersPage = () => {
 
             <Dialog open={open} onOpenChange={openCreate}>
               <DialogTrigger asChild>
-                <Button
-                  type="button"
-                  disabled={needsOrganization || creatableTypes.length === 0}
-                  title={needsOrganization ? 'Elegí una organización arriba' : undefined}
-                >
+                <Button type="button" disabled={creatableTypes.length === 0}>
                   {isCashier ? 'Nuevo jugador' : 'Nuevo usuario'}
                 </Button>
               </DialogTrigger>
@@ -272,6 +278,28 @@ export const UsersPage = () => {
                     />
                   </div>
 
+                  {picksCashier && (
+                    <div className="flex flex-col gap-1">
+                      <Label>Pasador</Label>
+                      <Select
+                        value={form.parent_polla_user_id}
+                        onValueChange={(v) => setForm({ ...form, parent_polla_user_id: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Elegí el pasador" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cashiers?.data.map((cashier) => (
+                            <SelectItem key={cashier.polla_user_id} value={cashier.polla_user_id}>
+                              {cashier.number ? `${cashier.number} · ` : ''}
+                              {cashier.name} {cashier.last_name ?? ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {form.user_type === POLLA_USER_TYPE.CASHIER && (
                     <>
                       <div className="flex flex-col gap-1">
@@ -321,12 +349,6 @@ export const UsersPage = () => {
           </div>
         }
       />
-
-      {needsOrganization && (
-        <p className="mb-4 rounded-md border bg-card p-3 text-sm text-card-foreground">
-          Para dar de alta usuarios, elegí arriba la organización en la que vas a trabajar.
-        </p>
-      )}
 
       {rows.length === 0 ? (
         <EmptyState message="No hay usuarios para mostrar" />
@@ -382,16 +404,21 @@ export const UsersPage = () => {
                         >
                           <Pencil />
                         </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          title="Blanquear contraseña"
-                          aria-label={`Blanquear la contraseña de ${item.name}`}
-                          onClick={() => setResetting(item)}
-                        >
-                          <KeyRound />
-                        </Button>
+                        {/* Cada rol blanquea solo a ciertos tipos y nadie a sí mismo. */}
+                        {role &&
+                          canResetPollaPassword(role, item.user_type) &&
+                          item.polla_user_id !== user?.polla_user_id && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              title="Blanquear contraseña"
+                              aria-label={`Blanquear la contraseña de ${item.name}`}
+                              onClick={() => setResetting(item)}
+                            >
+                              <KeyRound />
+                            </Button>
+                          )}
                         <Button
                           type="button"
                           size="icon"

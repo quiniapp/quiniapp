@@ -75,7 +75,7 @@ export const updatePollaUserSchema = z.object({
   fee_plus: z.number().min(0).max(100).nullable().optional(),
 });
 
-/** Blanqueo de contraseña: el usuario tiene que cambiarla al entrar. */
+/** Blanqueo de contraseña: la que pone el superior queda definitiva. */
 export const resetPollaPasswordSchema = z.object({ password });
 
 /** Alta de una organización con su capitalista (como QuiniApp). */
