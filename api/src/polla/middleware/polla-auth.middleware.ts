@@ -21,7 +21,10 @@ const authRepository = new PollaAuthRepository();
 /** Endpoints que no cuentan como actividad del usuario. */
 const PASSIVE_PATHS = ['/auth/validate'];
 
-/** Lo único alcanzable mientras la contraseña siga siendo temporal. */
+/**
+ * Lo único alcanzable mientras la contraseña inicial siga sin cambiar. Hoy solo
+ * le pasa al OWNER del seed: los blanqueos ya no piden cambiarla.
+ */
 const PASSWORD_RESET_PATHS = [
   '/auth/validate',
   '/auth/change-password',
@@ -69,7 +72,7 @@ export const isPollaAuthenticated = asyncHandler(
       throw new UnauthorizedError('Usuario no encontrado');
     }
 
-    // Con contraseña temporal la sesión solo sirve para cambiarla. Se valida
+    // Con la contraseña inicial la sesión solo sirve para cambiarla. Se valida
     // acá y no solo en el frontend: si no, cualquiera que conozca la
     // contraseña del seed opera con un token completo.
     if (user.password_reset_required && !PASSWORD_RESET_PATHS.some((p) => req.path.endsWith(p))) {

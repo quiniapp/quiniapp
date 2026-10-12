@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Check, KeyRound } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { POLLA_THEME } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { ROUTES } from '@/types/routes.type';
 import { PageHeader } from '@/components/PageHeader';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const THEMES: { value: POLLA_THEME; label: string; description: string }[] = [
@@ -121,16 +118,6 @@ export const SettingsPage = () => {
             );
           })}
         </div>
-      </section>
-
-      <section className="rounded-xl bg-card p-4 text-card-foreground sm:p-6">
-        <PageHeader title="Cuenta" />
-        <Button asChild variant="outline">
-          <Link to={ROUTES.CHANGE_PASSWORD}>
-            <KeyRound />
-            Cambiar contraseña
-          </Link>
-        </Button>
       </section>
     </div>
   );

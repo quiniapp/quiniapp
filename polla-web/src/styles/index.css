@@ -111,6 +111,13 @@
     padding: 8px 8px !important;
   }
 
+  /* Los inputs son claros en los dos temas: con color-scheme dark el ícono del
+     calendario (y del reloj) quedaba blanco sobre blanco. */
+  input[type='date'],
+  input[type='time'] {
+    color-scheme: light;
+  }
+
   tbody tr:nth-child(even) {
     background-color: hsl(var(--row-stripe));
   }

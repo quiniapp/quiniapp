@@ -50,7 +50,8 @@ const COPY: Record<ReportKind, { title: string; description: string; action: str
   },
   subtotals: {
     title: 'Exportar subtotales',
-    description: 'Ticket con el subtotal de cada pasador del día, o de cada día del período.',
+    description:
+      'Ticket con el subtotal de cada pasador del día, o de cada día del período, menos el % del pozo y con el % del capitalista.',
     action: 'Generar ticket',
   },
 };
@@ -83,6 +84,8 @@ export const ReportDialog = ({
   const [to, setTo] = useState(initialDate);
   const [groupId, setGroupId] = useState(initialGroupId || ALL_GROUPS);
   const [percentage, setPercentage] = useState('50');
+  /** % del pozo que se descuenta del total antes de calcular el del capitalista. */
+  const [poolPercentage, setPoolPercentage] = useState('0');
   const [printing, setPrinting] = useState(false);
 
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
@@ -90,6 +93,7 @@ export const ReportDialog = ({
   const copy = COPY[kind];
   const hasExpenses = kind !== 'summary' && mode === 'day';
   const hasPercentage = kind !== 'summary' && (mode === 'range' || kind === 'subtotals');
+  const hasPoolPercentage = kind === 'subtotals';
 
   const base = {
     polla_group_id: effectiveGroupId,
@@ -135,6 +139,7 @@ export const ReportDialog = ({
               groupName,
               expenses,
               percentage: Number(percentage) || 0,
+              poolPercentage: Number(poolPercentage) || 0,
             });
           }
         }
@@ -164,6 +169,7 @@ export const ReportDialog = ({
             orgName,
             groupName,
             percentage: Number(percentage) || 0,
+            poolPercentage: Number(poolPercentage) || 0,
           });
         }
       }
@@ -194,6 +200,22 @@ export const ReportDialog = ({
             <div className="grid grid-cols-2 gap-3">
               <DateField id="report-from" label="Desde" value={from} onChange={setFrom} />
               <DateField id="report-to" label="Hasta" value={to} onChange={setTo} />
+            </div>
+          )}
+
+          {hasPoolPercentage && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="report-pool-percentage">Porcentaje del pozo</Label>
+              <Input
+                id="report-pool-percentage"
+                inputMode="decimal"
+                className="w-28"
+                value={poolPercentage}
+                onChange={(e) => setPoolPercentage(e.target.value.replace(/[^\d.]/g, ''))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se descuenta del total antes de calcular el del capitalista.
+              </p>
             </div>
           )}
 

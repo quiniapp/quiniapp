@@ -3,6 +3,7 @@ import { dateRegex } from '../../functions/dateRegex';
 import { POLLA_NUMBERS_REQUIRED } from '../types/game.type';
 
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
+const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Hora inválida (HH:mm)');
 const twoDigitNumber = z.string().regex(/^\d{2}$/, 'Debe ser un número de 2 cifras (00-99)');
 
 /** Se permiten repetidos: cada aparición de un número es un casillero propio. */
@@ -24,6 +25,7 @@ export const newPollaEditionSchema = z
     start_date: isoDate,
     end_date: isoDate,
     load_limit_date: isoDate,
+    load_limit_time: clockTime,
     pool_amount: z.number().min(0),
     ticket_price: z.number().min(0.01),
   })
@@ -52,6 +54,7 @@ export const updatePollaEditionSchema = z
     start_date: isoDate.optional(),
     end_date: isoDate.optional(),
     load_limit_date: isoDate.optional(),
+    load_limit_time: clockTime.optional(),
     pool_amount: z.number().min(0).optional(),
     ticket_price: z.number().min(0.01).optional(),
   })

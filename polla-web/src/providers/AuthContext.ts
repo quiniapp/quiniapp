@@ -4,12 +4,10 @@ import { IPollaSessionUser, POLLA_THEME, POLLA_USER_TYPE } from '@helper/polla/t
 export interface AuthContextValue {
   user: IPollaSessionUser | null;
   role: POLLA_USER_TYPE | null;
+  /** La organización del usuario: cada uno, OWNER incluido, opera solo sobre la suya. */
   organizationId: string | null;
   isAuth: boolean;
   loading: boolean;
-  /** Organización sobre la que trabaja el OWNER; null = la propia. */
-  activeOrganizationId: string | null;
-  setActiveOrganizationId: (id: string | null) => void;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;

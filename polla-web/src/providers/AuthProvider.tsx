@@ -12,7 +12,8 @@ import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { AuthContext } from './AuthContext';
 
 const AUTH_HINT_KEY = 'polla_auth_hint';
-const ACTIVE_ORG_KEY = 'polla_active_org';
+/** La usaba el selector de organización del OWNER: se limpia si quedó guardada. */
+const LEGACY_ACTIVE_ORG_KEY = 'polla_active_org';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
@@ -21,17 +22,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Con el hint se pinta el esqueleto de la app en vez del login mientras
   // /auth/validate está en vuelo.
   const [loading, setLoading] = useState(true);
-  const [activeOrganizationId, setActiveOrganizationIdState] = useState<string | null>(() =>
-    sessionStorage.getItem(ACTIVE_ORG_KEY)
-  );
 
   const validatingRef = useRef(false);
 
   const clearSession = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem(AUTH_HINT_KEY);
-    sessionStorage.removeItem(ACTIVE_ORG_KEY);
-    setActiveOrganizationIdState(null);
     queryClient.clear();
   }, [queryClient]);
 
@@ -51,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [clearSession]);
 
   useEffect(() => {
+    sessionStorage.removeItem(LEGACY_ACTIVE_ORG_KEY);
     void validate();
   }, [validate]);
 
@@ -106,40 +103,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(updated);
   }, []);
 
-  const setActiveOrganizationId = useCallback(
-    (id: string | null) => {
-      setActiveOrganizationIdState(id);
-      if (id) sessionStorage.setItem(ACTIVE_ORG_KEY, id);
-      else sessionStorage.removeItem(ACTIVE_ORG_KEY);
-      queryClient.clear();
-    },
-    [queryClient]
-  );
-
   const value = useMemo(
     () => ({
       user,
       role: user?.user_type ?? null,
-      organizationId: activeOrganizationId ?? user?.polla_organization_id ?? null,
+      organizationId: user?.polla_organization_id ?? null,
       isAuth: Boolean(user),
       loading,
-      activeOrganizationId,
-      setActiveOrganizationId,
       login,
       logout,
       refreshUser: validate,
       setTheme,
     }),
-    [
-      user,
-      loading,
-      activeOrganizationId,
-      setActiveOrganizationId,
-      login,
-      logout,
-      validate,
-      setTheme,
-    ]
+    [user, loading, login, logout, validate, setTheme]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

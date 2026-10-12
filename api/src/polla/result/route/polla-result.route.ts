@@ -44,10 +44,7 @@ export class PollaResultRouter {
     const { user } = getPollaSession(req);
     const result = await this.repository.getById(resultId);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      result.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (result.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('El resultado pertenece a otra organización');
     }
 

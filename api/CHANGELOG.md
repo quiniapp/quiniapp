@@ -4,6 +4,47 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
+
+#### Alcance por organización
+- **`helper/scope.ts`**: todos los roles, OWNER incluido, operan solo sobre su organización. Pedir otra devuelve 403, y `resolveOptionalOrganizationId` ya no devuelve "todas" para el OWNER.
+- Se sacan las excepciones del OWNER en jugadas, catálogos, cuenta corriente, ediciones, resultados y usuarios. El OWNER sigue administrando las organizaciones (y el capitalista de cada una) desde `/organization`.
+
+#### Usuarios y contraseñas
+- **`polla-user.route.ts`**:
+  - El alta usa `canCreatePollaUser`. Superadmin, capitalista y OWNER crean jugadores eligiendo el pasador; el trigger valida que sea un pasador activo de la organización.
+  - El blanqueo exige `canResetPollaPassword(actor, objetivo)` y rechaza blanquearse a uno mismo:
+    - el OWNER blanquea capitalistas (vía Organizaciones) y a todos los de su organización;
+    - el capitalista, a los de su organización;
+    - el superadmin, a admin y pasador;
+    - el admin, a pasadores;
+    - el pasador, a sus jugadores.
+  - `GET /user/by-number/:number` es solo ADMIN+ y busca pasadores y jugadores.
+- **`polla-auth.repository.ts`**: el blanqueo deja la contraseña definitiva (`password_reset_required = false`). Sigue destrabando la cuenta y cerrando las sesiones.
+- **`POST /auth/change-password`**: solo responde mientras `password_reset_required`, que hoy solo puede tener el OWNER del seed con la contraseña inicial publicada en el repositorio. El resto recibe 403.
+- **Migración `20261012012417_polla_definitive_passwords.sql`**: las contraseñas temporales pendientes pasan a definitivas, salvo la del OWNER del seed si sigue con la contraseña inicial.
+
+#### Grupos
+- **`polla-catalog.route.ts`**: los grupos los crean, renombran y borran solo OWNER y capitalista. La lectura sigue abierta a todos.
+
+#### Jugadas
+- **`polla-bet.route.ts`**:
+  - Editar es solo ADMIN+. Eliminar: ADMIN+, o el pasador sobre lo suyo o lo de sus jugadores. El jugador recibe 403 en las dos.
+  - `can_edit` sale de la vista pública y `can_delete` es solo para el pasador.
+  - Pasador y jugador cargan únicamente a su nombre (se saca la carga del pasador a nombre de sus jugadores).
+  - `date` solo se toma de un ADMIN+: antes un pasador o un jugador podía mandar una fecha anterior y saltear el cierre de carga.
+  - `GET /bet/check/:ticketNumber` (staff, solo la propia organización): devuelve `IPollaTicketCheck`, con la jugada, el titular (pasador, o jugador y su pasador), la edición con su pozo y los ganadores con su premio.
+- **`polla-bet.repository.ts`**: `getForCheck`, y un helper `ticketPattern` (ticket completo o prefijo de 17 dígitos) que comparte con `getByTicketNumber`.
+
+#### Hora de cierre de carga
+- **Migración `20261012012416_polla_edition_load_limit_time.sql`**:
+  - columna `polla_editions.load_limit_time TIME NOT NULL DEFAULT '23:59:59'` (las ediciones existentes conservan el cierre a fin de día);
+  - función `polla_load_closed(date, time)` con la hora de Argentina;
+  - `polla_create_bet`, `polla_update_bet_numbers` y `polla_delete_bet` controlan el cierre por fecha y hora (sin `p_force`).
+- **`polla-edition.route.ts`/`repository`**: filtro `loadable=true` (carga abierta ahora, con fecha y hora del servidor). `loadable_on` sigue aceptándose.
+- **`helper/date.ts`**: `pollaNowTime()`.
+- **`polla-errors.ts`**: `POLLA_LOAD_LIMIT_EXCEEDED` → "Cerró la carga de esta edición (fecha y hora de cierre)".
+
 ### Changed - 2026-10-06 (Polla: resultados de 2 cifras)
 
 - **Migración `20261006140000_polla_results_two_digits.sql`**:

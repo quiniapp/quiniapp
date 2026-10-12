@@ -30,19 +30,18 @@ import { RepeatBetDialog } from './RepeatBetDialog';
 import { TargetUserByNumber } from './TargetUserByNumber';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
+/** `HH:mm:ss` de la base → `HH:mm`. */
+const fmtTime = (value: string) => value.slice(0, 5);
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
 export const MakeBetPage = () => {
   const { role, organizationId } = useAuth();
-  const today = dayjs().format('YYYY-MM-DD');
 
+  // Owner, capitalista, superadmin y admin no juegan a su nombre: siempre
+  // cargan para un pasador o un jugador. Pasador y jugador, solo a su nombre.
   const canManage = Boolean(role && isPollaAdminRole(role));
-  const isCashier = role === POLLA_USER_TYPE.CASHIER;
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
-  // ADMIN+ no juega a su nombre: siempre carga para un pasador o un jugador.
-  // El pasador carga a su nombre o al de uno de sus jugadores.
-  const pickTarget = canManage || isCashier;
 
   const [editionId, setEditionId] = useState('');
   const [targetNumber, setTargetNumber] = useState('');
@@ -51,9 +50,11 @@ export const MakeBetPage = () => {
   const [repeatOpen, setRepeatOpen] = useState(false);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
 
+  // Las que tienen la carga abierta ahora: la API compara fecha y hora de
+  // cierre con la hora de Argentina.
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
-    loadable_on: today,
+    loadable: true,
     polla_organization_id: organizationId ?? undefined,
   });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
@@ -91,11 +92,6 @@ export const MakeBetPage = () => {
       return;
     }
 
-    if (isCashier && targetNumber && !target) {
-      toast.error('No hay un jugador tuyo con ese número');
-      return;
-    }
-
     const error = pollaNumbersError(values);
     if (error) {
       toast.error(error);
@@ -106,7 +102,7 @@ export const MakeBetPage = () => {
       {
         polla_edition_id: edition.polla_edition_id,
         numbers: values,
-        ...(pickTarget && target ? { polla_user_id: target.polla_user_id } : {}),
+        ...(canManage && target ? { polla_user_id: target.polla_user_id } : {}),
       },
       {
         onSuccess: async (bet) => {
@@ -165,22 +161,18 @@ export const MakeBetPage = () => {
             {edition && (
               <p className="text-xs text-muted-foreground">
                 Pozo ${fmtMoney(edition.pool_amount)} · cierre de carga{' '}
-                {fmtDate(edition.load_limit_date)}
+                {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
               </p>
             )}
           </div>
 
-          {pickTarget && (
+          {canManage && (
             <TargetUserByNumber
               value={targetNumber}
               onChange={setTargetNumber}
               onResolved={setTarget}
               organizationId={organizationId}
-              emptyHint={
-                canManage
-                  ? 'Escribí el número del pasador o jugador'
-                  : 'Vacío: la jugada va a tu nombre'
-              }
+              emptyHint="Escribí el número del pasador o jugador"
               onEnter={() => boxesRef.current?.focusFirst()}
             />
           )}

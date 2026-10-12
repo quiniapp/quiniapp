@@ -4,6 +4,8 @@ import {
   POLLA_USER_TYPE,
   POLLA_USER_HIERARCHY,
   IPollaSessionUser,
+  canCreatePollaUser,
+  canResetPollaPassword,
   isPollaAdminRole,
 } from '@helper/polla/types/user.type';
 import {
@@ -52,8 +54,17 @@ export class PollaUserRouter {
       POLLA_USER_TYPE.CASHIER
     );
 
+    // Cargar a nombre de otro es solo de ADMIN y superiores: el pasador carga a
+    // su nombre, así que no busca usuarios por número.
+    const adminAndUp = requirePollaRole(
+      POLLA_USER_TYPE.OWNER,
+      POLLA_USER_TYPE.CAPITALIST,
+      POLLA_USER_TYPE.SUPERADMIN,
+      POLLA_USER_TYPE.ADMIN
+    );
+
     this.router.get('/', staffOnly, this.getAllHandler);
-    this.router.get('/by-number/:number', staffOnly, this.getByNumberHandler);
+    this.router.get('/by-number/:number', adminAndUp, this.getByNumberHandler);
     this.router.get('/:id', staffOnly, this.getByIdHandler);
     this.router.post('/', staffOnly, this.createHandler);
     this.router.put('/:id', staffOnly, this.updateHandler);
@@ -65,10 +76,7 @@ export class PollaUserRouter {
   private assertReachable = async (actor: IPollaSessionUser, targetId: string) => {
     const target = await this.repository.getById(targetId);
 
-    if (
-      actor.user_type !== POLLA_USER_TYPE.OWNER &&
-      target.polla_organization_id !== actor.polla_organization_id
-    ) {
+    if (target.polla_organization_id !== actor.polla_organization_id) {
       throw new ForbiddenError('El usuario pertenece a otra organización');
     }
 
@@ -112,10 +120,7 @@ export class PollaUserRouter {
     res.status(200).json({ data: { users: result } });
   });
 
-  /**
-   * Pasador o jugador por número, para cargarle una jugada. ADMIN+ busca en
-   * toda su organización; el pasador, solo entre sus jugadores.
-   */
+  /** Pasador o jugador de la organización por número, para cargarle una jugada (ADMIN+). */
   private getByNumberHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const number = Number(req.params.number);
@@ -124,15 +129,11 @@ export class PollaUserRouter {
       throw new BadRequestError('Número inválido');
     }
 
-    const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
-
     const found = await this.repository.getByNumber({
       organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
       number,
-      userTypes: isCashier
-        ? [POLLA_USER_TYPE.PLAYER]
-        : [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
-      parentId: isCashier ? user.polla_user_id : null,
+      userTypes: [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
+      parentId: null,
     });
 
     res.status(200).json({ data: { user: found } });
@@ -148,20 +149,18 @@ export class PollaUserRouter {
     const { user } = getPollaSession(req);
     const body = { ...(req.body ?? {}) };
 
-    // Los jugadores los da de alta solo su pasador: el padre lo pone el
-    // backend, no el cliente (y así el schema encuentra el campo que exige).
+    if (!canCreatePollaUser(user.user_type, body.user_type)) {
+      throw new ForbiddenError('No podés crear ese tipo de usuario');
+    }
+
+    // El jugador de un pasador lo pone el backend, no el cliente (y así el
+    // schema encuentra el campo que exige). Si lo crea un superior, elige el
+    // pasador y el trigger valida que sea un pasador activo de la organización.
     if (user.user_type === POLLA_USER_TYPE.CASHIER) {
-      if (body.user_type !== POLLA_USER_TYPE.PLAYER) {
-        throw new ForbiddenError('Un pasador solo puede crear jugadores');
-      }
       body.parent_polla_user_id = user.polla_user_id;
-    } else if (body.user_type === POLLA_USER_TYPE.PLAYER) {
-      throw new ForbiddenError('Solo un pasador puede crear jugadores');
     }
 
     const payload = newPollaUserSchema.parse(body);
-
-    assertCanManage(user, payload.user_type);
 
     const organizationId = resolveOrganizationId(user, payload.polla_organization_id);
     const parentId = payload.parent_polla_user_id ?? null;
@@ -188,7 +187,7 @@ export class PollaUserRouter {
 
     const payload = updatePollaUserSchema.parse(req.body);
     // fee_plus no se edita: queda en 0 (la liquidación no tiene deje). La
-    // contraseña se cambia con el blanqueo, que obliga a cambiarla al entrar.
+    // contraseña se cambia solo con el blanqueo de un superior.
     const { fee_plus: _feePlus, parent_polla_user_id: parentId, fee, ...rest } = payload;
     void _feePlus;
 
@@ -210,9 +209,23 @@ export class PollaUserRouter {
     res.status(200).json({ data: { user: updated } });
   });
 
+  /**
+   * La contraseña la pone siempre un superior y queda definitiva: nadie se la
+   * cambia a sí mismo y cada rol blanquea solo a ciertos tipos (ver
+   * `POLLA_PASSWORD_RESET_TARGETS`).
+   */
   private resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-    await this.assertReachable(user, req.params.id);
+
+    if (req.params.id === user.polla_user_id) {
+      throw new ForbiddenError('No podés cambiar tu propia contraseña');
+    }
+
+    const target = await this.assertReachable(user, req.params.id);
+
+    if (!canResetPollaPassword(user.user_type, target.user_type)) {
+      throw new ForbiddenError('No podés blanquear la contraseña de ese tipo de usuario');
+    }
 
     const { password } = resetPollaPasswordSchema.parse(req.body);
     await this.authRepository.resetPassword(req.params.id, await hashPassword(password));

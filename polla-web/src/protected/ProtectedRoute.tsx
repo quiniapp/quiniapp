@@ -17,9 +17,16 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   if (loading) return <Splash />;
   if (!isAuth) return <Navigate to={ROUTES.LOGIN} replace />;
 
-  // Contraseña temporal: no se puede usar la app hasta cambiarla.
-  if (user?.password_reset_required && location.pathname !== ROUTES.CHANGE_PASSWORD) {
+  // Contraseña inicial (OWNER del seed): no se puede usar la app hasta
+  // cambiarla. Fuera de ese caso nadie se cambia la contraseña.
+  const mustChangePassword = Boolean(user?.password_reset_required);
+  const onChangePassword = location.pathname === ROUTES.CHANGE_PASSWORD;
+
+  if (mustChangePassword && !onChangePassword) {
     return <Navigate to={ROUTES.CHANGE_PASSWORD} replace />;
+  }
+  if (!mustChangePassword && onChangePassword) {
+    return <Navigate to={ROUTES.BETS} replace />;
   }
 
   return <>{children}</>;

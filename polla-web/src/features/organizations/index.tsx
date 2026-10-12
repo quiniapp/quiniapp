@@ -10,7 +10,6 @@ import {
   useResetCapitalistPassword,
   useUpdateOrganization,
 } from '@/hooks/mutations/usePollaMutations';
-import { useAuth } from '@/providers/AuthContext';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { ResetPasswordDialog } from '@/components/ResetPasswordDialog';
 import { Button } from '@/components/ui/button';
@@ -201,7 +200,6 @@ const capitalistLabel = (organization: IPollaOrganizationWithCapitalist) => {
 
 /** Una organización = un capitalista, con su pozo, sus usuarios y su liquidación. */
 export const OrganizationsPage = () => {
-  const { activeOrganizationId, setActiveOrganizationId } = useAuth();
   const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<IPollaOrganizationWithCapitalist | null>(null);
   const [resetting, setResetting] = useState<IPollaOrganizationWithCapitalist | null>(null);
@@ -241,18 +239,6 @@ export const OrganizationsPage = () => {
                   <TableCell>{capitalistLabel(organization)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        type="button"
-                        variant={
-                          activeOrganizationId === organization.polla_organization_id
-                            ? 'default'
-                            : 'outline'
-                        }
-                        size="sm"
-                        onClick={() => setActiveOrganizationId(organization.polla_organization_id)}
-                      >
-                        Trabajar acá
-                      </Button>
                       <Button
                         type="button"
                         size="icon"

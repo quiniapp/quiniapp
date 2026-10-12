@@ -60,6 +60,16 @@ export interface PollaBetTicketScope {
   userId?: string | null;
 }
 
+/**
+ * Un ticket sin el sufijo `-<pasador>` (solo los 17 dígitos) se busca por
+ * prefijo, como en QuiniApp. Llega validado (dígitos y un guion), así que el
+ * LIKE no recibe comodines.
+ */
+const ticketPattern = (ticketNumber: string) =>
+  /^\d{17}$/.test(ticketNumber)
+    ? { op: 'like' as const, value: `${ticketNumber}-%` }
+    : { op: 'eq' as const, value: ticketNumber };
+
 interface CursorPosition {
   hits: number;
   createdAt: string;
@@ -193,23 +203,19 @@ export class PollaBetRepository {
   }
 
   /**
-   * Ticket a repetir. Sin el sufijo `-<pasador>` y con los 17 dígitos completos
-   * se busca por prefijo, como en QuiniApp; el alcance evita mezclar pasadores.
-   * `ticketNumber` llega validado (solo dígitos y un guion), así que el LIKE no
-   * recibe comodines.
+   * Ticket a repetir, completo o por prefijo (ver `ticketPattern`); el alcance
+   * evita mezclar pasadores.
    */
   async getByTicketNumber(
     ticketNumber: string,
     scope: PollaBetTicketScope
   ): Promise<IPollaBetToRepeat> {
+    const ticket = ticketPattern(ticketNumber);
     let query = supabase
       .from('polla_bets')
       .select('ticket_number, polla_edition_id, numbers')
-      .is('deleted_at', null);
-
-    query = /^\d{17}$/.test(ticketNumber)
-      ? query.like('ticket_number', `${ticketNumber}-%`)
-      : query.eq('ticket_number', ticketNumber);
+      .is('deleted_at', null)
+      .filter('ticket_number', ticket.op, ticket.value);
 
     if (scope.organizationId) query = query.eq('polla_organization_id', scope.organizationId);
     if (scope.cashierId) query = query.eq('cashier_polla_user_id', scope.cashierId);
@@ -223,6 +229,24 @@ export class PollaBetRepository {
     throwIfPollaError(error);
     if (!data) throw new NotFoundError('Ticket de Polla');
     return data as IPollaBetToRepeat;
+  }
+
+  /** Jugada completa de un ticket de la organización, para "Revisar ticket". */
+  async getForCheck(ticketNumber: string, organizationId: string): Promise<PollaBetRow> {
+    const ticket = ticketPattern(ticketNumber);
+    const { data, error } = await supabase
+      .from('polla_bets')
+      .select(BET_COLUMNS)
+      .is('deleted_at', null)
+      .eq('polla_organization_id', organizationId)
+      .filter('ticket_number', ticket.op, ticket.value)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Ticket de Polla');
+    return withDerivedFields(data as unknown as RawBetRow);
   }
 
   /**

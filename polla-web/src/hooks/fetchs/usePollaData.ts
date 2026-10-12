@@ -8,6 +8,7 @@ import {
   IPollaEditionEntityFront,
   IPollaOrgExpenseEntityFront,
   IPollaResultEntityFront,
+  IPollaTicketCheck,
 } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import {
@@ -97,6 +98,19 @@ export const useBetToRepeat = (ticketNumber: string | null) =>
     {},
     // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
     { enabled: Boolean(ticketNumber), retry: false, placeholderData: undefined }
+  );
+
+/** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
+export const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
+
+/** "Revisar ticket": la jugada, su titular y el reparto del pozo de su edición. */
+export const useTicketCheck = (ticketNumber: string) =>
+  useApiQuery<IPollaTicketCheck>(
+    ['polla-ticket-check', ticketNumber],
+    BACKEND_ROUTES.bet.check(ticketNumber),
+    {},
+    // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
+    { enabled: TICKET_SEARCH.test(ticketNumber), retry: false, placeholderData: undefined }
   );
 
 /**

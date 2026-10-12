@@ -9,8 +9,10 @@ export interface PollaEditionFilters {
   status?: POLLA_EDITION_STATUS;
   /** Ediciones cuyo rango de juego incluye esta fecha. */
   playingOn?: string;
-  /** Ediciones que todavía aceptan carga a esta fecha. */
+  /** Ediciones que todavía aceptan carga a esta fecha (sin mirar la hora). */
   loadableOn?: string;
+  /** Ediciones con la carga abierta en este momento: fecha y hora de cierre. */
+  loadableAt?: { date: string; time: string };
 }
 
 export class PollaEditionRepository {
@@ -31,6 +33,14 @@ export class PollaEditionRepository {
     }
     if (filters.loadableOn) {
       query = query.gte('load_limit_date', filters.loadableOn);
+    }
+    if (filters.loadableAt) {
+      // Fecha y hora salen del servidor (`pollaToday`/`pollaNowTime`): no hay
+      // texto del cliente dentro del filtro `or`.
+      const { date, time } = filters.loadableAt;
+      query = query.or(
+        `load_limit_date.gt.${date},and(load_limit_date.eq.${date},load_limit_time.gte.${time})`
+      );
     }
 
     const { data, error, count } = await query

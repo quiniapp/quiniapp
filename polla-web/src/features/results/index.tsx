@@ -18,6 +18,8 @@ import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { flattenPages } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
+import { todayIso } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { padPollaNumber } from '@/lib/pollaNumbers';
@@ -238,7 +240,7 @@ export const ResultsPage = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
             <div className="flex min-w-0 flex-col gap-1">
               <Label>Fecha</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <DateInput value={date} max={todayIso()} onValueChange={setDate} />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
               <Label>Quiniela</Label>

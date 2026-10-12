@@ -29,7 +29,7 @@ export const useResetCapitalistPassword = () =>
   useApiMutation<unknown, { id: string; password: string }>(
     'post',
     ({ id }) => BACKEND_ROUTES.organization.resetCapitalist(id),
-    { successMessage: 'Contraseña blanqueada: el capitalista la cambia al entrar' }
+    { successMessage: 'Contraseña del capitalista blanqueada' }
   );
 
 export const useUpdateOrganization = () =>
@@ -51,6 +51,13 @@ export const useCreateGroup = () =>
     invalidate: ['polla-groups'],
     successMessage: 'Grupo creado',
   });
+
+export const useUpdateGroup = () =>
+  useApiMutation<unknown, { id: string; name: string }>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.group.id(id),
+    { invalidate: ['polla-groups'], successMessage: 'Grupo actualizado' }
+  );
 
 export const useDeleteGroup = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.group.id(id), {
@@ -107,7 +114,7 @@ export const useResetUserPassword = () =>
   useApiMutation<unknown, { id: string; password: string }>(
     'post',
     ({ id }) => BACKEND_ROUTES.user.resetPassword(id),
-    { successMessage: 'Contraseña blanqueada: el usuario la cambia al entrar' }
+    { successMessage: 'Contraseña blanqueada' }
   );
 
 // -------------------------------------------------------------- ediciones

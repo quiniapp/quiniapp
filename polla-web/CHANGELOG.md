@@ -4,6 +4,44 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
+
+#### Organización y roles
+- El OWNER opera solo sobre su organización, como el resto: se saca el selector de organización del header (`OrganizationPicker`), `activeOrganizationId`/`setActiveOrganizationId` del `AuthContext` y el botón "Trabajar acá" de Organizaciones. Organizaciones queda para dar de alta, editar y eliminar organizaciones con su capitalista y blanquearle la contraseña.
+- **Grupos** (`features/groups`, ruta `/grupos`, OWNER y capitalista): pantalla propia para crear, renombrar y eliminar grupos. Sale la tarjeta de Grupos de "Quinielas y turnos". Hook nuevo `useUpdateGroup`.
+
+#### Usuarios y contraseñas
+- El alta ofrece los tipos de `POLLA_CREATABLE_TYPES`. Superadmin, capitalista y OWNER pueden crear jugadores eligiendo el pasador (select "Pasador"). Admin crea solo pasadores.
+- El ícono de blanqueo se muestra solo si `canResetPollaPassword(rol, tipo)` y nunca sobre uno mismo.
+- El blanqueo pone una contraseña definitiva: `ResetPasswordDialog` ya no habla de contraseña temporal.
+- Se saca "Cambiar contraseña" de Configuración. `/cambiar-password` queda solo para la contraseña inicial del OWNER del seed: `ProtectedRoute` redirige ahí mientras `password_reset_required` y, si no, la manda a Jugadas.
+
+#### Jugadas y carga
+- **`features/bets`**: owner, capitalista, superadmin y admin tienen todas las acciones. El pasador solo imprime y elimina lo suyo. El jugador no tiene columna de acciones.
+- **`features/make-bet`**: "Cargar a nombre de" queda solo para owner, capitalista, superadmin y admin. El pasador carga únicamente a su nombre. Las ediciones se piden con `loadable=true` (la API mira fecha y hora de cierre) y se muestra "cierre de carga DD-MM-YYYY HH:mm".
+- **`features/editions`**: el alta pide la hora de cierre de carga (`load_limit_time`, por defecto 21:00) además de la fecha. La columna Cierre muestra fecha y hora.
+
+#### Revisar ticket
+- **`features/check-ticket`** (ruta `/revisar-ticket`, todos menos el jugador): se busca un ticket de la organización y se ve:
+  - si ganó y el premio;
+  - el titular: pasador, o jugador y de qué pasador;
+  - los números con aciertos;
+  - la edición con su pozo;
+  - la tabla de ganadores con lo que se llevó cada uno.
+- Hook `useTicketCheck` y `BACKEND_ROUTES.bet.check`.
+
+#### Ventas, cuenta corriente y reportes
+- **`features/sales`**: filtro por grupo (o todos) para todos menos el pasador. Filtra el desglose por grupo y los totales.
+- **`components/ui/date-input.tsx`** (`DateInput`) y `lib/dates.ts` (`todayIso`):
+  - el calendario se abre con cualquier click (`showPicker`); antes, después de elegir una vez, había que tipear la fecha;
+  - una fecha tipeada pasado el `max` se lleva al máximo.
+- `DateInput` se usa en cuenta corriente (admin y pasador), reportes, ventas, resultados (máximo hoy) y ediciones.
+- **`styles/index.css`**: `color-scheme: light` en los inputs de fecha y hora, porque en el tema oscuro el ícono del calendario quedaba blanco sobre blanco.
+- **Exportar subtotales** (`ReportDialogs`, `totalsTicket`):
+  - campo nuevo "Porcentaje del pozo";
+  - del total (o del saldo neto si hay gastos) se descuenta ese %, con las líneas `X% POZO` y `SALDO SIN POZO`;
+  - el % del capitalista se calcula sobre lo que queda.
+
 ### Changed - 2026-10-08 (Resultados como QuiniApp)
 
 - **`features/results`**, con la lógica de `web/src/features/results`:

@@ -6,6 +6,7 @@ import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/s
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaEditionRepository } from '../repository/polla-edition.repository';
 import { parsePagination } from '../../helper/pagination';
+import { pollaNowTime, pollaToday } from '../../helper/date';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
@@ -48,10 +49,7 @@ export class PollaEditionRouter {
     const { user } = getPollaSession(req);
     const edition = await this.repository.getById(editionId);
 
-    if (
-      user.user_type !== POLLA_USER_TYPE.OWNER &&
-      edition.polla_organization_id !== user.polla_organization_id
-    ) {
+    if (edition.polla_organization_id !== user.polla_organization_id) {
       throw new ForbiddenError('La edición pertenece a otra organización');
     }
 
@@ -68,6 +66,9 @@ export class PollaEditionRouter {
         status: req.query.status as POLLA_EDITION_STATUS | undefined,
         playingOn: typeof req.query.playing_on === 'string' ? req.query.playing_on : undefined,
         loadableOn: typeof req.query.loadable_on === 'string' ? req.query.loadable_on : undefined,
+        // Carga abierta ahora mismo, con la fecha y hora de Argentina del servidor.
+        loadableAt:
+          req.query.loadable === 'true' ? { date: pollaToday(), time: pollaNowTime() } : undefined,
       },
       pagination
     );

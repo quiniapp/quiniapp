@@ -67,6 +67,9 @@ export const BetsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const canManage = Boolean(role && isPollaAdminRole(role));
+  const isCashier = role === POLLA_USER_TYPE.CASHIER;
+  // El jugador solo mira: no imprime, edita ni borra.
+  const hasActions = role !== POLLA_USER_TYPE.PLAYER;
   // Pasador y jugador eligen entre lo suyo ("Mis jugadas", por defecto) y todo
   // lo que se está jugando en el capitalista; el admin filtra por pasador.
   const canFilterMine = !canManage;
@@ -184,12 +187,14 @@ export const BetsPage = () => {
     return <span className="text-xs text-muted-foreground">{fmtDate(row.load_date)}</span>;
   };
 
+  // Owner, capitalista, superadmin y admin: todas las acciones. Pasador: solo
+  // imprimir y eliminar lo suyo. Jugador: ninguna.
   const renderActions = (row: IPollaBetListItem) => {
     const isPublic = isPublicPollaBet(row);
-    const canPrint = canManage || (isPublic && row.is_mine);
-    const canEdit = !row.winner && (canManage || (isPublic && row.can_edit));
+    const canPrint = canManage || (isCashier && isPublic && row.is_mine);
+    const canEdit = canManage && !row.winner;
     // El pasador borra lo que no le pagaron en el día (la API decide `can_delete`).
-    const canDelete = !row.winner && (canManage || (isPublic && row.can_delete));
+    const canDelete = !row.winner && (canManage || (isCashier && isPublic && row.can_delete));
 
     if (!canPrint && !canEdit && !canDelete) return null;
 
@@ -427,7 +432,7 @@ export const BetsPage = () => {
 
                 <div className="mt-2 flex items-center justify-between gap-2">
                   {renderStatus(row)}
-                  <div className="flex gap-1">{renderActions(row)}</div>
+                  {hasActions && <div className="flex gap-1">{renderActions(row)}</div>}
                 </div>
               </li>
             ))}
@@ -450,7 +455,7 @@ export const BetsPage = () => {
                     </TableHead>
                   ))}
                   <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  {hasActions && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -481,9 +486,11 @@ export const BetsPage = () => {
                       );
                     })}
                     <TableCell>{renderStatus(row)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">{renderActions(row)}</div>
-                    </TableCell>
+                    {hasActions && (
+                      <TableCell>
+                        <div className="flex justify-end gap-1">{renderActions(row)}</div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -492,7 +499,7 @@ export const BetsPage = () => {
         </InfiniteList>
       )}
 
-      <EditBetDialog bet={editing} onClose={() => setEditing(null)} />
+      {canManage && <EditBetDialog bet={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 };

@@ -9,19 +9,19 @@ import {
   LogOut,
   Menu,
   PlusCircle,
+  ScanSearch,
   Settings,
   Ticket,
   Users,
+  UsersRound,
   Building2,
 } from 'lucide-react';
 import { POLLA_USER_TYPE, POLLA_USER_TYPE_LABEL } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import type { RouteHandle } from '@/routes/route';
 import { ROUTES } from '@/types/routes.type';
-import { useOrganizations } from '@/hooks/fetchs/useCatalogs';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const ADMIN_AND_UP = [
   POLLA_USER_TYPE.OWNER,
@@ -31,6 +31,8 @@ const ADMIN_AND_UP = [
 ];
 
 const STAFF = [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER];
+
+const OWNER_AND_CAPITALIST = [POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST];
 
 interface NavItem {
   to: string;
@@ -47,12 +49,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: PlusCircle,
     roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
   },
+  { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: STAFF },
   { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },
   { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: ADMIN_AND_UP },
   { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
   { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
   { to: ROUTES.CURRENT_ACCOUNT, label: 'Cuenta corriente', icon: CreditCard, roles: STAFF },
   { to: ROUTES.CATALOGS, label: 'Quinielas y turnos', icon: ListOrdered, roles: ADMIN_AND_UP },
+  { to: ROUTES.GROUPS, label: 'Grupos', icon: UsersRound, roles: OWNER_AND_CAPITALIST },
   {
     to: ROUTES.ORGANIZATIONS,
     label: 'Organizaciones',
@@ -61,34 +65,6 @@ const NAV_ITEMS: NavItem[] = [
   },
   { to: ROUTES.SETTINGS, label: 'Configuración', icon: Settings },
 ];
-
-/** Solo el OWNER cambia de capitalist; el resto queda fijo a su organización. */
-const OrganizationPicker = () => {
-  const { activeOrganizationId, setActiveOrganizationId, role } = useAuth();
-  const isOwner = role === POLLA_USER_TYPE.OWNER;
-  const { data } = useOrganizations({}, isOwner);
-
-  if (!isOwner) return null;
-
-  return (
-    <Select
-      value={activeOrganizationId ?? 'all'}
-      onValueChange={(value) => setActiveOrganizationId(value === 'all' ? null : value)}
-    >
-      <SelectTrigger className="w-full sm:w-[200px]">
-        <SelectValue placeholder="Organización" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">Todas las organizaciones</SelectItem>
-        {data?.data.map((org) => (
-          <SelectItem key={org.polla_organization_id} value={org.polla_organization_id}>
-            {org.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-};
 
 export const AppLayout = () => {
   const { user, role, logout } = useAuth();
@@ -155,12 +131,6 @@ export const AppLayout = () => {
             <LogOut />
             <span className="hidden sm:inline">Salir</span>
           </Button>
-        </div>
-
-        {/* El selector de organización baja a su propia línea: con el nombre de
-            un capitalist no entra al lado del título en 320px. */}
-        <div className="w-full sm:w-auto">
-          <OrganizationPicker />
         </div>
       </header>
 

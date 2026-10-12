@@ -58,6 +58,65 @@ export const isPollaAdminRole = (role: POLLA_USER_TYPE): boolean =>
 export const isPollaStaffRole = (role: POLLA_USER_TYPE): boolean =>
   POLLA_STAFF_ROLES.includes(role);
 
+/**
+ * Qué tipos de usuario da de alta cada rol, siempre dentro de su organización.
+ * El capitalista no figura: se crea únicamente junto con su organización. El
+ * jugador lo crea su pasador o, eligiendo el pasador, un superadmin o superior.
+ */
+export const POLLA_CREATABLE_TYPES: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
+  [POLLA_USER_TYPE.OWNER]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.CAPITALIST]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.SUPERADMIN]: [
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.PLAYER]: [],
+};
+
+/**
+ * A quién le blanquea la contraseña cada rol. Nadie se la cambia a sí mismo:
+ * siempre la pone un superior. El OWNER llega a los capitalistas de todas las
+ * organizaciones (desde Organizaciones) y al resto solo dentro de la suya.
+ */
+export const POLLA_PASSWORD_RESET_TARGETS: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
+  [POLLA_USER_TYPE.OWNER]: [
+    POLLA_USER_TYPE.CAPITALIST,
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.CAPITALIST]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.SUPERADMIN]: [POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.PLAYER]: [],
+};
+
+export const canCreatePollaUser = (actor: POLLA_USER_TYPE, target: POLLA_USER_TYPE): boolean =>
+  POLLA_CREATABLE_TYPES[actor].includes(target);
+
+export const canResetPollaPassword = (actor: POLLA_USER_TYPE, target: POLLA_USER_TYPE): boolean =>
+  POLLA_PASSWORD_RESET_TARGETS[actor].includes(target);
+
 export interface IPollaUserEntityBack {
   polla_user_id: string;
   number: number | null;

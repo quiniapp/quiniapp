@@ -12,6 +12,8 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
+import { todayIso } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -177,13 +179,7 @@ const AdminAccountView = () => {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex min-w-0 flex-col gap-1">
           <Label htmlFor="account-date">A la fecha</Label>
-          <Input
-            id="account-date"
-            type="date"
-            value={date}
-            max={dayjs().format('YYYY-MM-DD')}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-          />
+          <DateInput id="account-date" value={date} max={todayIso()} onValueChange={setDate} />
         </div>
 
         <div className="flex min-w-0 flex-col gap-1">

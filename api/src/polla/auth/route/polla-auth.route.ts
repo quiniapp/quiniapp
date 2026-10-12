@@ -1,5 +1,5 @@
 import { Request, Response, Router } from 'express';
-import { UnauthorizedError } from '@helper/errors';
+import { ForbiddenError, UnauthorizedError } from '@helper/errors';
 import {
   pollaLoginSchema,
   pollaChangePasswordSchema,
@@ -98,8 +98,18 @@ export class PollaAuthRouter {
     res.status(200).json({ data: { success: true } });
   });
 
+  /**
+   * Nadie se cambia la contraseña a sí mismo: la pone un superior y queda
+   * definitiva. Solo queda el cambio obligatorio de una contraseña inicial
+   * pública (el OWNER del seed), que no tiene a nadie arriba que se la blanquee.
+   */
   private changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
+
+    if (!user.password_reset_required) {
+      throw new ForbiddenError('La contraseña la cambia un usuario superior');
+    }
+
     const { current_password, new_password } = pollaChangePasswordSchema.parse(req.body);
 
     await this.controller.changePassword(user.polla_user_id, current_password, new_password);
