@@ -20,6 +20,10 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new ForbiddenError('La jugada ya es ganadora, no se puede modificar'),
   POLLA_BET_DELETE_ONLY_SAME_DAY: () =>
     new ForbiddenError('Solo se pueden eliminar las jugadas cargadas hoy'),
+  POLLA_BET_DELETE_LIQUIDATED: () =>
+    new ForbiddenError(
+      'Tu cuenta ya se liquidó desde el día de carga de este ticket: solo un administrador puede borrarlo'
+    ),
   POLLA_NUMBERS_MUST_BE_TEN: () => new BadRequestError('La jugada debe tener 10 números'),
   POLLA_NUMBERS_INVALID: () => new BadRequestError('Los números deben ser de 2 cifras (00-99)'),
   POLLA_RESULTS_INVALID: () => new BadRequestError('Los resultados deben ser de 2 cifras (00-99)'),

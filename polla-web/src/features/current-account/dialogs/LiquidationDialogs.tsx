@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { IPollaCurrentAccountEntityFront } from '@helper/polla/types/game.type';
+import { IPollaCurrentAccountPeriodRow } from '@helper/polla/types/game.type';
 import {
   useBulkUpdateCurrentAccounts,
   useLiquidateCurrentAccounts,
@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { periodLabel, periodView } from '@/lib/accountPeriod';
 import { DayBetsTables } from '../DayBetsTables';
 import { fmtMoney } from '../format';
 
@@ -35,8 +36,9 @@ const parseAmount = (raw: string): number | null => {
   return raw.trim() !== '' && Number.isFinite(value) ? value : null;
 };
 
+/** Lo que se carga a mano en la fila del día que se liquida. */
 const EDITABLE = [
-  ['claims', 'Reclamos'],
+  ['claims', 'Reclamos del día'],
   ['bills', 'Gastos'],
   ['previous_balance', 'Saldo anterior'],
   ['collections', 'Cobro al pasador'],
@@ -53,17 +55,24 @@ const ReadOnlyAmount = ({ label, value }: { label: string; value: number }) => (
 );
 
 /**
- * Liquidar un pasador en el día, como el modal de QuiniApp: se cargan
- * reclamos, gastos, saldo anterior, cobro y pago; pase, comisión, aciertos y
- * lo que deja salen de las jugadas. Sin deje.
+ * Liquidar un pasador, como el modal de QuiniApp, pero por período: pase,
+ * comisión, aciertos y lo que deja se acumulan desde el día siguiente a su
+ * última liquidación. Reclamos, gastos, cobro y pago se cargan en el día que
+ * se liquida. Sin deje.
  */
 export const LiquidateCashierDialog = ({
   account,
   onClose,
 }: {
-  account: IPollaCurrentAccountEntityFront;
+  account: IPollaCurrentAccountPeriodRow;
   onClose: () => void;
 }) => {
+  const view = periodView(account);
+  // El saldo anterior solo se corrige si el período arranca ese día: a mitad de
+  // período es el total del día anterior, que ya viene encadenado.
+  const startsToday = account.period.from === account.date;
+  const editable = EDITABLE.filter(([key]) => key !== 'previous_balance' || startsToday);
+
   const [form, setForm] = useState<Record<EditableKey, string>>(
     () =>
       Object.fromEntries(EDITABLE.map(([key]) => [key, String(Number(account[key]))])) as Record<
@@ -77,7 +86,7 @@ export const LiquidateCashierDialog = ({
     e.preventDefault();
 
     const props: Record<string, number> = {};
-    for (const [key, label] of EDITABLE) {
+    for (const [key, label] of editable) {
       const value = parseAmount(form[key]);
       if (value === null) {
         toast.error(`Revisá ${label.toLowerCase()}`);
@@ -98,24 +107,30 @@ export const LiquidateCashierDialog = ({
         <DialogHeader>
           <DialogTitle>
             Liquidar {account.user_number ? `${account.user_number} · ` : ''}
-            {account.user_name} del {dayjs(account.date).format('DD-MM-YYYY')}
+            {account.user_name} · {periodLabel(view.period_from, account.date, 'DD-MM-YYYY')}
           </DialogTitle>
           <DialogDescription>
-            Pase, comisión, aciertos y lo que deja salen de las jugadas del día.
+            Pase, comisión, aciertos y lo que deja se acumulan desde el día siguiente a la última
+            liquidación. Reclamos, gastos, cobro y pago son del{' '}
+            {dayjs(account.date).format('DD-MM-YYYY')}.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <ReadOnlyAmount label="Pase" value={account.pass} />
-              <ReadOnlyAmount label="Comisión" value={account.cashier_commission} />
-              <ReadOnlyAmount label="Aciertos" value={account.successes} />
-              <ReadOnlyAmount label="Deja" value={account.revenue} />
-              <ReadOnlyAmount label="Total" value={account.total} />
+              <ReadOnlyAmount label="Pase" value={view.pass} />
+              <ReadOnlyAmount label="Comisión" value={view.cashier_commission} />
+              <ReadOnlyAmount label="Aciertos" value={view.successes} />
+              <ReadOnlyAmount label="Reclamos del período" value={view.claims} />
+              <ReadOnlyAmount label="Deja" value={view.revenue} />
+              {!startsToday && (
+                <ReadOnlyAmount label="Saldo anterior" value={view.previous_balance} />
+              )}
+              <ReadOnlyAmount label="Total" value={view.total} />
             </div>
             <div className="flex flex-col gap-2">
-              {EDITABLE.map(([key, label]) => (
+              {editable.map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between gap-2">
                   <Label htmlFor={`liquidate-${key}`} className="shrink-0">
                     {label}
@@ -132,7 +147,11 @@ export const LiquidateCashierDialog = ({
             </div>
           </div>
 
-          <DayBetsTables date={account.date} cashierId={account.polla_user_id} />
+          <DayBetsTables
+            from={view.period_from}
+            to={account.date}
+            cashierId={account.polla_user_id}
+          />
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
@@ -153,9 +172,10 @@ const BULK_LABEL = { claims: 'Reclamos', collections: 'Cobros', paid: 'Pagos' } 
 type BulkKey = keyof typeof BULK_LABEL;
 
 /**
- * Generar las liquidaciones del día de todos los pasadores (como QuiniApp): se
- * corrigen reclamos, cobros y pagos en la grilla, se guardan y el día queda
- * liquidado.
+ * Generar las liquidaciones de todos los pasadores en el día (como QuiniApp):
+ * cada uno con lo acumulado en su período. Reclamos, cobros y pagos se
+ * corrigen en la grilla (son del día), se guardan y todos los períodos quedan
+ * cerrados en esa fecha.
  */
 export const GenerateLiquidationDialog = ({
   date,
@@ -164,7 +184,7 @@ export const GenerateLiquidationDialog = ({
   onClose,
 }: {
   date: string;
-  rows: IPollaCurrentAccountEntityFront[];
+  rows: IPollaCurrentAccountPeriodRow[];
   organizationId: string | null;
   onClose: () => void;
 }) => {
@@ -172,10 +192,10 @@ export const GenerateLiquidationDialog = ({
   const { mutateAsync: bulkUpdate, isPending: isSaving } = useBulkUpdateCurrentAccounts();
   const { mutateAsync: liquidate, isPending: isLiquidating } = useLiquidateCurrentAccounts();
 
-  const valueOf = (row: IPollaCurrentAccountEntityFront, key: BulkKey) =>
+  const valueOf = (row: IPollaCurrentAccountPeriodRow, key: BulkKey) =>
     edits[row.polla_current_account_id]?.[key] ?? String(Number(row[key]));
 
-  const editCell = (row: IPollaCurrentAccountEntityFront, key: BulkKey) => (
+  const editCell = (row: IPollaCurrentAccountPeriodRow, key: BulkKey) => (
     <TableCell>
       <Input
         aria-label={`${BULK_LABEL[key]} de ${row.user_name}`}
@@ -226,10 +246,10 @@ export const GenerateLiquidationDialog = ({
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto lg:max-w-[1100px]">
         <DialogHeader>
-          <DialogTitle>Generar liquidaciones del {dayjs(date).format('DD-MM-YYYY')}</DialogTitle>
+          <DialogTitle>Generar liquidaciones al {dayjs(date).format('DD-MM-YYYY')}</DialogTitle>
           <DialogDescription>
-            Corregí reclamos, cobros y pagos; al generar, el día queda liquidado para todos los
-            pasadores.
+            Cada pasador con lo acumulado desde su última liquidación. Corregí reclamos, cobros y
+            pagos del día; al generar, todos los períodos quedan liquidados en esta fecha.
           </DialogDescription>
         </DialogHeader>
 
@@ -239,9 +259,10 @@ export const GenerateLiquidationDialog = ({
               <TableRow>
                 <TableHead>Número</TableHead>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Desde</TableHead>
                 <TableHead className="text-right">Pase</TableHead>
                 <TableHead className="text-right">Aciertos</TableHead>
-                <TableHead className="text-right">Reclamos</TableHead>
+                <TableHead className="text-right">Reclamos del día</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
                 <TableHead className="text-right">Saldo anterior</TableHead>
                 <TableHead className="text-right">Cobros</TableHead>
@@ -250,28 +271,36 @@ export const GenerateLiquidationDialog = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.polla_current_account_id}>
-                  <TableCell>{row.user_number ?? ''}</TableCell>
-                  <TableCell className="max-w-[180px] truncate">{row.user_name}</TableCell>
-                  <TableCell className="text-right tabular-nums">${fmtMoney(row.pass)}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(row.successes)}
-                  </TableCell>
-                  {editCell(row, 'claims')}
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(row.subtotal)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(row.previous_balance)}
-                  </TableCell>
-                  {editCell(row, 'collections')}
-                  {editCell(row, 'paid')}
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    ${fmtMoney(row.total)}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {rows.map((row) => {
+                const view = periodView(row);
+                return (
+                  <TableRow key={row.polla_current_account_id}>
+                    <TableCell>{row.user_number ?? ''}</TableCell>
+                    <TableCell className="max-w-[180px] truncate">{row.user_name}</TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {dayjs(view.period_from).format('DD/MM')}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(view.pass)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(view.successes)}
+                    </TableCell>
+                    {editCell(row, 'claims')}
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(view.subtotal)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(view.previous_balance)}
+                    </TableCell>
+                    {editCell(row, 'collections')}
+                    {editCell(row, 'paid')}
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      ${fmtMoney(view.total)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

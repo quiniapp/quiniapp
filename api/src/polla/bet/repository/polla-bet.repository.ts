@@ -40,6 +40,10 @@ export interface PollaBetFilters {
   loadDate?: string | null;
   /** Día en que se completó (ganadoras de ese día, para la liquidación). */
   hitDate?: string | null;
+  /** Cargadas entre estas fechas (tickets del período que se liquida). */
+  loadRange?: { from: string; to: string } | null;
+  /** Completadas entre estas fechas (ganadoras del período que se liquida). */
+  hitRange?: { from: string; to: string } | null;
   onlyWinners?: boolean;
 }
 
@@ -155,6 +159,12 @@ export class PollaBetRepository {
     if (filters.ticketNumber) query = query.eq('ticket_number', filters.ticketNumber);
     if (filters.loadDate) query = query.eq('load_date', filters.loadDate);
     if (filters.hitDate) query = query.eq('hit_date', filters.hitDate);
+    if (filters.loadRange) {
+      query = query.gte('load_date', filters.loadRange.from).lte('load_date', filters.loadRange.to);
+    }
+    if (filters.hitRange) {
+      query = query.gte('hit_date', filters.hitRange.from).lte('hit_date', filters.hitRange.to);
+    }
     if (filters.onlyWinners) query = query.eq('winner', true);
 
     if (useKeyset) {

@@ -4,6 +4,41 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
+
+#### Cuenta corriente por período (liquidación semanal)
+- **Vista y exportes:** la planilla, el total general, "Exportar diario" y "Exportar liquidación" muestran cada pasador acumulado desde el día siguiente a su última liquidación hasta la fecha elegida. Hay una columna nueva "Desde".
+  - "Actualizar" recalcula todo el período abierto.
+  - Liquidar, a uno o a todos, cierra el período en esa fecha.
+- **Helpers nuevos (`lib/accountPeriod.ts`):**
+  - `periodView`, la fila con los montos del período;
+  - `periodLabel`;
+  - `betsRangeFrom`.
+- **`LiquidateCashierDialog`:**
+  - montos del período de solo lectura, incluidos los reclamos del período;
+  - reclamos, gastos, cobro y pago del día, editables;
+  - el saldo anterior solo se edita si el período empieza ese día.
+- **`GenerateLiquidationDialog`:** usa los montos del período, con la columna "Desde".
+- **`DayBetsTables`:** recibe `from`/`to` y lista los tickets y las ganadoras del período.
+- **`CashierAccountView`:** el pasador ve su período.
+- **Liquidación en PDF:** dice "Período D/M al D/M" e incluye las ganadoras de todo el período.
+- **Reportes por día:** "Resumen" y "Exportar subtotales" usan lo acumulado del período. "Exportar cobros y pagos" sigue siendo la caja del día.
+
+#### Cobros y pagos
+- **"Exportar cobros y pagos"** tiene el campo "Porcentaje del pozo":
+  - **Día:** si el saldo del día es positivo, el ticket suma `p% POZO` y `SALDO SIN POZO`.
+  - **Período:** si deja, descuenta el pozo y calcula el `% DEJA` del capitalista sobre lo que queda.
+
+#### Jugadas
+- **El pasador borra hasta el cierre de carga:** el botón eliminar ya no se limita a las jugadas del día. Sigue `can_delete`: carga abierta y cuenta sin liquidar desde el día de carga.
+- **"Compartir PDF" (`features/bets/ShareTicketsPdfButton.tsx`):** está en Jugadas para todos menos el jugador y usa los filtros elegidos.
+  - Baja todas las jugadas de la edición de a 1000, con un spinner que muestra el progreso.
+  - Arma un PDF A4 apaisado para blanco y negro (`functions/editionTicketsPDF.ts`):
+    - los números acertados van en negrita y sombreados;
+    - tiene columnas de aciertos, si ganó y premio.
+  - En mobile lo comparte; en desktop lo descarga (`sharePdf` y `downloadPdfBlob` en `functions/printPdf.ts`).
+- **Resultados:** después de "Generar ganadores" aparece una tarjeta con cada edición procesada, su "Compartir PDF" y un link a Jugadas.
+
 ### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
 
 #### Organización y roles

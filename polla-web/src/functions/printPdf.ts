@@ -52,3 +52,36 @@ export const deliverPdf = async (blob: Blob, fileName: string, text: string) => 
     printPdfBlob(blob);
   }
 };
+
+/** Descarga el PDF (para adjuntarlo a mano desde la computadora). */
+export function downloadPdfBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Para compartir un PDF largo: en mobile abre el share sheet con el archivo; en
+ * desktop lo descarga (el fallback a WhatsApp de `sharePdfBlob` no adjunta
+ * archivos).
+ */
+export const sharePdf = async (blob: Blob, fileName: string, text: string) => {
+  if (isMobileDevice()) {
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ title: fileName, text, files: [file] });
+        return;
+      } catch (error) {
+        // Cancelar el share sheet no es un error.
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+  }
+  downloadPdfBlob(blob, fileName);
+};

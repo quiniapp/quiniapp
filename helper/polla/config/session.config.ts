@@ -35,3 +35,13 @@ export const POLLA_ACCOUNT_LOCKOUT_MS = 15 * 60 * 1000;
 /** Paginación por defecto de todos los getAll. */
 export const POLLA_DEFAULT_PAGE_SIZE = 50;
 export const POLLA_MAX_PAGE_SIZE = 200;
+
+/** Páginas del PDF de tickets: el `max_rows` de PostgREST. */
+export const POLLA_EXPORT_PAGE_SIZE = 1000;
+
+/**
+ * Días hacia atrás que recalcula "Actualizar" en la cuenta corriente (el
+ * período abierto más viejo). La RPC `polla_recalculate_open_period` usa el
+ * mismo número.
+ */
+export const POLLA_ACCOUNT_RECALC_MAX_DAYS = 62;

@@ -1,5 +1,6 @@
 import { IPollaBetListItem } from '@helper/polla/types/game.type';
 import { useBetsOfDay } from '@/hooks/fetchs/usePollaData';
+import { betsRangeFrom } from '@/lib/accountPeriod';
 import {
   Table,
   TableBody,
@@ -11,7 +12,9 @@ import {
 import { fmtMoney } from './format';
 
 interface DayBetsTablesProps {
-  date: string;
+  /** Período que se liquida (el mismo día si arranca y termina ahí). */
+  from: string;
+  to: string;
   /** Admin: el pasador de la fila. El pasador mira lo suyo con `mine`. */
   cashierId?: string;
   enabled?: boolean;
@@ -20,18 +23,20 @@ interface DayBetsTablesProps {
 const player = (bet: IPollaBetListItem) => bet.client_name ?? bet.cashier_name;
 
 /**
- * Lo que se liquida de un pasador en el día, como en QuiniApp: los tickets que
- * cargó (el pase) y las jugadas que ganaron ese día (los premios).
+ * Lo que se liquida de un pasador en el período, como en QuiniApp: los tickets
+ * que cargó (el pase) y las jugadas que ganaron (los premios).
  */
-export const DayBetsTables = ({ date, cashierId, enabled = true }: DayBetsTablesProps) => {
+export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTablesProps) => {
   const scope = cashierId ? { cashier_polla_user_id: cashierId } : { mine: true };
+  const span = from === to ? 'del día' : 'del período';
+  const rangeFrom = betsRangeFrom(from, to);
 
   const { data: tickets, isFetching: loadingTickets } = useBetsOfDay(
-    { ...scope, load_date: date },
+    { ...scope, load_from: rangeFrom, load_to: to },
     enabled
   );
   const { data: winners, isFetching: loadingWinners } = useBetsOfDay(
-    { ...scope, hit_date: date, winners: true },
+    { ...scope, hit_from: rangeFrom, hit_to: to, winners: true },
     enabled
   );
 
@@ -46,7 +51,7 @@ export const DayBetsTables = ({ date, cashierId, enabled = true }: DayBetsTables
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <section className="flex min-w-0 flex-col gap-1">
-        <h3 className="text-sm font-semibold">Tickets del día</h3>
+        <h3 className="text-sm font-semibold">Tickets {span}</h3>
         <div className="max-h-60 overflow-auto rounded-md border">
           <Table>
             <TableHeader>
@@ -67,14 +72,14 @@ export const DayBetsTables = ({ date, cashierId, enabled = true }: DayBetsTables
                       </TableCell>
                     </TableRow>
                   ))
-                : empty(loadingTickets, 'No cargó tickets ese día', 3)}
+                : empty(loadingTickets, `No cargó tickets ${span}`, 3)}
             </TableBody>
           </Table>
         </div>
       </section>
 
       <section className="flex min-w-0 flex-col gap-1">
-        <h3 className="text-sm font-semibold">Jugadas ganadoras</h3>
+        <h3 className="text-sm font-semibold">Jugadas ganadoras {span}</h3>
         <div className="max-h-60 overflow-auto rounded-md border">
           <Table>
             <TableHeader>
@@ -97,7 +102,7 @@ export const DayBetsTables = ({ date, cashierId, enabled = true }: DayBetsTables
                       </TableCell>
                     </TableRow>
                   ))
-                : empty(loadingWinners, 'Sin jugadas ganadoras ese día', 4)}
+                : empty(loadingWinners, `Sin jugadas ganadoras ${span}`, 4)}
             </TableBody>
           </Table>
         </div>

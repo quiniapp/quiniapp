@@ -4,6 +4,39 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
+
+#### Borrado de jugadas por el pasador
+- **Migración `20261012210905_polla_cashier_delete_until_load_limit.sql`**: `polla_delete_bet` sin force deja de exigir que la jugada sea del día.
+  - El pasador borra lo suyo y lo de sus jugadores mientras la carga de la edición siga abierta (fecha y hora de cierre). Con la polla en juego la carga ya cerró.
+  - Si su cuenta ya se liquidó el día de carga o después, devuelve `POLLA_BET_DELETE_LIQUIDATED` y solo un admin puede borrarla.
+- **`polla-errors.ts`**: error nuevo `POLLA_BET_DELETE_LIQUIDATED` (403).
+- **`polla-bet.route.ts`**: `can_delete` del pasador sigue la misma regla.
+  - Usa el cierre de carga de cada edición, con el nuevo `PollaEditionRepository.getLoadLimits` y `isPollaLoadOpen` en `helper/date.ts`.
+  - Usa la última liquidación del pasador, con el nuevo `PollaCurrentAccountRepository.getLastLiquidatedDate`.
+
+#### Cuenta corriente por período (liquidación semanal)
+- **Migración `20261012210906_polla_current_account_period.sql`**: las filas diarias no cambian. Se suman dos funciones:
+  - **`polla_current_account_period_rows`**: devuelve las filas de un día. Cada una trae en `period` lo acumulado desde el día siguiente a la última liquidación del pasador:
+    - pase, aciertos, reclamos, comisión, deja, subtotal, cobros y pagos;
+    - saldo anterior al inicio del período;
+    - total a la fecha.
+  - **`polla_recalculate_open_period`**: recalcula todos los días con movimiento del período abierto más viejo de la organización, hasta 62 días hacia atrás. Después vuelve a encadenar los saldos. Así entran los días que nunca se calcularon.
+  - Índice parcial `idx_polla_current_accounts_liquidated`.
+- **`polla-current-account.route.ts`**:
+  - `GET /current_account?date=` devuelve las filas con `period`. Con `from`/`to` no cambia.
+  - `POST /calculate` recalcula el período abierto.
+  - `POST /liquidate` recalcula y marca el día como liquidado para todos, lo que cierra sus períodos.
+  - `PUT /:id` con `liquidate` recalcula el período antes de liquidar.
+- **`PollaCurrentAccountRepository`**: `getPeriodRows`, `recalculateOpenPeriod`, `markDayLiquidated` y `getLastLiquidatedDate`. Sale `calculate`, que quedó sin uso.
+- **`GET /bet`**: filtros nuevos `load_from`/`load_to` y `hit_from`/`hit_to`, de hasta 62 días. Son los tickets y ganadoras del período que se liquida.
+
+#### PDF de tickets
+- **`GET /bet?export=true`**: páginas de hasta 1000 jugadas (`POLLA_EXPORT_PAGE_SIZE`) con el keyset que ya existía.
+  - Exige una edición.
+  - El jugador recibe 403, porque no imprime.
+- **`helper/pagination.ts`**: `parsePagination(query, maxLimit)`.
+
 ### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
 
 #### Alcance por organización

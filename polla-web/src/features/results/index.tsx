@@ -1,4 +1,5 @@
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Pencil, Trash2 } from 'lucide-react';
@@ -6,7 +7,7 @@ import { newPollaResultSchema } from '@helper/polla/schemas/game.schema';
 import { IPollaResultEntityFront } from '@helper/polla/types/game.type';
 import { isPollaAdminRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useResultFor, useResults } from '@/hooks/fetchs/usePollaData';
+import { useEditions, useResultFor, useResults } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import {
   useCreateResult,
@@ -18,6 +19,8 @@ import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { flattenPages } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
+import { ShareTicketsPdfButton } from '@/features/bets/ShareTicketsPdfButton';
+import { ROUTES } from '@/types/routes.type';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
@@ -63,6 +66,8 @@ export const ResultsPage = () => {
   const [numbers, setNumbers] = useState<string[]>(emptyResults);
   // Cajas que quedaron vacías al apretar Enter o al guardar.
   const [incomplete, setIncomplete] = useState<Set<number>>(new Set());
+  // Ediciones de la última vez que se generaron ganadores: se ofrece su PDF.
+  const [processedIds, setProcessedIds] = useState<string[]>([]);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useResults({
@@ -72,6 +77,14 @@ export const ResultsPage = () => {
   const { rows, totalCount } = flattenPages(data?.pages);
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
+  const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
+  const processedEditions = useMemo(
+    () =>
+      processedIds
+        .map((id) => editions?.data.find((edition) => edition.polla_edition_id === id))
+        .filter((edition) => edition !== undefined),
+    [processedIds, editions]
+  );
 
   // Si el día ya tiene resultado, se trae para corregirlo en vez de duplicarlo.
   const { data: existingPage } = useResultFor(
@@ -205,6 +218,12 @@ export const ResultsPage = () => {
       },
       {
         onSuccess: (result) => {
+          setProcessedIds(
+            result.editions
+              .filter((edition) => edition.polla_edition_id && !edition.skipped)
+              .map((edition) => edition.polla_edition_id as string)
+          );
+
           // La corrección revirtió un ganador: los días posteriores que ya
           // estaban cargados quedaron sin procesar para esa edición.
           if (result.editions.some((edition) => edition.reopened)) {
@@ -298,6 +317,40 @@ export const ResultsPage = () => {
               </Button>
             </div>
           </div>
+
+          {processedEditions.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-md border-2 border-success p-3 text-sm">
+              <p className="font-medium">
+                Ganadores generados. Compartí los tickets de cada edición con sus aciertos:
+              </p>
+              {processedEditions.map((edition) => {
+                const lotteryName = lotteryById.get(edition.polla_lottery_id) ?? 'Quiniela';
+                const scheduleName = scheduleById.get(edition.polla_schedule_id) ?? 'Turno';
+                return (
+                  <div
+                    key={edition.polla_edition_id}
+                    className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+                  >
+                    <span className="sm:mr-auto">
+                      {lotteryName} · {scheduleName} ({fmtDate(edition.start_date)} al{' '}
+                      {fmtDate(edition.end_date)})
+                    </span>
+                    <ShareTicketsPdfButton
+                      edition={edition}
+                      lotteryName={lotteryName}
+                      scheduleName={scheduleName}
+                      filtersLabel="Todas las jugadas · por aciertos"
+                    />
+                    <Button asChild variant="ghost">
+                      <Link to={`${ROUTES.BETS}?polla_edition_id=${edition.polla_edition_id}`}>
+                        Ver en Jugadas
+                      </Link>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {existing && (
             <p className="text-xs text-muted-foreground">

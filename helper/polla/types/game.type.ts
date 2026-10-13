@@ -144,8 +144,9 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields {
   /** Es del usuario o, para un pasador, está imputada a él (sus jugadores). */
   is_mine: boolean;
   /**
-   * Solo un pasador la puede borrar: es suya o de uno de sus jugadores, se cargó
-   * hoy y no ganó (da de baja lo que no le pagaron en el día).
+   * Solo un pasador la puede borrar: es suya o de uno de sus jugadores, no ganó,
+   * la carga de la edición sigue abierta y su cuenta no se liquidó desde el día
+   * de carga (da de baja lo que no le pagaron).
    */
   can_delete: boolean;
 }
@@ -260,6 +261,31 @@ export interface IPollaCurrentAccountEntityBack {
 }
 
 export type IPollaCurrentAccountEntityFront = IPollaCurrentAccountEntityBack;
+
+/**
+ * Montos acumulados de un pasador desde el día siguiente a su última
+ * liquidación hasta la fecha pedida (liquidación semanal). `previous_balance`
+ * es el saldo con el que arrancó el período y `total`, el saldo a la fecha.
+ */
+export interface IPollaCurrentAccountPeriod {
+  /** Primer día del período (YYYY-MM-DD). */
+  from: string;
+  pass: number;
+  successes: number;
+  claims: number;
+  cashier_commission: number;
+  revenue: number;
+  subtotal: number;
+  previous_balance: number;
+  collections: number;
+  paid: number;
+  total: number;
+}
+
+/** Fila del día (montos de ese día) con los montos de su período. */
+export type IPollaCurrentAccountPeriodRow = IPollaCurrentAccountEntityFront & {
+  period: IPollaCurrentAccountPeriod;
+};
 
 /** Totales de la cuenta corriente de un día (pie de la tabla y reportes). */
 export interface IPollaCurrentAccountDailyTotals {

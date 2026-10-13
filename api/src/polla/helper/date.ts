@@ -16,3 +16,12 @@ export const pollaToday = (): string => dayjs().tz(POLLA_TIMEZONE).format('YYYY-
 
 /** Hora actual (`HH:mm:ss`) en Argentina, para comparar con el cierre de carga. */
 export const pollaNowTime = (): string => dayjs().tz(POLLA_TIMEZONE).format('HH:mm:ss');
+
+/**
+ * ¿Sigue abierta la carga? Mismo criterio que `polla_load_closed` en la base:
+ * cierra cuando el momento actual (Argentina) pasa la fecha y hora de cierre.
+ */
+export const isPollaLoadOpen = (limitDate: string, limitTime: string): boolean => {
+  const today = pollaToday();
+  return limitDate > today || (limitDate === today && limitTime >= pollaNowTime());
+};

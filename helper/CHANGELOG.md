@@ -4,6 +4,15 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
+
+- **`polla/types/game.type.ts`**:
+  - `IPollaCurrentAccountPeriod` e `IPollaCurrentAccountPeriodRow`: la fila del día con lo acumulado desde la última liquidación del pasador.
+  - Se actualiza el comentario de `IPollaBetPublic.can_delete`: el pasador borra hasta el cierre de carga si su cuenta no se liquidó.
+- **`polla/config/session.config.ts`**:
+  - `POLLA_EXPORT_PAGE_SIZE` (1000), las páginas del PDF de tickets;
+  - `POLLA_ACCOUNT_RECALC_MAX_DAYS` (62), los días que recalcula "Actualizar" y el rango máximo de los filtros de fechas de jugadas.
+
 ### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
 
 - **`polla/types/user.type.ts`**: `POLLA_CREATABLE_TYPES` y `POLLA_PASSWORD_RESET_TARGETS` (qué crea y a quién blanquea cada rol), con los helpers `canCreatePollaUser` y `canResetPollaPassword`.

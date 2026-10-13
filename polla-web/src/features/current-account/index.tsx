@@ -2,7 +2,7 @@ import { ComponentProps, ReactNode, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { BarChart2, CreditCard, FileDown, FileText, List, RefreshCw, Wallet } from 'lucide-react';
-import { IPollaCurrentAccountEntityFront } from '@helper/polla/types/game.type';
+import { IPollaCurrentAccountPeriodRow } from '@helper/polla/types/game.type';
 import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
+import { periodLabel, periodView } from '@/lib/accountPeriod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -65,8 +66,10 @@ const ActionButton = ({
 
 /**
  * Cuenta corriente de los pasadores, como la de QuiniApp sin Arrastre ni Deje
- * (la liquidación de Polla no tiene deje): filtros, planilla del día con total
- * general, liquidar por pasador o todo el día y los exportes.
+ * (la liquidación de Polla no tiene deje): filtros, planilla con total general,
+ * liquidar por pasador o todo el día y los exportes. Cada pasador se muestra
+ * acumulado desde el día siguiente a su última liquidación (en general, la
+ * semana) hasta la fecha elegida.
  */
 const AdminAccountView = () => {
   const { organizationId } = useAuth();
@@ -74,7 +77,7 @@ const AdminAccountView = () => {
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [groupId, setGroupId] = useState('');
   const [userNumber, setUserNumber] = useState('');
-  const [liquidating, setLiquidating] = useState<IPollaCurrentAccountEntityFront | null>(null);
+  const [liquidating, setLiquidating] = useState<IPollaCurrentAccountPeriodRow | null>(null);
   const [generating, setGenerating] = useState(false);
   const [report, setReport] = useState<ReportKind | null>(null);
   const [printing, setPrinting] = useState(false);
@@ -90,7 +93,9 @@ const AdminAccountView = () => {
 
   const { data, isFetching } = useCurrentAccountsOfDay(filters);
   const rows = useMemo(() => data?.data ?? [], [data]);
-  const totals = useMemo(() => computeAccountTotals(rows), [rows]);
+  // Lo que se muestra y se exporta: los montos acumulados del período.
+  const views = useMemo(() => rows.map(periodView), [rows]);
+  const totals = useMemo(() => computeAccountTotals(views), [views]);
 
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
   const groupList = useMemo(() => groups?.data ?? [], [groups]);
@@ -112,7 +117,7 @@ const AdminAccountView = () => {
     try {
       await downloadDailyAccountsPDF({
         date,
-        rows,
+        rows: views,
         groupName: groupId ? groupById.get(groupId) : undefined,
       });
     } catch {
@@ -129,8 +134,12 @@ const AdminAccountView = () => {
     }
     setPrinting(true);
     try {
-      const winnersByCashier = await fetchWinnersByCashier({ date, organizationId });
-      await downloadLiquidationSlipsPDF({ accounts: rows, winnersByCashier });
+      const winnersByCashier = await fetchWinnersByCashier({
+        accounts: views,
+        date,
+        organizationId,
+      });
+      await downloadLiquidationSlipsPDF({ accounts: views, winnersByCashier });
     } catch {
       toast.error('No se pudieron exportar las liquidaciones');
     } finally {
@@ -140,7 +149,7 @@ const AdminAccountView = () => {
 
   return (
     <div>
-      <PageHeader description="Pase, aciertos, reclamos, cobros y pagos por pasador y por día. La liquidación no tiene deje." />
+      <PageHeader description="Pase, aciertos, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación. La liquidación no tiene deje." />
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <ActionButton icon={<FileText />} onClick={handleExportDaily} disabled={printing}>
@@ -213,7 +222,8 @@ const AdminAccountView = () => {
       </div>
 
       <p className="mb-2 text-sm text-muted-foreground">
-        Fecha de la liquidación: {dayjs(date).format('DD/MM/YYYY')}
+        Acumulado desde la última liquidación de cada pasador hasta el{' '}
+        {dayjs(date).format('DD/MM/YYYY')}
       </p>
 
       {rows.length === 0 ? (
@@ -228,12 +238,17 @@ const AdminAccountView = () => {
         <>
           {/* Mobile: tarjetas. La planilla tiene 12 columnas. */}
           <ul className="flex flex-col gap-2 md:hidden">
-            {rows.map((row) => (
+            {views.map((row, index) => (
               <li key={row.polla_current_account_id} className="rounded-md border bg-card p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="font-medium">
-                    {row.user_number ? `${row.user_number} · ` : ''}
-                    {row.user_name}
+                  <span className="min-w-0">
+                    <span className="block font-medium">
+                      {row.user_number ? `${row.user_number} · ` : ''}
+                      {row.user_name}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {periodLabel(row.period_from, row.date)}
+                    </span>
                   </span>
                   {row.is_liquidated && <Badge variant="success">Liquidado</Badge>}
                 </div>
@@ -250,7 +265,7 @@ const AdminAccountView = () => {
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full"
-                  onClick={() => setLiquidating(row)}
+                  onClick={() => setLiquidating(rows[index])}
                 >
                   Liquidar
                 </Button>
@@ -278,6 +293,7 @@ const AdminAccountView = () => {
                   <TableHead>Liquidar</TableHead>
                   <TableHead>Número</TableHead>
                   <TableHead>Nombre</TableHead>
+                  <TableHead>Desde</TableHead>
                   {MONEY_COLUMNS.map(([key, label]) => (
                     <TableHead key={key} className="whitespace-nowrap text-right">
                       {label}
@@ -287,20 +303,23 @@ const AdminAccountView = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
+                {views.map((row, index) => (
                   <TableRow key={row.polla_current_account_id}>
                     <TableCell>
                       <Button
                         type="button"
                         variant={row.is_liquidated ? 'ghost' : 'outline'}
                         size="sm"
-                        onClick={() => setLiquidating(row)}
+                        onClick={() => setLiquidating(rows[index])}
                       >
                         {row.is_liquidated ? 'Liquidado' : 'Liquidar'}
                       </Button>
                     </TableCell>
                     <TableCell className="tabular-nums">{row.user_number ?? ''}</TableCell>
                     <TableCell className="max-w-[220px] truncate">{row.user_name}</TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {dayjs(row.period_from).format('DD/MM')}
+                    </TableCell>
                     {MONEY_COLUMNS.map(([key]) => (
                       <TableCell
                         key={key}
@@ -321,7 +340,7 @@ const AdminAccountView = () => {
               </TableBody>
               <TableFooter>
                 <TableRow className="font-semibold">
-                  <TableCell colSpan={3}>Total general</TableCell>
+                  <TableCell colSpan={4}>Total general</TableCell>
                   {MONEY_COLUMNS.map(([key]) => (
                     <TableCell key={key} className="text-right tabular-nums">
                       ${fmtMoney(totals[key])}

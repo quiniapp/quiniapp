@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { IPollaCurrentAccountEntityFront } from '@helper/polla/types/game.type';
+import { AccountPeriodView, periodLabel } from '@/lib/accountPeriod';
 import { PdfDoc, addFooterPageNumbers, getPDFDeps, lastTableY } from './pdf-shared';
 
 /** Jugada ganadora del día de un pasador, tal como va en la liquidación. */
@@ -16,11 +16,12 @@ const amount = (n?: number | null) =>
 
 /**
  * Liquidación de cada pasador en una hoja, como `printLiquidationCashier` de
- * QuiniApp: datos de la cuenta del día y las jugadas que ganaron ese día. Sin
- * deje. Varias cuentas salen en un solo PDF, una por página.
+ * QuiniApp: lo acumulado en su período (desde el día siguiente a la última
+ * liquidación) y las jugadas que ganaron en ese período. Sin deje. Varias
+ * cuentas salen en un solo PDF, una por página.
  */
 export async function downloadLiquidationSlipsPDF(params: {
-  accounts: IPollaCurrentAccountEntityFront[];
+  accounts: AccountPeriodView[];
   winnersByCashier: Map<string, SlipWinner[]>;
 }) {
   const { jsPDF, autoTable } = await getPDFDeps();
@@ -38,14 +39,19 @@ export async function downloadLiquidationSlipsPDF(params: {
   params.accounts.forEach((account, index) => {
     if (index > 0) doc.addPage();
 
-    const dateStr = dayjs(account.date).format('D/M/YYYY');
+    const dateStr = periodLabel(account.period_from, account.date, 'D/M/YYYY');
 
     doc.setFontSize(11);
     doc.text(`Nro: ${account.user_number ?? ''}`, margin.left, 14);
     doc.text(`Nombre: ${account.user_name ?? ''}`, margin.left + usableW / 2, 14, {
       align: 'center',
     });
-    doc.text(`Fecha ${dateStr}`, margin.left + usableW, 14, { align: 'right' });
+    doc.text(
+      `${account.period_from === account.date ? 'Fecha' : 'Período'} ${dateStr}`,
+      margin.left + usableW,
+      14,
+      { align: 'right' }
+    );
     doc.line(margin.left, 18, margin.left + usableW, 18);
 
     autoTable(doc, {
