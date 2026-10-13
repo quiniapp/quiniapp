@@ -1,8 +1,6 @@
 import dayjs from 'dayjs';
-import {
-  IPollaCurrentAccountDailyTotals,
-  IPollaCurrentAccountEntityFront,
-} from '@helper/polla/types/game.type';
+import { IPollaCurrentAccountDailyTotals } from '@helper/polla/types/game.type';
+import { AccountPeriodView } from '@/lib/accountPeriod';
 import {
   ACCOUNT_MONEY_HEAD,
   PdfDoc,
@@ -33,12 +31,13 @@ const newDoc = async () => {
 };
 
 /**
- * Planilla de un día, una fila por pasador. Es "Exportar diario" y, con un
- * grupo, el resumen de un día de ese grupo.
+ * Planilla a una fecha, una fila por pasador con lo acumulado desde su última
+ * liquidación. Es "Exportar diario" y, con un grupo, el resumen de un día de
+ * ese grupo.
  */
 export async function downloadDailyAccountsPDF(params: {
   date: string;
-  rows: IPollaCurrentAccountEntityFront[];
+  rows: AccountPeriodView[];
   title?: string;
   groupName?: string;
 }) {
@@ -51,7 +50,7 @@ export async function downloadDailyAccountsPDF(params: {
   doc.setFontSize(14);
   doc.text(title, 14, 14);
   doc.setFontSize(10);
-  doc.text(`Fecha de la liquidación: ${dateStr}`, 14, 20);
+  doc.text(`Acumulado desde la última liquidación de cada pasador hasta el ${dateStr}`, 14, 20);
   if (params.groupName) doc.text(`Grupo: ${params.groupName}`, 14, 26);
   const startY = params.groupName ? 32 : 26;
   doc.setFontSize(BASE_FONT);
@@ -64,16 +63,17 @@ export async function downloadDailyAccountsPDF(params: {
     columnStyles: buildColumnStyles({
       available,
       minMoneyCol,
-      leadColumns: [16, 24],
+      leadColumns: [16, 14, 24],
       moneyColumns: ACCOUNT_MONEY_HEAD.length,
     }),
   });
 
   autoTable(doc, {
     ...options,
-    head: [['Número', 'Nombre', ...ACCOUNT_MONEY_HEAD]],
+    head: [['Número', 'Desde', 'Nombre', ...ACCOUNT_MONEY_HEAD]],
     body: params.rows.map((row) => [
       row.user_number ?? '',
+      dayjs(row.period_from).format('DD/MM'),
       row.user_name ?? '',
       ...accountMoneyCells(row),
     ]),
@@ -82,8 +82,8 @@ export async function downloadDailyAccountsPDF(params: {
 
   autoTable(doc, {
     ...options,
-    head: [['', '', ...ACCOUNT_MONEY_HEAD]],
-    body: [['Totales', '', ...accountMoneyCells(computeAccountTotals(params.rows))]],
+    head: [['', '', '', ...ACCOUNT_MONEY_HEAD]],
+    body: [['Totales', '', '', ...accountMoneyCells(computeAccountTotals(params.rows))]],
     startY: lastTableY(doc, startY) + 6,
   });
 

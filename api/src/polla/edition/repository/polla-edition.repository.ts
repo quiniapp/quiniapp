@@ -51,6 +51,23 @@ export class PollaEditionRepository {
     return buildPaginated(data ?? [], pagination, pagination.withCount ? (count ?? 0) : null);
   }
 
+  /** Fecha y hora de cierre de carga de varias ediciones (`can_delete` del pasador). */
+  async getLoadLimits(
+    editionIds: string[]
+  ): Promise<
+    Pick<IPollaEditionEntityBack, 'polla_edition_id' | 'load_limit_date' | 'load_limit_time'>[]
+  > {
+    if (editionIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('polla_editions')
+      .select('polla_edition_id, load_limit_date, load_limit_time')
+      .in('polla_edition_id', editionIds);
+
+    throwIfPollaError(error);
+    return data ?? [];
+  }
+
   async getById(editionId: string): Promise<IPollaEditionEntityBack> {
     const { data, error } = await supabase
       .from('polla_editions')

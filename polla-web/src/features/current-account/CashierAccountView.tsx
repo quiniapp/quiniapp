@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
+import { periodLabel, periodView } from '@/lib/accountPeriod';
 import { Label } from '@/components/ui/label';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
@@ -29,9 +30,9 @@ const FIELDS = [
 ] as const;
 
 /**
- * La liquidación del pasador para un día, como su vista en QuiniApp: los
- * montos del día, los tickets que cargó, las jugadas que ganaron y el botón
- * para imprimirla.
+ * La liquidación del pasador, como su vista en QuiniApp: lo acumulado desde el
+ * día siguiente a su última liquidación hasta la fecha elegida, los tickets que
+ * cargó, las jugadas que ganaron y el botón para imprimirla.
  */
 export const CashierAccountView = () => {
   const { user } = useAuth();
@@ -39,13 +40,15 @@ export const CashierAccountView = () => {
   const [printing, setPrinting] = useState(false);
 
   const { data, isFetching } = useCurrentAccountsOfDay({ date });
-  const account = data?.data[0];
+  const row = data?.data[0];
+  const account = row ? periodView(row) : undefined;
 
   const handlePrint = async () => {
     if (!account || !user) return;
     setPrinting(true);
     try {
       const winnersByCashier = await fetchWinnersByCashier({
+        accounts: [account],
         date,
         ownAsCashier: { cashierId: user.polla_user_id },
       });
@@ -62,7 +65,7 @@ export const CashierAccountView = () => {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        description="Tu liquidación del día: lo que pasaste, tus aciertos y comisión, y lo que cobraste o te pagaron."
+        description="Tu liquidación desde la última vez que te liquidaron: lo que pasaste, tus aciertos y comisión, y lo que cobraste o te pagaron."
         actions={
           <Button type="button" onClick={handlePrint} disabled={!account || printing}>
             <Printer />
@@ -91,7 +94,7 @@ export const CashierAccountView = () => {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="font-semibold">
                 {account.user_number ? `${account.user_number} · ` : ''}
-                {account.user_name} · {dayjs(account.date).format('DD/MM/YYYY')}
+                {account.user_name} · {periodLabel(account.period_from, account.date, 'DD/MM/YYYY')}
               </p>
               {account.is_liquidated ? (
                 <Badge variant="success">Liquidado</Badge>
@@ -112,7 +115,7 @@ export const CashierAccountView = () => {
             </p>
           </div>
 
-          <DayBetsTables date={account.date} />
+          <DayBetsTables from={account.period_from} to={account.date} />
         </>
       )}
     </div>

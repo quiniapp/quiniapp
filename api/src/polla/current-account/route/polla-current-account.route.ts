@@ -7,7 +7,7 @@ import {
 } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaCurrentAccountRepository } from '../repository/polla-current-account.repository';
-import { parsePagination } from '../../helper/pagination';
+import { buildPaginated, parsePagination } from '../../helper/pagination';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
@@ -53,22 +53,48 @@ export class PollaCurrentAccountRouter {
     }
 
     const pagination = parsePagination(req.query as Record<string, unknown>);
+    const date = queryString(req.query.date);
+
+    const filters = {
+      // El pasador solo ve su propia cuenta.
+      userId:
+        user.user_type === POLLA_USER_TYPE.CASHIER
+          ? user.polla_user_id
+          : queryString(req.query.polla_user_id),
+      userNumber: /^\d{1,9}$/.test(String(req.query.user_number ?? ''))
+        ? Number(req.query.user_number)
+        : null,
+      groupId: queryString(req.query.polla_group_id),
+    };
+
+    // Un día: cada fila trae además los montos acumulados de su período.
+    if (date) {
+      if (!ISO_DATE.test(date)) throw new BadRequestError('Fecha inválida (YYYY-MM-DD)');
+
+      const rows = await this.repository.getPeriodRows({
+        ...filters,
+        organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+        date,
+      });
+
+      res.status(200).json({
+        data: {
+          current_accounts: buildPaginated(
+            rows,
+            { ...pagination, page: 1, limit: rows.length },
+            rows.length
+          ),
+        },
+      });
+      return;
+    }
 
     const result = await this.repository.getAll(
       {
+        ...filters,
         organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
-        date: typeof req.query.date === 'string' ? req.query.date : undefined,
-        from: typeof req.query.from === 'string' ? req.query.from : undefined,
-        to: typeof req.query.to === 'string' ? req.query.to : undefined,
-        // El pasador solo ve su propia cuenta.
-        userId:
-          user.user_type === POLLA_USER_TYPE.CASHIER
-            ? user.polla_user_id
-            : ((req.query.polla_user_id as string) ?? null),
-        userNumber: /^\d{1,9}$/.test(String(req.query.user_number ?? ''))
-          ? Number(req.query.user_number)
-          : null,
-        groupId: (req.query.polla_group_id as string) ?? null,
+        from: queryString(req.query.from) ?? undefined,
+        to: queryString(req.query.to) ?? undefined,
       },
       pagination
     );
@@ -124,12 +150,18 @@ export class PollaCurrentAccountRouter {
     res.status(200).json({ data: { current_account: account } });
   });
 
+  /**
+   * "Actualizar" recalcula el período abierto (desde la última liquidación de
+   * cada pasador) hasta la fecha, no solo ese día: lo jugado en la semana se
+   * acumula. Liquidar además cierra el período de todos en esa fecha. La
+   * liquidación de Polla no tiene deje.
+   */
   private runCalculation = async (req: Request, liquidated: boolean) => {
     const { user } = getPollaSession(req);
     const date = req.query.date ?? req.body?.date;
 
-    if (typeof date !== 'string') {
-      throw new BadRequestError('Falta la fecha');
+    if (typeof date !== 'string' || !ISO_DATE.test(date)) {
+      throw new BadRequestError('Falta la fecha (YYYY-MM-DD)');
     }
 
     const organizationId = resolveOrganizationId(
@@ -137,14 +169,10 @@ export class PollaCurrentAccountRouter {
       req.query.polla_organization_id ?? req.body?.polla_organization_id
     );
 
-    // La liquidación de Polla no tiene deje: nunca se calcula recargo.
-    return this.repository.calculate({
-      organizationId,
-      date,
-      calculateLeave: false,
-      liquidated,
-      leaveInSubtotal: false,
-    });
+    await this.repository.recalculateOpenPeriod(organizationId, date);
+    if (liquidated) await this.repository.markDayLiquidated(organizationId, date);
+
+    return this.repository.getPeriodRows({ organizationId, date });
   };
 
   private calculateHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -166,6 +194,11 @@ export class PollaCurrentAccountRouter {
     }
 
     const { liquidate, ...props } = pollaCurrentAccountUpdateSchema.parse(req.body);
+
+    // Liquidar cierra el período: antes se trae al día con todo lo jugado.
+    if (liquidate) {
+      await this.repository.recalculateOpenPeriod(account.polla_organization_id, account.date);
+    }
 
     let updated = await this.repository.recompute({
       currentAccountId: req.params.id,

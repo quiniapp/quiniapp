@@ -43,6 +43,7 @@ import { deliverPdf } from '@/functions/printPdf';
 import { betNumberClass, hitTitle } from '@/lib/betNumbers';
 import { cn } from '@/lib/utils';
 import { EditBetDialog, EditableBet } from './EditBetDialog';
+import { ShareTicketsPdfButton } from './ShareTicketsPdfButton';
 
 const fmtDate = (value?: string | null) => (value ? dayjs(value).format('DD-MM-YYYY') : '-');
 const fmtMoney = (value: number) =>
@@ -147,6 +148,16 @@ export const BetsPage = () => {
   );
 
   const { data: winners } = useWinners(editionId || null);
+
+  // Lo que dice el PDF sobre los filtros con que se armó.
+  const selectedCashier = canManage
+    ? cashiers?.data.find((cashier) => cashier.polla_user_id === cashierId)
+    : undefined;
+  let pdfScope = mine ? 'Mis jugadas' : 'Todas las jugadas';
+  if (selectedCashier) {
+    pdfScope = `Pasador ${selectedCashier.number ? `${selectedCashier.number} · ` : ''}${selectedCashier.name}`;
+  }
+  const pdfFiltersLabel = `${pdfScope} · ${sort === 'recent' ? 'más recientes primero' : 'por aciertos'}`;
   const { mutate: deleteBet } = useDeleteBet();
 
   const handlePrint = async (row: IPollaBetListItem) => {
@@ -193,7 +204,8 @@ export const BetsPage = () => {
     const isPublic = isPublicPollaBet(row);
     const canPrint = canManage || (isCashier && isPublic && row.is_mine);
     const canEdit = canManage && !row.winner;
-    // El pasador borra lo que no le pagaron en el día (la API decide `can_delete`).
+    // El pasador borra lo que no le pagaron, hasta el cierre de carga y si no se
+    // liquidó su cuenta desde ese día (la API decide `can_delete`).
     const canDelete = !row.winner && (canManage || (isCashier && isPublic && row.can_delete));
 
     if (!canPrint && !canEdit && !canDelete) return null;
@@ -386,6 +398,22 @@ export const BetsPage = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {/* El jugador no imprime: tampoco comparte el PDF de tickets. */}
+        {hasActions && selectedEdition && !searching && (
+          <ShareTicketsPdfButton
+            className="sm:ml-auto"
+            edition={selectedEdition}
+            lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
+            scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
+            filters={{
+              cashier_polla_user_id: canManage ? cashierId || undefined : undefined,
+              mine,
+              sort,
+            }}
+            filtersLabel={pdfFiltersLabel}
+          />
+        )}
       </div>
 
       {rows.length === 0 ? (

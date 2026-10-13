@@ -3,6 +3,8 @@ import { NotFoundError } from '@helper/errors';
 import {
   IPollaCurrentAccountDailyTotals,
   IPollaCurrentAccountEntityBack,
+  IPollaCurrentAccountPeriod,
+  IPollaCurrentAccountPeriodRow,
 } from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
@@ -46,6 +48,77 @@ export class PollaCurrentAccountRepository {
     return buildPaginated(data ?? [], pagination, pagination.withCount ? (count ?? 0) : null);
   }
 
+  /**
+   * Filas de un día con los montos acumulados de su período (desde el día
+   * siguiente a la última liquidación de cada pasador).
+   */
+  async getPeriodRows(filters: {
+    organizationId: string;
+    date: string;
+    userId?: string | null;
+    userNumber?: number | null;
+    groupId?: string | null;
+  }): Promise<IPollaCurrentAccountPeriodRow[]> {
+    const { data, error } = await supabase.rpc('polla_current_account_period_rows', {
+      p_organization_id: filters.organizationId,
+      p_date: filters.date,
+      p_group_id: filters.groupId ?? null,
+      p_user_id: filters.userId ?? null,
+      p_user_number: filters.userNumber ?? null,
+    });
+
+    throwIfPollaError(error);
+
+    return ((data ?? []) as IPollaCurrentAccountPeriodRow[]).map((row) => ({
+      ...row,
+      period: Object.fromEntries(
+        Object.entries(row.period).map(([key, value]) => [
+          key,
+          key === 'from' ? value : Number(value),
+        ])
+      ) as unknown as IPollaCurrentAccountPeriod,
+    }));
+  }
+
+  /**
+   * "Actualizar": recalcula los días del período abierto más viejo de la
+   * organización hasta `date` y vuelve a encadenar los saldos.
+   */
+  async recalculateOpenPeriod(organizationId: string, date: string) {
+    const { error } = await supabase.rpc('polla_recalculate_open_period', {
+      p_organization_id: organizationId,
+      p_date: date,
+    });
+
+    throwIfPollaError(error);
+  }
+
+  /** Liquida el día de todos los pasadores de la organización (cierra sus períodos). */
+  async markDayLiquidated(organizationId: string, date: string) {
+    const { error } = await supabase
+      .from('polla_current_accounts')
+      .update({ is_liquidated: true, edited_at: new Date().toISOString() })
+      .eq('polla_organization_id', organizationId)
+      .eq('date', date);
+
+    throwIfPollaError(error);
+  }
+
+  /** Último día en que se liquidó la cuenta de un pasador (o `null`). */
+  async getLastLiquidatedDate(userId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('polla_current_accounts')
+      .select('date')
+      .eq('polla_user_id', userId)
+      .eq('is_liquidated', true)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    return data?.date ?? null;
+  }
+
   async getById(currentAccountId: string): Promise<IPollaCurrentAccountEntityBack> {
     const { data, error } = await supabase
       .from('polla_current_accounts')
@@ -56,25 +129,6 @@ export class PollaCurrentAccountRepository {
     throwIfPollaError(error);
     if (!data) throw new NotFoundError('Cuenta corriente');
     return data as IPollaCurrentAccountEntityBack;
-  }
-
-  async calculate(params: {
-    organizationId: string;
-    date: string;
-    calculateLeave: boolean;
-    liquidated: boolean;
-    leaveInSubtotal: boolean;
-  }) {
-    const { data, error } = await supabase.rpc('polla_calculate_current_account', {
-      p_date_text: toSqlDateText(params.date),
-      p_calculate_leave: params.calculateLeave,
-      p_liquidated: params.liquidated,
-      p_organization_id: params.organizationId,
-      p_leave_in_subtotal: params.leaveInSubtotal,
-    });
-
-    throwIfPollaError(error);
-    return (data ?? []) as IPollaCurrentAccountEntityBack[];
   }
 
   async recompute(params: {

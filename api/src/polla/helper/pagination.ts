@@ -10,14 +10,18 @@ export interface PollaPagination {
   withCount: boolean;
 }
 
-export const parsePagination = (query: Record<string, unknown>): PollaPagination => {
+/** `maxLimit`: tope de filas por página (el PDF de tickets pide más que el listado). */
+export const parsePagination = (
+  query: Record<string, unknown>,
+  maxLimit: number = POLLA_MAX_PAGE_SIZE
+): PollaPagination => {
   const rawPage = Number(query.page);
   const rawLimit = Number(query.limit);
 
   const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
   const limit =
     Number.isFinite(rawLimit) && rawLimit > 0
-      ? Math.min(Math.floor(rawLimit), POLLA_MAX_PAGE_SIZE)
+      ? Math.min(Math.floor(rawLimit), maxLimit)
       : POLLA_DEFAULT_PAGE_SIZE;
 
   const from = (page - 1) * limit;

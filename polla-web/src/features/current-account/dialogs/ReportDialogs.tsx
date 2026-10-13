@@ -23,6 +23,7 @@ import {
   printSubtotalsDayTicket,
   printSubtotalsRangeTicket,
 } from '@/functions/current-account/totalsTicket';
+import { periodView } from '@/lib/accountPeriod';
 import {
   fetchAccountsOfDay,
   fetchDailyTotals,
@@ -39,7 +40,7 @@ const COPY: Record<ReportKind, { title: string; description: string; action: str
   collections: {
     title: 'Exportar cobros y pagos',
     description:
-      'Ticket con lo que cobraste y pagaste a cada pasador y los gastos del día, o el balance de un período.',
+      'Ticket con lo que cobraste y pagaste a cada pasador y los gastos del día, o el balance de un período, menos el % del pozo.',
     action: 'Generar ticket',
   },
   summary: {
@@ -51,7 +52,7 @@ const COPY: Record<ReportKind, { title: string; description: string; action: str
   subtotals: {
     title: 'Exportar subtotales',
     description:
-      'Ticket con el subtotal de cada pasador del día, o de cada día del período, menos el % del pozo y con el % del capitalista.',
+      'Ticket con el subtotal acumulado de cada pasador a la fecha, o de cada día del período, menos el % del pozo y con el % del capitalista.',
     action: 'Generar ticket',
   },
 };
@@ -84,7 +85,7 @@ export const ReportDialog = ({
   const [to, setTo] = useState(initialDate);
   const [groupId, setGroupId] = useState(initialGroupId || ALL_GROUPS);
   const [percentage, setPercentage] = useState('50');
-  /** % del pozo que se descuenta del total antes de calcular el del capitalista. */
+  /** % del pozo que se descuenta del saldo antes de calcular el del capitalista. */
   const [poolPercentage, setPoolPercentage] = useState('0');
   const [printing, setPrinting] = useState(false);
 
@@ -93,7 +94,7 @@ export const ReportDialog = ({
   const copy = COPY[kind];
   const hasExpenses = kind !== 'summary' && mode === 'day';
   const hasPercentage = kind !== 'summary' && (mode === 'range' || kind === 'subtotals');
-  const hasPoolPercentage = kind === 'subtotals';
+  const hasPoolPercentage = kind !== 'summary';
 
   const base = {
     polla_group_id: effectiveGroupId,
@@ -120,7 +121,7 @@ export const ReportDialog = ({
         if (kind === 'summary') {
           await downloadDailyAccountsPDF({
             date,
-            rows,
+            rows: rows.map(periodView),
             title: 'Resumen Cuenta Corriente',
             groupName,
           });
@@ -129,11 +130,19 @@ export const ReportDialog = ({
             nombre: e.name,
             monto: Number(e.amount),
           }));
+          // Cobros y pagos es la caja del día; subtotales, lo acumulado del período.
           if (kind === 'collections') {
-            await printDailyTotalsTicket({ data: rows, date, orgName, groupName, expenses });
+            await printDailyTotalsTicket({
+              data: rows,
+              date,
+              orgName,
+              groupName,
+              expenses,
+              poolPercentage: Number(poolPercentage) || 0,
+            });
           } else {
             await printSubtotalsDayTicket({
-              data: rows,
+              data: rows.map(periodView),
               date,
               orgName,
               groupName,
@@ -158,6 +167,7 @@ export const ReportDialog = ({
             date_from: from,
             date_to: to,
             percentage: Number(percentage) || 0,
+            poolPercentage: Number(poolPercentage) || 0,
             orgName,
             groupName,
           });
@@ -214,7 +224,9 @@ export const ReportDialog = ({
                 onChange={(e) => setPoolPercentage(e.target.value.replace(/[^\d.]/g, ''))}
               />
               <p className="text-xs text-muted-foreground">
-                Se descuenta del total antes de calcular el del capitalista.
+                {hasPercentage
+                  ? 'Se descuenta antes de calcular el del capitalista.'
+                  : 'Se descuenta del saldo del día.'}
               </p>
             </div>
           )}

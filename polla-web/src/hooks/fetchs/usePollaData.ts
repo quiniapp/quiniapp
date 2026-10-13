@@ -4,6 +4,7 @@ import {
   IPollaBetToRepeat,
   IPollaCurrentAccountDailyTotals,
   IPollaCurrentAccountEntityFront,
+  IPollaCurrentAccountPeriodRow,
   IPollaDailySales,
   IPollaEditionEntityFront,
   IPollaOrgExpenseEntityFront,
@@ -175,9 +176,12 @@ export const useCurrentAccounts = (params: QueryParams = {}, enabled = true) =>
     { enabled, limit: 50 }
   );
 
-/** Todas las filas de un día: la tabla de liquidación no se pagina. */
+/**
+ * Todas las filas de un día (la tabla de liquidación no se pagina), cada una
+ * con lo acumulado en el período de su pasador.
+ */
 export const useCurrentAccountsOfDay = (params: QueryParams = {}, enabled = true) =>
-  useApiQuery<PollaPage<IPollaCurrentAccountEntityFront>>(
+  useApiQuery<PollaPage<IPollaCurrentAccountPeriodRow>>(
     ['polla-current-accounts', 'day'],
     BACKEND_ROUTES.currentAccount.base,
     { limit: 200, ...params },
