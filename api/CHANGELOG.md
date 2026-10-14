@@ -4,6 +4,13 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-14 (Polla: buscador de usuarios por número)
+
+- **`GET /user/search`**: ordena por número (`number` ascendente, sin número al final). Si un pasador y un jugador comparten número, el pasador va primero.
+  - Antes salían todos los pasadores y después los jugadores. El desplegable de la web se lee como una lista por número.
+- **`GET /user?search=`** (listado de Usuarios): solo dígitos busca el número exacto. Otro texto sigue buscando con `ilike` en nombre, apellido y usuario.
+- **`helper/search.ts`**: `searchNumber` decide cuándo lo escrito es un número. Lo usan `PollaUserRepository.getAll` y `search`.
+
 ### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
 
 #### Número de usuario único por tipo

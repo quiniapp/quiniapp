@@ -8,7 +8,7 @@ import {
 } from '@helper/polla/types/user.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
-import { ilikeAny } from '../../helper/search';
+import { ilikeAny, searchNumber } from '../../helper/search';
 
 /** Nunca se devuelven hacia afuera las columnas sensibles de auth. */
 const PUBLIC_COLUMNS =
@@ -40,11 +40,13 @@ export class PollaUserRepository {
     if (filters.groupId) {
       query = query.eq('polla_group_id', filters.groupId);
     }
-    const searchFilter = filters.search
-      ? ilikeAny(['name', 'last_name', 'username'], filters.search)
-      : null;
-    if (searchFilter) {
-      query = query.or(searchFilter);
+    // Solo dígitos busca el número exacto; otro texto, en nombre, apellido y usuario.
+    const searchedNumber = filters.search ? searchNumber(filters.search) : null;
+    if (searchedNumber !== null) {
+      query = query.eq('number', searchedNumber);
+    } else if (filters.search) {
+      const searchFilter = ilikeAny(['name', 'last_name', 'username'], filters.search);
+      if (searchFilter) query = query.or(searchFilter);
     }
     if (!filters.includeDisabled) {
       query = query.eq('disabled', false);
@@ -190,7 +192,8 @@ export class PollaUserRepository {
   /**
    * Buscador de pasadores y jugadores para elegir uno de una lista. Solo
    * dígitos busca el número exacto; cualquier otro texto, en nombre, apellido
-   * y usuario; vacío trae todos. Pasadores primero, después por número.
+   * y usuario; vacío trae todos. Ordenado por número; si un pasador y un
+   * jugador lo comparten, el pasador primero.
    */
   async search(
     params: { organizationId: string; userTypes: POLLA_USER_TYPE[]; q: string },
@@ -210,17 +213,17 @@ export class PollaUserRepository {
       .eq('disabled', false)
       .is('deleted_at', null);
 
-    const q = params.q.trim();
-    if (/^\d{1,9}$/.test(q)) {
-      query = query.eq('number', Number(q));
+    const searchedNumber = searchNumber(params.q);
+    if (searchedNumber !== null) {
+      query = query.eq('number', searchedNumber);
     } else {
-      const searchFilter = ilikeAny(['name', 'last_name', 'username'], q);
+      const searchFilter = ilikeAny(['name', 'last_name', 'username'], params.q);
       if (searchFilter) query = query.or(searchFilter);
     }
 
     const { data, error, count } = await query
-      .order('user_type', { ascending: true })
       .order('number', { ascending: true, nullsFirst: false })
+      .order('user_type', { ascending: true })
       .order('name', { ascending: true })
       .range(pagination.from, pagination.to);
 
