@@ -8,10 +8,11 @@ import {
   POLLA_USER_HIERARCHY,
   POLLA_USER_TYPE_LABEL,
   IPollaUserEntityFront,
+  IPollaUserOption,
   canResetPollaPassword,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useUserOptions, useUsers } from '@/hooks/fetchs/usePollaData';
+import { useUsers } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
   useCreateUser,
@@ -20,6 +21,7 @@ import {
 } from '@/hooks/mutations/usePollaMutations';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { flattenPages } from '@/hooks/useApi';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,8 +62,6 @@ const emptyForm = {
   number: '',
   fee: '',
   polla_group_id: '',
-  /** Pasador del jugador, cuando lo crea un superior (el pasador no lo elige). */
-  parent_polla_user_id: '',
 };
 
 /** Pasadores y jugadores se buscan por número para cargarles jugadas. */
@@ -73,6 +73,8 @@ export const UsersPage = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  /** Pasador elegido en el buscador para el jugador nuevo (superiores). */
+  const [parentCashier, setParentCashier] = useState<IPollaUserOption | null>(null);
   const [editing, setEditing] = useState<IPollaUserEntityFront | null>(null);
   const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
 
@@ -89,10 +91,6 @@ export const UsersPage = () => {
 
   const { rows, totalCount } = flattenPages(data?.pages);
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
-  const { data: cashiers } = useUserOptions(
-    { user_type: POLLA_USER_TYPE.CASHIER, limit: 200 },
-    picksCashier
-  );
 
   const { mutate: createUser, isPending } = useCreateUser();
   const { mutate: deleteUser } = useDeleteUser();
@@ -118,7 +116,10 @@ export const UsersPage = () => {
   const creatableTypes = role ? POLLA_CREATABLE_TYPES[role] : [];
 
   const openCreate = (next: boolean) => {
-    if (next) setForm({ ...emptyForm, user_type: creatableTypes[0] ?? '' });
+    if (next) {
+      setForm({ ...emptyForm, user_type: creatableTypes[0] ?? '' });
+      setParentCashier(null);
+    }
     setOpen(next);
   };
 
@@ -140,11 +141,11 @@ export const UsersPage = () => {
     };
 
     if (form.user_type === POLLA_USER_TYPE.PLAYER && !isCashier) {
-      if (!form.parent_polla_user_id) {
+      if (!parentCashier) {
         toast.error('Elegí el pasador del jugador');
         return;
       }
-      payload.parent_polla_user_id = form.parent_polla_user_id;
+      payload.parent_polla_user_id = parentCashier.polla_user_id;
     }
 
     if (form.user_type === POLLA_USER_TYPE.CASHIER) {
@@ -279,25 +280,15 @@ export const UsersPage = () => {
                   </div>
 
                   {picksCashier && (
-                    <div className="flex flex-col gap-1">
-                      <Label>Pasador</Label>
-                      <Select
-                        value={form.parent_polla_user_id}
-                        onValueChange={(v) => setForm({ ...form, parent_polla_user_id: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Elegí el pasador" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cashiers?.data.map((cashier) => (
-                            <SelectItem key={cashier.polla_user_id} value={cashier.polla_user_id}>
-                              {cashier.number ? `${cashier.number} · ` : ''}
-                              {cashier.name} {cashier.last_name ?? ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <UserSearchPicker
+                      id="new-user-cashier"
+                      label="Pasador"
+                      userTypes={[POLLA_USER_TYPE.CASHIER]}
+                      value={parentCashier}
+                      onChange={setParentCashier}
+                      placeholder="Número o nombre del pasador"
+                      emptyHint="Elegí el pasador del jugador"
+                    />
                   )}
 
                   {form.user_type === POLLA_USER_TYPE.CASHIER && (

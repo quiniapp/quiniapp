@@ -1,12 +1,14 @@
 import { supabase } from '@database/db.connection';
-import { NotFoundError } from '@helper/errors';
+import { ConflictError, NotFoundError } from '@helper/errors';
 import {
   IPollaUserByNumber,
   IPollaUserEntityBack,
+  IPollaUserOption,
   POLLA_USER_TYPE,
 } from '@helper/polla/types/user.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
+import { ilikeAny } from '../../helper/search';
 
 /** Nunca se devuelven hacia afuera las columnas sensibles de auth. */
 const PUBLIC_COLUMNS =
@@ -38,8 +40,11 @@ export class PollaUserRepository {
     if (filters.groupId) {
       query = query.eq('polla_group_id', filters.groupId);
     }
-    if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,username.ilike.%${filters.search}%`);
+    const searchFilter = filters.search
+      ? ilikeAny(['name', 'last_name', 'username'], filters.search)
+      : null;
+    if (searchFilter) {
+      query = query.or(searchFilter);
     }
     if (!filters.includeDisabled) {
       query = query.eq('disabled', false);
@@ -65,6 +70,29 @@ export class PollaUserRepository {
     throwIfPollaError(error);
     if (!data) throw new NotFoundError('Usuario de Polla');
     return data as unknown as IPollaUserEntityBack;
+  }
+
+  /** Si otro usuario activo del mismo tipo ya usa ese número en la organización. */
+  async isNumberTaken(params: {
+    organizationId: string;
+    userType: POLLA_USER_TYPE;
+    number: number;
+    excludeId?: string;
+  }) {
+    let query = supabase
+      .from('polla_users')
+      .select('polla_user_id', { count: 'exact', head: true })
+      .eq('polla_organization_id', params.organizationId)
+      .eq('user_type', params.userType)
+      .eq('number', params.number)
+      .is('deleted_at', null);
+
+    if (params.excludeId) query = query.neq('polla_user_id', params.excludeId);
+
+    const { count, error } = await query;
+
+    throwIfPollaError(error);
+    return (count ?? 0) > 0;
   }
 
   async create(payload: Record<string, unknown>) {
@@ -127,12 +155,16 @@ export class PollaUserRepository {
 
     if (params.parentId) query = query.eq('parent_polla_user_id', params.parentId);
 
-    const { data, error } = await query.maybeSingle();
+    // El número es único por tipo: un pasador y un jugador pueden compartirlo.
+    const { data, error } = await query.limit(2);
 
     throwIfPollaError(error);
-    if (!data) throw new NotFoundError('Pasador o jugador con ese número');
+    if (!data?.length) throw new NotFoundError('Pasador o jugador con ese número');
+    if (data.length > 1) {
+      throw new ConflictError('Hay un pasador y un jugador con ese número: buscalo por nombre');
+    }
 
-    const user = data as {
+    const user = data[0] as {
       polla_user_id: string;
       name: string;
       last_name: string | null;
@@ -153,6 +185,64 @@ export class PollaUserRepository {
       user_type: user.user_type,
       cashier_name: cashierName,
     };
+  }
+
+  /**
+   * Buscador de pasadores y jugadores para elegir uno de una lista. Solo
+   * dígitos busca el número exacto; cualquier otro texto, en nombre, apellido
+   * y usuario; vacío trae todos. Pasadores primero, después por número.
+   */
+  async search(
+    params: { organizationId: string; userTypes: POLLA_USER_TYPE[]; q: string },
+    pagination: PollaPagination
+  ) {
+    let query = supabase
+      .from('polla_users')
+      // Embebido por columna: así es el pasador del jugador (muchos a uno). Con
+      // `polla_users!parent_polla_user_id` PostgREST trae los jugadores del
+      // pasador.
+      .select(
+        'polla_user_id, name, last_name, username, number, user_type, parent:parent_polla_user_id(name, number)',
+        pagination.withCount ? { count: 'exact' } : {}
+      )
+      .eq('polla_organization_id', params.organizationId)
+      .in('user_type', params.userTypes)
+      .eq('disabled', false)
+      .is('deleted_at', null);
+
+    const q = params.q.trim();
+    if (/^\d{1,9}$/.test(q)) {
+      query = query.eq('number', Number(q));
+    } else {
+      const searchFilter = ilikeAny(['name', 'last_name', 'username'], q);
+      if (searchFilter) query = query.or(searchFilter);
+    }
+
+    const { data, error, count } = await query
+      .order('user_type', { ascending: true })
+      .order('number', { ascending: true, nullsFirst: false })
+      .order('name', { ascending: true })
+      .range(pagination.from, pagination.to);
+
+    throwIfPollaError(error);
+
+    const rows = (data ?? []) as unknown as {
+      polla_user_id: string;
+      name: string;
+      last_name: string | null;
+      username: string | null;
+      number: number;
+      user_type: POLLA_USER_TYPE;
+      parent: { name: string; number: number | null } | null;
+    }[];
+
+    const options: IPollaUserOption[] = rows.map(({ parent, ...user }) => ({
+      ...user,
+      cashier_name: parent ? parent.name : user.name,
+      cashier_number: parent ? parent.number : user.number,
+    }));
+
+    return buildPaginated(options, pagination, pagination.withCount ? (count ?? 0) : null);
   }
 
   /** Capitalista de cada organización pedida (para el listado del OWNER). */

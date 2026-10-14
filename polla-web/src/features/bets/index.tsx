@@ -9,9 +9,9 @@ import {
   POLLA_NUMBERS_REQUIRED,
   isPublicPollaBet,
 } from '@helper/polla/types/game.type';
-import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import { IPollaUserOption, POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useBets, useEditions, useUserOptions, useWinners } from '@/hooks/fetchs/usePollaData';
+import { useBets, useEditions, useUser, useWinners } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -19,6 +19,8 @@ import { flattenPages } from '@/hooks/useApi';
 import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
+import { cashierOption } from '@/lib/pollaUsers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,10 +89,19 @@ export const BetsPage = () => {
   const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
-  const { data: cashiers } = useUserOptions(
-    { user_type: POLLA_USER_TYPE.CASHIER, limit: 200 },
-    canManage
+
+  // El pasador elegido en el buscador ya trae su nombre; si el filtro vino en
+  // la URL (recarga, link), se trae por id para mostrarlo.
+  const [pickedCashier, setPickedCashier] = useState<IPollaUserOption | null>(null);
+  const pickedMatches = Boolean(cashierId) && pickedCashier?.polla_user_id === cashierId;
+  const { data: cashierFromUrl } = useUser(
+    canManage && cashierId && !pickedMatches ? cashierId : null
   );
+  const selectedCashier = useMemo(() => {
+    if (!canManage || !cashierId) return null;
+    if (pickedMatches) return pickedCashier;
+    return cashierFromUrl?.polla_user_id === cashierId ? cashierOption(cashierFromUrl) : null;
+  }, [canManage, cashierId, pickedMatches, pickedCashier, cashierFromUrl]);
 
   const lotteryById = useMemo(
     () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
@@ -150,9 +161,6 @@ export const BetsPage = () => {
   const { data: winners } = useWinners(editionId || null);
 
   // Lo que dice el PDF sobre los filtros con que se armó.
-  const selectedCashier = canManage
-    ? cashiers?.data.find((cashier) => cashier.polla_user_id === cashierId)
-    : undefined;
   let pdfScope = mine ? 'Mis jugadas' : 'Todas las jugadas';
   if (selectedCashier) {
     pdfScope = `Pasador ${selectedCashier.number ? `${selectedCashier.number} · ` : ''}${selectedCashier.name}`;
@@ -316,28 +324,19 @@ export const BetsPage = () => {
         </div>
 
         {canManage && (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label>Pasador</Label>
-            <Select
-              value={cashierId || 'all'}
-              onValueChange={(value) =>
-                updateParam('cashier_polla_user_id', value === 'all' ? '' : value)
-              }
-            >
-              <SelectTrigger className="w-full sm:w-[220px]">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {cashiers?.data.map((cashier) => (
-                  <SelectItem key={cashier.polla_user_id} value={cashier.polla_user_id}>
-                    {cashier.number ? `${cashier.number} · ` : ''}
-                    {cashier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <UserSearchPicker
+            id="bets-cashier"
+            label="Pasador"
+            userTypes={[POLLA_USER_TYPE.CASHIER]}
+            value={selectedCashier}
+            onChange={(cashier) => {
+              setPickedCashier(cashier);
+              updateParam('cashier_polla_user_id', cashier?.polla_user_id ?? '');
+            }}
+            placeholder="Todos: número o nombre"
+            clearLabel="Todos"
+            className="sm:w-[260px]"
+          />
         )}
 
         {canFilterMine && (

@@ -1,4 +1,8 @@
-import { IPollaUserByNumber, IPollaUserEntityFront } from '@helper/polla/types/user.type';
+import {
+  IPollaUserEntityFront,
+  IPollaUserOption,
+  POLLA_USER_TYPE,
+} from '@helper/polla/types/user.type';
 import {
   IPollaBetListItem,
   IPollaBetToRepeat,
@@ -28,15 +32,6 @@ export const useUsers = (params: QueryParams = {}, enabled = true) =>
     limit: 50,
   });
 
-/** Versión no paginada para los combos (pasador, jugador destino). */
-export const useUserOptions = (params: QueryParams = {}, enabled = true) =>
-  useApiQuery<PollaPage<IPollaUserEntityFront>>(
-    ['polla-user-options'],
-    BACKEND_ROUTES.user.base,
-    { limit: 200, ...params },
-    { enabled }
-  );
-
 export const useUser = (id: string | null) =>
   useApiQuery<IPollaUserEntityFront>(
     ['polla-user', id],
@@ -46,15 +41,15 @@ export const useUser = (id: string | null) =>
   );
 
 /**
- * Pasador o jugador por número, para cargarle una jugada a su nombre. Un número
- * que no existe es un 404 esperable: sin reintentos ni datos viejos.
+ * Buscador de pasadores y jugadores (`UserSearchPicker`): número exacto si `q`
+ * son solo dígitos; si no, nombre, apellido y usuario. Vacío trae todos.
  */
-export const useUserByNumber = (number: string, organizationId?: string | null) =>
-  useApiQuery<IPollaUserByNumber>(
-    ['polla-user-by-number', number],
-    BACKEND_ROUTES.user.byNumber(number),
-    { polla_organization_id: organizationId },
-    { enabled: /^\d{1,9}$/.test(number), retry: false, placeholderData: undefined }
+export const useUserSearch = (q: string, userTypes: POLLA_USER_TYPE[], enabled = true) =>
+  useApiInfiniteQuery<IPollaUserOption>(
+    ['polla-user-search'],
+    BACKEND_ROUTES.user.search,
+    { q, user_type: userTypes.join(',') },
+    { enabled, limit: 30 }
   );
 
 // --------------------------------------------------------------- ediciones

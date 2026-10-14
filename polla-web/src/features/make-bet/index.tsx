@@ -3,16 +3,13 @@ import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Repeat2 } from 'lucide-react';
 import { IPollaEditionEntityFront, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
-import {
-  IPollaUserByNumber,
-  POLLA_USER_TYPE,
-  isPollaAdminRole,
-} from '@helper/polla/types/user.type';
+import { IPollaUserOption, POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useCreateBet } from '@/hooks/mutations/usePollaMutations';
 import { PollaNumberBoxes, PollaNumberBoxesHandle } from '@/components/PollaNumberBoxes';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { createEmptyPollaNumbers, pollaNumbersError } from '@/lib/pollaNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -27,7 +24,6 @@ import {
 import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
 import { RepeatBetDialog } from './RepeatBetDialog';
-import { TargetUserByNumber } from './TargetUserByNumber';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 /** `HH:mm:ss` de la base → `HH:mm`. */
@@ -44,8 +40,7 @@ export const MakeBetPage = () => {
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
 
   const [editionId, setEditionId] = useState('');
-  const [targetNumber, setTargetNumber] = useState('');
-  const [target, setTarget] = useState<IPollaUserByNumber | null>(null);
+  const [target, setTarget] = useState<IPollaUserOption | null>(null);
   const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
   const [repeatOpen, setRepeatOpen] = useState(false);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
@@ -88,7 +83,7 @@ export const MakeBetPage = () => {
     }
 
     if (canManage && !target) {
-      toast.error('Escribí el número del pasador o jugador');
+      toast.error('Elegí el pasador o jugador');
       return;
     }
 
@@ -167,12 +162,15 @@ export const MakeBetPage = () => {
           </div>
 
           {canManage && (
-            <TargetUserByNumber
-              value={targetNumber}
-              onChange={setTargetNumber}
-              onResolved={setTarget}
-              organizationId={organizationId}
-              emptyHint="Escribí el número del pasador o jugador"
+            <UserSearchPicker
+              id="target-user"
+              label="Cargar a nombre de"
+              userTypes={[POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER]}
+              value={target}
+              onChange={setTarget}
+              placeholder="Número o nombre del pasador o jugador"
+              emptyHint="Escribí el número o buscalo por nombre"
+              clearOnType
               onEnter={() => boxesRef.current?.focusFirst()}
             />
           )}

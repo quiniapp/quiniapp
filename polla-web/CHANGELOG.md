@@ -4,6 +4,23 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
+
+#### Buscador de pasadores y jugadores (`components/UserSearchPicker.tsx`)
+- **Cómo busca:** el mismo campo acepta número o nombre.
+  - Solo dígitos busca el número exacto. Si hay uno solo, lo elige solo y Enter sigue de largo, como antes.
+  - Con letras busca en nombre, apellido y usuario.
+  - Al enfocarlo vacío lista todos, para scrollear hasta encontrarlo (de a 30, con scroll infinito dentro del panel).
+- **Cómo se elige:** con clic o con ↑/↓ y Enter. Si un pasador y un jugador comparten número aparecen los dos.
+- **Debajo del campo** se ve el elegido ("Ana Gómez · jugador de 3 · Pedro"). Con `clearLabel` aparece una ✕ para volver a "Todos".
+- **Dónde se usa:**
+  - **Cargar jugada:** reemplaza a `TargetUserByNumber` ("Cargar a nombre de"). Escribir suelta al elegido, así no se carga a nombre del anterior.
+  - **Cuenta corriente:** reemplaza al input "Nº de pasador". Filtra por `polla_user_id`.
+  - **Jugadas:** reemplaza al desplegable "Pasador", que cortaba en 200. El filtro sigue en la URL y al recargar se trae el pasador por id.
+  - **Usuarios → Nuevo jugador:** reemplaza al desplegable "Pasador".
+- **`lib/pollaUsers.ts`** (nuevo): `describePollaUser`, `pollaUserTypeLine` y `cashierOption`.
+- **Hooks:** nuevo `useUserSearch`. Salen `useUserByNumber`, `useUserOptions`, `TargetUserByNumber.tsx` y la ruta `user.byNumber`. Crear, editar o borrar un usuario invalida también el buscador.
+
 ### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
 
 #### Cuenta corriente por período (liquidación semanal)

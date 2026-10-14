@@ -4,6 +4,25 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
+
+#### Número de usuario único por tipo
+- **Migración `20261013221747_polla_user_number_per_type.sql`**: `unique_polla_user_number_active` pasa a ser `(polla_organization_id, user_type, number)`.
+  - Un pasador y un jugador pueden compartir número; dos jugadores (o dos pasadores) de la misma organización, no.
+  - El índice conserva el nombre, así que `polla-errors.ts` lo sigue traduciendo. El mensaje de respaldo ahora dice "para ese tipo de usuario".
+  - No necesita backfill: los números ya eran únicos por organización.
+- **`polla-user.route.ts`**: alta y edición chequean el número antes de guardar (`PollaUserRepository.isNumberTaken`). Si está ocupado devuelven 409 "Ese número de jugador ya está en uso" (o "de pasador").
+- **`GET /user/by-number/:number`**: si el número lo comparten un pasador y un jugador devuelve 409 "buscalo por nombre", en vez de un 500. La web nueva usa el buscador; queda para la web vieja durante el deploy.
+
+#### Buscador de pasadores y jugadores
+- **`GET /user/search`** (ADMIN y superiores): `q` y `user_type` (separados por coma, solo `CASHIER`/`PLAYER`), paginado.
+  - Solo dígitos busca el número exacto; otro texto busca con `ilike` en nombre, apellido y usuario; vacío trae todos.
+  - Orden: pasadores primero, después por número.
+  - Cada fila trae `cashier_name`/`cashier_number`: el pasador del jugador, o el propio pasador.
+- **`PollaUserRepository.search`**: embebe al pasador por columna (`parent:parent_polla_user_id(...)`). Con `polla_users!parent_polla_user_id` PostgREST trae los jugadores del pasador.
+- **`helper/search.ts`** (nuevo): `ilikeTerm`/`ilikeAny` arman el patrón entre comillas dobles, así `,`, `(` o `)` escritos por el usuario no rompen el `.or()`.
+  - El `search` de `GET /user` lo usa también: deja de interpolar el texto crudo y suma el apellido.
+
 ### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
 
 #### Borrado de jugadas por el pasador
