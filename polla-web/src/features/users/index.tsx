@@ -13,6 +13,7 @@ import {
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useUsers } from '@/hooks/fetchs/usePollaData';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
   useCreateUser,
@@ -71,6 +72,9 @@ const needsNumber = (type: POLLA_USER_TYPE | '') =>
 export const UsersPage = () => {
   const { user, role, organizationId } = useAuth();
   const [typeFilter, setTypeFilter] = useState('');
+  /** Solo dígitos busca el número exacto; si no, nombre, apellido o usuario. */
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim());
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   /** Pasador elegido en el buscador para el jugador nuevo (superiores). */
@@ -84,6 +88,7 @@ export const UsersPage = () => {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useUsers({
     user_type: typeFilter || undefined,
+    search: debouncedSearch || undefined,
     polla_organization_id: organizationId ?? undefined,
     // Se listan también los deshabilitados para poder volver a habilitarlos.
     include_disabled: true,
@@ -176,6 +181,14 @@ export const UsersPage = () => {
         description={isCashier ? 'Tus jugadores' : 'Usuarios de la organización'}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value.slice(0, 50))}
+              placeholder="Buscar: número, nombre o usuario"
+              aria-label="Buscar usuarios por número, nombre o usuario"
+              className="w-full sm:w-[260px]"
+            />
             <Select
               value={typeFilter || 'all'}
               onValueChange={(v) => setTypeFilter(v === 'all' ? '' : v)}
@@ -342,7 +355,11 @@ export const UsersPage = () => {
       />
 
       {rows.length === 0 ? (
-        <EmptyState message="No hay usuarios para mostrar" />
+        <EmptyState
+          message={
+            debouncedSearch ? 'No hay usuarios que coincidan' : 'No hay usuarios para mostrar'
+          }
+        />
       ) : (
         <InfiniteList
           totalCount={totalCount}

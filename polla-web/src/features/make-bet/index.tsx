@@ -35,7 +35,7 @@ export const MakeBetPage = () => {
   const { role, organizationId } = useAuth();
 
   // Owner, capitalista, superadmin y admin no juegan a su nombre: siempre
-  // cargan para un pasador o un jugador. Pasador y jugador, solo a su nombre.
+  // cargan para un pasador. Pasador y jugador, solo a su nombre.
   const canManage = Boolean(role && isPollaAdminRole(role));
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
 
@@ -83,7 +83,7 @@ export const MakeBetPage = () => {
     }
 
     if (canManage && !target) {
-      toast.error('Elegí el pasador o jugador');
+      toast.error('Elegí el pasador');
       return;
     }
 
@@ -164,12 +164,12 @@ export const MakeBetPage = () => {
           {canManage && (
             <UserSearchPicker
               id="target-user"
-              label="Cargar a nombre de"
-              userTypes={[POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER]}
+              label="Cargar a nombre del pasador"
+              userTypes={[POLLA_USER_TYPE.CASHIER]}
               value={target}
               onChange={setTarget}
-              placeholder="Número o nombre del pasador o jugador"
-              emptyHint="Escribí el número o buscalo por nombre"
+              placeholder="Número o nombre del pasador"
+              emptyHint="Escribí el número o elegilo de la lista"
               clearOnType
               onEnter={() => boxesRef.current?.focusFirst()}
             />

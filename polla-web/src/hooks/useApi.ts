@@ -52,7 +52,11 @@ export const useApiInfiniteQuery = <T>(
   key: unknown[],
   url: string,
   params: QueryParams = {},
-  options?: { enabled?: boolean; limit?: number }
+  /**
+   * `keepPrevious`: al cambiar el filtro se sigue viendo la lista anterior hasta
+   * que llega la nueva (buscadores que se refinan mientras se escribe).
+   */
+  options?: { enabled?: boolean; limit?: number; keepPrevious?: boolean }
 ) => {
   const clean = cleanParams(params);
   const limit = options?.limit ?? 50;
@@ -65,6 +69,7 @@ export const useApiInfiniteQuery = <T>(
     getNextPageParam: (lastPage) =>
       lastPage.pagination.hasMore ? lastPage.pagination.currentPage + 1 : undefined,
     enabled: options?.enabled ?? true,
+    placeholderData: options?.keepPrevious ? keepPreviousData : undefined,
   });
 };
 

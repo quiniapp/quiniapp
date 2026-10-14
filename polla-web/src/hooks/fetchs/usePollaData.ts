@@ -30,6 +30,7 @@ export const useUsers = (params: QueryParams = {}, enabled = true) =>
   useApiInfiniteQuery<IPollaUserEntityFront>(['polla-users'], BACKEND_ROUTES.user.base, params, {
     enabled,
     limit: 50,
+    keepPrevious: true,
   });
 
 export const useUser = (id: string | null) =>
@@ -49,7 +50,7 @@ export const useUserSearch = (q: string, userTypes: POLLA_USER_TYPE[], enabled =
     ['polla-user-search'],
     BACKEND_ROUTES.user.search,
     { q, user_type: userTypes.join(',') },
-    { enabled, limit: 30 }
+    { enabled, limit: 30, keepPrevious: true }
   );
 
 // --------------------------------------------------------------- ediciones

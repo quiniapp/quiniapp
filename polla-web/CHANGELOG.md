@@ -4,6 +4,36 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-14 (Polla: desplegable de usuarios)
+
+#### `components/UserSearchPicker.tsx`
+- **Clic:** abre el desplegable aunque el input ya tenga el foco (por ejemplo, recién elegido alguien).
+- **Chevron:** el que aparece a la derecha abre y cierra la lista sin sacarle el foco al input.
+- **Orden:** la lista viene ordenada por número, por el cambio de `GET /user/search`.
+- **Refinar sin vaciar:** mientras se escribe se sigue viendo la lista anterior hasta que llega la refinada.
+  - `useApiInfiniteQuery` suma la opción `keepPrevious` (`placeholderData: keepPreviousData`).
+  - La usan `useUserSearch` y `useUsers`.
+- **Teclado:** con ↑/↓ la fila activa queda a la vista (`scrollIntoView`). Al llegar al final se carga la página siguiente.
+- **Sin coincidencias:** se avisa dentro del panel, que ya no se cierra.
+- **Prop nueva `typeFilter`:** muestra "Pasador | Jugador" junto al label y busca solo en el tipo elegido.
+  - Al cambiar de tipo se limpia el texto.
+  - La página suelta al elegido y limpia sus filtros.
+
+#### Cargar jugada
+- "Cargar a nombre del pasador" lista **solo pasadores**. La usan los roles superiores al pasador para cargar a nombre de uno.
+- La API sigue aceptando un jugador como destino.
+
+#### Jugadas
+- El filtro "Pasador" pasa a ser "Filtrar por" con **Pasador | Jugador**.
+  - **Pasador:** filtra con `cashier_polla_user_id`, que trae sus jugadas y las de sus jugadores.
+  - **Jugador:** filtra con `polla_user_id`, que trae solo las del jugador.
+- El filtro queda en la URL. Al recargar se trae al usuario por id y, si es un jugador, también a su pasador para mostrar "jugador de N · Pasador".
+- **"Compartir PDF":** usa el mismo filtro (`TicketsPdfFilters.polla_user_id`) y el encabezado dice "Jugador N · Nombre" o "Pasador N · Nombre".
+- **`lib/pollaUsers.ts`:** `cashierOption` pasa a ser `pollaUserOption(user, cashier?)`. Sin el pasador a mano, el texto dice solo "jugador".
+
+#### Usuarios
+- Buscador "número, nombre o usuario" al lado del filtro de tipo (`search` de `GET /user`, con debounce).
+
 ### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
 
 #### Buscador de pasadores y jugadores (`components/UserSearchPicker.tsx`)

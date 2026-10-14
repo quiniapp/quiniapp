@@ -19,3 +19,9 @@ export const ilikeAny = (columns: string[], raw: string): string | null => {
   const term = ilikeTerm(raw);
   return term ? columns.map((column) => `${column}.ilike.${term}`).join(',') : null;
 };
+
+/** Solo dígitos es un número de usuario: se busca exacto, no como texto. */
+export const searchNumber = (raw: string): number | null => {
+  const text = raw.trim();
+  return /^\d{1,9}$/.test(text) ? Number(text) : null;
+};

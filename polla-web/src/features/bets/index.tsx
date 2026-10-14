@@ -9,7 +9,12 @@ import {
   POLLA_NUMBERS_REQUIRED,
   isPublicPollaBet,
 } from '@helper/polla/types/game.type';
-import { IPollaUserOption, POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import {
+  IPollaUserOption,
+  POLLA_USER_TYPE,
+  POLLA_USER_TYPE_LABEL,
+  isPollaAdminRole,
+} from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useBets, useEditions, useUser, useWinners } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
@@ -20,7 +25,7 @@ import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
-import { cashierOption } from '@/lib/pollaUsers';
+import { pollaUserOption } from '@/lib/pollaUsers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +88,7 @@ export const BetsPage = () => {
   const debouncedTicket = useDebouncedValue(ticketSearch.trim());
   const editionId = searchParams.get('polla_edition_id') ?? '';
   const cashierId = searchParams.get('cashier_polla_user_id') ?? '';
+  const playerId = searchParams.get('polla_user_id') ?? '';
   const sort = searchParams.get('sort') === 'recent' ? 'recent' : 'hits';
   const mine = canFilterMine && searchParams.get('mine') !== '0';
 
@@ -90,18 +96,42 @@ export const BetsPage = () => {
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
 
-  // El pasador elegido en el buscador ya trae su nombre; si el filtro vino en
-  // la URL (recarga, link), se trae por id para mostrarlo.
-  const [pickedCashier, setPickedCashier] = useState<IPollaUserOption | null>(null);
-  const pickedMatches = Boolean(cashierId) && pickedCashier?.polla_user_id === cashierId;
-  const { data: cashierFromUrl } = useUser(
-    canManage && cashierId && !pickedMatches ? cashierId : null
+  // El admin filtra por pasador (sus jugadas y las de sus jugadores) o por
+  // jugador (solo las suyas). El tipo sale del filtro de la URL; sin filtro,
+  // del último elegido en "Pasador | Jugador".
+  const [pickedType, setPickedType] = useState(() =>
+    searchParams.get('polla_user_id') ? POLLA_USER_TYPE.PLAYER : POLLA_USER_TYPE.CASHIER
   );
-  const selectedCashier = useMemo(() => {
-    if (!canManage || !cashierId) return null;
-    if (pickedMatches) return pickedCashier;
-    return cashierFromUrl?.polla_user_id === cashierId ? cashierOption(cashierFromUrl) : null;
-  }, [canManage, cashierId, pickedMatches, pickedCashier, cashierFromUrl]);
+  const filterType = playerId
+    ? POLLA_USER_TYPE.PLAYER
+    : cashierId
+      ? POLLA_USER_TYPE.CASHIER
+      : pickedType;
+  const filterUserId = filterType === POLLA_USER_TYPE.PLAYER ? playerId : cashierId;
+  const filterParam =
+    filterType === POLLA_USER_TYPE.PLAYER ? 'polla_user_id' : 'cashier_polla_user_id';
+
+  // El elegido en el buscador ya trae su nombre; si el filtro vino en la URL
+  // (recarga, link), se trae por id (y, si es un jugador, también su pasador).
+  const [pickedUser, setPickedUser] = useState<IPollaUserOption | null>(null);
+  const pickedMatches = Boolean(filterUserId) && pickedUser?.polla_user_id === filterUserId;
+  const { data: userFromUrl } = useUser(
+    canManage && filterUserId && !pickedMatches ? filterUserId : null
+  );
+  const urlUser = userFromUrl?.polla_user_id === filterUserId ? userFromUrl : null;
+  const urlCashierId =
+    urlUser?.user_type === POLLA_USER_TYPE.PLAYER ? urlUser.parent_polla_user_id : null;
+  const { data: cashierOfUrlUser } = useUser(urlCashierId);
+  const selectedUser = useMemo(() => {
+    if (!canManage || !filterUserId) return null;
+    if (pickedMatches) return pickedUser;
+    if (!urlUser) return null;
+    const cashier = cashierOfUrlUser?.polla_user_id === urlCashierId ? cashierOfUrlUser : null;
+    return pollaUserOption(urlUser, cashier);
+  }, [canManage, filterUserId, pickedMatches, pickedUser, urlUser, urlCashierId, cashierOfUrlUser]);
+  // Filtro de usuario para la lista y el PDF.
+  const userFilter: Record<string, string> =
+    canManage && filterUserId ? { [filterParam]: filterUserId } : {};
 
   const lotteryById = useMemo(
     () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
@@ -139,6 +169,18 @@ export const BetsPage = () => {
     });
   };
 
+  /** "Pasador | Jugador": cambiar de tipo suelta al elegido y su filtro. */
+  const changeFilterType = (type: POLLA_USER_TYPE) => {
+    setPickedType(type);
+    setPickedUser(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('cashier_polla_user_id');
+      next.delete('polla_user_id');
+      return next;
+    });
+  };
+
   const searching = debouncedTicket.length > 0;
 
   const {
@@ -151,7 +193,7 @@ export const BetsPage = () => {
     {
       polla_edition_id: searching ? undefined : editionId || undefined,
       ticket_number: searching ? debouncedTicket : undefined,
-      cashier_polla_user_id: canManage && !searching ? cashierId || undefined : undefined,
+      ...(searching ? {} : userFilter),
       mine: mine ? 'true' : undefined,
       sort,
     },
@@ -162,8 +204,10 @@ export const BetsPage = () => {
 
   // Lo que dice el PDF sobre los filtros con que se armó.
   let pdfScope = mine ? 'Mis jugadas' : 'Todas las jugadas';
-  if (selectedCashier) {
-    pdfScope = `Pasador ${selectedCashier.number ? `${selectedCashier.number} · ` : ''}${selectedCashier.name}`;
+  if (selectedUser) {
+    pdfScope = `${POLLA_USER_TYPE_LABEL[selectedUser.user_type]} ${
+      selectedUser.number ? `${selectedUser.number} · ` : ''
+    }${selectedUser.name}`;
   }
   const pdfFiltersLabel = `${pdfScope} · ${sort === 'recent' ? 'más recientes primero' : 'por aciertos'}`;
   const { mutate: deleteBet } = useDeleteBet();
@@ -325,13 +369,15 @@ export const BetsPage = () => {
 
         {canManage && (
           <UserSearchPicker
-            id="bets-cashier"
-            label="Pasador"
-            userTypes={[POLLA_USER_TYPE.CASHIER]}
-            value={selectedCashier}
-            onChange={(cashier) => {
-              setPickedCashier(cashier);
-              updateParam('cashier_polla_user_id', cashier?.polla_user_id ?? '');
+            id="bets-user"
+            label="Filtrar por"
+            userTypes={[POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER]}
+            typeFilter={{ value: filterType, onChange: changeFilterType }}
+            value={selectedUser}
+            onChange={(picked) => {
+              setPickedType(filterType);
+              setPickedUser(picked);
+              updateParam(filterParam, picked?.polla_user_id ?? '');
             }}
             placeholder="Todos: número o nombre"
             clearLabel="Todos"
@@ -406,7 +452,7 @@ export const BetsPage = () => {
             lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
             scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
             filters={{
-              cashier_polla_user_id: canManage ? cashierId || undefined : undefined,
+              ...userFilter,
               mine,
               sort,
             }}

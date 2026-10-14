@@ -14,6 +14,8 @@ import { fetchOrganizationName } from '@/features/current-account/fetchers';
 
 export interface TicketsPdfFilters {
   cashier_polla_user_id?: string;
+  /** Las de un jugador (filtro "Jugador" de Jugadas). */
+  polla_user_id?: string;
   mine?: boolean;
   sort?: 'hits' | 'recent';
 }
@@ -47,6 +49,7 @@ const fetchAllTickets = async (
         cursor,
         sort: filters.sort ?? 'hits',
         cashier_polla_user_id: filters.cashier_polla_user_id,
+        polla_user_id: filters.polla_user_id,
         mine: filters.mine ? true : undefined,
       }),
     });
