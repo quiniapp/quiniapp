@@ -168,6 +168,16 @@ export interface IPollaUserByNumber {
   cashier_name: string;
 }
 
+/**
+ * Resultado del buscador de pasadores y jugadores (por número exacto o por
+ * nombre, apellido y usuario). `cashier_*` es el pasador del jugador; para un
+ * pasador, él mismo.
+ */
+export interface IPollaUserOption extends IPollaUserByNumber {
+  username: string | null;
+  cashier_number: number | null;
+}
+
 /** Usuario autenticado tal como lo devuelve /auth/validate. */
 export interface IPollaSessionUser {
   polla_user_id: string;

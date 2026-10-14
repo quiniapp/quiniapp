@@ -1,8 +1,9 @@
 import { Request, Response, Router } from 'express';
-import { BadRequestError, ForbiddenError } from '@helper/errors';
+import { BadRequestError, ConflictError, ForbiddenError } from '@helper/errors';
 import {
   POLLA_USER_TYPE,
   POLLA_USER_HIERARCHY,
+  POLLA_USER_TYPE_LABEL,
   IPollaSessionUser,
   canCreatePollaUser,
   canResetPollaPassword,
@@ -64,6 +65,7 @@ export class PollaUserRouter {
     );
 
     this.router.get('/', staffOnly, this.getAllHandler);
+    this.router.get('/search', adminAndUp, this.searchHandler);
     this.router.get('/by-number/:number', adminAndUp, this.getByNumberHandler);
     this.router.get('/:id', staffOnly, this.getByIdHandler);
     this.router.post('/', staffOnly, this.createHandler);
@@ -91,6 +93,27 @@ export class PollaUserRouter {
     return target;
   };
 
+  /**
+   * El número es único por tipo dentro de la organización: un pasador y un
+   * jugador pueden compartirlo, dos jugadores no. Se chequea antes para dar un
+   * mensaje claro; el índice único queda de respaldo.
+   */
+  private assertNumberFree = async (params: {
+    organizationId: string;
+    userType: POLLA_USER_TYPE;
+    number: number | null | undefined;
+    excludeId?: string;
+  }) => {
+    if (params.number === null || params.number === undefined) return;
+
+    const taken = await this.repository.isNumberTaken({ ...params, number: params.number });
+    if (taken) {
+      throw new ConflictError(
+        `Ese número de ${POLLA_USER_TYPE_LABEL[params.userType].toLowerCase()} ya está en uso`
+      );
+    }
+  };
+
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const pagination = parsePagination(req.query as Record<string, unknown>);
@@ -113,6 +136,39 @@ export class PollaUserRouter {
         groupId: (req.query.polla_group_id as string) ?? null,
         search: typeof req.query.search === 'string' ? req.query.search : undefined,
         includeDisabled: req.query.include_disabled === 'true',
+      },
+      pagination
+    );
+
+    res.status(200).json({ data: { users: result } });
+  });
+
+  /**
+   * Buscador para elegir un pasador o jugador de una lista (ADMIN+): `q` con
+   * solo dígitos es el número exacto; otro texto busca en nombre, apellido y
+   * usuario. `user_type` acota los tipos (separados por coma).
+   */
+  private searchHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const pagination = parsePagination(req.query as Record<string, unknown>);
+
+    const requested = typeof req.query.user_type === 'string' ? req.query.user_type.split(',') : [];
+    const searchable = visibleTypesFor(user.user_type).filter(
+      (t) => t === POLLA_USER_TYPE.CASHIER || t === POLLA_USER_TYPE.PLAYER
+    );
+    const userTypes = requested.length
+      ? searchable.filter((t) => requested.includes(t))
+      : searchable;
+
+    if (userTypes.length === 0) {
+      throw new BadRequestError('Tipo de usuario inválido');
+    }
+
+    const result = await this.repository.search(
+      {
+        organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+        userTypes,
+        q: typeof req.query.q === 'string' ? req.query.q : '',
       },
       pagination
     );
@@ -168,6 +224,12 @@ export class PollaUserRouter {
     const { password, polla_organization_id: _ignored, ...rest } = payload;
     void _ignored;
 
+    await this.assertNumberFree({
+      organizationId,
+      userType: payload.user_type,
+      number: payload.number,
+    });
+
     const created = await this.repository.create({
       ...rest,
       // La liquidación de Polla no tiene deje: el pasador no lleva recargo.
@@ -190,6 +252,15 @@ export class PollaUserRouter {
     // contraseña se cambia solo con el blanqueo de un superior.
     const { fee_plus: _feePlus, parent_polla_user_id: parentId, fee, ...rest } = payload;
     void _feePlus;
+
+    if (rest.number !== undefined && rest.number !== target.number) {
+      await this.assertNumberFree({
+        organizationId: target.polla_organization_id,
+        userType: target.user_type,
+        number: rest.number,
+        excludeId: target.polla_user_id,
+      });
+    }
 
     const changes: Record<string, unknown> = { ...rest };
 

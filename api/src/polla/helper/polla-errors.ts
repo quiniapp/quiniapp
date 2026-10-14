@@ -44,7 +44,8 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   no_overlapping_polla_editions: () =>
     new ConflictError('Ya hay una edición para esa quiniela y turno en ese rango de fechas'),
   unique_polla_username_active: () => new ConflictError('Ese nombre de usuario ya está en uso'),
-  unique_polla_user_number_active: () => new ConflictError('Ese número ya está en uso'),
+  unique_polla_user_number_active: () =>
+    new ConflictError('Ese número ya está en uso para ese tipo de usuario'),
   unique_polla_organization_name_active: () =>
     new ConflictError('Ya existe una organización con ese nombre'),
   unique_polla_group_name_active: () => new ConflictError('Ya existe un grupo con ese nombre'),

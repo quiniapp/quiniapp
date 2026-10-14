@@ -3,19 +3,18 @@ import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { BarChart2, CreditCard, FileDown, FileText, List, RefreshCw, Wallet } from 'lucide-react';
 import { IPollaCurrentAccountPeriodRow } from '@helper/polla/types/game.type';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { IPollaUserOption, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import { useCalculateCurrentAccounts } from '@/hooks/mutations/usePollaMutations';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
 import { periodLabel, periodView } from '@/lib/accountPeriod';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -76,18 +75,16 @@ const AdminAccountView = () => {
 
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [groupId, setGroupId] = useState('');
-  const [userNumber, setUserNumber] = useState('');
+  const [cashier, setCashier] = useState<IPollaUserOption | null>(null);
   const [liquidating, setLiquidating] = useState<IPollaCurrentAccountPeriodRow | null>(null);
   const [generating, setGenerating] = useState(false);
   const [report, setReport] = useState<ReportKind | null>(null);
   const [printing, setPrinting] = useState(false);
 
-  const number = useDebouncedValue(userNumber.trim());
-
   const filters = {
     date,
     polla_group_id: groupId || undefined,
-    user_number: number || undefined,
+    polla_user_id: cashier?.polla_user_id,
     polla_organization_id: organizationId ?? undefined,
   };
 
@@ -208,17 +205,16 @@ const AdminAccountView = () => {
           </Select>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-1">
-          <Label htmlFor="account-user-number">Nº de pasador</Label>
-          <Input
-            id="account-user-number"
-            inputMode="numeric"
-            placeholder="Todos"
-            className="w-full sm:w-[140px]"
-            value={userNumber}
-            onChange={(e) => setUserNumber(e.target.value.replace(/\D/g, ''))}
-          />
-        </div>
+        <UserSearchPicker
+          id="account-cashier"
+          label="Pasador"
+          userTypes={[POLLA_USER_TYPE.CASHIER]}
+          value={cashier}
+          onChange={setCashier}
+          placeholder="Todos: número o nombre"
+          clearLabel="Todos"
+          className="sm:w-[260px]"
+        />
       </div>
 
       <p className="mb-2 text-sm text-muted-foreground">

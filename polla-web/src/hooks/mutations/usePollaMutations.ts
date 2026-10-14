@@ -93,7 +93,7 @@ export const useDeleteSchedule = () =>
 
 export const useCreateUser = () =>
   useApiMutation('post', BACKEND_ROUTES.user.base, {
-    invalidate: ['polla-users'],
+    invalidate: ['polla-users', 'polla-user-search'],
     successMessage: 'Usuario creado',
   });
 
@@ -101,12 +101,15 @@ export const useUpdateUser = () =>
   useApiMutation<unknown, { id: string } & Record<string, unknown>>(
     'put',
     ({ id }) => BACKEND_ROUTES.user.id(id),
-    { invalidate: ['polla-users', 'polla-user'], successMessage: 'Usuario actualizado' }
+    {
+      invalidate: ['polla-users', 'polla-user', 'polla-user-search'],
+      successMessage: 'Usuario actualizado',
+    }
   );
 
 export const useDeleteUser = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.user.id(id), {
-    invalidate: ['polla-users'],
+    invalidate: ['polla-users', 'polla-user-search'],
     successMessage: 'Usuario eliminado',
   });
 

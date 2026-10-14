@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
+
+- **`polla/types/user.type.ts`**: `IPollaUserOption`, la fila del buscador de pasadores y jugadores (`IPollaUserByNumber` + `username` y `cashier_number`).
+
 ### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
 
 - **`polla/types/game.type.ts`**:
