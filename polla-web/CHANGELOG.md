@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-15 (Polla: ícono de la app)
+
+- **`public/manifest.webmanifest`** (nombre "Polla", `display: standalone`) y los íconos del gallo en `public/icons/`: 192 y 512, maskable 512 (con margen para el recorte circular de Android), `apple-touch-icon` 180 y favicons de 32 y 48.
+  - Sin manifest, Android armaba al instalarla un ícono genérico con una letra ("V").
+  - `index.html` enlaza el manifest, el `apple-touch-icon`, `theme-color` y los favicons PNG. Antes apuntaba a un `/favicon.svg` que no existía.
+  - Quien ya la tiene instalada tiene que borrarla y volver a agregarla para ver el ícono nuevo.
+
 ### Changed - 2026-10-15 (Polla: mobile de ediciones y usuarios)
 
 #### Ediciones (`features/editions/index.tsx`)
