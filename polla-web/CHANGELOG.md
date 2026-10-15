@@ -4,6 +4,19 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-15 (Polla: mobile de ediciones y usuarios)
+
+#### Ediciones (`features/editions/index.tsx`)
+- **Checkboxes "Futuras / Jugando / Pasadas"**, en mobile y en desktop. Por defecto quedan tildadas Futuras y Jugando. Con ninguna o con las tres se ven todas.
+  - Filtra la API con `periods` (`GET /edition?periods=UPCOMING,PLAYING`), así el scroll infinito pagina sobre lo filtrado.
+  - `useEditionList` suma `keepPrevious`: al tildar o destildar se sigue viendo la lista anterior hasta que llega la nueva.
+  - Sin resultados dice "No hay ediciones para los filtros elegidos".
+- **Mobile: tarjetas** en lugar de la tabla de 8 columnas, que obligaba a scrollear de costado. Muestran quiniela, turno, semana, estado, eliminar, cierre, pozo, ticket y jugadas. En desktop (`md`) sigue la tabla.
+- **Estado**: el badge dice Futura, Jugando o Cerrada (con fecha del ganador o "sin ganador"), según `pollaEditionPeriod`. Antes las futuras y las que se jugaban decían las dos "Activa".
+
+#### Usuarios (`features/users/index.tsx`)
+- **Mobile: tarjetas** en lugar de la tabla. Muestran número y nombre, tipo, "Deshabilitado", `@usuario`, grupo, comisión y las acciones (editar, blanquear y eliminar, compartidas con la tabla en `renderActions`). En desktop sigue la tabla.
+
 ### Changed - 2026-10-14 (Polla: cierre de carga de los admin)
 
 - **`features/make-bet/index.tsx`**: ADMIN y superiores ven las ediciones hasta el final del día de cierre, porque `GET /edition?loadable=true` ya las filtra solo por fecha para ellos.

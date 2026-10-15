@@ -4,6 +4,12 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-15 (Polla: filtro de ediciones por período)
+
+- **`polla/types/game.type.ts`**:
+  - `POLLA_EDITION_PERIOD` (`UPCOMING`, `PLAYING`, `FINISHED`) y `POLLA_EDITION_PERIOD_LABEL` (Futuras, Jugando, Pasadas), el filtro `periods` de `GET /edition`.
+  - `pollaEditionPeriod(edition, today)`: el período de una edición, con el mismo criterio que el filtro de la API. Lo usa el badge de estado de la pantalla de ediciones.
+
 ### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
 
 - **`polla/types/user.type.ts`**: `IPollaUserOption`, la fila del buscador de pasadores y jugadores (`IPollaUserByNumber` + `username` y `cashier_number`).

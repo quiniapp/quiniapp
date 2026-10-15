@@ -3,7 +3,20 @@ export enum POLLA_EDITION_STATUS {
   ACTIVE = 'ACTIVE',
   FINISHED = 'FINISHED',
 }
+
+/** Filtro de la pantalla de ediciones (`GET /edition?periods=`). */
+export enum POLLA_EDITION_PERIOD {
+  UPCOMING = 'UPCOMING',
+  PLAYING = 'PLAYING',
+  FINISHED = 'FINISHED',
+}
 /* eslint-enable no-unused-vars */
+
+export const POLLA_EDITION_PERIOD_LABEL: Record<POLLA_EDITION_PERIOD, string> = {
+  [POLLA_EDITION_PERIOD.UPCOMING]: 'Futuras',
+  [POLLA_EDITION_PERIOD.PLAYING]: 'Jugando',
+  [POLLA_EDITION_PERIOD.FINISHED]: 'Pasadas',
+};
 
 export const POLLA_NUMBERS_REQUIRED = 10;
 
@@ -37,6 +50,19 @@ export type IPollaEditionEntityFront = Omit<
   'deleted_at' | 'bets_count' | 'collected_amount'
 > &
   Partial<Pick<IPollaEditionEntityBack, 'bets_count' | 'collected_amount'>>;
+
+/**
+ * Período de una edición a la fecha `today` (`YYYY-MM-DD`). Mismo criterio que
+ * el filtro `periods` de `GET /edition`: sigue "jugando" pasado `end_date`
+ * hasta que se procesa el resultado de ese día y queda `FINISHED`.
+ */
+export const pollaEditionPeriod = (
+  edition: Pick<IPollaEditionEntityBack, 'status' | 'start_date'>,
+  today: string
+): POLLA_EDITION_PERIOD => {
+  if (edition.status === POLLA_EDITION_STATUS.FINISHED) return POLLA_EDITION_PERIOD.FINISHED;
+  return edition.start_date > today ? POLLA_EDITION_PERIOD.UPCOMING : POLLA_EDITION_PERIOD.PLAYING;
+};
 
 // --------------------------------------------------------------- resultados
 

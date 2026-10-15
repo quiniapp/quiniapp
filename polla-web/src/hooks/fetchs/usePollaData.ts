@@ -68,7 +68,8 @@ export const useEditionList = (params: QueryParams = {}) =>
     ['polla-editions'],
     BACKEND_ROUTES.edition.base,
     params,
-    { limit: 25 }
+    // Al tildar o destildar un período se sigue viendo la lista anterior.
+    { limit: 25, keepPrevious: true }
   );
 
 // ----------------------------------------------------------------- jugadas

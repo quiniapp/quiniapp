@@ -1,6 +1,10 @@
 import { supabase } from '@database/db.connection';
 import { NotFoundError } from '@helper/errors';
-import { IPollaEditionEntityBack, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
+import {
+  IPollaEditionEntityBack,
+  POLLA_EDITION_PERIOD,
+  POLLA_EDITION_STATUS,
+} from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
 
@@ -13,7 +17,21 @@ export interface PollaEditionFilters {
   loadableOn?: string;
   /** Ediciones con la carga abierta en este momento: fecha y hora de cierre. */
   loadableAt?: { date: string; time: string };
+  /** Futuras, jugando y/o pasadas a la fecha `today` (ver `pollaEditionPeriod`). */
+  periods?: { list: POLLA_EDITION_PERIOD[]; today: string };
 }
+
+/** Condición PostgREST de un período (mismo criterio que `pollaEditionPeriod`). */
+const periodFilter = (period: POLLA_EDITION_PERIOD, today: string): string => {
+  switch (period) {
+    case POLLA_EDITION_PERIOD.UPCOMING:
+      return `and(status.eq.${POLLA_EDITION_STATUS.ACTIVE},start_date.gt.${today})`;
+    case POLLA_EDITION_PERIOD.PLAYING:
+      return `and(status.eq.${POLLA_EDITION_STATUS.ACTIVE},start_date.lte.${today})`;
+    case POLLA_EDITION_PERIOD.FINISHED:
+      return `status.eq.${POLLA_EDITION_STATUS.FINISHED}`;
+  }
+};
 
 export class PollaEditionRepository {
   async getAll(filters: PollaEditionFilters, pagination: PollaPagination) {
@@ -41,6 +59,12 @@ export class PollaEditionRepository {
       query = query.or(
         `load_limit_date.gt.${date},and(load_limit_date.eq.${date},load_limit_time.gte.${time})`
       );
+    }
+    if (filters.periods) {
+      // La fecha sale del servidor y los períodos vienen validados contra el
+      // enum: no hay texto del cliente dentro del filtro `or`.
+      const { list, today } = filters.periods;
+      query = query.or(list.map((period) => periodFilter(period, today)).join(','));
     }
 
     const { data, error, count } = await query
