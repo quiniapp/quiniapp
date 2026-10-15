@@ -175,6 +175,65 @@ export const UsersPage = () => {
     });
   };
 
+  const groupName = (item: IPollaUserEntityFront) =>
+    item.polla_group_id ? (groupById.get(item.polla_group_id) ?? null) : null;
+
+  /** Usuario, grupo y comisión de la tarjeta mobile; lo que falta no se muestra. */
+  const userDetails = (item: IPollaUserEntityFront) => {
+    const group = groupName(item);
+    return [
+      item.username && `@${item.username}`,
+      group && `Grupo ${group}`,
+      item.fee !== null && `Comisión ${item.fee}%`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  };
+
+  const renderActions = (item: IPollaUserEntityFront) => (
+    <div className="flex justify-end gap-1">
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        title="Editar"
+        aria-label={`Editar a ${item.name}`}
+        onClick={() => setEditing(item)}
+      >
+        <Pencil />
+      </Button>
+      {/* Cada rol blanquea solo a ciertos tipos y nadie a sí mismo. */}
+      {role &&
+        canResetPollaPassword(role, item.user_type) &&
+        item.polla_user_id !== user?.polla_user_id && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Blanquear contraseña"
+            aria-label={`Blanquear la contraseña de ${item.name}`}
+            onClick={() => setResetting(item)}
+          >
+            <KeyRound />
+          </Button>
+        )}
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        title="Eliminar"
+        aria-label={`Eliminar a ${item.name}`}
+        onClick={() => {
+          if (window.confirm(`¿Eliminar a ${item.name}?`)) {
+            deleteUser({ id: item.polla_user_id });
+          }
+        }}
+      >
+        <Trash2 />
+      </Button>
+    </div>
+  );
+
   return (
     <div>
       <PageHeader
@@ -368,7 +427,36 @@ export const UsersPage = () => {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
         >
-          <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
+          {/* Mobile: tarjetas, sin scroll de costado. */}
+          <ul className="flex flex-col gap-2 md:hidden">
+            {rows.map((item) => (
+              <li
+                key={item.polla_user_id}
+                className="rounded-md border bg-card p-3 text-card-foreground"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">
+                      {item.number ? `${item.number} · ` : ''}
+                      {item.name} {item.last_name ?? ''}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <Badge variant="secondary">{POLLA_USER_TYPE_LABEL[item.user_type]}</Badge>
+                      {item.disabled && <Badge variant="outline">Deshabilitado</Badge>}
+                    </div>
+                    {userDetails(item) && (
+                      <p className="mt-1 break-words text-xs text-muted-foreground">
+                        {userDetails(item)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0">{renderActions(item)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-md border bg-card text-card-foreground md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -394,55 +482,11 @@ export const UsersPage = () => {
                     </TableCell>
                     <TableCell>{POLLA_USER_TYPE_LABEL[item.user_type]}</TableCell>
                     <TableCell>{item.username ?? '-'}</TableCell>
-                    <TableCell>
-                      {item.polla_group_id ? (groupById.get(item.polla_group_id) ?? '-') : '-'}
-                    </TableCell>
+                    <TableCell>{groupName(item) ?? '-'}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.fee !== null ? `${item.fee}%` : '-'}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          title="Editar"
-                          aria-label={`Editar a ${item.name}`}
-                          onClick={() => setEditing(item)}
-                        >
-                          <Pencil />
-                        </Button>
-                        {/* Cada rol blanquea solo a ciertos tipos y nadie a sí mismo. */}
-                        {role &&
-                          canResetPollaPassword(role, item.user_type) &&
-                          item.polla_user_id !== user?.polla_user_id && (
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              title="Blanquear contraseña"
-                              aria-label={`Blanquear la contraseña de ${item.name}`}
-                              onClick={() => setResetting(item)}
-                            >
-                              <KeyRound />
-                            </Button>
-                          )}
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          title="Eliminar"
-                          aria-label={`Eliminar a ${item.name}`}
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar a ${item.name}?`)) {
-                              deleteUser({ id: item.polla_user_id });
-                            }
-                          }}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right">{renderActions(item)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

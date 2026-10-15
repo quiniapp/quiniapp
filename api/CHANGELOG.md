@@ -4,6 +4,16 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-15 (Polla: filtro de ediciones por período)
+
+- **`GET /edition?periods=`**: lista separada por coma de `UPCOMING`, `PLAYING` y `FINISHED` (`POLLA_EDITION_PERIOD`). Lo usan los checkboxes "Futuras / Jugando / Pasadas" de la pantalla de ediciones; se filtra en la base para que el scroll infinito pagine bien.
+  - `UPCOMING`: `ACTIVE` con `start_date` posterior a hoy.
+  - `PLAYING`: `ACTIVE` con `start_date` hasta hoy. Sigue acá pasado `end_date` hasta que se procesa el resultado y queda `FINISHED`.
+  - `FINISHED`: cerradas, con ganador o sin ganador.
+  - "Hoy" es `pollaToday()` (Argentina, del servidor). Los valores se validan contra el enum (otro valor → 400 "Período inválido"), así que en el `or` de PostgREST no entra texto del cliente.
+  - Sin `periods`, o con los tres, no filtra.
+- **`PollaEditionRepository.getAll`**: filtro `periods` (`{ list, today }`), con un único `or` y una condición por período.
+
 ### Changed - 2026-10-14 (Polla: los admin cargan hasta el final del día de cierre)
 
 - **Migración `20261014225307_polla_admin_load_until_end_of_day.sql`**: `polla_create_bet` con `p_force` (ADMIN y superiores) ya no saltea el cierre. Carga hasta el final del día `load_limit_date` (`polla_today() > load_limit_date` → `POLLA_LOAD_LIMIT_EXCEEDED`), sin mirar `load_limit_time`.

@@ -1,7 +1,11 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
-import { IPollaEditionEntityBack, POLLA_EDITION_STATUS } from '@helper/polla/types/game.type';
+import {
+  IPollaEditionEntityBack,
+  POLLA_EDITION_PERIOD,
+  POLLA_EDITION_STATUS,
+} from '@helper/polla/types/game.type';
 import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaEditionRepository } from '../repository/polla-edition.repository';
@@ -23,6 +27,23 @@ const withoutTotals = (edition: IPollaEditionEntityBack) => {
   void _count;
   void _collected;
   return rest;
+};
+
+const PERIODS = Object.values(POLLA_EDITION_PERIOD);
+
+/**
+ * `periods=UPCOMING,PLAYING` → la lista validada. Sin filtro si no viene o
+ * vienen los tres (es lo mismo que traer todas).
+ */
+const parsePeriods = (raw: unknown): POLLA_EDITION_PERIOD[] | undefined => {
+  if (typeof raw !== 'string' || raw.trim() === '') return undefined;
+
+  const list = [...new Set(raw.split(',').map((value) => value.trim()))];
+  if (list.some((value) => !PERIODS.includes(value as POLLA_EDITION_PERIOD))) {
+    throw new BadRequestError('Período inválido');
+  }
+
+  return list.length < PERIODS.length ? (list as POLLA_EDITION_PERIOD[]) : undefined;
 };
 
 export class PollaEditionRouter {
@@ -66,6 +87,7 @@ export class PollaEditionRouter {
     const loadable = req.query.loadable === 'true';
     const loadableOn =
       typeof req.query.loadable_on === 'string' ? req.query.loadable_on : undefined;
+    const periods = parsePeriods(req.query.periods);
 
     const result = await this.repository.getAll(
       {
@@ -74,6 +96,7 @@ export class PollaEditionRouter {
         playingOn: typeof req.query.playing_on === 'string' ? req.query.playing_on : undefined,
         loadableOn: loadable && isAdmin ? pollaToday() : loadableOn,
         loadableAt: loadable && !isAdmin ? { date: pollaToday(), time: pollaNowTime() } : undefined,
+        periods: periods ? { list: periods, today: pollaToday() } : undefined,
       },
       pagination
     );
