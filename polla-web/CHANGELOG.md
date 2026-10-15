@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-14 (Polla: cierre de carga de los admin)
+
+- **`features/make-bet/index.tsx`**: ADMIN y superiores ven las ediciones hasta el final del día de cierre, porque `GET /edition?loadable=true` ya las filtra solo por fecha para ellos.
+  - Debajo de la edición se agrega "· vos podés cargar hasta las 23:59" después de la fecha y hora de cierre, que siguen siendo las de pasadores y jugadores.
+
 ### Changed - 2026-10-14 (Polla: desplegable de usuarios)
 
 #### `components/UserSearchPicker.tsx`

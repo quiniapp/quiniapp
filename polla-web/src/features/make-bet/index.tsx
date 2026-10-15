@@ -46,7 +46,8 @@ export const MakeBetPage = () => {
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
 
   // Las que tienen la carga abierta ahora: la API compara fecha y hora de
-  // cierre con la hora de Argentina.
+  // cierre con la hora de Argentina. Para ADMIN+ solo la fecha: carga hasta
+  // las 23:59 del día de cierre.
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
     loadable: true,
@@ -157,6 +158,7 @@ export const MakeBetPage = () => {
               <p className="text-xs text-muted-foreground">
                 Pozo ${fmtMoney(edition.pool_amount)} · cierre de carga{' '}
                 {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
+                {canManage && ' · vos podés cargar hasta las 23:59'}
               </p>
             )}
           </div>

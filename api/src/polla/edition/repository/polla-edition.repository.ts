@@ -9,7 +9,7 @@ export interface PollaEditionFilters {
   status?: POLLA_EDITION_STATUS;
   /** Ediciones cuyo rango de juego incluye esta fecha. */
   playingOn?: string;
-  /** Ediciones que todavía aceptan carga a esta fecha (sin mirar la hora). */
+  /** Ediciones que todavía aceptan carga a esta fecha (sin mirar la hora): la de ADMIN+. */
   loadableOn?: string;
   /** Ediciones con la carga abierta en este momento: fecha y hora de cierre. */
   loadableAt?: { date: string; time: string };

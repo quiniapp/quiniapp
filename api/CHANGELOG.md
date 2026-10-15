@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-14 (Polla: los admin cargan hasta el final del día de cierre)
+
+- **Migración `20261014225307_polla_admin_load_until_end_of_day.sql`**: `polla_create_bet` con `p_force` (ADMIN y superiores) ya no saltea el cierre. Carga hasta el final del día `load_limit_date` (`polla_today() > load_limit_date` → `POLLA_LOAD_LIMIT_EXCEEDED`), sin mirar `load_limit_time`.
+  - Ejemplo: si la edición cierra el viernes 16/10 a las 12:00, pasadores y jugadores cargan hasta esa hora y los admin hasta el viernes a las 23:59:59 (hora de Argentina). Antes los admin podían cargar en cualquier momento.
+  - `p_force` conserva el nombre para que la API anterior siga funcionando durante el deploy.
+  - Editar y borrar jugadas no cambia: con force, el admin sigue pudiendo pasado el cierre.
+- **`GET /edition?loadable=true`**: para ADMIN y superiores filtra solo por fecha (`load_limit_date >= hoy`). Para pasador y jugador sigue mirando fecha y hora.
+- **`polla-errors.ts`**: `POLLA_LOAD_LIMIT_EXCEEDED` dice "Cerró la carga de esta edición", sin "(fecha y hora de cierre)", porque para los admin el cierre es solo la fecha.
+
 ### Changed - 2026-10-14 (Polla: buscador de usuarios por número)
 
 - **`GET /user/search`**: ordena por número (`number` ascendente, sin número al final). Si un pasador y un jugador comparten número, el pasador va primero.
