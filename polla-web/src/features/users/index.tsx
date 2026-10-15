@@ -182,7 +182,7 @@ export const UsersPage = () => {
   const userDetails = (item: IPollaUserEntityFront) => {
     const group = groupName(item);
     return [
-      item.username && `@${item.username}`,
+      item.username && `${item.username}`,
       group && `Grupo ${group}`,
       item.fee !== null && `Comisión ${item.fee}%`,
     ]

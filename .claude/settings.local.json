@@ -13,7 +13,10 @@
       "WebFetch(domain:api.github.com)",
       "mcp__supabase__list_projects",
       "mcp__supabase__get_advisors",
-      "Skill(caveman:caveman-commit)"
+      "Skill(caveman:caveman-commit)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "mcp__filesystem__write_file"
     ],
     "deny": [
       "Bash(git push:*)"
