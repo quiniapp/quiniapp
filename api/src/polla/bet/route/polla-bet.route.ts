@@ -454,7 +454,8 @@ export class PollaBetRouter {
       targetUserId,
       numbers: payload.numbers,
       // Solo un admin elige el día de carga: para el resto es hoy, y el cierre
-      // de la edición se mide contra la fecha y hora reales.
+      // de la edición se mide contra la fecha y hora reales. Con force el admin
+      // carga hasta el final del día de cierre, sin mirar la hora (la RPC).
       date: isAdmin ? payload.date : undefined,
       force: isAdmin,
     });

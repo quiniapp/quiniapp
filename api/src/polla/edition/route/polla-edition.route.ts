@@ -58,22 +58,27 @@ export class PollaEditionRouter {
 
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
+    const isAdmin = isPollaAdminRole(user.user_type);
     const pagination = parsePagination(req.query as Record<string, unknown>);
+
+    // Carga abierta ahora mismo, con la fecha y hora de Argentina del servidor.
+    // ADMIN+ carga hasta el final del día de cierre: solo cuenta la fecha.
+    const loadable = req.query.loadable === 'true';
+    const loadableOn =
+      typeof req.query.loadable_on === 'string' ? req.query.loadable_on : undefined;
 
     const result = await this.repository.getAll(
       {
         organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
         status: req.query.status as POLLA_EDITION_STATUS | undefined,
         playingOn: typeof req.query.playing_on === 'string' ? req.query.playing_on : undefined,
-        loadableOn: typeof req.query.loadable_on === 'string' ? req.query.loadable_on : undefined,
-        // Carga abierta ahora mismo, con la fecha y hora de Argentina del servidor.
-        loadableAt:
-          req.query.loadable === 'true' ? { date: pollaToday(), time: pollaNowTime() } : undefined,
+        loadableOn: loadable && isAdmin ? pollaToday() : loadableOn,
+        loadableAt: loadable && !isAdmin ? { date: pollaToday(), time: pollaNowTime() } : undefined,
       },
       pagination
     );
 
-    const data = isPollaAdminRole(user.user_type) ? result.data : result.data.map(withoutTotals);
+    const data = isAdmin ? result.data : result.data.map(withoutTotals);
 
     res.status(200).json({ data: { editions: { ...result, data } } });
   });
