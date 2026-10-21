@@ -1,6 +1,6 @@
 import { lazy, ReactNode, Suspense } from 'react';
 import { Navigate, RouteObject } from 'react-router-dom';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute, RoleRoute } from '@/protected/ProtectedRoute';
 import { ROUTES } from '@/types/routes.type';
@@ -98,8 +98,9 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Usuarios' } satisfies RouteHandle,
       },
       {
+        // Dueño, capitalista y superadmin; el pasador ve la suya. El admin no.
         path: ROUTES.CURRENT_ACCOUNT,
-        element: guarded(STAFF, <CurrentAccountPage />),
+        element: guarded([...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER], <CurrentAccountPage />),
         handle: { title: 'Cuenta corriente' } satisfies RouteHandle,
       },
       {

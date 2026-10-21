@@ -133,6 +133,13 @@ export interface IPollaBetEntityBack {
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
+  /**
+   * Si se borró: día en que se descuenta del pase de su pasador (Borradas).
+   * Sigue contando en el pase de jugadas de su día de carga. `null` si está
+   * activa o se anuló sin pasar por la cuenta corriente (bajas viejas o
+   * edición borrada).
+   */
+  deducted_on: string | null;
 }
 
 /** Campos que la API agrega a cada jugada que lista. */
@@ -167,12 +174,15 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields {
   prize: number;
   /** Precio del ticket, solo en las propias (o imputadas al pasador). */
   amount: number | null;
+  /** Si se borró, día en que se descuenta del pase (ver `IPollaBetEntityBack`). */
+  deducted_on: string | null;
   /** Es del usuario o, para un pasador, está imputada a él (sus jugadores). */
   is_mine: boolean;
   /**
-   * Solo un pasador la puede borrar: es suya o de uno de sus jugadores, no ganó,
-   * la carga de la edición sigue abierta y su cuenta no se liquidó desde el día
-   * de carga (da de baja lo que no le pagaron).
+   * Solo un pasador la puede borrar: es suya o de uno de sus jugadores, no ganó
+   * y la carga de la edición sigue abierta (da de baja lo que no le pagaron).
+   * Aunque su cuenta ya se haya liquidado: la baja se descuenta del pase el día
+   * que se borra.
    */
   can_delete: boolean;
 }
@@ -267,6 +277,11 @@ export interface IPollaCurrentAccountEntityBack {
   polla_organization_id: string;
   polla_group_id: string | null;
   date: string;
+  /** Pase de jugadas: lo cargado ese día, incluidas las que se borraron después. */
+  bets_pass: number;
+  /** Borradas: jugadas que se descuentan del pase ese día. */
+  deleted_pass: number;
+  /** Pase real: pase de jugadas − borradas + reclamos positivos. Base de la comisión. */
   pass: number;
   successes: number;
   cashier_commission: number;
@@ -290,12 +305,15 @@ export type IPollaCurrentAccountEntityFront = IPollaCurrentAccountEntityBack;
 
 /**
  * Montos acumulados de un pasador desde el día siguiente a su última
- * liquidación hasta la fecha pedida (liquidación semanal). `previous_balance`
- * es el saldo con el que arrancó el período y `total`, el saldo a la fecha.
+ * liquidación (liquidación semanal), o desde el inicio del rango pedido, hasta
+ * la fecha pedida. `previous_balance` es el saldo con el que arrancó el período
+ * y `total`, el saldo a la fecha.
  */
 export interface IPollaCurrentAccountPeriod {
   /** Primer día del período (YYYY-MM-DD). */
   from: string;
+  bets_pass: number;
+  deleted_pass: number;
   pass: number;
   successes: number;
   claims: number;
@@ -317,6 +335,8 @@ export type IPollaCurrentAccountPeriodRow = IPollaCurrentAccountEntityFront & {
 export interface IPollaCurrentAccountDailyTotals {
   date: string;
   accounts_count: number;
+  total_bets_pass: number;
+  total_deleted_pass: number;
   total_pass: number;
   total_successes: number;
   total_commission: number;

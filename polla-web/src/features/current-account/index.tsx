@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
-import { periodLabel, periodView } from '@/lib/accountPeriod';
+import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/lib/accountPeriod';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -37,11 +37,15 @@ import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquida
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
 import { CashierAccountView } from './CashierAccountView';
 import { fetchWinnersByCashier } from './fetchers';
-import { fmtMoney } from './format';
+import { ReportMode, fmtMoney } from './format';
 import { GenerateLiquidationDialog, LiquidateCashierDialog } from './dialogs/LiquidationDialogs';
 import { ReportDialog, ReportKind } from './dialogs/ReportDialogs';
+import { ModeToggle } from './dialogs/shared';
 
+/** Pase jugadas − Borradas = Pase (más los reclamos positivos), base de la comisión. */
 const MONEY_COLUMNS = [
+  ['bets_pass', 'Pase jugadas'],
+  ['deleted_pass', 'Borradas'],
   ['pass', 'Pase'],
   ['successes', 'Aciertos'],
   ['claims', 'Reclamos'],
@@ -66,14 +70,17 @@ const ActionButton = ({
 /**
  * Cuenta corriente de los pasadores, como la de QuiniApp sin Arrastre ni Deje
  * (la liquidación de Polla no tiene deje): filtros, planilla con total general,
- * liquidar por pasador o todo el día y los exportes. Cada pasador se muestra
- * acumulado desde el día siguiente a su última liquidación (en general, la
- * semana) hasta la fecha elegida.
+ * liquidar por pasador o todo el día y los exportes. Por día, cada pasador se
+ * muestra acumulado desde el día siguiente a su última liquidación (en
+ * general, la semana) hasta la fecha elegida; por rango, lo de esos días. En
+ * los dos casos se liquida en la última fecha.
  */
 const AdminAccountView = () => {
   const { organizationId } = useAuth();
 
+  const [mode, setMode] = useState<ReportMode>('day');
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [from, setFrom] = useState(dayjs().startOf('week').format('YYYY-MM-DD'));
   const [groupId, setGroupId] = useState('');
   const [cashier, setCashier] = useState<IPollaUserOption | null>(null);
   const [liquidating, setLiquidating] = useState<IPollaCurrentAccountPeriodRow | null>(null);
@@ -81,8 +88,11 @@ const AdminAccountView = () => {
   const [report, setReport] = useState<ReportKind | null>(null);
   const [printing, setPrinting] = useState(false);
 
+  const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;
+
   const filters = {
     date,
+    range_from: rangeFrom,
     polla_group_id: groupId || undefined,
     polla_user_id: cashier?.polla_user_id,
     polla_organization_id: organizationId ?? undefined,
@@ -114,6 +124,7 @@ const AdminAccountView = () => {
     try {
       await downloadDailyAccountsPDF({
         date,
+        from: rangeFrom,
         rows: views,
         groupName: groupId ? groupById.get(groupId) : undefined,
       });
@@ -146,7 +157,7 @@ const AdminAccountView = () => {
 
   return (
     <div>
-      <PageHeader description="Pase, aciertos, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación. La liquidación no tiene deje." />
+      <PageHeader description="Pase, borradas, aciertos, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación o en un rango de fechas. La liquidación no tiene deje." />
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <ActionButton icon={<FileText />} onClick={handleExportDaily} disabled={printing}>
@@ -174,7 +185,7 @@ const AdminAccountView = () => {
         <Button
           type="button"
           className="gap-2 sm:col-span-2"
-          onClick={() => calculate({ date, ...scope })}
+          onClick={() => calculate({ date, range_from: rangeFrom, ...scope })}
           disabled={isCalculating}
         >
           <RefreshCw className={isCalculating ? 'animate-spin' : undefined} />
@@ -183,8 +194,23 @@ const AdminAccountView = () => {
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <ModeToggle id="account-mode" label="Liquidar" value={mode} onChange={setMode} />
+
+        {mode === 'range' && (
+          <div className="flex min-w-0 flex-col gap-1">
+            <Label htmlFor="account-from">Desde</Label>
+            <DateInput
+              id="account-from"
+              value={rangeFrom ?? from}
+              min={oldestRangeFrom(date)}
+              max={date}
+              onValueChange={setFrom}
+            />
+          </div>
+        )}
+
         <div className="flex min-w-0 flex-col gap-1">
-          <Label htmlFor="account-date">A la fecha</Label>
+          <Label htmlFor="account-date">{mode === 'range' ? 'Hasta' : 'A la fecha'}</Label>
           <DateInput id="account-date" value={date} max={todayIso()} onValueChange={setDate} />
         </div>
 
@@ -218,8 +244,9 @@ const AdminAccountView = () => {
       </div>
 
       <p className="mb-2 text-sm text-muted-foreground">
-        Acumulado desde la última liquidación de cada pasador hasta el{' '}
-        {dayjs(date).format('DD/MM/YYYY')}
+        {rangeFrom
+          ? `Del ${dayjs(rangeFrom).format('DD/MM/YYYY')} al ${dayjs(date).format('DD/MM/YYYY')}: se liquida el ${dayjs(date).format('DD/MM/YYYY')}`
+          : `Acumulado desde la última liquidación de cada pasador hasta el ${dayjs(date).format('DD/MM/YYYY')}`}
       </p>
 
       {rows.length === 0 ? (
@@ -356,6 +383,7 @@ const AdminAccountView = () => {
       {generating && (
         <GenerateLiquidationDialog
           date={date}
+          from={rangeFrom}
           rows={rows}
           organizationId={organizationId}
           onClose={() => setGenerating(false)}

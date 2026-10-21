@@ -46,8 +46,8 @@ export const MakeBetPage = () => {
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
 
   // Las que tienen la carga abierta ahora: la API compara fecha y hora de
-  // cierre con la hora de Argentina. Para ADMIN+ solo la fecha: carga hasta
-  // las 23:59 del día de cierre.
+  // cierre con la hora de Argentina. ADMIN+ no tiene cierre de carga: carga
+  // hasta el último día de juego.
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
     loadable: true,
@@ -69,6 +69,9 @@ export const MakeBetPage = () => {
 
   const loadable = editions?.data ?? [];
   const edition = loadable.find((e) => e.polla_edition_id === editionId);
+  // Con la polla en juego (solo ADMIN+ llega acá), la jugada no suma los
+  // aciertos de los sorteos ya procesados hasta que se regeneran a mano.
+  const isPlaying = Boolean(edition && edition.start_date <= dayjs().format('YYYY-MM-DD'));
 
   const editionLabel = (item: IPollaEditionEntityFront) =>
     `${lotteryById.get(item.polla_lottery_id) ?? ''} · ${
@@ -158,7 +161,13 @@ export const MakeBetPage = () => {
               <p className="text-xs text-muted-foreground">
                 Pozo ${fmtMoney(edition.pool_amount)} · cierre de carga{' '}
                 {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
-                {canManage && ' · vos podés cargar hasta las 23:59'}
+                {canManage && ` · vos podés cargar hasta el ${fmtDate(edition.end_date)}`}
+              </p>
+            )}
+            {canManage && isPlaying && (
+              <p className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-xs">
+                La edición ya está en juego: para que esta jugada sume los aciertos de los sorteos
+                anteriores, volvé a generar los ganadores de esos días en Resultados.
               </p>
             )}
           </div>

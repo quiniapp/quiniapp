@@ -4,6 +4,22 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
+
+- **Cuenta corriente**: el ADMIN ya no la tiene en el menú (`AppLayout.tsx`) y la ruta lo manda a Jugadas (`routes/route.tsx`). Entran dueño, capitalista, superadmin (`POLLA_ACCOUNT_ROLES`) y el pasador, que ve la suya.
+- **Usuarios** (`features/users/index.tsx`): el filtro de tipos ya no ofrece "Capitalista" (`pollaUserListTypes`) y la API no los lista. El capitalista se ve desde Organizaciones.
+
+### Changed - 2026-10-20 (Polla: jugadas borradas en el pase, liquidación por rango y carga de ADMIN+)
+
+#### Cuenta corriente
+- **Columnas "Pase jugadas" y "Borradas"** antes de "Pase" en la planilla (tabla y tarjetas mobile, `features/current-account/index.tsx`), la vista del pasador (`CashierAccountView.tsx`), el modal de liquidar y la grilla de "Generar liquidación" (`dialogs/LiquidationDialogs.tsx`), "Exportar diario", el resumen por rango (`accountTablePDF.ts`) y la hoja de liquidación (`liquidationSlipPDF.ts`). Pase jugadas − Borradas = Pase (más los reclamos positivos), sobre el que se calcula la comisión.
+- **Modo "Día / Rango de fechas"** en la planilla del admin y en la vista del pasador (`ModeToggle` de `dialogs/shared.tsx`, ahora con `id` y `label`). Por día sigue igual: cada pasador desde su última liquidación hasta "A la fecha". Por rango se eligen Desde y Hasta y todo suma esos días (planilla, liquidar, PDFs, jugadas); liquidar cierra en Hasta. Desde arranca en el inicio de la semana y se limita a Hasta y a 62 días (`accountRangeFrom` y `oldestRangeFrom` en `lib/accountPeriod.ts`).
+- **`DayBetsTables.tsx`**: los tickets del período incluyen los que se borraron después (`with_deducted`), con la marca "Borrada dd/mm", y hay una tabla "Borradas del período" (ticket, jugador, día de carga, día de baja y monto). Así se puede verificar Pase jugadas − Borradas = Pase.
+
+#### Jugadas y carga
+- **`features/bets/index.tsx`**: el pasador puede borrar aunque su cuenta ya esté liquidada (lo decide `can_delete`). La confirmación avisa que se descuenta del pase del día en que se borra.
+- **`features/make-bet/index.tsx`**: ADMIN y superiores ven las ediciones hasta su último día de juego y el aviso dice "vos podés cargar hasta el {fin de la edición}". Si la edición ya está en juego, avisa que para sumar los aciertos de los sorteos anteriores hay que volver a generar los ganadores de esos días.
+
 ### Added - 2026-10-15 (Polla: ícono de la app)
 
 - **`public/manifest.webmanifest`** (nombre "Polla", `display: standalone`) y los íconos del gallo en `public/icons/`: 192 y 512, maskable 512 (con margen para el recorte circular de Android), `apple-touch-icon` 180 y favicons de 32 y 48.

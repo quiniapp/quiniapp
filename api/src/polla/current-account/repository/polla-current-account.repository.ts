@@ -49,12 +49,14 @@ export class PollaCurrentAccountRepository {
   }
 
   /**
-   * Filas de un día con los montos acumulados de su período (desde el día
-   * siguiente a la última liquidación de cada pasador).
+   * Filas de un día con los montos acumulados de su período: desde el día
+   * siguiente a la última liquidación de cada pasador o, con `from`, desde ese
+   * día (liquidación por rango).
    */
   async getPeriodRows(filters: {
     organizationId: string;
     date: string;
+    from?: string | null;
     userId?: string | null;
     userNumber?: number | null;
     groupId?: string | null;
@@ -65,6 +67,7 @@ export class PollaCurrentAccountRepository {
       p_group_id: filters.groupId ?? null,
       p_user_id: filters.userId ?? null,
       p_user_number: filters.userNumber ?? null,
+      p_from: filters.from ?? null,
     });
 
     throwIfPollaError(error);
@@ -102,21 +105,6 @@ export class PollaCurrentAccountRepository {
       .eq('date', date);
 
     throwIfPollaError(error);
-  }
-
-  /** Último día en que se liquidó la cuenta de un pasador (o `null`). */
-  async getLastLiquidatedDate(userId: string): Promise<string | null> {
-    const { data, error } = await supabase
-      .from('polla_current_accounts')
-      .select('date')
-      .eq('polla_user_id', userId)
-      .eq('is_liquidated', true)
-      .order('date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    throwIfPollaError(error);
-    return data?.date ?? null;
   }
 
   async getById(currentAccountId: string): Promise<IPollaCurrentAccountEntityBack> {

@@ -26,7 +26,6 @@ import {
   PollaBetTicketScope,
 } from '../repository/polla-bet.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
-import { PollaCurrentAccountRepository } from '../../current-account/repository/polla-current-account.repository';
 import { parsePagination } from '../../helper/pagination';
 import { isPollaLoadOpen, pollaToday } from '../../helper/date';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
@@ -78,23 +77,22 @@ const isOwnOrImputed = (bet: PollaBetRow, viewer: IPollaSessionUser) =>
 interface DeleteContext {
   /** Ediciones con la carga abierta en este momento. */
   openEditions: Set<string>;
-  /** Último día liquidado de la cuenta del pasador. */
-  liquidatedUntil: string | null;
 }
 
 /**
  * Solo el pasador borra lo suyo (y lo de sus jugadores), hasta el cierre de
- * carga de la edición: da de baja lo que no le pagaron. Si su cuenta ya se
- * liquidó el día de carga o después, ya no (lo liquidado no cambia solo). La
- * RPC vuelve a controlar las dos cosas. El jugador no tiene acciones.
+ * carga de la edición: da de baja lo que no le pagaron. Aunque su cuenta ya se
+ * haya liquidado: la baja se descuenta del pase el día que se borra y lo
+ * liquidado no cambia. La RPC vuelve a controlar el cierre. El jugador no tiene
+ * acciones.
  */
 const canDeleteOwn = (bet: PollaBetRow, viewer: IPollaSessionUser, ctx?: DeleteContext) =>
   ctx !== undefined &&
   viewer.user_type === POLLA_USER_TYPE.CASHIER &&
   isOwnOrImputed(bet, viewer) &&
   !bet.winner &&
-  ctx.openEditions.has(bet.polla_edition_id) &&
-  (!ctx.liquidatedUntil || bet.load_date > ctx.liquidatedUntil);
+  !bet.deleted_at &&
+  ctx.openEditions.has(bet.polla_edition_id);
 
 /** Si la jugó un jugador, el pasador al que se imputa es otro usuario: el suyo. */
 const holderOf = (bet: PollaBetRow): IPollaTicketHolder => ({
@@ -126,6 +124,7 @@ const toPublicBet = (
   winner: bet.winner,
   hit_date: bet.hit_date,
   prize: bet.winner ? Number(bet.prize) : 0,
+  deducted_on: bet.deducted_on,
   is_mine: isOwnOrImputed(bet, viewer),
   // El monto de lo propio se ve (lo cobra el pasador); el de lo ajeno es un total.
   amount: isOwnOrImputed(bet, viewer) ? Number(bet.amount) : null,
@@ -141,8 +140,6 @@ export class PollaBetRouter {
   private repository = new PollaBetRepository();
 
   private editionRepository = new PollaEditionRepository();
-
-  private currentAccountRepository = new PollaCurrentAccountRepository();
 
   constructor() {
     this.router = Router();
@@ -176,7 +173,7 @@ export class PollaBetRouter {
     return edition;
   };
 
-  /** Solo para un pasador: cierre de carga de esas ediciones y su última liquidación. */
+  /** Solo para un pasador: qué ediciones de esas jugadas tienen la carga abierta. */
   private buildDeleteContext = async (
     user: IPollaSessionUser,
     bets: PollaBetRow[]
@@ -184,10 +181,7 @@ export class PollaBetRouter {
     if (user.user_type !== POLLA_USER_TYPE.CASHIER) return undefined;
 
     const editionIds = [...new Set(bets.map((bet) => bet.polla_edition_id))];
-    const [limits, liquidatedUntil] = await Promise.all([
-      this.editionRepository.getLoadLimits(editionIds),
-      this.currentAccountRepository.getLastLiquidatedDate(user.polla_user_id),
-    ]);
+    const limits = await this.editionRepository.getLoadLimits(editionIds);
 
     return {
       openEditions: new Set(
@@ -195,7 +189,6 @@ export class PollaBetRouter {
           .filter((edition) => isPollaLoadOpen(edition.load_limit_date, edition.load_limit_time))
           .map((edition) => edition.polla_edition_id)
       ),
-      liquidatedUntil,
     };
   };
 
@@ -224,6 +217,18 @@ export class PollaBetRouter {
     const loadRange = queryDateRange(req.query.load_from, req.query.load_to);
     const hitRange = queryDateRange(req.query.hit_from, req.query.hit_to);
 
+    // Borradas que pasaron por la cuenta corriente: los tickets del período
+    // con las que se borraron después (cuadran con el pase de jugadas) o solo
+    // las que se descuentan en el período. Es parte de la liquidación: el
+    // jugador no la ve y el pasador, solo lo imputado a él.
+    const deductedRange = queryDateRange(req.query.deducted_from, req.query.deducted_to);
+    const withDeducted = req.query.with_deducted === 'true';
+    const deletedOnes = Boolean(deductedRange) || withDeducted;
+
+    if (deletedOnes && user.user_type === POLLA_USER_TYPE.PLAYER) {
+      throw new ForbiddenError('Los jugadores no ven jugadas borradas');
+    }
+
     // Pasadores y jugadores ven todas las jugadas de su organización (con
     // nombres y aciertos); "solo mías" es, para el pasador, lo imputado a él.
     const filters: PollaBetFilters = isAdmin
@@ -238,19 +243,25 @@ export class PollaBetRouter {
           hitDate: queryDate(req.query.hit_date),
           loadRange,
           hitRange,
+          deductedRange,
+          withDeducted,
           onlyWinners: req.query.winners === 'true',
         }
       : {
           editionId,
           organizationId: user.polla_organization_id,
           cashierId:
-            onlyMine && user.user_type === POLLA_USER_TYPE.CASHIER ? user.polla_user_id : null,
+            (onlyMine || deletedOnes) && user.user_type === POLLA_USER_TYPE.CASHIER
+              ? user.polla_user_id
+              : null,
           userId: onlyMine && user.user_type === POLLA_USER_TYPE.PLAYER ? user.polla_user_id : null,
           ticketNumber: queryString(req.query.ticket_number),
           loadDate: queryDate(req.query.load_date),
           hitDate: queryDate(req.query.hit_date),
           loadRange,
           hitRange,
+          deductedRange,
+          withDeducted,
           onlyWinners: req.query.winners === 'true',
         };
 
@@ -261,7 +272,8 @@ export class PollaBetRouter {
       !filters.loadDate &&
       !filters.hitDate &&
       !loadRange &&
-      !hitRange
+      !hitRange &&
+      !deductedRange
     ) {
       throw new BadRequestError('Elegí una edición o buscá por número de ticket');
     }
@@ -455,7 +467,7 @@ export class PollaBetRouter {
       numbers: payload.numbers,
       // Solo un admin elige el día de carga: para el resto es hoy, y el cierre
       // de la edición se mide contra la fecha y hora reales. Con force el admin
-      // carga hasta el final del día de cierre, sin mirar la hora (la RPC).
+      // carga sin cierre de carga, hasta el último día de juego (la RPC).
       date: isAdmin ? payload.date : undefined,
       force: isAdmin,
     });
@@ -466,8 +478,9 @@ export class PollaBetRouter {
   /**
    * ADMIN y superiores pueden editar o borrar cualquier jugada, incluso pasado
    * el cierre. El pasador solo borra (no edita) las suyas o las de sus
-   * jugadores; el cierre de carga y su liquidación los controla la RPC. El
-   * jugador no tiene acciones.
+   * jugadores, hasta el cierre de carga (lo controla la RPC). Si ya se
+   * liquidaron, la baja se descuenta del pase el día que se borra. El jugador
+   * no tiene acciones.
    */
   private assertCanWrite = async (
     user: IPollaSessionUser,
@@ -513,12 +526,12 @@ export class PollaBetRouter {
     const { user } = getPollaSession(req);
     await this.assertCanWrite(user, req.params.id, 'delete');
 
-    await this.repository.remove(
+    const { deducted_on } = await this.repository.remove(
       req.params.id,
       user.polla_user_id,
       isPollaAdminRole(user.user_type)
     );
 
-    res.status(200).json({ data: { success: true } });
+    res.status(200).json({ data: { success: true, deducted_on } });
   });
 }

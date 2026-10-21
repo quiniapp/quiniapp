@@ -1,4 +1,6 @@
+import dayjs from 'dayjs';
 import { IPollaBetListItem } from '@helper/polla/types/game.type';
+import { Badge } from '@/components/ui/badge';
 import { useBetsOfDay } from '@/hooks/fetchs/usePollaData';
 import { betsRangeFrom } from '@/lib/accountPeriod';
 import {
@@ -22,9 +24,13 @@ interface DayBetsTablesProps {
 
 const player = (bet: IPollaBetListItem) => bet.client_name ?? bet.cashier_name;
 
+const money = (bet: IPollaBetListItem) => (bet.amount !== null ? `$${fmtMoney(bet.amount)}` : '-');
+
 /**
  * Lo que se liquida de un pasador en el período, como en QuiniApp: los tickets
- * que cargó (el pase) y las jugadas que ganaron (los premios).
+ * que cargó (el pase de jugadas, con los que se borraron después), las
+ * borradas que se descuentan en el período y las jugadas que ganaron (los
+ * premios). Tickets − borradas = pase.
  */
 export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTablesProps) => {
   const scope = cashierId ? { cashier_polla_user_id: cashierId } : { mine: true };
@@ -32,7 +38,11 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
   const rangeFrom = betsRangeFrom(from, to);
 
   const { data: tickets, isFetching: loadingTickets } = useBetsOfDay(
-    { ...scope, load_from: rangeFrom, load_to: to },
+    { ...scope, load_from: rangeFrom, load_to: to, with_deducted: true },
+    enabled
+  );
+  const { data: deleted, isFetching: loadingDeleted } = useBetsOfDay(
+    { ...scope, deducted_from: rangeFrom, deducted_to: to },
     enabled
   );
   const { data: winners, isFetching: loadingWinners } = useBetsOfDay(
@@ -65,11 +75,16 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
               {tickets?.data.length
                 ? tickets.data.map((bet) => (
                     <TableRow key={bet.polla_bet_id}>
-                      <TableCell className="font-mono text-xs">{bet.ticket_number}</TableCell>
-                      <TableCell>{player(bet)}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {bet.amount !== null ? `$${fmtMoney(bet.amount)}` : '-'}
+                      <TableCell className="font-mono text-xs">
+                        {bet.ticket_number}
+                        {bet.deducted_on && (
+                          <Badge variant="destructive" className="ml-1 font-sans">
+                            Borrada {dayjs(bet.deducted_on).format('DD/MM')}
+                          </Badge>
+                        )}
                       </TableCell>
+                      <TableCell>{player(bet)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{money(bet)}</TableCell>
                     </TableRow>
                   ))
                 : empty(loadingTickets, `No cargó tickets ${span}`, 3)}
@@ -103,6 +118,40 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
                     </TableRow>
                   ))
                 : empty(loadingWinners, `Sin jugadas ganadoras ${span}`, 4)}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+
+      <section className="flex min-w-0 flex-col gap-1 md:col-span-2">
+        <h3 className="text-sm font-semibold">Borradas {span}</h3>
+        <div className="max-h-60 overflow-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ticket</TableHead>
+                <TableHead>Jugador</TableHead>
+                <TableHead>Cargada</TableHead>
+                <TableHead>Borrada</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {deleted?.data.length
+                ? deleted.data.map((bet) => (
+                    <TableRow key={bet.polla_bet_id}>
+                      <TableCell className="font-mono text-xs">{bet.ticket_number}</TableCell>
+                      <TableCell>{player(bet)}</TableCell>
+                      <TableCell className="tabular-nums">
+                        {dayjs(bet.load_date).format('DD/MM')}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {bet.deducted_on ? dayjs(bet.deducted_on).format('DD/MM') : ''}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{money(bet)}</TableCell>
+                    </TableRow>
+                  ))
+                : empty(loadingDeleted, `Sin jugadas borradas ${span}`, 5)}
             </TableBody>
           </Table>
         </div>

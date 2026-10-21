@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError } from '@helper/errors';
-import { POLLA_ADMIN_ROLES } from '@helper/polla/types/user.type';
+import { POLLA_ACCOUNT_ROLES } from '@helper/polla/types/user.type';
 import { newPollaOrgExpenseSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaExpenseRepository } from '../repository/polla-expense.repository';
@@ -9,7 +9,10 @@ import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.m
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Gastos de la organización para el ticket de cobros y pagos. Solo ADMIN+. */
+/**
+ * Gastos de la organización para el ticket de cobros y pagos. Son parte de la
+ * cuenta corriente: solo dueño, capitalista y superadmin (`POLLA_ACCOUNT_ROLES`).
+ */
 export class PollaExpenseRouter {
   public router: Router;
 
@@ -21,7 +24,7 @@ export class PollaExpenseRouter {
   }
 
   private setupRoutes() {
-    this.router.use(requirePollaRole(...POLLA_ADMIN_ROLES));
+    this.router.use(requirePollaRole(...POLLA_ACCOUNT_ROLES));
     this.router.get('/', this.getByDateHandler);
     this.router.post('/', this.createHandler);
     this.router.delete('/:id', this.deleteHandler);

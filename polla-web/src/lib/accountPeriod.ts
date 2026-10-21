@@ -32,12 +32,23 @@ export const periodLabel = (from: string, to: string, format = 'DD/MM') =>
     ? dayjs(to).format(format)
     : `${dayjs(from).format(format)} al ${dayjs(to).format(format)}`;
 
+/** Primer día que la API acepta en un rango que termina en `to`. */
+export const oldestRangeFrom = (to: string) =>
+  dayjs(to).subtract(POLLA_ACCOUNT_RECALC_MAX_DAYS, 'day').format('YYYY-MM-DD');
+
 /**
  * Inicio para pedir las jugadas de un período: la API acepta rangos de hasta
  * `POLLA_ACCOUNT_RECALC_MAX_DAYS` días (un pasador que nunca se liquidó puede
  * tener un período más largo).
  */
 export const betsRangeFrom = (from: string, to: string) => {
-  const limit = dayjs(to).subtract(POLLA_ACCOUNT_RECALC_MAX_DAYS, 'day').format('YYYY-MM-DD');
+  const limit = oldestRangeFrom(to);
   return from < limit ? limit : from;
 };
+
+/**
+ * Desde de la liquidación por rango: no pasa a Hasta (si se corre la fecha
+ * para atrás, arranca ahí) ni el máximo de días que acepta la API.
+ */
+export const accountRangeFrom = (from: string, to: string) =>
+  betsRangeFrom(from > to ? to : from, to);
