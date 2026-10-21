@@ -3,15 +3,20 @@ import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { Pencil, Printer, Trash2 } from 'lucide-react';
 import {
-  IPollaBetEntityFront,
   IPollaBetListItem,
   IPollaEditionEntityFront,
   POLLA_EDITION_STATUS,
-  isAnonymousPollaBet,
+  POLLA_NUMBERS_REQUIRED,
+  isPublicPollaBet,
 } from '@helper/polla/types/game.type';
-import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import {
+  IPollaUserOption,
+  POLLA_USER_TYPE,
+  POLLA_USER_TYPE_LABEL,
+  isPollaAdminRole,
+} from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useBets, useEditions, useUserOptions, useWinners } from '@/hooks/fetchs/usePollaData';
+import { useBets, useEditions, useUser, useWinners } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -19,6 +24,8 @@ import { flattenPages } from '@/hooks/useApi';
 import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
+import { pollaUserOption } from '@/lib/pollaUsers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,13 +47,18 @@ import {
 } from '@/components/ui/table';
 import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
-import { EditBetDialog } from './EditBetDialog';
+import { betNumberClass, hitTitle } from '@/lib/betNumbers';
+import { cn } from '@/lib/utils';
+import { EditBetDialog, EditableBet } from './EditBetDialog';
+import { ShareTicketsPdfButton } from './ShareTicketsPdfButton';
 
 const fmtDate = (value?: string | null) => (value ? dayjs(value).format('DD-MM-YYYY') : '-');
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
-export const editionLabel = (
+const SLOTS = Array.from({ length: POLLA_NUMBERS_REQUIRED }, (_, i) => i);
+
+const editionLabel = (
   edition: IPollaEditionEntityFront,
   lotteryName?: string,
   scheduleName?: string
@@ -55,33 +67,71 @@ export const editionLabel = (
     edition.end_date
   )})`;
 
-interface BetsPageProps {
-  /** Vista "Mis jugadas": fuerza el filtro a las del usuario. */
-  onlyMine?: boolean;
-}
+const cashierLabel = (row: IPollaBetListItem) =>
+  `${row.cashier_number ? `${row.cashier_number} · ` : ''}${row.cashier_name}`;
 
-export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
-  const { user, role, organizationId } = useAuth();
+export const BetsPage = () => {
+  const { role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const isPlayer = role === POLLA_USER_TYPE.PLAYER;
-  const isStaff = Boolean(role) && !isPlayer;
   const canManage = Boolean(role && isPollaAdminRole(role));
+  const isCashier = role === POLLA_USER_TYPE.CASHIER;
+  // El jugador solo mira: no imprime, edita ni borra.
+  const hasActions = role !== POLLA_USER_TYPE.PLAYER;
+  // Pasador y jugador eligen entre lo suyo ("Mis jugadas", por defecto) y todo
+  // lo que se está jugando en el capitalista; el admin filtra por pasador.
+  const canFilterMine = !canManage;
 
   const [ticketSearch, setTicketSearch] = useState(searchParams.get('ticket_number') ?? '');
-  const [editing, setEditing] = useState<IPollaBetEntityFront | null>(null);
+  const [editing, setEditing] = useState<EditableBet | null>(null);
 
-  const debouncedTicket = useDebouncedValue(ticketSearch);
+  const debouncedTicket = useDebouncedValue(ticketSearch.trim());
   const editionId = searchParams.get('polla_edition_id') ?? '';
   const cashierId = searchParams.get('cashier_polla_user_id') ?? '';
+  const playerId = searchParams.get('polla_user_id') ?? '';
+  const sort = searchParams.get('sort') === 'recent' ? 'recent' : 'hits';
+  const mine = canFilterMine && searchParams.get('mine') !== '0';
 
   const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
-  const { data: cashiers } = useUserOptions(
-    { user_type: POLLA_USER_TYPE.CASHIER, limit: 200 },
-    canManage
+
+  // El admin filtra por pasador (sus jugadas y las de sus jugadores) o por
+  // jugador (solo las suyas). El tipo sale del filtro de la URL; sin filtro,
+  // del último elegido en "Pasador | Jugador".
+  const [pickedType, setPickedType] = useState(() =>
+    searchParams.get('polla_user_id') ? POLLA_USER_TYPE.PLAYER : POLLA_USER_TYPE.CASHIER
   );
+  const filterType = playerId
+    ? POLLA_USER_TYPE.PLAYER
+    : cashierId
+      ? POLLA_USER_TYPE.CASHIER
+      : pickedType;
+  const filterUserId = filterType === POLLA_USER_TYPE.PLAYER ? playerId : cashierId;
+  const filterParam =
+    filterType === POLLA_USER_TYPE.PLAYER ? 'polla_user_id' : 'cashier_polla_user_id';
+
+  // El elegido en el buscador ya trae su nombre; si el filtro vino en la URL
+  // (recarga, link), se trae por id (y, si es un jugador, también su pasador).
+  const [pickedUser, setPickedUser] = useState<IPollaUserOption | null>(null);
+  const pickedMatches = Boolean(filterUserId) && pickedUser?.polla_user_id === filterUserId;
+  const { data: userFromUrl } = useUser(
+    canManage && filterUserId && !pickedMatches ? filterUserId : null
+  );
+  const urlUser = userFromUrl?.polla_user_id === filterUserId ? userFromUrl : null;
+  const urlCashierId =
+    urlUser?.user_type === POLLA_USER_TYPE.PLAYER ? urlUser.parent_polla_user_id : null;
+  const { data: cashierOfUrlUser } = useUser(urlCashierId);
+  const selectedUser = useMemo(() => {
+    if (!canManage || !filterUserId) return null;
+    if (pickedMatches) return pickedUser;
+    if (!urlUser) return null;
+    const cashier = cashierOfUrlUser?.polla_user_id === urlCashierId ? cashierOfUrlUser : null;
+    return pollaUserOption(urlUser, cashier);
+  }, [canManage, filterUserId, pickedMatches, pickedUser, urlUser, urlCashierId, cashierOfUrlUser]);
+  // Filtro de usuario para la lista y el PDF.
+  const userFilter: Record<string, string> =
+    canManage && filterUserId ? { [filterParam]: filterUserId } : {};
 
   const lotteryById = useMemo(
     () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
@@ -92,7 +142,7 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
     [schedules]
   );
 
-  const editionList = editions?.data ?? [];
+  const editionList = useMemo(() => editions?.data ?? [], [editions]);
   const selectedEdition = editionList.find((e) => e.polla_edition_id === editionId);
 
   // Sin edición elegida se abre en la más reciente que siga activa.
@@ -119,6 +169,18 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
     });
   };
 
+  /** "Pasador | Jugador": cambiar de tipo suelta al elegido y su filtro. */
+  const changeFilterType = (type: POLLA_USER_TYPE) => {
+    setPickedType(type);
+    setPickedUser(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('cashier_polla_user_id');
+      next.delete('polla_user_id');
+      return next;
+    });
+  };
+
   const searching = debouncedTicket.length > 0;
 
   const {
@@ -131,99 +193,131 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
     {
       polla_edition_id: searching ? undefined : editionId || undefined,
       ticket_number: searching ? debouncedTicket : undefined,
-      cashier_polla_user_id: canManage && !searching ? cashierId || undefined : undefined,
-      mine: onlyMine ? 'true' : undefined,
+      ...(searching ? {} : userFilter),
+      mine: mine ? 'true' : undefined,
+      sort,
     },
     Boolean(editionId) || searching
   );
 
   const { data: winners } = useWinners(editionId || null);
+
+  // Lo que dice el PDF sobre los filtros con que se armó.
+  let pdfScope = mine ? 'Mis jugadas' : 'Todas las jugadas';
+  if (selectedUser) {
+    pdfScope = `${POLLA_USER_TYPE_LABEL[selectedUser.user_type]} ${
+      selectedUser.number ? `${selectedUser.number} · ` : ''
+    }${selectedUser.name}`;
+  }
+  const pdfFiltersLabel = `${pdfScope} · ${sort === 'recent' ? 'más recientes primero' : 'por aciertos'}`;
   const { mutate: deleteBet } = useDeleteBet();
 
-  const handlePrint = async (bet: IPollaBetEntityFront) => {
-    if (!selectedEdition) return;
+  const handlePrint = async (row: IPollaBetListItem) => {
+    const edition = editionList.find((e) => e.polla_edition_id === row.polla_edition_id);
+    if (!edition) return;
 
     const { blob, fileName } = await makePollaTicketPdf({
-      ticket_number: bet.ticket_number,
-      user_name: bet.user_name,
-      cashier_number: bet.cashier_number ?? undefined,
-      numbers: bet.numbers,
-      lotteryName: lotteryById.get(selectedEdition.polla_lottery_id) ?? '',
-      scheduleName: scheduleById.get(selectedEdition.polla_schedule_id) ?? '',
-      startDate: selectedEdition.start_date,
-      endDate: selectedEdition.end_date,
-      loadDate: bet.load_date,
-      ticketPrice: Number(bet.amount),
-      poolAmount: Number(selectedEdition.pool_amount),
+      ticket_number: row.ticket_number,
+      user_name: isPublicPollaBet(row) ? (row.client_name ?? row.cashier_name) : row.user_name,
+      cashier_number: row.cashier_number ?? undefined,
+      numbers: row.numbers,
+      lotteryName: lotteryById.get(edition.polla_lottery_id) ?? '',
+      scheduleName: scheduleById.get(edition.polla_schedule_id) ?? '',
+      startDate: edition.start_date,
+      endDate: edition.end_date,
+      loadDate: row.load_date,
+      ticketPrice: Number(edition.ticket_price),
+      poolAmount: Number(edition.pool_amount),
     });
 
-    await deliverPdf(blob, fileName, `Ticket Polla ${bet.ticket_number}`);
+    await deliverPdf(blob, fileName, `Ticket Polla ${row.ticket_number}`);
   };
 
   const { rows, totalCount } = flattenPages(bets?.pages);
 
   // Estado y acciones se comparten entre la tabla (desktop) y las tarjetas (mobile).
-  const renderStatus = (row: IPollaBetListItem, full: IPollaBetEntityFront | null) => {
+  const renderStatus = (row: IPollaBetListItem) => {
     if (row.winner) {
-      return <Badge className="bg-emerald-600">Ganadora {fmtDate(row.hit_date)}</Badge>;
+      return <Badge variant="success">Ganadora {fmtDate(row.hit_date)}</Badge>;
     }
-    if (isAnonymousPollaBet(row) && row.is_mine) {
-      return <Badge variant="outline">Mía</Badge>;
+    if (isPublicPollaBet(row)) {
+      return row.is_mine ? (
+        <Badge variant="outline">Mía</Badge>
+      ) : (
+        <Badge variant="secondary">Jugando</Badge>
+      );
     }
-    return (
-      <span className="text-xs text-muted-foreground">
-        {full ? fmtDate(full.load_date) : 'En juego'}
-      </span>
-    );
+    return <span className="text-xs text-muted-foreground">{fmtDate(row.load_date)}</span>;
   };
 
-  const renderActions = (full: IPollaBetEntityFront) => (
-    <>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        title="Imprimir"
-        onClick={() => handlePrint(full)}
-      >
-        <Printer />
-      </Button>
-      {(canManage || full.polla_user_id === user?.polla_user_id) && !full.winner && (
-        <>
+  // Owner, capitalista, superadmin y admin: todas las acciones. Pasador: solo
+  // imprimir y eliminar lo suyo. Jugador: ninguna.
+  const renderActions = (row: IPollaBetListItem) => {
+    const isPublic = isPublicPollaBet(row);
+    const canPrint = canManage || (isCashier && isPublic && row.is_mine);
+    const canEdit = canManage && !row.winner;
+    // El pasador borra lo que no le pagaron, hasta el cierre de carga (la API
+    // decide `can_delete`), aunque ya se haya liquidado: se descuenta del pase.
+    const canDelete = !row.winner && (canManage || (isCashier && isPublic && row.can_delete));
+
+    if (!canPrint && !canEdit && !canDelete) return null;
+
+    return (
+      <>
+        {canPrint && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Imprimir"
+            onClick={() => handlePrint(row)}
+          >
+            <Printer />
+          </Button>
+        )}
+        {canEdit && (
           <Button
             type="button"
             size="icon"
             variant="ghost"
             title="Editar"
-            onClick={() => setEditing(full)}
+            onClick={() => setEditing(row)}
           >
             <Pencil />
           </Button>
+        )}
+        {canDelete && (
           <Button
             type="button"
             size="icon"
             variant="ghost"
             title="Eliminar"
             onClick={() => {
-              if (window.confirm(`¿Eliminar la jugada ${full.ticket_number}?`)) {
-                deleteBet({ id: full.polla_bet_id });
+              if (
+                window.confirm(
+                  `¿Eliminar la jugada ${row.ticket_number}? Se descuenta del pase del día en que se borra.`
+                )
+              ) {
+                deleteBet({ id: row.polla_bet_id });
               }
             }}
           >
             <Trash2 />
           </Button>
-        </>
-      )}
-    </>
-  );
+        )}
+      </>
+    );
+  };
 
   return (
     <div>
       {winners && winners.data.length > 0 && (
-        <div className="mb-4 rounded-md border border-emerald-600/40 bg-emerald-600/10 p-3 text-sm">
+        <div className="mb-4 rounded-md border-2 border-success bg-card p-3 text-sm text-card-foreground">
           <strong>Ganadores de la edición:</strong>{' '}
           {winners.data
-            .map((w) => `${w.user_name} (${w.ticket_number}) $${fmtMoney(w.prize)}`)
+            .map(
+              (w) => `${w.client_name ?? w.cashier_name} (${w.ticket_number}) $${fmtMoney(w.prize)}`
+            )
             .join(' · ')}
         </div>
       )}
@@ -253,51 +347,121 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
             </SelectContent>
           </Select>
           {/* Quiniela, turno y fechas ya están en el select: acá va solo lo
-              que el select no dice. */}
+              que el select no dice. La cantidad de jugadas es un total: solo
+              la recibe un admin. */}
           {selectedEdition && (
             <p className="text-xs text-muted-foreground">
-              Pozo ${fmtMoney(selectedEdition.pool_amount)} · {selectedEdition.bets_count} jugadas
+              Pozo ${fmtMoney(selectedEdition.pool_amount)}
+              {selectedEdition.bets_count !== undefined &&
+                ` · ${selectedEdition.bets_count} jugadas`}
             </p>
           )}
         </div>
 
-        {isStaff && (
+        <div className="flex min-w-0 flex-col gap-1">
+          <Label>Buscar ticket</Label>
+          <Input
+            value={ticketSearch}
+            placeholder="Nº de ticket"
+            inputMode="numeric"
+            onChange={(e) => {
+              setTicketSearch(e.target.value);
+            }}
+            className="w-full sm:w-[220px]"
+          />
+        </div>
+
+        {canManage && (
+          <UserSearchPicker
+            id="bets-user"
+            label="Filtrar por"
+            userTypes={[POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER]}
+            typeFilter={{ value: filterType, onChange: changeFilterType }}
+            value={selectedUser}
+            onChange={(picked) => {
+              setPickedType(filterType);
+              setPickedUser(picked);
+              updateParam(filterParam, picked?.polla_user_id ?? '');
+            }}
+            placeholder="Todos: número o nombre"
+            clearLabel="Todos"
+            className="sm:w-[260px]"
+          />
+        )}
+
+        {canFilterMine && (
           <div className="flex min-w-0 flex-col gap-1">
-            <Label>Buscar ticket</Label>
-            <Input
-              value={ticketSearch}
-              placeholder="Nº de ticket"
-              onChange={(e) => {
-                setTicketSearch(e.target.value);
-              }}
-              className="w-full sm:w-[220px]"
-            />
+            <Label id="bets-view-label">Ver</Label>
+            <div
+              role="tablist"
+              aria-labelledby="bets-view-label"
+              className="inline-flex rounded-md border bg-card p-1"
+            >
+              {[
+                {
+                  value: '1',
+                  label: 'Mis jugadas',
+                  title:
+                    role === POLLA_USER_TYPE.CASHIER
+                      ? 'Las tuyas y las de tus jugadores'
+                      : 'Las que cargaste',
+                },
+                { value: '0', label: 'Jugando', title: 'Todas las que se están jugando' },
+              ].map((tab) => {
+                const active = (mine ? '1' : '0') === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    title={tab.title}
+                    onClick={() => updateParam('mine', tab.value)}
+                    className={cn(
+                      'flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
+                      active
+                        ? 'bg-nav-active text-nav-active-foreground'
+                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {canManage && (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label>Pasador</Label>
-            <Select
-              value={cashierId || 'all'}
-              onValueChange={(value) =>
-                updateParam('cashier_polla_user_id', value === 'all' ? '' : value)
-              }
-            >
-              <SelectTrigger className="w-full sm:w-[220px]">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {cashiers?.data.map((cashier) => (
-                  <SelectItem key={cashier.polla_user_id} value={cashier.polla_user_id}>
-                    {cashier.number ? `${cashier.number} · ` : ''}
-                    {cashier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <Label>Ordenar por</Label>
+          <Select
+            value={sort}
+            onValueChange={(value) => updateParam('sort', value === 'recent' ? 'recent' : '')}
+          >
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hits">Más aciertos</SelectItem>
+              <SelectItem value="recent">Más recientes</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* El jugador no imprime: tampoco comparte el PDF de tickets. */}
+        {hasActions && selectedEdition && !searching && (
+          <ShareTicketsPdfButton
+            className="sm:ml-auto"
+            edition={selectedEdition}
+            lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
+            scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
+            filters={{
+              ...userFilter,
+              mine,
+              sort,
+            }}
+            filtersLabel={pdfFiltersLabel}
+          />
         )}
       </div>
 
@@ -311,100 +475,108 @@ export const BetsPage = ({ onlyMine = false }: BetsPageProps) => {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
         >
-          {/* Mobile: tarjetas. Una tabla de 7 columnas en 320px obliga a
+          {/* Mobile: tarjetas. Una tabla de 16 columnas en 320px obliga a
               scrollear de costado para leer una sola jugada. */}
-          <ul className="flex flex-col gap-2 sm:hidden">
-            {rows.map((row: IPollaBetListItem) => {
-              const anonymous = isAnonymousPollaBet(row);
-              const full = anonymous ? null : (row as IPollaBetEntityFront);
-
-              return (
-                <li key={row.polla_bet_id} className="rounded-md border bg-card p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-mono text-xs text-muted-foreground">
-                        {row.ticket_number}
-                      </p>
-                      {full && (
-                        <p className="truncate text-sm">
-                          {full.user_name}
-                          {full.cashier_name !== full.user_name && (
-                            <span className="text-muted-foreground"> · {full.cashier_name}</span>
-                          )}
-                        </p>
+          <ul className="flex flex-col gap-2 md:hidden">
+            {rows.map((row: IPollaBetListItem) => (
+              <li
+                key={row.polla_bet_id}
+                className="rounded-md border bg-card p-3 text-card-foreground"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-xs text-muted-foreground">
+                      {row.ticket_number}
+                    </p>
+                    <p className="truncate text-sm">
+                      {row.group_name && (
+                        <span className="text-muted-foreground">{row.group_name} · </span>
                       )}
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums">
-                      {row.hits}/10
-                    </span>
+                      {cashierLabel(row)}
+                      {row.client_name && (
+                        <span className="font-semibold"> · {row.client_name}</span>
+                      )}
+                    </p>
                   </div>
+                  <Badge variant="success" className="shrink-0 text-sm tabular-nums">
+                    {row.hits}
+                  </Badge>
+                </div>
 
-                  <div className="mt-2">
-                    <BetNumbers numbers={row.numbers} hitNumbers={row.hit_numbers} />
-                  </div>
+                <div className="mt-2">
+                  <BetNumbers numbers={row.numbers} hitDates={row.hit_dates} />
+                </div>
 
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    {renderStatus(row, full)}
-                    {isStaff && full && <div className="flex gap-1">{renderActions(full)}</div>}
-                  </div>
-                </li>
-              );
-            })}
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  {renderStatus(row)}
+                  {hasActions && <div className="flex gap-1">{renderActions(row)}</div>}
+                </div>
+              </li>
+            ))}
           </ul>
 
-          <div className="hidden rounded-md border sm:block">
+          {/* Desktop: planilla con un casillero por número; los acertados en
+              amarillo. */}
+          <div className="hidden rounded-md border bg-card text-card-foreground md:block">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Ticket</TableHead>
-                  {isStaff && <TableHead>Jugador</TableHead>}
-                  {isStaff && <TableHead>Pasador</TableHead>}
-                  <TableHead>Números</TableHead>
-                  <TableHead>Aciertos</TableHead>
+                  <TableHead>Coord</TableHead>
+                  <TableHead>Pasador</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-center">Aciertos</TableHead>
+                  {SLOTS.map((slot) => (
+                    <TableHead key={slot} className="w-10 text-center">
+                      {slot + 1}
+                    </TableHead>
+                  ))}
                   <TableHead>Estado</TableHead>
-                  {isStaff && <TableHead className="text-right">Acciones</TableHead>}
+                  {hasActions && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row: IPollaBetListItem) => {
-                  const anonymous = isAnonymousPollaBet(row);
-                  const full = anonymous ? null : (row as IPollaBetEntityFront);
-
-                  return (
-                    <TableRow key={row.polla_bet_id}>
-                      <TableCell className="font-mono text-xs">{row.ticket_number}</TableCell>
-
-                      {isStaff && <TableCell>{full?.user_name}</TableCell>}
-                      {isStaff && (
-                        <TableCell>
-                          {full?.cashier_number ? `${full.cashier_number} · ` : ''}
-                          {full?.cashier_name}
+                {rows.map((row: IPollaBetListItem) => (
+                  <TableRow key={row.polla_bet_id}>
+                    <TableCell className="font-mono text-xs">{row.ticket_number}</TableCell>
+                    <TableCell>{row.group_name ?? ''}</TableCell>
+                    <TableCell>{cashierLabel(row)}</TableCell>
+                    <TableCell className="font-medium">{row.client_name ?? ''}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="success" className="tabular-nums">
+                        {row.hits}
+                      </Badge>
+                    </TableCell>
+                    {SLOTS.map((slot) => {
+                      const hitDate = row.hit_dates?.[slot] ?? null;
+                      return (
+                        <TableCell
+                          key={slot}
+                          title={hitTitle(hitDate)}
+                          className={cn(
+                            'border-l text-center font-mono text-sm tabular-nums',
+                            hitDate && betNumberClass(true)
+                          )}
+                        >
+                          {row.numbers[slot]}
                         </TableCell>
-                      )}
-
+                      );
+                    })}
+                    <TableCell>{renderStatus(row)}</TableCell>
+                    {hasActions && (
                       <TableCell>
-                        <BetNumbers numbers={row.numbers} hitNumbers={row.hit_numbers} />
+                        <div className="flex justify-end gap-1">{renderActions(row)}</div>
                       </TableCell>
-
-                      <TableCell className="tabular-nums">{row.hits}/10</TableCell>
-
-                      <TableCell>{renderStatus(row, full)}</TableCell>
-
-                      {isStaff && full && (
-                        <TableCell>
-                          <div className="flex justify-end gap-1">{renderActions(full)}</div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
+                    )}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
         </InfiniteList>
       )}
 
-      <EditBetDialog bet={editing} onClose={() => setEditing(null)} />
+      {canManage && <EditBetDialog bet={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 };

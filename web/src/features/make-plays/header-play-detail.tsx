@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { makeTicketPdf, printPdfBlob, sharePdfBlob } from '@/functions/makeTicket';
 import { useGetTicketsNumber } from '@/hooks/fetchs/tickets/useGetTicketNumber';
 import { usePlayDetails } from './context/MakePlaysContext';
 
@@ -28,7 +27,8 @@ import { usePlayDetails } from './context/MakePlaysContext';
 const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));
 
 const HeaderPlayDetail = () => {
-  const { cashier, userNumber, setUserNumber, handleRecreateBet, handleEditTicket } = usePlayDetails();
+  const { cashier, userNumber, setUserNumber, handleRecreateBet, handleEditTicket, setTicketToShare } =
+    usePlayDetails();
   const [selectedValue, setSelectedValue] = useState<string>('');
   const { role } = useAuth();
 
@@ -54,31 +54,14 @@ const HeaderPlayDetail = () => {
     setUserNumber(isNaN(parsed) ? undefined : parsed);
   };
 
-  const handleRePrimtLast = async () => {
+  const handleRePrimtLast = () => {
     const lastTicketStr = localStorage.getItem('lastTicket');
     if (!lastTicketStr) {
       toast.error('No hay ticket guardado para reimprimir');
       return;
     }
-    const lastTicket = JSON.parse(lastTicketStr);
-    const { blob, fileName } = await makeTicketPdf(lastTicket);
-    // Heurística simple: si es mobile, priorizo compartir; si desktop, imprimir
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    try {
-      if (isMobile) {
-        // 1) Intentá compartir el archivo directamente (Chrome Android)
-        await sharePdfBlob(blob, fileName, {
-          text: `Ticket ${lastTicket.ticket.ticket_number}`,
-        });
-      } else {
-        // Desktop: imprimir directo
-        await printPdfBlob(blob);
-      }
-    } catch {
-      // Garantizá una salida
-      await printPdfBlob(blob);
-    }
+    // Abre ShareTicketModal: imagen, PDF o imprimir
+    setTicketToShare(JSON.parse(lastTicketStr));
   };
 
   const { data: tickets } = useGetTicketsNumber({

@@ -4,6 +4,7 @@ import { IScheduleEntityFront } from '@helper/types/schedule.type';
 import { ILotteryEntityFront } from '@helper/types/lottery.type';
 import { IUserEntityFront } from '@helper/types/user.type';
 import { IBetTable } from '@helper/request/ticket.request';
+import { PrintableTicket } from '@/functions/makeTicket';
 
 type PlayDetailsState = {
   ticketId?: string;
@@ -21,12 +22,15 @@ type PlayDetailsState = {
   openDeleteModal: boolean;
   openClosedSchedulesModal: boolean;
   closedSchedules: IScheduleEntityFront[];
+  /** Ticket cuyo comprobante se ofrece compartir/imprimir (abre ShareTicketModal) */
+  ticketToShare: PrintableTicket | null;
   setBets: React.Dispatch<React.SetStateAction<IBetTable[]>>;
   setTotalAmount: React.Dispatch<React.SetStateAction<number>>;
   setPartialAmount: React.Dispatch<React.SetStateAction<number>>;
   setOpenDeleteModal: React.Dispatch<React.SetStateAction<boolean>>;
   setOpenClosedSchedulesModal: React.Dispatch<React.SetStateAction<boolean>>;
   setClosedSchedules: React.Dispatch<React.SetStateAction<IScheduleEntityFront[]>>;
+  setTicketToShare: React.Dispatch<React.SetStateAction<PrintableTicket | null>>;
 };
 
 type PlayDetailsActions = {

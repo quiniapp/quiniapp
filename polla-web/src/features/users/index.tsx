@@ -1,25 +1,30 @@
 import { useMemo, useState } from 'react';
-import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { Trash2, Wallet } from 'lucide-react';
+import { KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { newPollaUserSchema } from '@helper/polla/schemas/user.schema';
 import {
+  POLLA_CREATABLE_TYPES,
   POLLA_USER_TYPE,
-  POLLA_USER_HIERARCHY,
+  POLLA_USER_TYPE_LABEL,
   IPollaUserEntityFront,
+  IPollaUserOption,
+  canResetPollaPassword,
+  pollaUserListTypes,
 } from '@helper/polla/types/user.type';
-import { POLLA_CREDIT_MOVEMENT_TYPE } from '@helper/polla/types/game.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useCreditMovements, useUserOptions, useUsers } from '@/hooks/fetchs/usePollaData';
+import { useUsers } from '@/hooks/fetchs/usePollaData';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
-  useAdjustCredits,
   useCreateUser,
   useDeleteUser,
+  useResetUserPassword,
 } from '@/hooks/mutations/usePollaMutations';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { flattenPages } from '@/hooks/useApi';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,199 +51,111 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-const fmtMoney = (value: number) =>
-  new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
+import { ResetPasswordDialog } from '@/components/ResetPasswordDialog';
+import { EditUserDialog } from './EditUserDialog';
 
 const emptyForm = {
-  user_type: POLLA_USER_TYPE.PLAYER as POLLA_USER_TYPE,
+  user_type: '' as POLLA_USER_TYPE | '',
   name: '',
   last_name: '',
   username: '',
   password: '',
   number: '',
   fee: '',
-  fee_plus: '',
-  parent_polla_user_id: '',
   polla_group_id: '',
 };
 
-const CreditsDialog = ({
-  player,
-  onClose,
-}: {
-  player: IPollaUserEntityFront | null;
-  onClose: () => void;
-}) => {
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState<string>(POLLA_CREDIT_MOVEMENT_TYPE.LOAD);
-  const [reason, setReason] = useState('');
-
-  const { data: movements } = useCreditMovements(player?.polla_user_id ?? null);
-  const { rows: movementsRows } = flattenPages(movements?.pages);
-  const { mutate: adjust, isPending } = useAdjustCredits();
-
-  const handleSubmit = () => {
-    const value = Number(amount);
-    if (!player || !Number.isFinite(value) || value === 0) {
-      toast.error('Ingresá un monto');
-      return;
-    }
-
-    adjust(
-      {
-        id: player.polla_user_id,
-        // Un retiro se manda en negativo: el signo lo valida el backend.
-        amount: type === POLLA_CREDIT_MOVEMENT_TYPE.WITHDRAW ? -Math.abs(value) : Math.abs(value),
-        type,
-        reason: reason || null,
-      },
-      {
-        onSuccess: () => {
-          setAmount('');
-          setReason('');
-        },
-      }
-    );
-  };
-
-  return (
-    <Dialog open={Boolean(player)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle>
-            Créditos de {player?.name} · saldo ${fmtMoney(player?.credit_balance ?? 0)}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <Label>Tipo</Label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={POLLA_CREDIT_MOVEMENT_TYPE.LOAD}>Carga</SelectItem>
-                <SelectItem value={POLLA_CREDIT_MOVEMENT_TYPE.WITHDRAW}>Retiro</SelectItem>
-                <SelectItem value={POLLA_CREDIT_MOVEMENT_TYPE.ADJUSTMENT}>Ajuste</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label>Monto</Label>
-            <Input
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full sm:w-[140px]"
-            />
-          </div>
-          <div className="flex flex-1 flex-col gap-1">
-            <Label>Motivo</Label>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} />
-          </div>
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
-            Aplicar
-          </Button>
-        </div>
-
-        <div className="max-h-64 overflow-y-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead className="text-right">Saldo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {movementsRows.map((movement) => (
-                <TableRow key={movement.polla_credit_movement_id}>
-                  <TableCell>{dayjs(movement.created_at).format('DD-MM HH:mm')}</TableCell>
-                  <TableCell>{movement.type}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(movement.amount)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(movement.balance_after)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cerrar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+/** Pasadores y jugadores se buscan por número para cargarles jugadas. */
+const needsNumber = (type: POLLA_USER_TYPE | '') =>
+  type === POLLA_USER_TYPE.CASHIER || type === POLLA_USER_TYPE.PLAYER;
 
 export const UsersPage = () => {
-  const { role, organizationId } = useAuth();
+  const { user, role, organizationId } = useAuth();
   const [typeFilter, setTypeFilter] = useState('');
+  /** Solo dígitos busca el número exacto; si no, nombre, apellido o usuario. */
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim());
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [creditsFor, setCreditsFor] = useState<IPollaUserEntityFront | null>(null);
+  /** Pasador elegido en el buscador para el jugador nuevo (superiores). */
+  const [parentCashier, setParentCashier] = useState<IPollaUserOption | null>(null);
+  const [editing, setEditing] = useState<IPollaUserEntityFront | null>(null);
+  const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
 
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
+  // Un superior que crea un jugador elige a qué pasador pertenece.
+  const picksCashier = open && !isCashier && form.user_type === POLLA_USER_TYPE.PLAYER;
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useUsers({
     user_type: typeFilter || undefined,
+    search: debouncedSearch || undefined,
     polla_organization_id: organizationId ?? undefined,
+    // Se listan también los deshabilitados para poder volver a habilitarlos.
+    include_disabled: true,
   });
 
   const { rows, totalCount } = flattenPages(data?.pages);
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
-  const { data: cashiers } = useUserOptions({ user_type: POLLA_USER_TYPE.CASHIER }, !isCashier);
 
   const { mutate: createUser, isPending } = useCreateUser();
   const { mutate: deleteUser } = useDeleteUser();
+  const { mutate: resetPassword, isPending: isResetting } = useResetUserPassword();
 
-  const creatableTypes = useMemo(() => {
-    if (!role) return [];
-    if (isCashier) return [POLLA_USER_TYPE.PLAYER];
-    return Object.values(POLLA_USER_TYPE).filter(
-      (t) => POLLA_USER_HIERARCHY[t] > POLLA_USER_HIERARCHY[role]
-    );
-  }, [role, isCashier]);
+  const groupById = useMemo(
+    () => new Map(groups?.data.map((group) => [group.polla_group_id, group.name])),
+    [groups]
+  );
+
+  /** Tipos que ve este rol (los inferiores, sin el capitalista: está en Organizaciones). */
+  const visibleTypes = useMemo(() => (role ? pollaUserListTypes(role) : []), [role]);
+
+  /** Qué da de alta este rol (ver `POLLA_CREATABLE_TYPES`). */
+  const creatableTypes = role ? POLLA_CREATABLE_TYPES[role] : [];
+
+  const openCreate = (next: boolean) => {
+    if (next) {
+      setForm({ ...emptyForm, user_type: creatableTypes[0] ?? '' });
+      setParentCashier(null);
+    }
+    setOpen(next);
+  };
 
   const handleCreate = () => {
+    if (!form.user_type) {
+      toast.error('Elegí el tipo de usuario');
+      return;
+    }
+
     const payload: Record<string, unknown> = {
       user_type: form.user_type,
-      name: form.name,
-      last_name: form.last_name || null,
-      username: form.username || null,
+      name: form.name.trim(),
+      last_name: form.last_name.trim() || null,
+      username: form.username.trim() || null,
       password: form.password,
-      number: form.number ? Number(form.number) : null,
+      number: needsNumber(form.user_type) && form.number ? Number(form.number) : null,
       polla_group_id: form.polla_group_id || null,
       ...(organizationId ? { polla_organization_id: organizationId } : {}),
     };
 
-    if (form.user_type === POLLA_USER_TYPE.CASHIER) {
-      payload.fee = Number(form.fee || 0);
-      payload.fee_plus = Number(form.fee_plus || 0);
-    }
     if (form.user_type === POLLA_USER_TYPE.PLAYER && !isCashier) {
-      payload.parent_polla_user_id = form.parent_polla_user_id || null;
-    }
-
-    // Un pasador no manda el padre: lo completa el backend con su propio id,
-    // así que ese caso no pasa por el schema acá.
-    if (!isCashier) {
-      const parsed = newPollaUserSchema.safeParse(payload);
-      if (!parsed.success) {
-        toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      if (!parentCashier) {
+        toast.error('Elegí el pasador del jugador');
         return;
       }
-    } else if (!form.name || form.password.length < 6) {
-      toast.error('Nombre y contraseña (mínimo 6 caracteres) son obligatorios');
+      payload.parent_polla_user_id = parentCashier.polla_user_id;
+    }
+
+    if (form.user_type === POLLA_USER_TYPE.CASHIER) {
+      payload.fee = form.fee === '' ? null : Number(form.fee);
+    }
+
+    // El pasador no manda el padre de su jugador (lo pone el backend con su
+    // propio id): se valida como lo va a validar el backend.
+    const parsed = newPollaUserSchema.safeParse(
+      isCashier ? { ...payload, parent_polla_user_id: user?.polla_user_id } : payload
+    );
+    if (!parsed.success) {
+      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
       return;
     }
 
@@ -250,93 +167,196 @@ export const UsersPage = () => {
     });
   };
 
+  const groupName = (item: IPollaUserEntityFront) =>
+    item.polla_group_id ? (groupById.get(item.polla_group_id) ?? null) : null;
+
+  /** Usuario, grupo y comisión de la tarjeta mobile; lo que falta no se muestra. */
+  const userDetails = (item: IPollaUserEntityFront) => {
+    const group = groupName(item);
+    return [
+      item.username && `${item.username}`,
+      group && `Grupo ${group}`,
+      item.fee !== null && `Comisión ${item.fee}%`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  };
+
+  const renderActions = (item: IPollaUserEntityFront) => (
+    <div className="flex justify-end gap-1">
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        title="Editar"
+        aria-label={`Editar a ${item.name}`}
+        onClick={() => setEditing(item)}
+      >
+        <Pencil />
+      </Button>
+      {/* Cada rol blanquea solo a ciertos tipos y nadie a sí mismo. */}
+      {role &&
+        canResetPollaPassword(role, item.user_type) &&
+        item.polla_user_id !== user?.polla_user_id && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Blanquear contraseña"
+            aria-label={`Blanquear la contraseña de ${item.name}`}
+            onClick={() => setResetting(item)}
+          >
+            <KeyRound />
+          </Button>
+        )}
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        title="Eliminar"
+        aria-label={`Eliminar a ${item.name}`}
+        onClick={() => {
+          if (window.confirm(`¿Eliminar a ${item.name}?`)) {
+            deleteUser({ id: item.polla_user_id });
+          }
+        }}
+      >
+        <Trash2 />
+      </Button>
+    </div>
+  );
+
   return (
     <div>
       <PageHeader
-        description={isCashier ? 'Tus jugadores y sus créditos' : 'Usuarios de la organización'}
+        description={isCashier ? 'Tus jugadores' : 'Usuarios de la organización'}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value.slice(0, 50))}
+              placeholder="Buscar: número, nombre o usuario"
+              aria-label="Buscar usuarios por número, nombre o usuario"
+              className="w-full sm:w-[260px]"
+            />
             <Select
               value={typeFilter || 'all'}
               onValueChange={(v) => setTypeFilter(v === 'all' ? '' : v)}
             >
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Todos los tipos" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
-                {creatableTypes.map((type) => (
+                {visibleTypes.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type}
+                    {POLLA_USER_TYPE_LABEL[type]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={openCreate}>
               <DialogTrigger asChild>
-                <Button type="button">Nuevo usuario</Button>
+                <Button type="button" disabled={creatableTypes.length === 0}>
+                  {isCashier ? 'Nuevo jugador' : 'Nuevo usuario'}
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-[95vw] sm:max-w-[560px]">
                 <DialogHeader>
-                  <DialogTitle>Nuevo usuario</DialogTitle>
+                  <DialogTitle>{isCashier ? 'Nuevo jugador' : 'Nuevo usuario'}</DialogTitle>
                 </DialogHeader>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1">
-                    <Label>Tipo</Label>
-                    <Select
-                      value={form.user_type}
-                      onValueChange={(v) => setForm({ ...form, user_type: v as POLLA_USER_TYPE })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {creatableTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {!isCashier && (
+                    <div className="flex flex-col gap-1">
+                      <Label>Tipo</Label>
+                      <Select
+                        value={form.user_type}
+                        onValueChange={(v) => setForm({ ...form, user_type: v as POLLA_USER_TYPE })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Elegí el tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {creatableTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {POLLA_USER_TYPE_LABEL[type]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-1">
-                    <Label>Nombre</Label>
+                    <Label htmlFor="new-user-name">Nombre</Label>
                     <Input
+                      id="new-user-name"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label>Usuario</Label>
+                    <Label htmlFor="new-user-last-name">Apellido</Label>
                     <Input
+                      id="new-user-last-name"
+                      value={form.last_name}
+                      onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                    />
+                  </div>
+
+                  {needsNumber(form.user_type) && (
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="new-user-number">Número</Label>
+                      <Input
+                        id="new-user-number"
+                        inputMode="numeric"
+                        value={form.number}
+                        onChange={(e) =>
+                          setForm({ ...form, number: e.target.value.replace(/\D/g, '') })
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="new-user-username">Usuario</Label>
+                    <Input
+                      id="new-user-username"
+                      autoComplete="off"
                       value={form.username}
                       onChange={(e) => setForm({ ...form, username: e.target.value })}
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label>Contraseña</Label>
+                    <Label htmlFor="new-user-password">Contraseña</Label>
                     <Input
+                      id="new-user-password"
                       type="password"
+                      autoComplete="new-password"
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
                     />
                   </div>
 
+                  {picksCashier && (
+                    <UserSearchPicker
+                      id="new-user-cashier"
+                      label="Pasador"
+                      userTypes={[POLLA_USER_TYPE.CASHIER]}
+                      value={parentCashier}
+                      onChange={setParentCashier}
+                      placeholder="Número o nombre del pasador"
+                      emptyHint="Elegí el pasador del jugador"
+                    />
+                  )}
+
                   {form.user_type === POLLA_USER_TYPE.CASHIER && (
                     <>
-                      <div className="flex flex-col gap-1">
-                        <Label>Número</Label>
-                        <Input
-                          inputMode="numeric"
-                          value={form.number}
-                          onChange={(e) => setForm({ ...form, number: e.target.value })}
-                        />
-                      </div>
                       <div className="flex flex-col gap-1">
                         <Label>Grupo</Label>
                         <Select
@@ -359,44 +379,15 @@ export const UsersPage = () => {
                         </Select>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <Label>Comisión %</Label>
+                        <Label htmlFor="new-user-fee">Comisión %</Label>
                         <Input
+                          id="new-user-fee"
                           inputMode="decimal"
                           value={form.fee}
                           onChange={(e) => setForm({ ...form, fee: e.target.value })}
                         />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <Label>Recargo % (fee plus)</Label>
-                        <Input
-                          inputMode="decimal"
-                          value={form.fee_plus}
-                          onChange={(e) => setForm({ ...form, fee_plus: e.target.value })}
-                        />
-                      </div>
                     </>
-                  )}
-
-                  {form.user_type === POLLA_USER_TYPE.PLAYER && !isCashier && (
-                    <div className="flex flex-col gap-1 sm:col-span-2">
-                      <Label>Pasador</Label>
-                      <Select
-                        value={form.parent_polla_user_id}
-                        onValueChange={(v) => setForm({ ...form, parent_polla_user_id: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Elegí el pasador" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cashiers?.data.map((cashier) => (
-                            <SelectItem key={cashier.polla_user_id} value={cashier.polla_user_id}>
-                              {cashier.number ? `${cashier.number} · ` : ''}
-                              {cashier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   )}
                 </div>
 
@@ -415,7 +406,11 @@ export const UsersPage = () => {
       />
 
       {rows.length === 0 ? (
-        <EmptyState message="No hay usuarios para mostrar" />
+        <EmptyState
+          message={
+            debouncedSearch ? 'No hay usuarios que coincidan' : 'No hay usuarios para mostrar'
+          }
+        />
       ) : (
         <InfiniteList
           totalCount={totalCount}
@@ -424,16 +419,45 @@ export const UsersPage = () => {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
         >
-          <div className="rounded-md border">
+          {/* Mobile: tarjetas, sin scroll de costado. */}
+          <ul className="flex flex-col gap-2 md:hidden">
+            {rows.map((item) => (
+              <li
+                key={item.polla_user_id}
+                className="rounded-md border bg-card p-3 text-card-foreground"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">
+                      {item.number ? `${item.number} · ` : ''}
+                      {item.name} {item.last_name ?? ''}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <Badge variant="secondary">{POLLA_USER_TYPE_LABEL[item.user_type]}</Badge>
+                      {item.disabled && <Badge variant="outline">Deshabilitado</Badge>}
+                    </div>
+                    {userDetails(item) && (
+                      <p className="mt-1 break-words text-xs text-muted-foreground">
+                        {userDetails(item)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0">{renderActions(item)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-md border bg-card text-card-foreground md:block">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Usuario</TableHead>
+                  <TableHead>Grupo</TableHead>
                   <TableHead className="text-right">Comisión</TableHead>
-                  <TableHead className="text-right">Créditos</TableHead>
-                  <TableHead />
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -442,45 +466,19 @@ export const UsersPage = () => {
                     <TableCell>
                       {item.number ? `${item.number} · ` : ''}
                       {item.name} {item.last_name ?? ''}
+                      {item.disabled && (
+                        <Badge variant="outline" className="ml-2">
+                          Deshabilitado
+                        </Badge>
+                      )}
                     </TableCell>
-                    <TableCell>{item.user_type}</TableCell>
+                    <TableCell>{POLLA_USER_TYPE_LABEL[item.user_type]}</TableCell>
                     <TableCell>{item.username ?? '-'}</TableCell>
+                    <TableCell>{groupName(item) ?? '-'}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {item.fee !== null ? `${item.fee}% / ${item.fee_plus}%` : '-'}
+                      {item.fee !== null ? `${item.fee}%` : '-'}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {item.user_type === POLLA_USER_TYPE.PLAYER
-                        ? `$${fmtMoney(item.credit_balance)}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {item.user_type === POLLA_USER_TYPE.PLAYER && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            title="Créditos"
-                            onClick={() => setCreditsFor(item)}
-                          >
-                            <Wallet />
-                          </Button>
-                        )}
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          title="Eliminar"
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar a ${item.name}?`)) {
-                              deleteUser({ id: item.polla_user_id });
-                            }
-                          }}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right">{renderActions(item)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -489,7 +487,27 @@ export const UsersPage = () => {
         </InfiniteList>
       )}
 
-      <CreditsDialog player={creditsFor} onClose={() => setCreditsFor(null)} />
+      {editing && (
+        <EditUserDialog
+          user={editing}
+          groups={groups?.data ?? []}
+          canEditFee={!isCashier}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {resetting && (
+        <ResetPasswordDialog
+          title={resetting.name}
+          isPending={isResetting}
+          onConfirm={(password) =>
+            resetPassword(
+              { id: resetting.polla_user_id, password },
+              { onSuccess: () => setResetting(null) }
+            )
+          }
+          onClose={() => setResetting(null)}
+        />
+      )}
     </div>
   );
 };

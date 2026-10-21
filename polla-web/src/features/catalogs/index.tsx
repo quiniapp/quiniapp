@@ -2,12 +2,10 @@ import { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
 import { useAuth } from '@/providers/AuthContext';
-import { useGroups, useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
+import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import {
-  useCreateGroup,
   useCreateLottery,
   useCreateSchedule,
-  useDeleteGroup,
   useDeleteLottery,
   useDeleteSchedule,
 } from '@/hooks/mutations/usePollaMutations';
@@ -38,9 +36,7 @@ const CatalogCard = ({
 }: {
   title: string;
   rows: SimpleRow[];
-  // eslint-disable-next-line no-unused-vars
   onCreate: (name: string, time?: string) => void;
-  // eslint-disable-next-line no-unused-vars
   onDelete: (id: string) => void;
   withTime?: boolean;
 }) => {
@@ -116,14 +112,11 @@ export const CatalogsPage = () => {
 
   const { data: lotteries } = useLotteries({ polla_organization_id: orgParam });
   const { data: schedules } = useSchedules({ polla_organization_id: orgParam });
-  const { data: groups } = useGroups({ polla_organization_id: orgParam });
 
   const { mutate: createLottery } = useCreateLottery();
   const { mutate: deleteLottery } = useDeleteLottery();
   const { mutate: createSchedule } = useCreateSchedule();
   const { mutate: deleteSchedule } = useDeleteSchedule();
-  const { mutate: createGroup } = useCreateGroup();
-  const { mutate: deleteGroup } = useDeleteGroup();
 
   return (
     <div className="flex flex-col gap-6">
@@ -148,15 +141,6 @@ export const CatalogsPage = () => {
           createSchedule({ name, time, ...(orgParam ? { polla_organization_id: orgParam } : {}) })
         }
         onDelete={(id) => deleteSchedule({ id })}
-      />
-
-      <CatalogCard
-        title="Grupos"
-        rows={(groups?.data ?? []).map((g) => ({ id: g.polla_group_id, name: g.name }))}
-        onCreate={(name) =>
-          createGroup({ name, ...(orgParam ? { polla_organization_id: orgParam } : {}) })
-        }
-        onDelete={(id) => deleteGroup({ id })}
       />
     </div>
   );

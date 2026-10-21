@@ -1,21 +1,24 @@
 import { lazy, ReactNode, Suspense } from 'react';
 import { Navigate, RouteObject } from 'react-router-dom';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute, RoleRoute } from '@/protected/ProtectedRoute';
 import { ROUTES } from '@/types/routes.type';
 import LoginPage from '@/features/login';
 
 const BetsPage = lazy(() => import('@/features/bets'));
-const MyBetsPage = lazy(() => import('@/features/my-bets'));
 const MakeBetPage = lazy(() => import('@/features/make-bet'));
 const EditionsPage = lazy(() => import('@/features/editions'));
 const ResultsPage = lazy(() => import('@/features/results'));
 const UsersPage = lazy(() => import('@/features/users'));
 const CatalogsPage = lazy(() => import('@/features/catalogs'));
 const OrganizationsPage = lazy(() => import('@/features/organizations'));
+const GroupsPage = lazy(() => import('@/features/groups'));
+const CheckTicketPage = lazy(() => import('@/features/check-ticket'));
 const CurrentAccountPage = lazy(() => import('@/features/current-account'));
 const ChangePasswordPage = lazy(() => import('@/features/change-password'));
+const SettingsPage = lazy(() => import('@/features/settings'));
+const SalesPage = lazy(() => import('@/features/sales'));
 
 const ADMIN_AND_UP = [
   POLLA_USER_TYPE.OWNER,
@@ -58,9 +61,9 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Jugadas' } satisfies RouteHandle,
       },
       {
+        // Las jugadas propias son una pestaña de Jugadas.
         path: ROUTES.MY_BETS,
-        element: guarded([POLLA_USER_TYPE.PLAYER], <MyBetsPage />),
-        handle: { title: 'Mis jugadas' } satisfies RouteHandle,
+        element: <Navigate to={`${ROUTES.BETS}?mine=1`} replace />,
       },
       {
         path: ROUTES.MAKE_BET,
@@ -68,13 +71,25 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Cargar jugada' } satisfies RouteHandle,
       },
       {
+        // Todos menos el jugador, siempre dentro de la propia organización.
+        path: ROUTES.CHECK_TICKET,
+        element: guarded(STAFF, <CheckTicketPage />),
+        handle: { title: 'Revisar ticket' } satisfies RouteHandle,
+      },
+      {
+        path: ROUTES.SALES,
+        element: guarded(STAFF, <SalesPage />),
+        handle: { title: 'Ventas del día' } satisfies RouteHandle,
+      },
+      {
         path: ROUTES.EDITIONS,
         element: guarded(ADMIN_AND_UP, <EditionsPage />),
         handle: { title: 'Ediciones' } satisfies RouteHandle,
       },
       {
+        // Todos los ven (como en QuiniApp); solo ADMIN+ carga y procesa.
         path: ROUTES.RESULTS,
-        element: guarded(ADMIN_AND_UP, <ResultsPage />),
+        element: withSuspense(<ResultsPage />),
         handle: { title: 'Resultados' } satisfies RouteHandle,
       },
       {
@@ -83,8 +98,9 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Usuarios' } satisfies RouteHandle,
       },
       {
+        // Dueño, capitalista y superadmin; el pasador ve la suya. El admin no.
         path: ROUTES.CURRENT_ACCOUNT,
-        element: guarded(STAFF, <CurrentAccountPage />),
+        element: guarded([...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER], <CurrentAccountPage />),
         handle: { title: 'Cuenta corriente' } satisfies RouteHandle,
       },
       {
@@ -98,6 +114,18 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Organizaciones' } satisfies RouteHandle,
       },
       {
+        path: ROUTES.GROUPS,
+        element: guarded([POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST], <GroupsPage />),
+        handle: { title: 'Grupos' } satisfies RouteHandle,
+      },
+      {
+        path: ROUTES.SETTINGS,
+        element: withSuspense(<SettingsPage />),
+        handle: { title: 'Configuración' } satisfies RouteHandle,
+      },
+      {
+        // Solo para la contraseña inicial del OWNER del seed: el resto no se
+        // cambia la contraseña (la pone un superior).
         path: ROUTES.CHANGE_PASSWORD,
         element: withSuspense(<ChangePasswordPage />),
         handle: { title: 'Cambiar contraseña' } satisfies RouteHandle,

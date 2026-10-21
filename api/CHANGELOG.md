@@ -4,6 +4,265 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
+
+- **`polla-current-account.route.ts`**: la cuenta corriente la ven y liquidan solo dueño, capitalista y superadmin (`POLLA_ACCOUNT_ROLES`). El pasador sigue viendo la suya. El ADMIN recibe 403 en `GET /current_account`, `/totals` y `/:id`, y en `calculate`, `liquidate`, `bulk` y `PUT /:id`. Antes podía ver todo y liquidar. El jugador queda afuera por el guard (se borran los chequeos sueltos).
+- **`polla-expense.route.ts`**: los gastos (ticket de cobros y pagos) son parte de la cuenta corriente y quedan para `POLLA_ACCOUNT_ROLES`. Antes también entraba el ADMIN.
+- **`polla-user.route.ts`**: `GET /user` ya no lista capitalistas, ni pidiéndolos con `user_type=CAPITALIST`: se ven y se administran desde Organizaciones (`pollaUserListTypes`). Crearlos ya estaba bloqueado (`POLLA_CREATABLE_TYPES`).
+
+### Changed - 2026-10-20 (Polla: jugadas borradas en el pase, liquidación por rango y carga de ADMIN+)
+
+#### Migración `20261020212216_polla_deleted_bets_range_admin_load.sql`
+- **`polla_bets.deducted_on`** (DATE): día en que la baja de una jugada se descuenta del pase de su pasador. Lo pone solo `polla_delete_bet`. Las bajas anteriores y las jugadas que anula el borrado de una edición quedan en NULL y siguen fuera de la cuenta corriente, como hasta ahora (no se reescribe lo liquidado). Índices parciales `idx_polla_bets_org_deducted_on` e `idx_polla_bets_cashier_deducted_on`.
+- **`polla_current_accounts.bets_pass` y `deleted_pass`**: "Pase jugadas" (todo lo cargado ese día, incluidas las que se borraron después) y "Borradas" (lo que se descuenta ese día). `pass` = `bets_pass − deleted_pass + reclamos positivos` y la comisión se calcula sobre ese pase. El día de una baja el pase y la comisión pueden quedar negativos: se revierte lo que ya se liquidó. Backfill: `bets_pass = pass − GREATEST(claims, 0)`.
+- **`polla_delete_bet`**: ya no tira `POLLA_BET_DELETE_LIQUIDATED`. El pasador borra lo suyo y lo de sus jugadores hasta el cierre de carga aunque su cuenta ya se haya liquidado: la jugada sigue en el pase de su día de carga (lo liquidado no cambia) y se descuenta hoy, o mañana si su cuenta ya se liquidó hoy. Recalcula la fila del día del descuento y devuelve `deducted_on`. Todas las bajas pasan por la cuenta corriente, también las del mismo período.
+- **`polla_calculate_current_account`** y **`polla_update_current_account_recompute`**: arman `bets_pass` y `deleted_pass` con la regla de arriba. Ahora tienen `REVOKE`/`GRANT` a `service_role` como el resto.
+- **`polla_recalculate_open_period`**: los días con bajas (`deducted_on`) también se recalculan.
+- **`polla_current_account_period_rows`**: nuevo `p_from DATE DEFAULT NULL`. Con `p_from` el período es `[p_from, p_date]` (liquidación por rango); sin él, cada pasador sigue arrancando el día siguiente a su última liquidación. `period` suma también `bets_pass` y `deleted_pass`. El saldo anterior es el del primer día, así que `saldo anterior + subtotal − cobros + pagos = total`.
+- **`polla_current_account_daily_totals`**: agrega `total_bets_pass` y `total_deleted_pass`.
+- **`polla_create_bet`**: con `p_force` (ADMIN y superiores) no hay cierre de carga: cargan mientras la edición esté `ACTIVE` y hasta su último día de juego (`polla_today() > end_date` → `POLLA_LOAD_LIMIT_EXCEEDED`). Con la polla en juego, los aciertos de los sorteos ya procesados no se suman solos: hay que volver a generar los ganadores de esos días. Pasador y jugador siguen con fecha y hora de cierre.
+
+#### Endpoints
+- **`GET /bet`**:
+  - `with_deducted=true`: suma a las activas las borradas que siguen en el pase de jugadas de su día (los tickets del período cuadran con "Pase jugadas").
+  - `deducted_from` / `deducted_to`: solo las borradas que se descuentan en ese rango (cuenta como filtro que acota el listado).
+  - Los dos son de la liquidación: el jugador recibe 403 y el pasador ve solo lo imputado a él.
+  - `IPollaBetPublic` trae `deducted_on`.
+- **`DELETE /bet/:id`**: devuelve `deducted_on`. `can_delete` del pasador ya no mira la liquidación (sí que la jugada no esté borrada).
+- **`GET /current_account?date=&range_from=`** y **`POST /current_account/calculate|liquidate`** con `range_from`: montos del rango `[range_from, date]` (hasta 62 días, `range_from <= date`, si no 400). Liquidar sigue marcando `date`, que es el Hasta.
+- **`GET /edition?loadable=true`**: para ADMIN y superiores filtra `end_date >= hoy` (`adminLoadableOn`) en lugar de `load_limit_date`.
+
+#### Otros
+- `PollaCurrentAccountRepository.getLastLiquidatedDate` se borra: quedó sin uso. `POLLA_BET_DELETE_LIQUIDATED` se deja en `polla-errors.ts` para la RPC anterior durante el deploy.
+
+### Added - 2026-10-15 (Polla: filtro de ediciones por período)
+
+- **`GET /edition?periods=`**: lista separada por coma de `UPCOMING`, `PLAYING` y `FINISHED` (`POLLA_EDITION_PERIOD`). Lo usan los checkboxes "Futuras / Jugando / Pasadas" de la pantalla de ediciones; se filtra en la base para que el scroll infinito pagine bien.
+  - `UPCOMING`: `ACTIVE` con `start_date` posterior a hoy.
+  - `PLAYING`: `ACTIVE` con `start_date` hasta hoy. Sigue acá pasado `end_date` hasta que se procesa el resultado y queda `FINISHED`.
+  - `FINISHED`: cerradas, con ganador o sin ganador.
+  - "Hoy" es `pollaToday()` (Argentina, del servidor). Los valores se validan contra el enum (otro valor → 400 "Período inválido"), así que en el `or` de PostgREST no entra texto del cliente.
+  - Sin `periods`, o con los tres, no filtra.
+- **`PollaEditionRepository.getAll`**: filtro `periods` (`{ list, today }`), con un único `or` y una condición por período.
+
+### Changed - 2026-10-14 (Polla: los admin cargan hasta el final del día de cierre)
+
+- **Migración `20261014225307_polla_admin_load_until_end_of_day.sql`**: `polla_create_bet` con `p_force` (ADMIN y superiores) ya no saltea el cierre. Carga hasta el final del día `load_limit_date` (`polla_today() > load_limit_date` → `POLLA_LOAD_LIMIT_EXCEEDED`), sin mirar `load_limit_time`.
+  - Ejemplo: si la edición cierra el viernes 16/10 a las 12:00, pasadores y jugadores cargan hasta esa hora y los admin hasta el viernes a las 23:59:59 (hora de Argentina). Antes los admin podían cargar en cualquier momento.
+  - `p_force` conserva el nombre para que la API anterior siga funcionando durante el deploy.
+  - Editar y borrar jugadas no cambia: con force, el admin sigue pudiendo pasado el cierre.
+- **`GET /edition?loadable=true`**: para ADMIN y superiores filtra solo por fecha (`load_limit_date >= hoy`). Para pasador y jugador sigue mirando fecha y hora.
+- **`polla-errors.ts`**: `POLLA_LOAD_LIMIT_EXCEEDED` dice "Cerró la carga de esta edición", sin "(fecha y hora de cierre)", porque para los admin el cierre es solo la fecha.
+
+### Changed - 2026-10-14 (Polla: buscador de usuarios por número)
+
+- **`GET /user/search`**: ordena por número (`number` ascendente, sin número al final). Si un pasador y un jugador comparten número, el pasador va primero.
+  - Antes salían todos los pasadores y después los jugadores. El desplegable de la web se lee como una lista por número.
+- **`GET /user?search=`** (listado de Usuarios): solo dígitos busca el número exacto. Otro texto sigue buscando con `ilike` en nombre, apellido y usuario.
+- **`helper/search.ts`**: `searchNumber` decide cuándo lo escrito es un número. Lo usan `PollaUserRepository.getAll` y `search`.
+
+### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
+
+#### Número de usuario único por tipo
+- **Migración `20261013221747_polla_user_number_per_type.sql`**: `unique_polla_user_number_active` pasa a ser `(polla_organization_id, user_type, number)`.
+  - Un pasador y un jugador pueden compartir número; dos jugadores (o dos pasadores) de la misma organización, no.
+  - El índice conserva el nombre, así que `polla-errors.ts` lo sigue traduciendo. El mensaje de respaldo ahora dice "para ese tipo de usuario".
+  - No necesita backfill: los números ya eran únicos por organización.
+- **`polla-user.route.ts`**: alta y edición chequean el número antes de guardar (`PollaUserRepository.isNumberTaken`). Si está ocupado devuelven 409 "Ese número de jugador ya está en uso" (o "de pasador").
+- **`GET /user/by-number/:number`**: si el número lo comparten un pasador y un jugador devuelve 409 "buscalo por nombre", en vez de un 500. La web nueva usa el buscador; queda para la web vieja durante el deploy.
+
+#### Buscador de pasadores y jugadores
+- **`GET /user/search`** (ADMIN y superiores): `q` y `user_type` (separados por coma, solo `CASHIER`/`PLAYER`), paginado.
+  - Solo dígitos busca el número exacto; otro texto busca con `ilike` en nombre, apellido y usuario; vacío trae todos.
+  - Orden: pasadores primero, después por número.
+  - Cada fila trae `cashier_name`/`cashier_number`: el pasador del jugador, o el propio pasador.
+- **`PollaUserRepository.search`**: embebe al pasador por columna (`parent:parent_polla_user_id(...)`). Con `polla_users!parent_polla_user_id` PostgREST trae los jugadores del pasador.
+- **`helper/search.ts`** (nuevo): `ilikeTerm`/`ilikeAny` arman el patrón entre comillas dobles, así `,`, `(` o `)` escritos por el usuario no rompen el `.or()`.
+  - El `search` de `GET /user` lo usa también: deja de interpolar el texto crudo y suma el apellido.
+
+### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
+
+#### Borrado de jugadas por el pasador
+- **Migración `20261012210905_polla_cashier_delete_until_load_limit.sql`**: `polla_delete_bet` sin force deja de exigir que la jugada sea del día.
+  - El pasador borra lo suyo y lo de sus jugadores mientras la carga de la edición siga abierta (fecha y hora de cierre). Con la polla en juego la carga ya cerró.
+  - Si su cuenta ya se liquidó el día de carga o después, devuelve `POLLA_BET_DELETE_LIQUIDATED` y solo un admin puede borrarla.
+- **`polla-errors.ts`**: error nuevo `POLLA_BET_DELETE_LIQUIDATED` (403).
+- **`polla-bet.route.ts`**: `can_delete` del pasador sigue la misma regla.
+  - Usa el cierre de carga de cada edición, con el nuevo `PollaEditionRepository.getLoadLimits` y `isPollaLoadOpen` en `helper/date.ts`.
+  - Usa la última liquidación del pasador, con el nuevo `PollaCurrentAccountRepository.getLastLiquidatedDate`.
+
+#### Cuenta corriente por período (liquidación semanal)
+- **Migración `20261012210906_polla_current_account_period.sql`**: las filas diarias no cambian. Se suman dos funciones:
+  - **`polla_current_account_period_rows`**: devuelve las filas de un día. Cada una trae en `period` lo acumulado desde el día siguiente a la última liquidación del pasador:
+    - pase, aciertos, reclamos, comisión, deja, subtotal, cobros y pagos;
+    - saldo anterior al inicio del período;
+    - total a la fecha.
+  - **`polla_recalculate_open_period`**: recalcula todos los días con movimiento del período abierto más viejo de la organización, hasta 62 días hacia atrás. Después vuelve a encadenar los saldos. Así entran los días que nunca se calcularon.
+  - Índice parcial `idx_polla_current_accounts_liquidated`.
+- **`polla-current-account.route.ts`**:
+  - `GET /current_account?date=` devuelve las filas con `period`. Con `from`/`to` no cambia.
+  - `POST /calculate` recalcula el período abierto.
+  - `POST /liquidate` recalcula y marca el día como liquidado para todos, lo que cierra sus períodos.
+  - `PUT /:id` con `liquidate` recalcula el período antes de liquidar.
+- **`PollaCurrentAccountRepository`**: `getPeriodRows`, `recalculateOpenPeriod`, `markDayLiquidated` y `getLastLiquidatedDate`. Sale `calculate`, que quedó sin uso.
+- **`GET /bet`**: filtros nuevos `load_from`/`load_to` y `hit_from`/`hit_to`, de hasta 62 días. Son los tickets y ganadoras del período que se liquida.
+
+#### PDF de tickets
+- **`GET /bet?export=true`**: páginas de hasta 1000 jugadas (`POLLA_EXPORT_PAGE_SIZE`) con el keyset que ya existía.
+  - Exige una edición.
+  - El jugador recibe 403, porque no imprime.
+- **`helper/pagination.ts`**: `parsePagination(query, maxLimit)`.
+
+### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
+
+#### Alcance por organización
+- **`helper/scope.ts`**: todos los roles, OWNER incluido, operan solo sobre su organización. Pedir otra devuelve 403, y `resolveOptionalOrganizationId` ya no devuelve "todas" para el OWNER.
+- Se sacan las excepciones del OWNER en jugadas, catálogos, cuenta corriente, ediciones, resultados y usuarios. El OWNER sigue administrando las organizaciones (y el capitalista de cada una) desde `/organization`.
+
+#### Usuarios y contraseñas
+- **`polla-user.route.ts`**:
+  - El alta usa `canCreatePollaUser`. Superadmin, capitalista y OWNER crean jugadores eligiendo el pasador; el trigger valida que sea un pasador activo de la organización.
+  - El blanqueo exige `canResetPollaPassword(actor, objetivo)` y rechaza blanquearse a uno mismo:
+    - el OWNER blanquea capitalistas (vía Organizaciones) y a todos los de su organización;
+    - el capitalista, a los de su organización;
+    - el superadmin, a admin y pasador;
+    - el admin, a pasadores;
+    - el pasador, a sus jugadores.
+  - `GET /user/by-number/:number` es solo ADMIN+ y busca pasadores y jugadores.
+- **`polla-auth.repository.ts`**: el blanqueo deja la contraseña definitiva (`password_reset_required = false`). Sigue destrabando la cuenta y cerrando las sesiones.
+- **`POST /auth/change-password`**: solo responde mientras `password_reset_required`, que hoy solo puede tener el OWNER del seed con la contraseña inicial publicada en el repositorio. El resto recibe 403.
+- **Migración `20261012012417_polla_definitive_passwords.sql`**: las contraseñas temporales pendientes pasan a definitivas, salvo la del OWNER del seed si sigue con la contraseña inicial.
+
+#### Grupos
+- **`polla-catalog.route.ts`**: los grupos los crean, renombran y borran solo OWNER y capitalista. La lectura sigue abierta a todos.
+
+#### Jugadas
+- **`polla-bet.route.ts`**:
+  - Editar es solo ADMIN+. Eliminar: ADMIN+, o el pasador sobre lo suyo o lo de sus jugadores. El jugador recibe 403 en las dos.
+  - `can_edit` sale de la vista pública y `can_delete` es solo para el pasador.
+  - Pasador y jugador cargan únicamente a su nombre (se saca la carga del pasador a nombre de sus jugadores).
+  - `date` solo se toma de un ADMIN+: antes un pasador o un jugador podía mandar una fecha anterior y saltear el cierre de carga.
+  - `GET /bet/check/:ticketNumber` (staff, solo la propia organización): devuelve `IPollaTicketCheck`, con la jugada, el titular (pasador, o jugador y su pasador), la edición con su pozo y los ganadores con su premio.
+- **`polla-bet.repository.ts`**: `getForCheck`, y un helper `ticketPattern` (ticket completo o prefijo de 17 dígitos) que comparte con `getByTicketNumber`.
+
+#### Hora de cierre de carga
+- **Migración `20261012012416_polla_edition_load_limit_time.sql`**:
+  - columna `polla_editions.load_limit_time TIME NOT NULL DEFAULT '23:59:59'` (las ediciones existentes conservan el cierre a fin de día);
+  - función `polla_load_closed(date, time)` con la hora de Argentina;
+  - `polla_create_bet`, `polla_update_bet_numbers` y `polla_delete_bet` controlan el cierre por fecha y hora (sin `p_force`).
+- **`polla-edition.route.ts`/`repository`**: filtro `loadable=true` (carga abierta ahora, con fecha y hora del servidor). `loadable_on` sigue aceptándose.
+- **`helper/date.ts`**: `pollaNowTime()`.
+- **`polla-errors.ts`**: `POLLA_LOAD_LIMIT_EXCEEDED` → "Cerró la carga de esta edición (fecha y hora de cierre)".
+
+### Changed - 2026-10-06 (Polla: resultados de 2 cifras)
+
+- **Migración `20261006140000_polla_results_two_digits.sql`**:
+  - Los resultados se cargan con 2 cifras (00 a 99) y se comparan tal cual con los números jugados. Antes se cargaban 4 cifras y el procesamiento se quedaba con las 2 últimas.
+  - Los resultados ya cargados se pasan a sus 2 últimas cifras, que es lo mismo que usaba el procesamiento: no cambia ningún acierto.
+  - Trigger `validate_polla_result_numbers`: cada resultado tiene que tener 2 cifras (`POLLA_RESULTS_INVALID`).
+  - `polla_process_edition_hits` compara cada resultado sin `RIGHT()`.
+- **`polla-result.route.ts`**: se saca el recorte a 2 cifras para pasador y jugador, porque todos los resultados ya tienen 2 cifras.
+
+### Fixed - 2026-10-06 (Polla: pase inflado por ediciones borradas)
+
+- **Causa del pase de $20.000 con 4 jugadas (develop):** borrar una edición solo le ponía `deleted_at` a la edición. Sus jugadas seguían vivas y `polla_calculate_current_account`, que suma por pasador y día, las contaba en el pase. Walter tenía el 05-10 un pase de $22.000: 1 jugada de la edición vigente y 10 de dos ediciones de prueba borradas.
+- **Migración `20261006130000_polla_delete_edition_voids_bets.sql`**:
+  - `polla_delete_edition(edition, actor)`: borra la edición, anula sus jugadas y recalcula la cuenta corriente de cada pasador y día afectado (`polla_refresh_current_account_row`). No borra una edición con ganadores (`POLLA_EDITION_HAS_WINNERS`).
+  - Arreglo de datos: anula las jugadas que quedaron vivas en ediciones ya borradas (con la fecha de borrado de su edición) y recalcula sus cuentas. En develop, Walter pasa de $22.000 a $2.000 y Pasador Prueba de $6.000 a $2.000 el 05-10.
+- **`polla-edition.route.ts`**: `DELETE /edition/:id` usa la RPC y devuelve `voided_bets`.
+
+### Changed - 2026-10-06 (Polla: segunda tanda del cliente)
+
+#### Jugadas sin créditos, fechas de Argentina y cuenta corriente al día
+Cada pasador cobra las jugadas por fuera de la aplicación, así que dejan de existir los créditos.
+- **Migración `20261006120000_polla_bets_without_credits.sql`**:
+  - `polla_today()`: fecha de negocio en Argentina. El servidor y la base corren en UTC, y una jugada cargada después de las 21 caía en el día siguiente.
+  - `polla_create_bet` ya no debita créditos. El número de ticket usa la hora de Argentina (igual que QuiniApp) y el día por defecto es `polla_today()`. Guarda quién cargó la jugada en la columna nueva `polla_bets.created_by`.
+  - `polla_delete_bet` ya no devuelve créditos. Sin `force` (pasador o jugador) solo borra jugadas cargadas hoy (`POLLA_BET_DELETE_ONLY_SAME_DAY`): borrar una de un día anterior cambiaría una liquidación ya hecha.
+  - `polla_update_bet_numbers` controla el límite de carga con `polla_today()`.
+  - `polla_refresh_current_account_row(cashier, date, org)`: si la cuenta corriente del día ya estaba calculada, alta y baja de jugadas la recalculan para ese pasador y arrastran el saldo. Antes el pase quedaba con las jugadas que había al calcular (por ejemplo, $20.000 de pase con 4 jugadas de $2.000 después de borrar otras).
+  - `REVOKE`/`GRANT` a `service_role` en todas las funciones recreadas.
+- **Migración `20261006120100_polla_player_numbers.sql`**: pasadores y jugadores necesitan número (`CHECK polla_users_number_required`), porque se los busca por número para cargarles jugadas. A los que ya existían sin número se les asignan los siguientes libres de su organización.
+- **Migración `20261006120200_polla_sales_and_current_account_reports.sql`**:
+  - Índice `idx_polla_bets_org_load_date`.
+  - `polla_daily_sales(org, date, cashier?)`: boletas y monto del día por grupo.
+  - Tabla `polla_org_expenses`: gastos de la organización o de un grupo por día. Es la de `org_expenses` de QuiniApp.
+  - `polla_current_account_daily_totals(org, from, to, group?, user?)`: totales por día de la cuenta corriente, con gastos y `net_balance` (cobros − pagos − gastos).
+- **Migración `20261006120300_polla_organization_with_capitalist.sql`**: `polla_create_organization_with_capitalist` crea la organización y su capitalista en una sola transacción. Si el usuario está repetido, no queda la organización.
+- **Errores**: `POLLA_BET_DELETE_ONLY_SAME_DAY` y `polla_users_number_required`. Se sacan los de créditos.
+- **`helper/date.ts`**: `pollaToday()`, la fecha de Argentina para Node. `polla-bet.repository.create` la usa por defecto en vez de la fecha UTC.
+
+#### Usuarios
+- **`polla-user.route.ts`**:
+  - Solo un pasador crea jugadores: cualquier otro rol recibe 403 "Solo un pasador puede crear jugadores".
+  - `POST /user/:id/reset-password`: blanqueo con contraseña temporal. Obliga a cambiarla al entrar, levanta el bloqueo y cierra las sesiones (`PollaAuthRepository.resetPassword`).
+  - `GET /user/by-number/:number`: pasador o jugador por número para cargarle una jugada. ADMIN+ busca en su organización y el pasador entre sus jugadores.
+  - `PUT /:id` no cambia la contraseña (se usa el blanqueo). El pasador no puede cambiar la comisión ni el pasador de un jugador.
+  - Se sacan `/me/credits` y `/:id/credits`, y los métodos de créditos del repositorio.
+- **Sesión**: `credit_balance` sale de `/auth/validate`, login y refresh.
+
+#### Jugadas
+- **`polla-bet.route.ts`**:
+  - Carga a nombre de otro: ADMIN+ para cualquier pasador o jugador de la organización, y el pasador para sus jugadores.
+  - Borrado: el pasador también puede borrar las jugadas imputadas a él (las de sus jugadores), siempre que sean del día. La proyección pública suma `can_delete` y `amount` (este último solo en las propias).
+  - `GET /bet/last`: la última jugada que cargó el propio usuario, para "Repetir última jugada".
+  - `GET /bet/sales?date=`: ventas del día. ADMIN+ recibe el total y el desglose por grupo; el pasador, solo lo suyo; el jugador recibe 403.
+  - Filtros `load_date` y `hit_date` para todos los roles. Con alguno de los dos ya no hace falta elegir edición (para la liquidación).
+- **`polla-edition.route.ts`**: no deja cambiar `ticket_price` si la edición ya tiene jugadas. Las jugadas guardan el precio con el que se cargaron, y cambiarlo desfasa el pase.
+
+#### Resultados
+- **`polla-result.route.ts`**: pasador y jugador reciben los resultados con las 2 últimas cifras. ADMIN+ recibe las 4.
+
+#### Organizaciones
+- **`organization/route/polla-organization.route.ts`** (nuevo; reemplaza al router genérico de catálogos para organizaciones):
+  - `GET` devuelve cada organización con su capitalista.
+  - `POST` crea la organización con su capitalista.
+  - `PUT` cambia el nombre y `DELETE` la borra.
+  - `POST /:id/capitalist/reset-password` blanquea la contraseña del capitalista.
+  - Todas las escrituras son solo del OWNER.
+
+#### Cuenta corriente y gastos
+- **`polla-current-account.route.ts`**:
+  - Filtro `user_number`.
+  - `GET /totals?from&to&polla_group_id` (el pasador recibe solo los suyos).
+  - `PUT /:id` acepta `liquidate: true` para marcar la fila como liquidada.
+- **`expense/route/polla-expense.route.ts`** (nuevo, ADMIN+): `GET ?date&polla_group_id`, `POST` y `DELETE /:id` de gastos, montado en `/expense`.
+
+### Changed - 2026-10-05 (Polla: ajustes del cliente)
+
+#### Números repetidos y aciertos por casillero con fecha
+Una jugada puede repetir números (el 32 cinco veces) y cada aparición necesita su propia salida a lo largo de la edición: las 5 en un mismo sorteo o repartidas entre varios días. Antes los números tenían que ser distintos y los aciertos se guardaban sin fecha, así que no había forma de corregir un sorteo mal cargado.
+- **Migración `20261005120000_polla_repeated_numbers_hit_dates.sql`**:
+  - El trigger `validate_polla_bet_numbers_distinct` se reemplaza por `validate_polla_bet_numbers`, que solo valida el formato `^\d{2}$`.
+  - Columna nueva `polla_bets.hit_dates DATE[]`, en paralelo a `numbers`: día en que acertó cada casillero, o NULL. `hits` y `hit_numbers` pasan a ser derivados (`hit_numbers` ahora incluye repetidos). El backfill le pone a cada casillero ya acertado el primer sorteo de la edición en que salió su número. No cambia ningún `hits`, `winner`, `prize` ni estado de edición.
+  - `polla_process_edition_hits` reescrita. Reprocesar el día D libera solo los casilleros marcados con D y los reasigna con los resultados actuales de D, contando repeticiones dentro del sorteo. Si el resultado se borró, D queda sin aciertos. Las marcas de otros días no se tocan. Los ganadores se derivan de las marcas: una jugada se completa el día de su último acierto y gana quien se completó primero. Así, corregir un resultado que había generado un ganador lo revierte y reabre la edición. También procesa ediciones `FINISHED` cuyo ganador es de D o posterior. Devuelve además `winner_date`, `previous_winner_date` y `reopened`.
+  - `polla_process_results_and_accounts` recorre las ediciones del turno que cubren el día, no los resultados cargados, así un resultado borrado también limpia sus aciertos. Recalcula la cuenta corriente de D y de los días ganadores viejo y nuevo, y arrastra el saldo con `polla_cascade_current_account_from_date`.
+  - `polla_update_bet_numbers` también limpia `hit_dates`.
+  - Índices: se crea `idx_polla_bets_edition_ranking (polla_edition_id, hits DESC, created_at DESC, polla_bet_id DESC)` para el ranking con keyset. Se dropean `idx_polla_bets_edition_hits` (cubierto) e `idx_polla_bets_edition_pending` (el procesamiento ya no filtra por `winner = FALSE`).
+- **`polla-errors.ts`**: se quita `POLLA_NUMBERS_NOT_DISTINCT`.
+
+#### Liquidación sin deje
+- **Migración `20261005120100_polla_settlement_without_leave.sql`**: `fee_plus = 0` para todos los pasadores. Con eso las funciones existentes dejan `drag` y `leave` en 0; el historial no se toca.
+- **`polla-user.route.ts`**: el alta de un pasador guarda `fee_plus = 0` y la edición ignora `fee_plus`.
+- **`polla-current-account.route.ts`**: `calculate`, `liquidate` y la edición por fila calculan siempre con `calculateLeave = false` y `leaveInSubtotal = false`. Los parámetros `leave` y `leave_in_subtotal` se ignoran.
+
+#### Privilegios por rol (como QuiniApp)
+- **`polla-bet.route.ts`**:
+  - Pasadores y jugadores reciben de cada jugada una proyección pública (`toPublicBet`): grupo, pasador, cliente, números, `hit_dates`, aciertos, estado, más `is_mine` y `can_edit`. No reciben ids internos ni montos; el premio solo viene si la jugada ganó. Admin+ recibe la fila completa.
+  - El jugador ya no ve las jugadas anónimas: ve el nombre del jugador y del pasador. Si la jugada es del pasador, `client_name` va en `null`.
+  - `mine=true`: el pasador ve las imputadas a él (las suyas y las de sus jugadores) y el jugador, las propias. La búsqueda por `ticket_number` queda habilitada para todos.
+  - `sort=hits|recent`, por defecto `hits` (ranking), con cursor keyset de tres niveles (`hits|created_at|id`) validado igual que el de dos.
+  - `GET /ganadores` usa la misma proyección.
+- **`polla-bet.repository.ts`**: el grupo viaja embebido (`polla_groups(name)`) y cada fila suma `group_name` y `client_name`.
+- **`polla-edition.route.ts`**: `bets_count` y `collected_amount` (totales) solo se le mandan a admin+.
+
+#### Repetir ticket
+- **`GET /api/polla/private/bet/ticket/:ticketNumber`**: devuelve `{ ticket_number, polla_edition_id, numbers }`. Acepta el número completo, o los 17 dígitos sin `-<pasador>` (búsqueda por prefijo, como QuiniApp). Admin+ busca en la organización, el pasador en lo imputado a él y el jugador en lo propio.
+
+#### Tema por usuario
+- **Migración `20261005120200_polla_user_theme.sql`**: `polla_users.theme` (`'light' | 'dark'`, por defecto `'light'`).
+- **`PUT /api/polla/private/auth/preferences`** (cualquier rol): guarda el tema y devuelve el usuario de sesión. `theme` se suma a `/auth/validate`, login y refresh.
+
 ### Fixed - 2026-10-04 (Borrado de archivo y tamaño de base)
 
 #### "Borrar datos" fallaba por statement timeout

@@ -4,14 +4,19 @@ export enum POLLA_EDITION_STATUS {
   FINISHED = 'FINISHED',
 }
 
-export enum POLLA_CREDIT_MOVEMENT_TYPE {
-  LOAD = 'LOAD',
-  WITHDRAW = 'WITHDRAW',
-  BET = 'BET',
-  BET_REFUND = 'BET_REFUND',
-  ADJUSTMENT = 'ADJUSTMENT',
+/** Filtro de la pantalla de ediciones (`GET /edition?periods=`). */
+export enum POLLA_EDITION_PERIOD {
+  UPCOMING = 'UPCOMING',
+  PLAYING = 'PLAYING',
+  FINISHED = 'FINISHED',
 }
 /* eslint-enable no-unused-vars */
+
+export const POLLA_EDITION_PERIOD_LABEL: Record<POLLA_EDITION_PERIOD, string> = {
+  [POLLA_EDITION_PERIOD.UPCOMING]: 'Futuras',
+  [POLLA_EDITION_PERIOD.PLAYING]: 'Jugando',
+  [POLLA_EDITION_PERIOD.FINISHED]: 'Pasadas',
+};
 
 export const POLLA_NUMBERS_REQUIRED = 10;
 
@@ -26,6 +31,8 @@ export interface IPollaEditionEntityBack {
   start_date: string;
   end_date: string;
   load_limit_date: string;
+  /** Hora de cierre de carga (`HH:mm:ss`, Argentina) del día `load_limit_date`. */
+  load_limit_time: string;
   pool_amount: number;
   ticket_price: number;
   status: POLLA_EDITION_STATUS;
@@ -37,7 +44,25 @@ export interface IPollaEditionEntityBack {
   deleted_at: string | null;
 }
 
-export type IPollaEditionEntityFront = Omit<IPollaEditionEntityBack, 'deleted_at'>;
+/** `bets_count` y `collected_amount` son totales: la API solo se los manda a un admin. */
+export type IPollaEditionEntityFront = Omit<
+  IPollaEditionEntityBack,
+  'deleted_at' | 'bets_count' | 'collected_amount'
+> &
+  Partial<Pick<IPollaEditionEntityBack, 'bets_count' | 'collected_amount'>>;
+
+/**
+ * Período de una edición a la fecha `today` (`YYYY-MM-DD`). Mismo criterio que
+ * el filtro `periods` de `GET /edition`: sigue "jugando" pasado `end_date`
+ * hasta que se procesa el resultado de ese día y queda `FINISHED`.
+ */
+export const pollaEditionPeriod = (
+  edition: Pick<IPollaEditionEntityBack, 'status' | 'start_date'>,
+  today: string
+): POLLA_EDITION_PERIOD => {
+  if (edition.status === POLLA_EDITION_STATUS.FINISHED) return POLLA_EDITION_PERIOD.FINISHED;
+  return edition.start_date > today ? POLLA_EDITION_PERIOD.UPCOMING : POLLA_EDITION_PERIOD.PLAYING;
+};
 
 // --------------------------------------------------------------- resultados
 
@@ -47,6 +72,7 @@ export interface IPollaResultEntityBack {
   polla_lottery_id: string;
   polla_schedule_id: string;
   date: string;
+  /** 20 números de 2 cifras (`'07'`), los que se comparan con las jugadas. */
   results: string[];
   loaded_by: string | null;
   created_at: string;
@@ -55,6 +81,24 @@ export interface IPollaResultEntityBack {
 }
 
 export type IPollaResultEntityFront = Omit<IPollaResultEntityBack, 'deleted_at'>;
+
+/** Resultado de procesar los aciertos de un día en una edición. */
+export interface IPollaProcessedEdition {
+  polla_edition_id?: string;
+  skipped?: boolean;
+  bets_updated?: number;
+  winners?: number;
+  winner_date?: string | null;
+  previous_winner_date?: string | null;
+  /** Un reproceso revirtió al ganador: hay que procesar los días siguientes. */
+  reopened?: boolean;
+}
+
+export interface IPollaProcessResult {
+  date: string;
+  editions: IPollaProcessedEdition[];
+  accounts_updated: number;
+}
 
 // ----------------------------------------------------------------- jugadas
 
@@ -71,60 +115,157 @@ export interface IPollaBetEntityBack {
   cashier_number: number | null;
   load_date: string;
   amount: number;
+  /** 10 números de 2 cifras; se pueden repetir. */
   numbers: string[];
+  /**
+   * En paralelo a `numbers`: día en que acertó cada casillero (`YYYY-MM-DD`) o
+   * `null` si todavía no acertó. Un número jugado 5 veces necesita salir 5 veces.
+   */
+  hit_dates: (string | null)[];
+  /** Derivado de `hit_dates`: los números de los casilleros acertados. */
   hit_numbers: string[];
   hits: number;
   winner: boolean;
   prize: number;
   hit_date: string | null;
+  /** Quién la cargó (el dueño, su pasador o un admin). */
+  created_by: string | null;
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
+  /**
+   * Si se borró: día en que se descuenta del pase de su pasador (Borradas).
+   * Sigue contando en el pase de jugadas de su día de carga. `null` si está
+   * activa o se anuló sin pasar por la cuenta corriente (bajas viejas o
+   * edición borrada).
+   */
+  deducted_on: string | null;
 }
 
-export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'>;
+/** Campos que la API agrega a cada jugada que lista. */
+export interface IPollaBetDerivedFields {
+  /** Grupo del pasador (la columna "Coord"). */
+  group_name: string | null;
+  /** Jugador dueño de la jugada; `null` si la jugó el propio pasador. */
+  client_name: string | null;
+}
+
+export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'> &
+  IPollaBetDerivedFields;
 
 /**
- * Proyección que recibe un jugador de las jugadas que no son suyas: sin nombres,
- * sin pasador, sin organización. El backend recorta las columnas; el front nunca
- * "esconde" datos que ya viajaron.
+ * Lo que recibe un pasador o un jugador de cada jugada: números, aciertos y
+ * quién la jugó, sin ids internos ni montos. Los totales son solo de admin.
  */
-export interface IPollaBetAnonymous {
+export interface IPollaBetPublic extends IPollaBetDerivedFields {
   polla_bet_id: string;
   ticket_number: string;
   polla_edition_id: string;
+  cashier_name: string;
+  cashier_number: number | null;
+  load_date: string;
   numbers: string[];
+  hit_dates: (string | null)[];
   hit_numbers: string[];
   hits: number;
   winner: boolean;
   hit_date: string | null;
-  /** Solo viene con nombre si la jugada es del propio jugador o si ya ganó. */
-  user_name?: string;
-  is_mine?: boolean;
+  /** Solo distinto de 0 si la jugada ganó: el premio es público. */
+  prize: number;
+  /** Precio del ticket, solo en las propias (o imputadas al pasador). */
+  amount: number | null;
+  /** Si se borró, día en que se descuenta del pase (ver `IPollaBetEntityBack`). */
+  deducted_on: string | null;
+  /** Es del usuario o, para un pasador, está imputada a él (sus jugadores). */
+  is_mine: boolean;
+  /**
+   * Solo un pasador la puede borrar: es suya o de uno de sus jugadores, no ganó
+   * y la carga de la edición sigue abierta (da de baja lo que no le pagaron).
+   * Aunque su cuenta ya se haya liquidado: la baja se descuenta del pase el día
+   * que se borra.
+   */
+  can_delete: boolean;
 }
 
-export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetAnonymous;
+export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
 
-export const isAnonymousPollaBet = (bet: IPollaBetListItem): bet is IPollaBetAnonymous =>
+export const isPublicPollaBet = (bet: IPollaBetListItem): bet is IPollaBetPublic =>
   !('cashier_polla_user_id' in bet);
 
-// ---------------------------------------------------------------- créditos
-
-export interface IPollaCreditMovementEntityBack {
-  polla_credit_movement_id: string;
-  polla_user_id: string;
-  cashier_polla_user_id: string;
-  polla_organization_id: string;
-  created_by_polla_user_id: string | null;
-  type: POLLA_CREDIT_MOVEMENT_TYPE;
-  amount: number;
-  balance_after: number;
-  polla_bet_id: string | null;
-  reason: string | null;
-  created_at: string;
+/** Lo mínimo para repetir un ticket (o la última jugada propia): sus 10 números. */
+export interface IPollaBetToRepeat {
+  ticket_number: string;
+  polla_edition_id: string;
+  numbers: string[];
 }
 
-export type IPollaCreditMovementEntityFront = IPollaCreditMovementEntityBack;
+// ----------------------------------------------------------- revisar ticket
+
+/** Titular de un ticket: el pasador que lo jugó o un jugador de un pasador. */
+export interface IPollaTicketHolder {
+  type: 'CASHIER' | 'PLAYER';
+  name: string;
+}
+
+export interface IPollaTicketWinner {
+  ticket_number: string;
+  holder: IPollaTicketHolder;
+  cashier_name: string;
+  cashier_number: number | null;
+  prize: number;
+}
+
+/** "Revisar ticket": la jugada, de quién es y cómo se repartió el pozo de su edición. */
+export interface IPollaTicketCheck {
+  bet: Pick<
+    IPollaBetEntityBack,
+    | 'ticket_number'
+    | 'numbers'
+    | 'hit_dates'
+    | 'hits'
+    | 'load_date'
+    | 'winner'
+    | 'prize'
+    | 'hit_date'
+  >;
+  holder: IPollaTicketHolder;
+  /** Pasador al que se imputa la jugada (para un jugador, el suyo). */
+  cashier: { name: string; number: number | null };
+  edition: Pick<
+    IPollaEditionEntityBack,
+    | 'polla_edition_id'
+    | 'polla_lottery_id'
+    | 'polla_schedule_id'
+    | 'name'
+    | 'start_date'
+    | 'end_date'
+    | 'load_limit_date'
+    | 'load_limit_time'
+    | 'pool_amount'
+    | 'ticket_price'
+    | 'status'
+    | 'winner_date'
+  >;
+  winners: IPollaTicketWinner[];
+}
+
+// ----------------------------------------------------------- ventas del día
+
+/** Boletas vendidas en un día por un grupo (`polla_group_id` null = sin grupo). */
+export interface IPollaDailySalesGroup {
+  polla_group_id: string | null;
+  group_name: string | null;
+  bets_count: number;
+  amount: number;
+}
+
+export interface IPollaDailySales {
+  date: string;
+  bets_count: number;
+  amount: number;
+  /** Desglose por grupo: solo admin+. El pasador recibe `null` (ve lo suyo). */
+  groups: IPollaDailySalesGroup[] | null;
+}
 
 // --------------------------------------------------------- cuenta corriente
 
@@ -136,6 +277,11 @@ export interface IPollaCurrentAccountEntityBack {
   polla_organization_id: string;
   polla_group_id: string | null;
   date: string;
+  /** Pase de jugadas: lo cargado ese día, incluidas las que se borraron después. */
+  bets_pass: number;
+  /** Borradas: jugadas que se descuentan del pase ese día. */
+  deleted_pass: number;
+  /** Pase real: pase de jugadas − borradas + reclamos positivos. Base de la comisión. */
   pass: number;
   successes: number;
   cashier_commission: number;
@@ -156,3 +302,71 @@ export interface IPollaCurrentAccountEntityBack {
 }
 
 export type IPollaCurrentAccountEntityFront = IPollaCurrentAccountEntityBack;
+
+/**
+ * Montos acumulados de un pasador desde el día siguiente a su última
+ * liquidación (liquidación semanal), o desde el inicio del rango pedido, hasta
+ * la fecha pedida. `previous_balance` es el saldo con el que arrancó el período
+ * y `total`, el saldo a la fecha.
+ */
+export interface IPollaCurrentAccountPeriod {
+  /** Primer día del período (YYYY-MM-DD). */
+  from: string;
+  bets_pass: number;
+  deleted_pass: number;
+  pass: number;
+  successes: number;
+  claims: number;
+  cashier_commission: number;
+  revenue: number;
+  subtotal: number;
+  previous_balance: number;
+  collections: number;
+  paid: number;
+  total: number;
+}
+
+/** Fila del día (montos de ese día) con los montos de su período. */
+export type IPollaCurrentAccountPeriodRow = IPollaCurrentAccountEntityFront & {
+  period: IPollaCurrentAccountPeriod;
+};
+
+/** Totales de la cuenta corriente de un día (pie de la tabla y reportes). */
+export interface IPollaCurrentAccountDailyTotals {
+  date: string;
+  accounts_count: number;
+  total_bets_pass: number;
+  total_deleted_pass: number;
+  total_pass: number;
+  total_successes: number;
+  total_commission: number;
+  total_claims: number;
+  total_bills: number;
+  total_revenue: number;
+  total_subtotal: number;
+  total_previous_balance: number;
+  total_collections: number;
+  total_paid: number;
+  total_total: number;
+  /** Gastos de la organización (o del grupo) cargados para ese día. */
+  total_expenses: number;
+  /** Cobros − pagos − gastos. */
+  net_balance: number;
+}
+
+// ------------------------------------------------------------------ gastos
+
+export interface IPollaOrgExpenseEntityBack {
+  polla_org_expense_id: string;
+  polla_organization_id: string;
+  /** `null` = gasto de la organización; si no, de ese grupo. */
+  polla_group_id: string | null;
+  date: string;
+  name: string;
+  amount: number;
+  created_by: string | null;
+  created_at: string;
+  edited_at: string;
+}
+
+export type IPollaOrgExpenseEntityFront = IPollaOrgExpenseEntityBack;

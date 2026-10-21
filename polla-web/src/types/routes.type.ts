@@ -1,16 +1,18 @@
-/* eslint-disable no-unused-vars */
 export enum ROUTES {
   LOGIN = '/login',
   BETS = '/jugadas',
   MY_BETS = '/mis-jugadas',
   MAKE_BET = '/cargar-jugada',
+  SALES = '/ventas',
   EDITIONS = '/ediciones',
   RESULTS = '/resultados',
   USERS = '/usuarios',
   CATALOGS = '/catalogos',
   ORGANIZATIONS = '/organizaciones',
+  GROUPS = '/grupos',
+  CHECK_TICKET = '/revisar-ticket',
   CURRENT_ACCOUNT = '/cuenta-corriente',
   CHANGE_PASSWORD = '/cambiar-password',
+  SETTINGS = '/configuracion',
   NOT_FOUND = '/not-found',
 }
-/* eslint-enable no-unused-vars */

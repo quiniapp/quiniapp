@@ -1,21 +1,31 @@
-import { useMemo, useState } from 'react';
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { newPollaResultSchema } from '@helper/polla/schemas/game.schema';
+import { IPollaResultEntityFront } from '@helper/polla/types/game.type';
+import { isPollaAdminRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useResults } from '@/hooks/fetchs/usePollaData';
+import { useEditions, useResultFor, useResults } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import {
   useCreateResult,
   useDeleteResult,
   useProcessResults,
+  useUpdateResult,
 } from '@/hooks/mutations/usePollaMutations';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { flattenPages } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
+import { ShareTicketsPdfButton } from '@/features/bets/ShareTicketsPdfButton';
+import { ROUTES } from '@/types/routes.type';
+import { DateInput } from '@/components/ui/date-input';
+import { todayIso } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { padPollaNumber } from '@/lib/pollaNumbers';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -34,16 +44,31 @@ import {
 } from '@/components/ui/table';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
-const EMPTY_RESULTS = Array(20).fill('');
+const RESULTS_COUNT = 20;
+const RESULT_DIGITS = 2;
+const emptyResults = () => Array<string>(RESULTS_COUNT).fill('');
+/** Como en la quiniela: 1 a 10 en la primera columna y 11 a 20 en la segunda. */
+const COLUMNS = [
+  Array.from({ length: 10 }, (_, i) => i),
+  Array.from({ length: 10 }, (_, i) => i + 10),
+];
 
 export const ResultsPage = () => {
-  const { organizationId } = useAuth();
+  const { role, organizationId } = useAuth();
   const today = dayjs().format('YYYY-MM-DD');
+
+  // Todos ven los resultados; solo ADMIN+ los carga, corrige y procesa.
+  const canManage = Boolean(role && isPollaAdminRole(role));
 
   const [date, setDate] = useState(today);
   const [lotteryId, setLotteryId] = useState('');
   const [scheduleId, setScheduleId] = useState('');
-  const [numbers, setNumbers] = useState<string[]>(EMPTY_RESULTS);
+  const [numbers, setNumbers] = useState<string[]>(emptyResults);
+  // Cajas que quedaron vacías al apretar Enter o al guardar.
+  const [incomplete, setIncomplete] = useState<Set<number>>(new Set());
+  // Ediciones de la última vez que se generaron ganadores: se ofrece su PDF.
+  const [processedIds, setProcessedIds] = useState<string[]>([]);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useResults({
     polla_organization_id: organizationId ?? undefined,
@@ -52,8 +77,34 @@ export const ResultsPage = () => {
   const { rows, totalCount } = flattenPages(data?.pages);
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
+  const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
+  const processedEditions = useMemo(
+    () =>
+      processedIds
+        .map((id) => editions?.data.find((edition) => edition.polla_edition_id === id))
+        .filter((edition) => edition !== undefined),
+    [processedIds, editions]
+  );
 
-  const { mutate: createResult, isPending } = useCreateResult();
+  // Si el día ya tiene resultado, se trae para corregirlo en vez de duplicarlo.
+  const { data: existingPage } = useResultFor(
+    {
+      date,
+      polla_lottery_id: lotteryId,
+      polla_schedule_id: scheduleId,
+      polla_organization_id: organizationId ?? undefined,
+    },
+    canManage && Boolean(date && lotteryId && scheduleId)
+  );
+  const existing = lotteryId && scheduleId ? existingPage?.data[0] : undefined;
+
+  useEffect(() => {
+    setNumbers(existing ? [...existing.results] : emptyResults());
+    setIncomplete(new Set());
+  }, [existing?.polla_result_id, existing?.edited_at]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { mutate: createResult, isPending: isCreating } = useCreateResult();
+  const { mutate: updateResult, isPending: isUpdating } = useUpdateResult();
   const { mutate: deleteResult } = useDeleteResult();
   const { mutate: processResults, isPending: isProcessing } = useProcessResults();
 
@@ -66,108 +117,292 @@ export const ResultsPage = () => {
     [schedules]
   );
 
-  const handleNumberChange = (index: number, raw: string) => {
+  const setNumber = (index: number, value: string) => {
     const next = [...numbers];
-    next[index] = raw.replace(/\D/g, '').slice(0, 4);
+    next[index] = value;
     setNumbers(next);
+    return next;
   };
 
-  const handleSave = () => {
+  const handleNumberChange = (index: number, raw: string) => {
+    const next = setNumber(index, raw.replace(/\D/g, '').slice(0, RESULT_DIGITS));
+    if (incomplete.has(index) && next[index]) {
+      setIncomplete((prev) => {
+        const rest = new Set(prev);
+        rest.delete(index);
+        return rest;
+      });
+    }
+  };
+
+  // Como en QuiniApp: Guardar se habilita recién con los 20 números cargados
+  // (una cifra sola vale: se completa con cero al guardar).
+  const filledCount = numbers.filter((value) => /^\d{1,2}$/.test(value)).length;
+  const isComplete = filledCount === RESULTS_COUNT;
+  const isSaving = isCreating || isUpdating;
+  const canSave = isComplete && Boolean(lotteryId && scheduleId) && !isSaving;
+
+  const handleSave = (values: string[] = numbers) => {
+    const results = values.map(padPollaNumber);
     const parsed = newPollaResultSchema.safeParse({
       polla_lottery_id: lotteryId,
       polla_schedule_id: scheduleId,
       date,
-      results: numbers,
+      results,
       ...(organizationId ? { polla_organization_id: organizationId } : {}),
     });
 
     if (!parsed.success) {
+      const missing = results
+        .map((value, index) => (value.length === RESULT_DIGITS ? -1 : index))
+        .filter((index) => index >= 0);
+      setIncomplete(new Set(missing));
+      inputRefs.current[missing[0]]?.focus();
       toast.error(parsed.error.errors[0]?.message ?? 'Revisá los resultados');
       return;
     }
 
-    createResult(parsed.data, { onSuccess: () => setNumbers(EMPTY_RESULTS) });
-  };
+    // Guardar no calcula nada: los aciertos salen de "Generar ganadores".
+    const afterSave = {
+      onSuccess: () =>
+        toast('Para calcular los aciertos del día tocá Generar ganadores', { duration: 6000 }),
+    };
 
-  const handleProcess = () => {
-    if (!scheduleId) {
-      toast.error('Elegí un turno para procesar');
+    if (existing) {
+      updateResult({ id: existing.polla_result_id, results: parsed.data.results }, afterSave);
       return;
     }
-    processResults({
-      polla_schedule_id: scheduleId,
-      date,
-      ...(organizationId ? { polla_organization_id: organizationId } : {}),
-    });
+
+    createResult(parsed.data, afterSave);
+  };
+
+  // Como en QuiniApp: Enter pasa siempre a la caja siguiente (una cifra se
+  // completa con cero: 7 queda 07). En la última guarda si están los 20; si
+  // falta alguno, vuelve a la primera vacía.
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+
+    const next = setNumber(index, padPollaNumber(numbers[index]));
+
+    if (index < RESULTS_COUNT - 1) {
+      inputRefs.current[index + 1]?.focus();
+      return;
+    }
+
+    const missing = next.map((value, i) => (value ? -1 : i)).filter((i) => i >= 0);
+    if (missing.length) {
+      setIncomplete(new Set(missing));
+      inputRefs.current[missing[0]]?.focus();
+      return;
+    }
+
+    if (lotteryId && scheduleId && !isSaving) handleSave(next);
+  };
+
+  const handleBlur = (index: number) => {
+    const padded = padPollaNumber(numbers[index]);
+    if (padded !== numbers[index]) setNumber(index, padded);
+  };
+
+  const handleGenerateWinners = () => {
+    if (!scheduleId) {
+      toast.error('Elegí el turno para generar los ganadores');
+      return;
+    }
+    processResults(
+      {
+        polla_schedule_id: scheduleId,
+        date,
+        ...(organizationId ? { polla_organization_id: organizationId } : {}),
+      },
+      {
+        onSuccess: (result) => {
+          setProcessedIds(
+            result.editions
+              .filter((edition) => edition.polla_edition_id && !edition.skipped)
+              .map((edition) => edition.polla_edition_id as string)
+          );
+
+          // La corrección revirtió un ganador: los días posteriores que ya
+          // estaban cargados quedaron sin procesar para esa edición.
+          if (result.editions.some((edition) => edition.reopened)) {
+            toast(
+              'La corrección anuló al ganador y la edición sigue en juego: generá los ganadores de los días siguientes que ya tengan resultado.',
+              { duration: 10000 }
+            );
+          }
+        },
+      }
+    );
+  };
+
+  const handleEdit = (result: IPollaResultEntityFront) => {
+    setDate(result.date);
+    setLotteryId(result.polla_lottery_id);
+    setScheduleId(result.polla_schedule_id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div>
-      <PageHeader description="Cargá los 20 números del día y procesá los aciertos de las ediciones en juego." />
+      <PageHeader
+        description={
+          canManage
+            ? 'Cargá o corregí los 20 números del día (2 cifras cada uno). Los aciertos se calculan al tocar Generar ganadores.'
+            : 'Los 20 números de cada sorteo, de 2 cifras.'
+        }
+      />
 
-      <div className="mb-6 flex flex-col gap-4 rounded-xl bg-card p-3 sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label>Fecha</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label>Quiniela</Label>
-            <Select value={lotteryId} onValueChange={setLotteryId}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Elegí" />
-              </SelectTrigger>
-              <SelectContent>
-                {lotteries?.data.map((l) => (
-                  <SelectItem key={l.polla_lottery_id} value={l.polla_lottery_id}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label>Turno</Label>
-            <Select value={scheduleId} onValueChange={setScheduleId}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Elegí" />
-              </SelectTrigger>
-              <SelectContent>
-                {schedules?.data.map((s) => (
-                  <SelectItem key={s.polla_schedule_id} value={s.polla_schedule_id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-            <Button type="button" onClick={handleSave} disabled={isPending}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleProcess} disabled={isProcessing}>
-              {isProcessing ? 'Procesando…' : 'Procesar aciertos'}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-2">
-          {numbers.map((value, index) => (
-            // eslint-disable-next-line react/no-array-index-key
-            <div key={index} className="flex flex-col items-center gap-1">
-              <span className="text-[10px] leading-none text-muted-foreground">{index + 1}</span>
-              <Input
-                inputMode="numeric"
-                maxLength={4}
-                value={value}
-                onChange={(e) => handleNumberChange(index, e.target.value)}
-                className="text-center font-mono tabular-nums"
-              />
+      {canManage && (
+        <div className="mb-6 flex flex-col gap-4 rounded-xl bg-card p-3 text-card-foreground sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex min-w-0 flex-col gap-1">
+              <Label>Fecha</Label>
+              <DateInput value={date} max={todayIso()} onValueChange={setDate} />
             </div>
-          ))}
+            <div className="flex min-w-0 flex-col gap-1">
+              <Label>Quiniela</Label>
+              <Select value={lotteryId} onValueChange={setLotteryId}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Elegí" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lotteries?.data.map((l) => (
+                    <SelectItem key={l.polla_lottery_id} value={l.polla_lottery_id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+              <Label>Turno</Label>
+              <Select value={scheduleId} onValueChange={setScheduleId}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Elegí" />
+                </SelectTrigger>
+                <SelectContent>
+                  {schedules?.data.map((s) => (
+                    <SelectItem key={s.polla_schedule_id} value={s.polla_schedule_id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
+              <Button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={!canSave}
+                title={
+                  !lotteryId || !scheduleId
+                    ? 'Elegí quiniela y turno'
+                    : !isComplete
+                      ? 'Faltan resultados por cargar'
+                      : undefined
+                }
+              >
+                {isSaving ? 'Guardando…' : existing ? 'Guardar corrección' : 'Guardar resultados'}
+              </Button>
+              <Button
+                type="button"
+                variant="success"
+                onClick={handleGenerateWinners}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Generando…' : 'Generar ganadores'}
+              </Button>
+            </div>
+          </div>
+
+          {processedEditions.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-md border-2 border-success p-3 text-sm">
+              <p className="font-medium">
+                Ganadores generados. Compartí los tickets de cada edición con sus aciertos:
+              </p>
+              {processedEditions.map((edition) => {
+                const lotteryName = lotteryById.get(edition.polla_lottery_id) ?? 'Quiniela';
+                const scheduleName = scheduleById.get(edition.polla_schedule_id) ?? 'Turno';
+                return (
+                  <div
+                    key={edition.polla_edition_id}
+                    className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+                  >
+                    <span className="sm:mr-auto">
+                      {lotteryName} · {scheduleName} ({fmtDate(edition.start_date)} al{' '}
+                      {fmtDate(edition.end_date)})
+                    </span>
+                    <ShareTicketsPdfButton
+                      edition={edition}
+                      lotteryName={lotteryName}
+                      scheduleName={scheduleName}
+                      filtersLabel="Todas las jugadas · por aciertos"
+                    />
+                    <Button asChild variant="ghost">
+                      <Link to={`${ROUTES.BETS}?polla_edition_id=${edition.polla_edition_id}`}>
+                        Ver en Jugadas
+                      </Link>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {existing && (
+            <p className="text-xs text-muted-foreground">
+              Este día ya tiene resultado cargado: podés editarlo y guardar la corrección. Después
+              tocá Generar ganadores; solo se recalculan los aciertos de este día.
+            </p>
+          )}
+
+          <div className="grid w-fit grid-cols-2 gap-x-6 gap-y-1.5 sm:gap-x-10">
+            {COLUMNS.map((column, columnIndex) => (
+              <div key={columnIndex} className="flex flex-col gap-1.5">
+                {column.map((index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="w-6 text-right text-sm font-bold tabular-nums text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <Input
+                      ref={(el) => {
+                        inputRefs.current[index] = el;
+                      }}
+                      inputMode="numeric"
+                      enterKeyHint={index < RESULTS_COUNT - 1 ? 'next' : 'done'}
+                      maxLength={RESULT_DIGITS}
+                      value={numbers[index]}
+                      aria-label={`Resultado ${index + 1}`}
+                      aria-invalid={incomplete.has(index)}
+                      onChange={(e) => handleNumberChange(index, e.target.value)}
+                      onBlur={() => handleBlur(index)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      className={cn(
+                        'h-10 w-16 text-center font-mono text-lg font-bold tabular-nums',
+                        incomplete.has(index) && 'border-2 border-destructive'
+                      )}
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <p
+            className={cn(
+              'text-sm',
+              incomplete.size > 0 && !isComplete ? 'text-destructive' : 'text-muted-foreground'
+            )}
+            role="status"
+          >
+            {isComplete
+              ? 'Los 20 resultados están cargados.'
+              : `Cargados ${filledCount} de ${RESULTS_COUNT}. Guardar se habilita con los 20 (2 cifras cada uno).`}
+          </p>
         </div>
-      </div>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState message="Todavía no hay resultados cargados" />
@@ -179,14 +414,14 @@ export const ResultsPage = () => {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
         >
-          <div className="rounded-md border">
+          <div className="rounded-md border bg-card text-card-foreground">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Quiniela / Turno</TableHead>
                   <TableHead>Resultados</TableHead>
-                  <TableHead />
+                  {canManage && <TableHead />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,24 +432,35 @@ export const ResultsPage = () => {
                       {lotteryById.get(result.polla_lottery_id) ?? '-'} ·{' '}
                       {scheduleById.get(result.polla_schedule_id) ?? '-'}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="whitespace-normal font-mono text-xs">
                       {result.results.join(' · ')}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        title="Eliminar"
-                        onClick={() => {
-                          if (window.confirm('¿Eliminar los resultados de ese día?')) {
-                            deleteResult({ id: result.polla_result_id });
-                          }
-                        }}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </TableCell>
+                    {canManage && (
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          title="Corregir"
+                          onClick={() => handleEdit(result)}
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          title="Eliminar"
+                          onClick={() => {
+                            if (window.confirm('¿Eliminar los resultados de ese día?')) {
+                              deleteResult({ id: result.polla_result_id });
+                            }
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

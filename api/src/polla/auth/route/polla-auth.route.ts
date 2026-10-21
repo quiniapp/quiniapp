@@ -1,6 +1,10 @@
 import { Request, Response, Router } from 'express';
-import { UnauthorizedError } from '@helper/errors';
-import { pollaLoginSchema, pollaChangePasswordSchema } from '@helper/polla/schemas/auth.schema';
+import { ForbiddenError, UnauthorizedError } from '@helper/errors';
+import {
+  pollaLoginSchema,
+  pollaChangePasswordSchema,
+  updatePollaPreferencesSchema,
+} from '@helper/polla/schemas/auth.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaAuthController, IPollaLoginResult } from '../controller/polla-auth.controller';
 import { POLLA_SESSION_CONFIG, pollaCookieOptions } from '../../config/polla-session.config';
@@ -45,6 +49,7 @@ export class PollaAuthRouter {
     this.privateRouter.post('/logout', this.logoutHandler);
     this.privateRouter.post('/logout-all', this.logoutAllHandler);
     this.privateRouter.post('/change-password', this.changePasswordHandler);
+    this.privateRouter.put('/preferences', this.preferencesHandler);
   }
 
   private loginHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -93,12 +98,32 @@ export class PollaAuthRouter {
     res.status(200).json({ data: { success: true } });
   });
 
+  /**
+   * Nadie se cambia la contraseña a sí mismo: la pone un superior y queda
+   * definitiva. Solo queda el cambio obligatorio de una contraseña inicial
+   * pública (el OWNER del seed), que no tiene a nadie arriba que se la blanquee.
+   */
   private changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
+
+    if (!user.password_reset_required) {
+      throw new ForbiddenError('La contraseña la cambia un usuario superior');
+    }
+
     const { current_password, new_password } = pollaChangePasswordSchema.parse(req.body);
 
     await this.controller.changePassword(user.polla_user_id, current_password, new_password);
 
     res.status(200).json({ data: { success: true } });
+  });
+
+  /** Preferencias propias del usuario (hoy, el tema). Cualquier rol. */
+  private preferencesHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const { theme } = updatePollaPreferencesSchema.parse(req.body);
+
+    const updated = await this.controller.updateTheme(user.polla_user_id, theme);
+
+    res.status(200).json({ data: { user: updated } });
   });
 }

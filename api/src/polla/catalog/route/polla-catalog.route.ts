@@ -3,8 +3,6 @@ import { ZodSchema } from 'zod';
 import { ForbiddenError } from '@helper/errors';
 import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import {
-  newPollaOrganizationSchema,
-  updatePollaOrganizationSchema,
   newPollaGroupSchema,
   updatePollaGroupSchema,
   newPollaLotterySchema,
@@ -36,8 +34,6 @@ const createCatalogRouter = (config: CatalogRouterConfig): Router => {
 
   const assertScope = async (req: Request, id: string) => {
     const { user } = getPollaSession(req);
-    if (user.user_type === POLLA_USER_TYPE.OWNER) return;
-
     const belongs = await repository.assertBelongsToOrganization(id, user.polla_organization_id);
     if (!belongs) {
       throw new ForbiddenError('El registro pertenece a otra organización');
@@ -128,17 +124,7 @@ const ADMIN_AND_UP = [
   POLLA_USER_TYPE.ADMIN,
 ];
 
-export const pollaOrganizationRouter = createCatalogRouter({
-  table: 'polla_organizations',
-  idColumn: 'polla_organization_id',
-  orgScoped: false,
-  orderBy: { column: 'name', ascending: true },
-  resourceKey: 'organizations',
-  newSchema: newPollaOrganizationSchema,
-  updateSchema: updatePollaOrganizationSchema,
-  writeRoles: [POLLA_USER_TYPE.OWNER],
-});
-
+/** Los grupos los arman el OWNER y el capitalista, cada uno en su organización. */
 export const pollaGroupRouter = createCatalogRouter({
   table: 'polla_groups',
   idColumn: 'polla_group_id',
@@ -147,7 +133,7 @@ export const pollaGroupRouter = createCatalogRouter({
   resourceKey: 'groups',
   newSchema: newPollaGroupSchema,
   updateSchema: updatePollaGroupSchema,
-  writeRoles: ADMIN_AND_UP,
+  writeRoles: [POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST],
 });
 
 export const pollaLotteryRouter = createCatalogRouter({

@@ -11,6 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/PageHeader';
 
+/**
+ * Solo la ve quien entra con la contraseña inicial pública (el OWNER del
+ * seed): el resto no se cambia la contraseña, se la pone un superior.
+ */
 export const ChangePasswordPage = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +53,7 @@ export const ChangePasswordPage = () => {
       <PageHeader
         description={
           user?.password_reset_required
-            ? 'Tu contraseña es temporal: cambiala para seguir.'
+            ? 'Estás usando la contraseña inicial: cambiala para seguir.'
             : undefined
         }
       />

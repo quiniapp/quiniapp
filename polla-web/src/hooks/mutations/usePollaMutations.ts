@@ -1,4 +1,4 @@
-import { IPollaBetEntityFront } from '@helper/polla/types/game.type';
+import { IPollaBetEntityFront, IPollaProcessResult } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
 
@@ -7,10 +7,30 @@ import { useApiMutation } from '../useApi';
 const catalogKeys = ['polla-organizations', 'polla-groups', 'polla-lotteries', 'polla-schedules'];
 
 export const useCreateOrganization = () =>
-  useApiMutation('post', BACKEND_ROUTES.organization.base, {
+  useApiMutation<
+    unknown,
+    {
+      organization: { name: string };
+      capitalist: {
+        name: string;
+        last_name?: string | null;
+        username: string;
+        password: string;
+        email?: string | null;
+        phone?: number | null;
+      };
+    }
+  >('post', BACKEND_ROUTES.organization.base, {
     invalidate: ['polla-organizations'],
-    successMessage: 'Organización creada',
+    successMessage: 'Organización y capitalista creados',
   });
+
+export const useResetCapitalistPassword = () =>
+  useApiMutation<unknown, { id: string; password: string }>(
+    'post',
+    ({ id }) => BACKEND_ROUTES.organization.resetCapitalist(id),
+    { successMessage: 'Contraseña del capitalista blanqueada' }
+  );
 
 export const useUpdateOrganization = () =>
   useApiMutation<unknown, { id: string; name: string }>(
@@ -31,6 +51,13 @@ export const useCreateGroup = () =>
     invalidate: ['polla-groups'],
     successMessage: 'Grupo creado',
   });
+
+export const useUpdateGroup = () =>
+  useApiMutation<unknown, { id: string; name: string }>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.group.id(id),
+    { invalidate: ['polla-groups'], successMessage: 'Grupo actualizado' }
+  );
 
 export const useDeleteGroup = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.group.id(id), {
@@ -66,7 +93,7 @@ export const useDeleteSchedule = () =>
 
 export const useCreateUser = () =>
   useApiMutation('post', BACKEND_ROUTES.user.base, {
-    invalidate: ['polla-users'],
+    invalidate: ['polla-users', 'polla-user-search'],
     successMessage: 'Usuario creado',
   });
 
@@ -74,23 +101,24 @@ export const useUpdateUser = () =>
   useApiMutation<unknown, { id: string } & Record<string, unknown>>(
     'put',
     ({ id }) => BACKEND_ROUTES.user.id(id),
-    { invalidate: ['polla-users', 'polla-user'], successMessage: 'Usuario actualizado' }
+    {
+      invalidate: ['polla-users', 'polla-user', 'polla-user-search'],
+      successMessage: 'Usuario actualizado',
+    }
   );
 
 export const useDeleteUser = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.user.id(id), {
-    invalidate: ['polla-users'],
+    invalidate: ['polla-users', 'polla-user-search'],
     successMessage: 'Usuario eliminado',
   });
 
-export const useAdjustCredits = () =>
-  useApiMutation<
-    { balance: number },
-    { id: string; amount: number; type: string; reason?: string | null }
-  >('post', ({ id }) => BACKEND_ROUTES.user.credits(id), {
-    invalidate: ['polla-users', 'polla-credits'],
-    successMessage: 'Créditos actualizados',
-  });
+export const useResetUserPassword = () =>
+  useApiMutation<unknown, { id: string; password: string }>(
+    'post',
+    ({ id }) => BACKEND_ROUTES.user.resetPassword(id),
+    { successMessage: 'Contraseña blanqueada' }
+  );
 
 // -------------------------------------------------------------- ediciones
 
@@ -109,8 +137,9 @@ export const useUpdateEdition = () =>
 
 export const useDeleteEdition = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.edition.id(id), {
-    invalidate: ['polla-editions'],
-    successMessage: 'Edición eliminada',
+    // Sus jugadas se anulan y la cuenta corriente se recalcula.
+    invalidate: ['polla-editions', 'polla-bets', 'polla-sales', 'polla-current-accounts'],
+    successMessage: 'Edición eliminada y sus jugadas anuladas',
   });
 
 // ---------------------------------------------------------------- jugadas
@@ -120,7 +149,7 @@ export const useCreateBet = () =>
     IPollaBetEntityFront,
     { polla_edition_id: string; numbers: string[]; polla_user_id?: string; date?: string }
   >('post', BACKEND_ROUTES.bet.base, {
-    invalidate: ['polla-bets', 'polla-editions', 'polla-credits', 'polla-users'],
+    invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
     successMessage: 'Jugada cargada',
   });
 
@@ -133,7 +162,7 @@ export const useUpdateBet = () =>
 
 export const useDeleteBet = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.bet.id(id), {
-    invalidate: ['polla-bets', 'polla-editions', 'polla-credits', 'polla-users'],
+    invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
     successMessage: 'Jugada eliminada',
   });
 
@@ -159,30 +188,74 @@ export const useDeleteResult = () =>
   });
 
 export const useProcessResults = () =>
-  useApiMutation('post', BACKEND_ROUTES.result.process, {
+  useApiMutation<
+    IPollaProcessResult,
+    { polla_schedule_id: string; date: string; polla_organization_id?: string }
+  >('post', BACKEND_ROUTES.result.process, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-winners', 'polla-current-accounts'],
-    successMessage: 'Aciertos procesados',
+    successMessage: 'Ganadores generados y cuenta corriente actualizada',
   });
 
 // --------------------------------------------------------- cuenta corriente
 
+/** `range_from`: liquidación por rango (si no, cada pasador desde su última liquidación). */
 export const useCalculateCurrentAccounts = () =>
-  useApiMutation('post', BACKEND_ROUTES.currentAccount.calculate, {
-    invalidate: ['polla-current-accounts'],
-    successMessage: 'Cuentas recalculadas',
-  });
+  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
+    'post',
+    BACKEND_ROUTES.currentAccount.calculate,
+    { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta corriente actualizada' }
+  );
 
 export const useLiquidateCurrentAccounts = () =>
-  useApiMutation('post', BACKEND_ROUTES.currentAccount.liquidate, {
-    invalidate: ['polla-current-accounts'],
-    successMessage: 'Cuentas liquidadas',
-  });
+  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
+    'post',
+    BACKEND_ROUTES.currentAccount.liquidate,
+    {
+      invalidate: ['polla-current-accounts'],
+      successMessage: 'Cuentas liquidadas',
+    }
+  );
 
 export const useUpdateCurrentAccount = () =>
   useApiMutation<unknown, { id: string } & Record<string, unknown>>(
     'put',
     ({ id }) => BACKEND_ROUTES.currentAccount.id(id),
     { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta actualizada' }
+  );
+
+export const useBulkUpdateCurrentAccounts = () =>
+  useApiMutation<
+    unknown,
+    {
+      date: string;
+      polla_organization_id?: string;
+      updates: { polla_current_account_id: string; props: Record<string, number> }[];
+    }
+  >('put', BACKEND_ROUTES.currentAccount.bulk, {
+    // Siempre va seguido de "liquidar día", que es el que avisa.
+    invalidate: ['polla-current-accounts'],
+  });
+
+// ------------------------------------------------------------------ gastos
+
+export const useCreateExpense = () =>
+  useApiMutation<
+    unknown,
+    {
+      date: string;
+      name: string;
+      amount: number;
+      polla_group_id?: string | null;
+      polla_organization_id?: string;
+    }
+  >('post', BACKEND_ROUTES.expense.base, { invalidate: ['polla-expenses'] });
+
+export const useDeleteExpense = () =>
+  useApiMutation<unknown, { id: string; polla_organization_id?: string }>(
+    'delete',
+    ({ id, polla_organization_id: org }) =>
+      `${BACKEND_ROUTES.expense.id(id)}${org ? `?polla_organization_id=${org}` : ''}`,
+    { invalidate: ['polla-expenses'] }
   );
 
 export { catalogKeys };

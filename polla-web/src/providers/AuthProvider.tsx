@@ -1,17 +1,19 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { IPollaSessionUser } from '@helper/polla/types/user.type';
+import { IPollaSessionUser, POLLA_THEME } from '@helper/polla/types/user.type';
 import {
   POLLA_VALIDATE_INTERVAL_MS,
   POLLA_REFRESH_INTERVAL_MS,
 } from '@helper/polla/config/session.config';
 import { apiClient } from '@/lib/apiClient';
 import { AUTH_EXPIRED_EVENT } from '@/lib/authEvents';
+import { applyTheme } from '@/lib/theme';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { AuthContext } from './AuthContext';
 
 const AUTH_HINT_KEY = 'polla_auth_hint';
-const ACTIVE_ORG_KEY = 'polla_active_org';
+/** La usaba el selector de organización del OWNER: se limpia si quedó guardada. */
+const LEGACY_ACTIVE_ORG_KEY = 'polla_active_org';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
@@ -20,17 +22,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Con el hint se pinta el esqueleto de la app en vez del login mientras
   // /auth/validate está en vuelo.
   const [loading, setLoading] = useState(true);
-  const [activeOrganizationId, setActiveOrganizationIdState] = useState<string | null>(() =>
-    sessionStorage.getItem(ACTIVE_ORG_KEY)
-  );
 
   const validatingRef = useRef(false);
 
   const clearSession = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem(AUTH_HINT_KEY);
-    sessionStorage.removeItem(ACTIVE_ORG_KEY);
-    setActiveOrganizationIdState(null);
     queryClient.clear();
   }, [queryClient]);
 
@@ -50,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [clearSession]);
 
   useEffect(() => {
+    sessionStorage.removeItem(LEGACY_ACTIVE_ORG_KEY);
     void validate();
   }, [validate]);
 
@@ -67,6 +65,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       window.clearInterval(refreshTimer);
     };
   }, [user, validate, clearSession]);
+
+  // El tema viaja en el usuario: se aplica al validar, loguear o cambiarlo.
+  useEffect(() => {
+    if (user?.theme) applyTheme(user.theme);
+  }, [user?.theme]);
 
   // El apiClient avisa por evento cuando el refresh falló definitivamente.
   useEffect(() => {
@@ -93,30 +96,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [clearSession]);
 
-  const setActiveOrganizationId = useCallback(
-    (id: string | null) => {
-      setActiveOrganizationIdState(id);
-      if (id) sessionStorage.setItem(ACTIVE_ORG_KEY, id);
-      else sessionStorage.removeItem(ACTIVE_ORG_KEY);
-      queryClient.clear();
-    },
-    [queryClient]
-  );
+  const setTheme = useCallback(async (theme: POLLA_THEME) => {
+    const updated = await apiClient.put<IPollaSessionUser>(BACKEND_ROUTES.auth.preferences, {
+      theme,
+    });
+    setUser(updated);
+  }, []);
 
   const value = useMemo(
     () => ({
       user,
       role: user?.user_type ?? null,
-      organizationId: activeOrganizationId ?? user?.polla_organization_id ?? null,
+      organizationId: user?.polla_organization_id ?? null,
       isAuth: Boolean(user),
       loading,
-      activeOrganizationId,
-      setActiveOrganizationId,
       login,
       logout,
       refreshUser: validate,
+      setTheme,
     }),
-    [user, loading, activeOrganizationId, setActiveOrganizationId, login, logout, validate]
+    [user, loading, login, logout, validate, setTheme]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

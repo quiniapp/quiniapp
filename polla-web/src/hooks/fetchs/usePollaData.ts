@@ -1,11 +1,19 @@
-import { IPollaUserEntityFront } from '@helper/polla/types/user.type';
 import {
-  IPollaBetEntityFront,
+  IPollaUserEntityFront,
+  IPollaUserOption,
+  POLLA_USER_TYPE,
+} from '@helper/polla/types/user.type';
+import {
   IPollaBetListItem,
-  IPollaCreditMovementEntityFront,
+  IPollaBetToRepeat,
+  IPollaCurrentAccountDailyTotals,
   IPollaCurrentAccountEntityFront,
+  IPollaCurrentAccountPeriodRow,
+  IPollaDailySales,
   IPollaEditionEntityFront,
+  IPollaOrgExpenseEntityFront,
   IPollaResultEntityFront,
+  IPollaTicketCheck,
 } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import {
@@ -22,16 +30,8 @@ export const useUsers = (params: QueryParams = {}, enabled = true) =>
   useApiInfiniteQuery<IPollaUserEntityFront>(['polla-users'], BACKEND_ROUTES.user.base, params, {
     enabled,
     limit: 50,
+    keepPrevious: true,
   });
-
-/** Versión no paginada para los combos (pasador, jugador destino). */
-export const useUserOptions = (params: QueryParams = {}, enabled = true) =>
-  useApiQuery<PollaPage<IPollaUserEntityFront>>(
-    ['polla-user-options'],
-    BACKEND_ROUTES.user.base,
-    { limit: 200, ...params },
-    { enabled }
-  );
 
 export const useUser = (id: string | null) =>
   useApiQuery<IPollaUserEntityFront>(
@@ -41,22 +41,16 @@ export const useUser = (id: string | null) =>
     { enabled: Boolean(id) }
   );
 
-// ---------------------------------------------------------------- créditos
-
-export const useCreditMovements = (playerId: string | null, params: QueryParams = {}) =>
-  useApiInfiniteQuery<IPollaCreditMovementEntityFront>(
-    ['polla-credits', playerId],
-    playerId ? BACKEND_ROUTES.user.credits(playerId) : BACKEND_ROUTES.user.ownCredits,
-    params,
-    { enabled: Boolean(playerId), limit: 20 }
-  );
-
-export const useOwnCreditMovements = (params: QueryParams = {}) =>
-  useApiInfiniteQuery<IPollaCreditMovementEntityFront>(
-    ['polla-credits', 'me'],
-    BACKEND_ROUTES.user.ownCredits,
-    params,
-    { limit: 20 }
+/**
+ * Buscador de pasadores y jugadores (`UserSearchPicker`): número exacto si `q`
+ * son solo dígitos; si no, nombre, apellido y usuario. Vacío trae todos.
+ */
+export const useUserSearch = (q: string, userTypes: POLLA_USER_TYPE[], enabled = true) =>
+  useApiInfiniteQuery<IPollaUserOption>(
+    ['polla-user-search'],
+    BACKEND_ROUTES.user.search,
+    { q, user_type: userTypes.join(',') },
+    { enabled, limit: 30, keepPrevious: true }
   );
 
 // --------------------------------------------------------------- ediciones
@@ -74,7 +68,8 @@ export const useEditionList = (params: QueryParams = {}) =>
     ['polla-editions'],
     BACKEND_ROUTES.edition.base,
     params,
-    { limit: 25 }
+    // Al tildar o destildar un período se sigue viendo la lista anterior.
+    { limit: 25, keepPrevious: true }
   );
 
 // ----------------------------------------------------------------- jugadas
@@ -86,12 +81,60 @@ export const useBets = (params: QueryParams = {}, enabled = true) =>
   });
 
 export const useWinners = (editionId: string | null) =>
-  useApiQuery<PollaPage<IPollaBetEntityFront>>(
+  useApiQuery<PollaPage<IPollaBetListItem>>(
     ['polla-winners', editionId],
     BACKEND_ROUTES.bet.winners,
     { polla_edition_id: editionId },
     { enabled: Boolean(editionId) }
   );
+
+/** Números de un ticket propio para repetirlo. */
+export const useBetToRepeat = (ticketNumber: string | null) =>
+  useApiQuery<IPollaBetToRepeat>(
+    ['polla-bet-ticket', ticketNumber],
+    ticketNumber ? BACKEND_ROUTES.bet.ticket(ticketNumber) : BACKEND_ROUTES.bet.base,
+    {},
+    // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
+    { enabled: Boolean(ticketNumber), retry: false, placeholderData: undefined }
+  );
+
+/** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
+export const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
+
+/** "Revisar ticket": la jugada, su titular y el reparto del pozo de su edición. */
+export const useTicketCheck = (ticketNumber: string) =>
+  useApiQuery<IPollaTicketCheck>(
+    ['polla-ticket-check', ticketNumber],
+    BACKEND_ROUTES.bet.check(ticketNumber),
+    {},
+    // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
+    { enabled: TICKET_SEARCH.test(ticketNumber), retry: false, placeholderData: undefined }
+  );
+
+/**
+ * Jugadas de un día sin paginar (para la liquidación): las cargadas ese día
+ * (`load_date`) o las que ganaron ese día (`hit_date` + `winners`).
+ */
+export const useBetsOfDay = (params: QueryParams, enabled = true) =>
+  useApiQuery<PollaPage<IPollaBetListItem>>(
+    ['polla-bets', 'day'],
+    BACKEND_ROUTES.bet.base,
+    { sort: 'recent', limit: 200, ...params },
+    { enabled, placeholderData: undefined }
+  );
+
+/** La última jugada propia, para "Repetir última jugada". */
+export const useLastBet = (enabled: boolean) =>
+  useApiQuery<IPollaBetToRepeat>(
+    ['polla-bet-last'],
+    BACKEND_ROUTES.bet.last,
+    {},
+    { enabled, retry: false, placeholderData: undefined }
+  );
+
+/** Boletas vendidas en el día (total y, para admin+, por grupo). */
+export const useDailySales = (params: { date: string; polla_organization_id?: string | null }) =>
+  useApiQuery<IPollaDailySales>(['polla-sales'], BACKEND_ROUTES.bet.sales, params);
 
 // -------------------------------------------------------------- resultados
 
@@ -103,6 +146,23 @@ export const useResults = (params: QueryParams = {}) =>
     { limit: 25 }
   );
 
+/** El resultado ya cargado para un día, quiniela y turno (para corregirlo). */
+export const useResultFor = (
+  params: {
+    date: string;
+    polla_lottery_id: string;
+    polla_schedule_id: string;
+    polla_organization_id?: string;
+  },
+  enabled: boolean
+) =>
+  useApiQuery<PollaPage<IPollaResultEntityFront>>(
+    ['polla-results', 'one'],
+    BACKEND_ROUTES.result.base,
+    { ...params, limit: 1 },
+    { enabled, placeholderData: undefined }
+  );
+
 // --------------------------------------------------------- cuenta corriente
 
 export const useCurrentAccounts = (params: QueryParams = {}, enabled = true) =>
@@ -111,4 +171,38 @@ export const useCurrentAccounts = (params: QueryParams = {}, enabled = true) =>
     BACKEND_ROUTES.currentAccount.base,
     params,
     { enabled, limit: 50 }
+  );
+
+/**
+ * Todas las filas de un día (la tabla de liquidación no se pagina), cada una
+ * con lo acumulado en el período de su pasador.
+ */
+export const useCurrentAccountsOfDay = (params: QueryParams = {}, enabled = true) =>
+  useApiQuery<PollaPage<IPollaCurrentAccountPeriodRow>>(
+    ['polla-current-accounts', 'day'],
+    BACKEND_ROUTES.currentAccount.base,
+    { limit: 200, ...params },
+    { enabled }
+  );
+
+/** Totales por día entre `from` y `to`. */
+export const useCurrentAccountTotals = (params: QueryParams = {}, enabled = true) =>
+  useApiQuery<IPollaCurrentAccountDailyTotals[]>(
+    ['polla-current-accounts', 'totals'],
+    BACKEND_ROUTES.currentAccount.totals,
+    params,
+    { enabled }
+  );
+
+// ------------------------------------------------------------------ gastos
+
+export const useOrgExpenses = (
+  params: { date: string; polla_group_id?: string | null; polla_organization_id?: string | null },
+  enabled = true
+) =>
+  useApiQuery<IPollaOrgExpenseEntityFront[]>(
+    ['polla-expenses'],
+    BACKEND_ROUTES.expense.base,
+    params,
+    { enabled, placeholderData: undefined }
   );

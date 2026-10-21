@@ -1,16 +1,34 @@
 import { Buffer } from 'node:buffer';
 import { supabase } from '@database/db.connection';
-import { NotFoundError } from '@helper/errors';
+import { BadRequestError, NotFoundError } from '@helper/errors';
 import { IPaginatedResponse } from '@helper/request/pagination.request';
-import { IPollaBetEntityBack } from '@helper/polla/types/game.type';
+import {
+  IPollaBetDerivedFields,
+  IPollaBetEntityBack,
+  IPollaBetToRepeat,
+  IPollaDailySalesGroup,
+} from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
+import { pollaToday } from '../../helper/date';
 
-/** Columnas mínimas para la vista de jugador: sin PII. */
-const ANONYMOUS_COLUMNS =
-  'polla_bet_id, ticket_number, polla_edition_id, numbers, hit_numbers, hits, winner, hit_date, polla_user_id, user_name, created_at';
+/** El grupo del pasador viaja embebido: es la columna "Coord" del listado. */
+const BET_COLUMNS = '*, polla_groups(name)';
 
-const FULL_COLUMNS = '*';
+/** Jugada tal como la devuelve el repositorio: la fila más los campos derivados. */
+export type PollaBetRow = IPollaBetEntityBack & IPollaBetDerivedFields;
+
+type RawBetRow = IPollaBetEntityBack & { polla_groups: { name: string } | null };
+
+const withDerivedFields = ({ polla_groups: group, ...bet }: RawBetRow): PollaBetRow => ({
+  ...bet,
+  group_name: group?.name ?? null,
+  // Si la jugó el propio pasador no hay cliente.
+  client_name: bet.polla_user_id === bet.cashier_polla_user_id ? null : bet.user_name,
+});
+
+/** Ranking de aciertos (predeterminado) o carga más reciente primero. */
+export type PollaBetSort = 'hits' | 'recent';
 
 export interface PollaBetFilters {
   editionId?: string;
@@ -20,12 +38,28 @@ export interface PollaBetFilters {
   groupId?: string | null;
   ticketNumber?: string | null;
   loadDate?: string | null;
+  /** Día en que se completó (ganadoras de ese día, para la liquidación). */
+  hitDate?: string | null;
+  /** Cargadas entre estas fechas (tickets del período que se liquida). */
+  loadRange?: { from: string; to: string } | null;
+  /** Completadas entre estas fechas (ganadoras del período que se liquida). */
+  hitRange?: { from: string; to: string } | null;
+  /**
+   * Solo las borradas que se descuentan del pase entre estas fechas (las
+   * "Borradas" del período que se liquida).
+   */
+  deductedRange?: { from: string; to: string } | null;
+  /**
+   * Además de las activas, las borradas que siguen en el pase de jugadas de su
+   * día de carga (`deducted_on`): los tickets del período cuadran con el pase.
+   */
+  withDeducted?: boolean;
   onlyWinners?: boolean;
 }
 
 export interface PollaBetQueryOptions {
-  anonymous: boolean;
-  /** Keyset: `${created_at}|${polla_bet_id}` de la última fila de la página previa. */
+  sort: PollaBetSort;
+  /** Keyset: posición de la última fila de la página previa (ver `encodeCursor`). */
   cursor?: string | null;
 }
 
@@ -33,17 +67,81 @@ export interface PollaBetPage<T> extends IPaginatedResponse<T> {
   next_cursor?: string | null;
 }
 
-const encodeCursor = (row: { created_at: string; polla_bet_id: string }) =>
-  Buffer.from(`${row.created_at}|${row.polla_bet_id}`).toString('base64url');
+/** Dónde puede buscar un ticket para repetirlo quien lo pide. */
+export interface PollaBetTicketScope {
+  organizationId: string | null;
+  cashierId?: string | null;
+  userId?: string | null;
+}
 
-const decodeCursor = (cursor: string): { createdAt: string; id: string } | null => {
+/**
+ * Un ticket sin el sufijo `-<pasador>` (solo los 17 dígitos) se busca por
+ * prefijo, como en QuiniApp. Llega validado (dígitos y un guion), así que el
+ * LIKE no recibe comodines.
+ */
+const ticketPattern = (ticketNumber: string) =>
+  /^\d{17}$/.test(ticketNumber)
+    ? { op: 'like' as const, value: `${ticketNumber}-%` }
+    : { op: 'eq' as const, value: ticketNumber };
+
+interface CursorPosition {
+  hits: number;
+  createdAt: string;
+  id: string;
+}
+
+const encodeCursor = (row: PollaBetRow, sort: PollaBetSort) => {
+  const parts =
+    sort === 'hits'
+      ? [row.hits, row.created_at, row.polla_bet_id]
+      : [row.created_at, row.polla_bet_id];
+  return Buffer.from(parts.join('|')).toString('base64url');
+};
+
+// El cursor lo manda el cliente y sus partes se interpolan en un filtro `or=`
+// de PostgREST, que es un mini-lenguaje con comas y paréntesis: sin validar,
+// se pueden inyectar cláusulas extra. Solo se aceptan un entero chico, un
+// timestamp ISO y un UUID, así que no queda ningún carácter con significado en
+// ese lenguaje.
+const CURSOR_HITS = /^\d{1,2}$/;
+const CURSOR_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}:?\d{2}|Z)?$/;
+const CURSOR_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const decodeCursor = (cursor: string, sort: PollaBetSort): CursorPosition => {
+  let decoded: string;
   try {
-    const [createdAt, id] = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
-    if (!createdAt || !id) return null;
-    return { createdAt, id };
+    decoded = Buffer.from(cursor, 'base64url').toString('utf8');
   } catch {
-    return null;
+    throw new BadRequestError('Cursor inválido');
   }
+
+  const parts = decoded.split('|');
+  const [hits, createdAt, id] = sort === 'hits' ? parts : ['0', ...parts];
+
+  if (
+    parts.length !== (sort === 'hits' ? 3 : 2) ||
+    !CURSOR_HITS.test(hits ?? '') ||
+    !CURSOR_TIMESTAMP.test(createdAt ?? '') ||
+    !CURSOR_UUID.test(id ?? '')
+  ) {
+    throw new BadRequestError('Cursor inválido');
+  }
+
+  return { hits: Number(hits), createdAt, id };
+};
+
+/** Filas que van después del cursor, en el mismo orden que el listado. */
+const afterCursor = ({ hits, createdAt, id }: CursorPosition, sort: PollaBetSort) => {
+  if (sort === 'recent') {
+    return `created_at.lt.${createdAt},and(created_at.eq.${createdAt},polla_bet_id.lt.${id})`;
+  }
+
+  return [
+    `hits.lt.${hits}`,
+    `and(hits.eq.${hits},created_at.lt.${createdAt})`,
+    `and(hits.eq.${hits},created_at.eq.${createdAt},polla_bet_id.lt.${id})`,
+  ].join(',');
 };
 
 export class PollaBetRepository {
@@ -51,17 +149,26 @@ export class PollaBetRepository {
     filters: PollaBetFilters,
     pagination: PollaPagination,
     options: PollaBetQueryOptions
-  ): Promise<PollaBetPage<Record<string, unknown>>> {
+  ): Promise<PollaBetPage<PollaBetRow>> {
     const useKeyset = Boolean(options.cursor);
 
-    let query = supabase
-      .from('polla_bets')
-      .select(
-        options.anonymous ? ANONYMOUS_COLUMNS : FULL_COLUMNS,
-        // Con keyset no tiene sentido el COUNT exacto: es lo más caro de la query.
-        pagination.withCount && !useKeyset ? { count: 'exact' } : {}
-      )
-      .is('deleted_at', null);
+    let query = supabase.from('polla_bets').select(
+      BET_COLUMNS,
+      // Con keyset no tiene sentido el COUNT exacto: es lo más caro de la query.
+      pagination.withCount && !useKeyset ? { count: 'exact' } : {}
+    );
+
+    // Las anuladas sin pasar por la cuenta corriente (`deducted_on` null) no
+    // salen nunca.
+    if (filters.deductedRange) {
+      query = query
+        .gte('deducted_on', filters.deductedRange.from)
+        .lte('deducted_on', filters.deductedRange.to);
+    } else if (filters.withDeducted) {
+      query = query.or('deleted_at.is.null,deducted_on.not.is.null');
+    } else {
+      query = query.is('deleted_at', null);
+    }
 
     if (filters.editionId) query = query.eq('polla_edition_id', filters.editionId);
     if (filters.organizationId) query = query.eq('polla_organization_id', filters.organizationId);
@@ -70,16 +177,20 @@ export class PollaBetRepository {
     if (filters.groupId) query = query.eq('polla_group_id', filters.groupId);
     if (filters.ticketNumber) query = query.eq('ticket_number', filters.ticketNumber);
     if (filters.loadDate) query = query.eq('load_date', filters.loadDate);
+    if (filters.hitDate) query = query.eq('hit_date', filters.hitDate);
+    if (filters.loadRange) {
+      query = query.gte('load_date', filters.loadRange.from).lte('load_date', filters.loadRange.to);
+    }
+    if (filters.hitRange) {
+      query = query.gte('hit_date', filters.hitRange.from).lte('hit_date', filters.hitRange.to);
+    }
     if (filters.onlyWinners) query = query.eq('winner', true);
 
     if (useKeyset) {
-      const decoded = decodeCursor(options.cursor!);
-      if (decoded) {
-        query = query.or(
-          `created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},polla_bet_id.lt.${decoded.id})`
-        );
-      }
+      query = query.or(afterCursor(decodeCursor(options.cursor!, options.sort), options.sort));
     }
+
+    if (options.sort === 'hits') query = query.order('hits', { ascending: false });
 
     query = query
       .order('created_at', { ascending: false })
@@ -91,35 +202,123 @@ export class PollaBetRepository {
 
     throwIfPollaError(error);
 
-    const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    const rows = ((data ?? []) as unknown as RawBetRow[]).map(withDerivedFields);
     const page = buildPaginated(
       rows,
       pagination,
       pagination.withCount && !useKeyset ? (count ?? 0) : null
     );
 
-    const last = rows[rows.length - 1] as { created_at: string; polla_bet_id: string } | undefined;
+    const last = rows[rows.length - 1];
 
     return {
       ...page,
       next_cursor:
-        last && rows.length === pagination.limit
-          ? encodeCursor({ created_at: last.created_at, polla_bet_id: last.polla_bet_id })
-          : null,
+        last && rows.length === pagination.limit ? encodeCursor(last, options.sort) : null,
     };
   }
 
-  async getById(betId: string): Promise<IPollaBetEntityBack> {
+  async getById(betId: string): Promise<PollaBetRow> {
     const { data, error } = await supabase
       .from('polla_bets')
-      .select('*')
+      .select(BET_COLUMNS)
       .eq('polla_bet_id', betId)
       .is('deleted_at', null)
       .maybeSingle();
 
     throwIfPollaError(error);
     if (!data) throw new NotFoundError('Jugada de Polla');
-    return data as IPollaBetEntityBack;
+    return withDerivedFields(data as unknown as RawBetRow);
+  }
+
+  /**
+   * Ticket a repetir, completo o por prefijo (ver `ticketPattern`); el alcance
+   * evita mezclar pasadores.
+   */
+  async getByTicketNumber(
+    ticketNumber: string,
+    scope: PollaBetTicketScope
+  ): Promise<IPollaBetToRepeat> {
+    const ticket = ticketPattern(ticketNumber);
+    let query = supabase
+      .from('polla_bets')
+      .select('ticket_number, polla_edition_id, numbers')
+      .is('deleted_at', null)
+      .filter('ticket_number', ticket.op, ticket.value);
+
+    if (scope.organizationId) query = query.eq('polla_organization_id', scope.organizationId);
+    if (scope.cashierId) query = query.eq('cashier_polla_user_id', scope.cashierId);
+    if (scope.userId) query = query.eq('polla_user_id', scope.userId);
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Ticket de Polla');
+    return data as IPollaBetToRepeat;
+  }
+
+  /** Jugada completa de un ticket de la organización, para "Revisar ticket". */
+  async getForCheck(ticketNumber: string, organizationId: string): Promise<PollaBetRow> {
+    const ticket = ticketPattern(ticketNumber);
+    const { data, error } = await supabase
+      .from('polla_bets')
+      .select(BET_COLUMNS)
+      .is('deleted_at', null)
+      .eq('polla_organization_id', organizationId)
+      .filter('ticket_number', ticket.op, ticket.value)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Ticket de Polla');
+    return withDerivedFields(data as unknown as RawBetRow);
+  }
+
+  /**
+   * Última jugada que cargó el propio usuario a su nombre, para repetirla. Las
+   * que le cargó su pasador no cuentan; las anteriores a `created_by` sí.
+   * `pollaUserId` sale de la sesión (un UUID), así que el filtro `or` es seguro.
+   */
+  async getLastByUser(pollaUserId: string): Promise<IPollaBetToRepeat> {
+    const { data, error } = await supabase
+      .from('polla_bets')
+      .select('ticket_number, polla_edition_id, numbers')
+      .eq('polla_user_id', pollaUserId)
+      .or(`created_by.eq.${pollaUserId},created_by.is.null`)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      // El número de ticket arranca con la hora de carga: desempata en el mismo instante.
+      .order('ticket_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Jugada anterior');
+    return data as IPollaBetToRepeat;
+  }
+
+  /** Boletas vendidas en el día por grupo; con `cashierId`, solo las de ese pasador. */
+  async getDailySales(
+    organizationId: string,
+    date: string,
+    cashierId: string | null
+  ): Promise<IPollaDailySalesGroup[]> {
+    const { data, error } = await supabase.rpc('polla_daily_sales', {
+      p_organization_id: organizationId,
+      p_date: date,
+      p_cashier_id: cashierId,
+    });
+
+    throwIfPollaError(error);
+    return ((data ?? []) as IPollaDailySalesGroup[]).map((row) => ({
+      ...row,
+      bets_count: Number(row.bets_count),
+      amount: Number(row.amount),
+    }));
   }
 
   async create(params: {
@@ -135,7 +334,7 @@ export class PollaBetRepository {
       p_actor_user_id: params.actorId,
       p_target_user_id: params.targetUserId,
       p_numbers: params.numbers,
-      p_date: params.date ?? new Date().toISOString().slice(0, 10),
+      p_date: params.date ?? pollaToday(),
       p_force: params.force,
     });
 
@@ -163,7 +362,8 @@ export class PollaBetRepository {
     });
 
     throwIfPollaError(error);
-    return data as { success: boolean };
+    // `deducted_on`: día en que la baja se descuenta del pase del pasador.
+    return data as { success: boolean; deducted_on: string };
   }
 
   /** Totales de una edición sin escanear jugadas fila por fila en el cliente. */

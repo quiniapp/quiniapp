@@ -1,8 +1,9 @@
 /* eslint-disable no-unused-vars */
 /**
  * Jerarquía de la Polla. Cada nivel ve y administra a los de abajo.
- * PLAYER es el rol nuevo respecto de QuiniApp: cuelga de un CASHIER, juega con
- * créditos y sus jugadas se imputan a la cuenta corriente de ese pasador.
+ * PLAYER es el rol nuevo respecto de QuiniApp: cuelga de un CASHIER y sus
+ * jugadas se imputan a la cuenta corriente de ese pasador, que las cobra por
+ * fuera de la aplicación.
  */
 export enum POLLA_USER_TYPE {
   OWNER = 'OWNER',
@@ -12,7 +13,23 @@ export enum POLLA_USER_TYPE {
   CASHIER = 'CASHIER',
   PLAYER = 'PLAYER',
 }
+
+/** Tema visual que elige cada usuario desde Configuración. */
+export enum POLLA_THEME {
+  LIGHT = 'light',
+  DARK = 'dark',
+}
 /* eslint-enable no-unused-vars */
+
+/** Nombre de cada rol tal como se muestra en pantalla. */
+export const POLLA_USER_TYPE_LABEL: Record<POLLA_USER_TYPE, string> = {
+  [POLLA_USER_TYPE.OWNER]: 'Dueño',
+  [POLLA_USER_TYPE.CAPITALIST]: 'Capitalista',
+  [POLLA_USER_TYPE.SUPERADMIN]: 'Superadministrador',
+  [POLLA_USER_TYPE.ADMIN]: 'Administrador',
+  [POLLA_USER_TYPE.CASHIER]: 'Pasador',
+  [POLLA_USER_TYPE.PLAYER]: 'Jugador',
+};
 
 /** Menor número = más privilegios. */
 export const POLLA_USER_HIERARCHY: Record<POLLA_USER_TYPE, number> = {
@@ -24,7 +41,7 @@ export const POLLA_USER_HIERARCHY: Record<POLLA_USER_TYPE, number> = {
   [POLLA_USER_TYPE.PLAYER]: 5,
 };
 
-/** Roles que administran la operación (cargan resultados, liquidan, editan pasado el límite). */
+/** Roles que administran la operación (cargan resultados, editan pasado el límite). */
 export const POLLA_ADMIN_ROLES: POLLA_USER_TYPE[] = [
   POLLA_USER_TYPE.OWNER,
   POLLA_USER_TYPE.CAPITALIST,
@@ -40,6 +57,86 @@ export const isPollaAdminRole = (role: POLLA_USER_TYPE): boolean =>
 
 export const isPollaStaffRole = (role: POLLA_USER_TYPE): boolean =>
   POLLA_STAFF_ROLES.includes(role);
+
+/**
+ * Roles que ven la cuenta corriente de los pasadores, sus reportes y gastos, y
+ * liquidan. El ADMIN opera (jugadas, resultados, usuarios) pero no ve la
+ * cuenta corriente ni liquida. El pasador ve solo la suya.
+ */
+export const POLLA_ACCOUNT_ROLES: POLLA_USER_TYPE[] = [
+  POLLA_USER_TYPE.OWNER,
+  POLLA_USER_TYPE.CAPITALIST,
+  POLLA_USER_TYPE.SUPERADMIN,
+];
+
+/**
+ * Tipos que lista la pantalla de Usuarios para cada rol: los inferiores, sin el
+ * capitalista, que se ve y se administra solo desde Organizaciones.
+ */
+export const pollaUserListTypes = (role: POLLA_USER_TYPE): POLLA_USER_TYPE[] =>
+  Object.values(POLLA_USER_TYPE).filter(
+    (type) =>
+      type !== POLLA_USER_TYPE.CAPITALIST && POLLA_USER_HIERARCHY[type] > POLLA_USER_HIERARCHY[role]
+  );
+
+/**
+ * Qué tipos de usuario da de alta cada rol, siempre dentro de su organización.
+ * El capitalista no figura: se crea únicamente junto con su organización. El
+ * jugador lo crea su pasador o, eligiendo el pasador, un superadmin o superior.
+ */
+export const POLLA_CREATABLE_TYPES: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
+  [POLLA_USER_TYPE.OWNER]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.CAPITALIST]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.SUPERADMIN]: [
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.PLAYER]: [],
+};
+
+/**
+ * A quién le blanquea la contraseña cada rol. Nadie se la cambia a sí mismo:
+ * siempre la pone un superior. El OWNER llega a los capitalistas de todas las
+ * organizaciones (desde Organizaciones) y al resto solo dentro de la suya.
+ */
+export const POLLA_PASSWORD_RESET_TARGETS: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
+  [POLLA_USER_TYPE.OWNER]: [
+    POLLA_USER_TYPE.CAPITALIST,
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.CAPITALIST]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.ADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.SUPERADMIN]: [POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.PLAYER]: [],
+};
+
+export const canCreatePollaUser = (actor: POLLA_USER_TYPE, target: POLLA_USER_TYPE): boolean =>
+  POLLA_CREATABLE_TYPES[actor].includes(target);
+
+export const canResetPollaPassword = (actor: POLLA_USER_TYPE, target: POLLA_USER_TYPE): boolean =>
+  POLLA_PASSWORD_RESET_TARGETS[actor].includes(target);
 
 export interface IPollaUserEntityBack {
   polla_user_id: string;
@@ -62,7 +159,9 @@ export interface IPollaUserEntityBack {
   parent_polla_user_id: string | null;
   fee: number | null;
   fee_plus: number | null;
+  /** Sin uso: las jugadas ya no se pagan con créditos. Queda por el historial. */
   credit_balance: number;
+  theme: POLLA_THEME;
   disabled: boolean;
   created_at: string;
   edited_at: string;
@@ -71,8 +170,34 @@ export interface IPollaUserEntityBack {
 
 export type IPollaUserEntityFront = Omit<
   IPollaUserEntityBack,
-  'password_hash' | 'password_changed_at' | 'failed_login_attempts' | 'last_login_ip' | 'deleted_at'
+  | 'password_hash'
+  | 'password_changed_at'
+  | 'failed_login_attempts'
+  | 'last_login_ip'
+  | 'deleted_at'
+  | 'credit_balance'
 >;
+
+/** Usuario encontrado por número para cargarle una jugada a su nombre. */
+export interface IPollaUserByNumber {
+  polla_user_id: string;
+  name: string;
+  last_name: string | null;
+  number: number;
+  user_type: POLLA_USER_TYPE;
+  /** Pasador del jugador; para un pasador, él mismo. */
+  cashier_name: string;
+}
+
+/**
+ * Resultado del buscador de pasadores y jugadores (por número exacto o por
+ * nombre, apellido y usuario). `cashier_*` es el pasador del jugador; para un
+ * pasador, él mismo.
+ */
+export interface IPollaUserOption extends IPollaUserByNumber {
+  username: string | null;
+  cashier_number: number | null;
+}
 
 /** Usuario autenticado tal como lo devuelve /auth/validate. */
 export interface IPollaSessionUser {
@@ -85,6 +210,6 @@ export interface IPollaSessionUser {
   polla_organization_id: string;
   polla_group_id: string | null;
   parent_polla_user_id: string | null;
-  credit_balance: number;
   password_reset_required: boolean;
+  theme: POLLA_THEME;
 }

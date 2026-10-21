@@ -3,19 +3,13 @@ import { dateRegex } from '../../functions/dateRegex';
 import { POLLA_NUMBERS_REQUIRED } from '../types/game.type';
 
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
+const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Hora inválida (HH:mm)');
 const twoDigitNumber = z.string().regex(/^\d{2}$/, 'Debe ser un número de 2 cifras (00-99)');
 
-const distinctNumbers = z
+/** Se permiten repetidos: cada aparición de un número es un casillero propio. */
+const betNumbers = z
   .array(twoDigitNumber)
-  .length(POLLA_NUMBERS_REQUIRED, `Debe elegir exactamente ${POLLA_NUMBERS_REQUIRED} números`)
-  .superRefine((numbers, ctx) => {
-    if (new Set(numbers).size !== numbers.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Los ${POLLA_NUMBERS_REQUIRED} números deben ser distintos`,
-      });
-    }
-  });
+  .length(POLLA_NUMBERS_REQUIRED, `Debe elegir exactamente ${POLLA_NUMBERS_REQUIRED} números`);
 
 // --------------------------------------------------------------- ediciones
 
@@ -31,6 +25,7 @@ export const newPollaEditionSchema = z
     start_date: isoDate,
     end_date: isoDate,
     load_limit_date: isoDate,
+    load_limit_time: clockTime,
     pool_amount: z.number().min(0),
     ticket_price: z.number().min(0.01),
   })
@@ -59,6 +54,7 @@ export const updatePollaEditionSchema = z
     start_date: isoDate.optional(),
     end_date: isoDate.optional(),
     load_limit_date: isoDate.optional(),
+    load_limit_time: clockTime.optional(),
     pool_amount: z.number().min(0).optional(),
     ticket_price: z.number().min(0.01).optional(),
   })
@@ -82,19 +78,11 @@ export const updatePollaEditionSchema = z
 
 // -------------------------------------------------------------- resultados
 
-/** Igual que QuiniApp: 20 números, todos del mismo largo (3 o 4 cifras). */
-const resultNumbers = z
-  .array(z.string().regex(/^\d{3,4}$/, 'Cada resultado debe tener 3 o 4 cifras'))
-  .length(20, 'Se cargan exactamente 20 resultados')
-  .superRefine((results, ctx) => {
-    const lengths = new Set(results.map((r) => r.length));
-    if (lengths.size > 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Todos los resultados deben tener la misma cantidad de cifras',
-      });
-    }
-  });
+/**
+ * 20 números de 2 cifras (00 a 99), como texto: se comparan tal cual con los
+ * números jugados.
+ */
+const resultNumbers = z.array(twoDigitNumber).length(20, 'Se cargan exactamente 20 resultados');
 
 export const newPollaResultSchema = z.object({
   polla_lottery_id: z.string().uuid(),
@@ -120,12 +108,12 @@ export const newPollaBetSchema = z.object({
   polla_edition_id: z.string().uuid(),
   /** Dueño de la jugada. Si falta, el backend usa al usuario autenticado. */
   polla_user_id: z.string().uuid().optional(),
-  numbers: distinctNumbers,
+  numbers: betNumbers,
   date: isoDate.optional(),
 });
 
 export const updatePollaBetSchema = z.object({
-  numbers: distinctNumbers,
+  numbers: betNumbers,
 });
 
 // -------------------------------------------------------- cuenta corriente
@@ -137,6 +125,8 @@ export const pollaCurrentAccountUpdateSchema = z.object({
   bills: z.number().optional(),
   previous_balance: z.number().optional(),
   previous_drag: z.number().optional(),
+  /** Además de guardar, marca el día como liquidado para ese pasador. */
+  liquidate: z.boolean().optional(),
 });
 
 export const pollaCurrentAccountBulkUpdateSchema = z.object({
@@ -151,8 +141,19 @@ export const pollaCurrentAccountBulkUpdateSchema = z.object({
     .min(1),
 });
 
+// ------------------------------------------------------------------ gastos
+
+export const newPollaOrgExpenseSchema = z.object({
+  date: isoDate,
+  name: z.string().trim().min(1, 'El gasto necesita un nombre').max(120),
+  amount: z.number().positive('El monto tiene que ser mayor a cero'),
+  polla_group_id: z.string().uuid().nullable().optional(),
+  polla_organization_id: z.string().uuid().optional(),
+});
+
 export type INewPollaEditionPayload = z.infer<typeof newPollaEditionSchema>;
 export type INewPollaResultPayload = z.infer<typeof newPollaResultSchema>;
 export type INewPollaBetPayload = z.infer<typeof newPollaBetSchema>;
 export type IUpdatePollaBetPayload = z.infer<typeof updatePollaBetSchema>;
 export type IPollaCurrentAccountUpdatePayload = z.infer<typeof pollaCurrentAccountUpdateSchema>;
+export type INewPollaOrgExpensePayload = z.infer<typeof newPollaOrgExpenseSchema>;

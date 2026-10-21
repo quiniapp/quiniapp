@@ -2,9 +2,30 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png" />
+    <!-- Ícono al instalarla en el celular: sin manifest, Android armaba uno
+         genérico con una letra. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Polla" />
+    <meta name="theme-color" content="#eff1f5" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>html,body,#root{background-color:#151933;margin:0;padding:0;height:100%}</style>
+    <!-- Fondo del tema antes de que cargue el bundle (sin parpadeo). El tema
+         real viene del usuario; esto es la copia local del último usado. -->
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('polla_theme') === 'dark' ? 'dark' : 'light';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
+    <style>
+      html,body,#root{margin:0;padding:0;height:100%}
+      html,body{background-color:hsl(220 20% 95%)}
+      html[data-theme='dark'],html[data-theme='dark'] body{background-color:hsl(222 24% 21%)}
+    </style>
     <title>Polla</title>
   </head>
   <body>

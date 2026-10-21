@@ -4,6 +4,285 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
+
+- **Cuenta corriente**: el ADMIN ya no la tiene en el menú (`AppLayout.tsx`) y la ruta lo manda a Jugadas (`routes/route.tsx`). Entran dueño, capitalista, superadmin (`POLLA_ACCOUNT_ROLES`) y el pasador, que ve la suya.
+- **Usuarios** (`features/users/index.tsx`): el filtro de tipos ya no ofrece "Capitalista" (`pollaUserListTypes`) y la API no los lista. El capitalista se ve desde Organizaciones.
+
+### Changed - 2026-10-20 (Polla: jugadas borradas en el pase, liquidación por rango y carga de ADMIN+)
+
+#### Cuenta corriente
+- **Columnas "Pase jugadas" y "Borradas"** antes de "Pase" en la planilla (tabla y tarjetas mobile, `features/current-account/index.tsx`), la vista del pasador (`CashierAccountView.tsx`), el modal de liquidar y la grilla de "Generar liquidación" (`dialogs/LiquidationDialogs.tsx`), "Exportar diario", el resumen por rango (`accountTablePDF.ts`) y la hoja de liquidación (`liquidationSlipPDF.ts`). Pase jugadas − Borradas = Pase (más los reclamos positivos), sobre el que se calcula la comisión.
+- **Modo "Día / Rango de fechas"** en la planilla del admin y en la vista del pasador (`ModeToggle` de `dialogs/shared.tsx`, ahora con `id` y `label`). Por día sigue igual: cada pasador desde su última liquidación hasta "A la fecha". Por rango se eligen Desde y Hasta y todo suma esos días (planilla, liquidar, PDFs, jugadas); liquidar cierra en Hasta. Desde arranca en el inicio de la semana y se limita a Hasta y a 62 días (`accountRangeFrom` y `oldestRangeFrom` en `lib/accountPeriod.ts`).
+- **`DayBetsTables.tsx`**: los tickets del período incluyen los que se borraron después (`with_deducted`), con la marca "Borrada dd/mm", y hay una tabla "Borradas del período" (ticket, jugador, día de carga, día de baja y monto). Así se puede verificar Pase jugadas − Borradas = Pase.
+
+#### Jugadas y carga
+- **`features/bets/index.tsx`**: el pasador puede borrar aunque su cuenta ya esté liquidada (lo decide `can_delete`). La confirmación avisa que se descuenta del pase del día en que se borra.
+- **`features/make-bet/index.tsx`**: ADMIN y superiores ven las ediciones hasta su último día de juego y el aviso dice "vos podés cargar hasta el {fin de la edición}". Si la edición ya está en juego, avisa que para sumar los aciertos de los sorteos anteriores hay que volver a generar los ganadores de esos días.
+
+### Added - 2026-10-15 (Polla: ícono de la app)
+
+- **`public/manifest.webmanifest`** (nombre "Polla", `display: standalone`) y los íconos del gallo en `public/icons/`: 192 y 512, maskable 512 (con margen para el recorte circular de Android), `apple-touch-icon` 180 y favicons de 32 y 48.
+  - Sin manifest, Android armaba al instalarla un ícono genérico con una letra ("V").
+  - `index.html` enlaza el manifest, el `apple-touch-icon`, `theme-color` y los favicons PNG. Antes apuntaba a un `/favicon.svg` que no existía.
+  - Quien ya la tiene instalada tiene que borrarla y volver a agregarla para ver el ícono nuevo.
+
+### Changed - 2026-10-15 (Polla: mobile de ediciones y usuarios)
+
+#### Ediciones (`features/editions/index.tsx`)
+- **Checkboxes "Futuras / Jugando / Pasadas"**, en mobile y en desktop. Por defecto quedan tildadas Futuras y Jugando. Con ninguna o con las tres se ven todas.
+  - Filtra la API con `periods` (`GET /edition?periods=UPCOMING,PLAYING`), así el scroll infinito pagina sobre lo filtrado.
+  - `useEditionList` suma `keepPrevious`: al tildar o destildar se sigue viendo la lista anterior hasta que llega la nueva.
+  - Sin resultados dice "No hay ediciones para los filtros elegidos".
+- **Mobile: tarjetas** en lugar de la tabla de 8 columnas, que obligaba a scrollear de costado. Muestran quiniela, turno, semana, estado, eliminar, cierre, pozo, ticket y jugadas. En desktop (`md`) sigue la tabla.
+- **Estado**: el badge dice Futura, Jugando o Cerrada (con fecha del ganador o "sin ganador"), según `pollaEditionPeriod`. Antes las futuras y las que se jugaban decían las dos "Activa".
+
+#### Usuarios (`features/users/index.tsx`)
+- **Mobile: tarjetas** en lugar de la tabla. Muestran número y nombre, tipo, "Deshabilitado", `@usuario`, grupo, comisión y las acciones (editar, blanquear y eliminar, compartidas con la tabla en `renderActions`). En desktop sigue la tabla.
+
+### Changed - 2026-10-14 (Polla: cierre de carga de los admin)
+
+- **`features/make-bet/index.tsx`**: ADMIN y superiores ven las ediciones hasta el final del día de cierre, porque `GET /edition?loadable=true` ya las filtra solo por fecha para ellos.
+  - Debajo de la edición se agrega "· vos podés cargar hasta las 23:59" después de la fecha y hora de cierre, que siguen siendo las de pasadores y jugadores.
+
+### Changed - 2026-10-14 (Polla: desplegable de usuarios)
+
+#### `components/UserSearchPicker.tsx`
+- **Clic:** abre el desplegable aunque el input ya tenga el foco (por ejemplo, recién elegido alguien).
+- **Chevron:** el que aparece a la derecha abre y cierra la lista sin sacarle el foco al input.
+- **Orden:** la lista viene ordenada por número, por el cambio de `GET /user/search`.
+- **Refinar sin vaciar:** mientras se escribe se sigue viendo la lista anterior hasta que llega la refinada.
+  - `useApiInfiniteQuery` suma la opción `keepPrevious` (`placeholderData: keepPreviousData`).
+  - La usan `useUserSearch` y `useUsers`.
+- **Teclado:** con ↑/↓ la fila activa queda a la vista (`scrollIntoView`). Al llegar al final se carga la página siguiente.
+- **Sin coincidencias:** se avisa dentro del panel, que ya no se cierra.
+- **Prop nueva `typeFilter`:** muestra "Pasador | Jugador" junto al label y busca solo en el tipo elegido.
+  - Al cambiar de tipo se limpia el texto.
+  - La página suelta al elegido y limpia sus filtros.
+
+#### Cargar jugada
+- "Cargar a nombre del pasador" lista **solo pasadores**. La usan los roles superiores al pasador para cargar a nombre de uno.
+- La API sigue aceptando un jugador como destino.
+
+#### Jugadas
+- El filtro "Pasador" pasa a ser "Filtrar por" con **Pasador | Jugador**.
+  - **Pasador:** filtra con `cashier_polla_user_id`, que trae sus jugadas y las de sus jugadores.
+  - **Jugador:** filtra con `polla_user_id`, que trae solo las del jugador.
+- El filtro queda en la URL. Al recargar se trae al usuario por id y, si es un jugador, también a su pasador para mostrar "jugador de N · Pasador".
+- **"Compartir PDF":** usa el mismo filtro (`TicketsPdfFilters.polla_user_id`) y el encabezado dice "Jugador N · Nombre" o "Pasador N · Nombre".
+- **`lib/pollaUsers.ts`:** `cashierOption` pasa a ser `pollaUserOption(user, cashier?)`. Sin el pasador a mano, el texto dice solo "jugador".
+
+#### Usuarios
+- Buscador "número, nombre o usuario" al lado del filtro de tipo (`search` de `GET /user`, con debounce).
+
+### Changed - 2026-10-13 (Polla: número por tipo y buscador de pasadores)
+
+#### Buscador de pasadores y jugadores (`components/UserSearchPicker.tsx`)
+- **Cómo busca:** el mismo campo acepta número o nombre.
+  - Solo dígitos busca el número exacto. Si hay uno solo, lo elige solo y Enter sigue de largo, como antes.
+  - Con letras busca en nombre, apellido y usuario.
+  - Al enfocarlo vacío lista todos, para scrollear hasta encontrarlo (de a 30, con scroll infinito dentro del panel).
+- **Cómo se elige:** con clic o con ↑/↓ y Enter. Si un pasador y un jugador comparten número aparecen los dos.
+- **Debajo del campo** se ve el elegido ("Ana Gómez · jugador de 3 · Pedro"). Con `clearLabel` aparece una ✕ para volver a "Todos".
+- **Dónde se usa:**
+  - **Cargar jugada:** reemplaza a `TargetUserByNumber` ("Cargar a nombre de"). Escribir suelta al elegido, así no se carga a nombre del anterior.
+  - **Cuenta corriente:** reemplaza al input "Nº de pasador". Filtra por `polla_user_id`.
+  - **Jugadas:** reemplaza al desplegable "Pasador", que cortaba en 200. El filtro sigue en la URL y al recargar se trae el pasador por id.
+  - **Usuarios → Nuevo jugador:** reemplaza al desplegable "Pasador".
+- **`lib/pollaUsers.ts`** (nuevo): `describePollaUser`, `pollaUserTypeLine` y `cashierOption`.
+- **Hooks:** nuevo `useUserSearch`. Salen `useUserByNumber`, `useUserOptions`, `TargetUserByNumber.tsx` y la ruta `user.byNumber`. Crear, editar o borrar un usuario invalida también el buscador.
+
+### Changed - 2026-10-12 (Polla: cuarta tanda del cliente)
+
+#### Cuenta corriente por período (liquidación semanal)
+- **Vista y exportes:** la planilla, el total general, "Exportar diario" y "Exportar liquidación" muestran cada pasador acumulado desde el día siguiente a su última liquidación hasta la fecha elegida. Hay una columna nueva "Desde".
+  - "Actualizar" recalcula todo el período abierto.
+  - Liquidar, a uno o a todos, cierra el período en esa fecha.
+- **Helpers nuevos (`lib/accountPeriod.ts`):**
+  - `periodView`, la fila con los montos del período;
+  - `periodLabel`;
+  - `betsRangeFrom`.
+- **`LiquidateCashierDialog`:**
+  - montos del período de solo lectura, incluidos los reclamos del período;
+  - reclamos, gastos, cobro y pago del día, editables;
+  - el saldo anterior solo se edita si el período empieza ese día.
+- **`GenerateLiquidationDialog`:** usa los montos del período, con la columna "Desde".
+- **`DayBetsTables`:** recibe `from`/`to` y lista los tickets y las ganadoras del período.
+- **`CashierAccountView`:** el pasador ve su período.
+- **Liquidación en PDF:** dice "Período D/M al D/M" e incluye las ganadoras de todo el período.
+- **Reportes por día:** "Resumen" y "Exportar subtotales" usan lo acumulado del período. "Exportar cobros y pagos" sigue siendo la caja del día.
+
+#### Cobros y pagos
+- **"Exportar cobros y pagos"** tiene el campo "Porcentaje del pozo":
+  - **Día:** si el saldo del día es positivo, el ticket suma `p% POZO` y `SALDO SIN POZO`.
+  - **Período:** si deja, descuenta el pozo y calcula el `% DEJA` del capitalista sobre lo que queda.
+
+#### Jugadas
+- **El pasador borra hasta el cierre de carga:** el botón eliminar ya no se limita a las jugadas del día. Sigue `can_delete`: carga abierta y cuenta sin liquidar desde el día de carga.
+- **"Compartir PDF" (`features/bets/ShareTicketsPdfButton.tsx`):** está en Jugadas para todos menos el jugador y usa los filtros elegidos.
+  - Baja todas las jugadas de la edición de a 1000, con un spinner que muestra el progreso.
+  - Arma un PDF A4 apaisado para blanco y negro (`functions/editionTicketsPDF.ts`):
+    - los números acertados van en negrita y sombreados;
+    - tiene columnas de aciertos, si ganó y premio.
+  - En mobile lo comparte; en desktop lo descarga (`sharePdf` y `downloadPdfBlob` en `functions/printPdf.ts`).
+- **Resultados:** después de "Generar ganadores" aparece una tarjeta con cada edición procesada, su "Compartir PDF" y un link a Jugadas.
+
+### Changed - 2026-10-12 (Polla: tercera tanda del cliente)
+
+#### Organización y roles
+- El OWNER opera solo sobre su organización, como el resto: se saca el selector de organización del header (`OrganizationPicker`), `activeOrganizationId`/`setActiveOrganizationId` del `AuthContext` y el botón "Trabajar acá" de Organizaciones. Organizaciones queda para dar de alta, editar y eliminar organizaciones con su capitalista y blanquearle la contraseña.
+- **Grupos** (`features/groups`, ruta `/grupos`, OWNER y capitalista): pantalla propia para crear, renombrar y eliminar grupos. Sale la tarjeta de Grupos de "Quinielas y turnos". Hook nuevo `useUpdateGroup`.
+
+#### Usuarios y contraseñas
+- El alta ofrece los tipos de `POLLA_CREATABLE_TYPES`. Superadmin, capitalista y OWNER pueden crear jugadores eligiendo el pasador (select "Pasador"). Admin crea solo pasadores.
+- El ícono de blanqueo se muestra solo si `canResetPollaPassword(rol, tipo)` y nunca sobre uno mismo.
+- El blanqueo pone una contraseña definitiva: `ResetPasswordDialog` ya no habla de contraseña temporal.
+- Se saca "Cambiar contraseña" de Configuración. `/cambiar-password` queda solo para la contraseña inicial del OWNER del seed: `ProtectedRoute` redirige ahí mientras `password_reset_required` y, si no, la manda a Jugadas.
+
+#### Jugadas y carga
+- **`features/bets`**: owner, capitalista, superadmin y admin tienen todas las acciones. El pasador solo imprime y elimina lo suyo. El jugador no tiene columna de acciones.
+- **`features/make-bet`**: "Cargar a nombre de" queda solo para owner, capitalista, superadmin y admin. El pasador carga únicamente a su nombre. Las ediciones se piden con `loadable=true` (la API mira fecha y hora de cierre) y se muestra "cierre de carga DD-MM-YYYY HH:mm".
+- **`features/editions`**: el alta pide la hora de cierre de carga (`load_limit_time`, por defecto 21:00) además de la fecha. La columna Cierre muestra fecha y hora.
+
+#### Revisar ticket
+- **`features/check-ticket`** (ruta `/revisar-ticket`, todos menos el jugador): se busca un ticket de la organización y se ve:
+  - si ganó y el premio;
+  - el titular: pasador, o jugador y de qué pasador;
+  - los números con aciertos;
+  - la edición con su pozo;
+  - la tabla de ganadores con lo que se llevó cada uno.
+- Hook `useTicketCheck` y `BACKEND_ROUTES.bet.check`.
+
+#### Ventas, cuenta corriente y reportes
+- **`features/sales`**: filtro por grupo (o todos) para todos menos el pasador. Filtra el desglose por grupo y los totales.
+- **`components/ui/date-input.tsx`** (`DateInput`) y `lib/dates.ts` (`todayIso`):
+  - el calendario se abre con cualquier click (`showPicker`); antes, después de elegir una vez, había que tipear la fecha;
+  - una fecha tipeada pasado el `max` se lleva al máximo.
+- `DateInput` se usa en cuenta corriente (admin y pasador), reportes, ventas, resultados (máximo hoy) y ediciones.
+- **`styles/index.css`**: `color-scheme: light` en los inputs de fecha y hora, porque en el tema oscuro el ícono del calendario quedaba blanco sobre blanco.
+- **Exportar subtotales** (`ReportDialogs`, `totalsTicket`):
+  - campo nuevo "Porcentaje del pozo";
+  - del total (o del saldo neto si hay gastos) se descuenta ese %, con las líneas `X% POZO` y `SALDO SIN POZO`;
+  - el % del capitalista se calcula sobre lo que queda.
+
+### Changed - 2026-10-08 (Resultados como QuiniApp)
+
+- **`features/results`**, con la lógica de `web/src/features/results`:
+  - Enter pasa siempre a la caja siguiente, también con la caja vacía. Una cifra se completa con cero.
+  - En la última caja, Enter guarda si están los 20; si falta alguno, vuelve a la primera vacía.
+  - "Guardar resultados" queda deshabilitado hasta tener quiniela, turno y los 20 números. Debajo de la grilla se muestra cuántos van cargados.
+  - Un resultado ya cargado se trae a la grilla para editarlo y se guarda como corrección.
+  - Guardar no calcula nada: los aciertos y ganadores se calculan con el botón **Generar ganadores** (antes "Procesar aciertos"), que también actualiza la cuenta corriente.
+
+### Changed - 2026-10-06 (Resultados de 2 cifras)
+
+- **`features/results`**: se cargan las 2 cifras que se comparan con las jugadas. Enter pasa a la caja siguiente y en la última guarda. Una cifra sola se completa con cero (7 → 07) al apretar Enter o al salir de la caja. Una caja vacía no avanza y queda marcada.
+
+### Fixed - 2026-10-06
+
+- **`features/editions`**: la confirmación de borrado avisa que se anulan las jugadas de la edición. Al borrar se refrescan jugadas, ventas y cuenta corriente.
+
+### Changed - 2026-10-06 (Segunda tanda del cliente)
+
+#### Roles y versión
+- Los tipos de usuario se muestran en español (`POLLA_USER_TYPE_LABEL`) en Usuarios y en el header. El header muestra el nombre y, abajo, el rol del usuario logueado (Dueño, Capitalista, Superadministrador, Administrador, Pasador o Jugador).
+- **Versión** como en QuiniApp: `vite.config.ts` define `__COMMIT_DATE__` (la fecha del último commit, declarada en `src/vite-env.d.ts`) y se muestra en el header, el menú mobile y el login.
+
+#### Usuarios
+- Solo el pasador crea jugadores: los demás roles ya no tienen la opción "Jugador" ni el select de pasador.
+- El número se pide para pasadores y jugadores. Apellido en el alta.
+- **`EditUserDialog`**: editar nombre, apellido, usuario, número, grupo, comisión (no la del propio pasador) y deshabilitado. Los deshabilitados se listan para poder volver a habilitarlos.
+- **`components/ResetPasswordDialog`**: blanquear la contraseña. Es temporal: el usuario la cambia al entrar.
+- El OWNER tiene que elegir una organización antes de dar de alta usuarios.
+- Se saca todo lo de créditos: columna, diálogo, saldo del header, `features/my-bets` y sus hooks y rutas.
+
+#### Organizaciones (como QuiniApp)
+- Alta de la organización con su capitalista (nombre, apellido, usuario, contraseña, email, teléfono). La tabla muestra el capitalista y tiene las acciones Trabajar acá, Editar, Blanquear contraseña y Eliminar.
+
+#### Cargar jugada
+- **`TargetUserByNumber`**: "Cargar a nombre de" se busca por número y muestra "Nombre · jugador de Pasador" o "No existe". Para ADMIN+ es obligatorio; para el pasador es opcional (vacío = a su nombre) y solo encuentra a sus jugadores. Enter pasa a los números.
+- El jugador tiene "Repetir última jugada": `RepeatBetDialog` en modo `last` trae su última jugada y deja elegir la edición vigente. ADMIN+ y pasador siguen con "Repetir ticket".
+
+#### Jugadas
+- Pasador y jugador eligen entre "Mis jugadas" (por defecto; para el pasador, las suyas y las de sus jugadores) y "Jugando" (todas las del capitalista). Las ajenas llevan el badge "Jugando".
+- Eliminar depende de `can_delete`: el pasador da de baja en el día lo que no le pagaron. `/mis-jugadas` redirige a `/jugadas?mine=1`.
+
+#### Ventas del día
+- **`features/sales`** (`/ventas`, staff): boletas vendidas y recaudado del día. Superadmin y admin ven además el desglose por grupo; el pasador ve lo suyo.
+
+#### Resultados
+- Como en la quiniela: 4 cifras exactas y Enter avanza solo con las 4 (con menos, la caja queda marcada). Dos columnas, 1–10 y 11–20, con el número de posición.
+- Pasador y jugador ven las 2 últimas cifras.
+
+#### Cuenta corriente (como QuiniApp, sin Arrastre ni Deje)
+- **Admin+**:
+  - Botones: Exportar diario, Exportar liquidación, Exportar cobros y pagos, Resumen cuenta corriente, Exportar subtotales, Generar liquidación y Actualizar.
+  - Filtros: fecha, grupo y nº de pasador.
+  - Planilla: Liquidar · Número · Nombre · Pase · Aciertos · Reclamos · Subtotal · Saldo anterior · Cobros · Pagos · Total · Grupo, con total general del día. En mobile, tarjetas.
+- **Diálogos**:
+  - `LiquidateCashierDialog`: reclamos, gastos, saldo anterior, cobro y pago, más los tickets del día y las ganadoras.
+  - `GenerateLiquidationDialog`: reclamos, cobros y pagos de todos; después liquida el día.
+  - `ReportDialog`: cobros y pagos, resumen y subtotales, por día o rango, con grupo, gastos guardados y porcentaje.
+- **Pasador**: `CashierAccountView` con su liquidación del día, los tickets y las ganadoras, y "Imprimir liquidación".
+- **PDFs** en `functions/current-account/`, adaptados de QuiniApp sin Arrastre ni Deje: planilla diaria, resumen por período, liquidaciones (una página por pasador, en un solo PDF) y tickets térmicos de cobros y pagos y de subtotales.
+- Dependencia nueva `jspdf-autotable` (^5.0.2, la misma que `web/`).
+
+### Added - 2026-10-05 (ESLint)
+
+#### Config de ESLint propia
+Hasta ahora `npm run lint` no analizaba nada: ESLint 9 tomaba la config de la raíz, que solo cubre `api/` y `helper/`, y daba todos los archivos por ignorados.
+- **`eslint.config.js`** (flat config): `@eslint/js` recommended, `typescript-eslint` recommended, `react-hooks` recommended, `react-refresh/only-export-components` (con excepción para `buttonVariants`/`badgeVariants` de shadcn), `@typescript-eslint/no-unused-vars` que ignora `_*`, y `eslint-config-prettier` al final.
+- **Dependencias de dev**: `eslint`, `@eslint/js`, `typescript-eslint` (fijado en 8.34.0, la versión que ya usa `web/`, para no mover las versiones compartidas del monorepo), `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals` y `eslint-config-prettier`.
+- **Scripts**: `lint` y `lint:fix` pasan a `eslint src`. El glob entre comillas simples no funcionaba en Windows (`cmd` las toma literales).
+- **Ajustes para dejar el lint en cero**:
+  - Se borran los `eslint-disable no-unused-vars`, que con `typescript-eslint` ya no hacen falta, y los de `react/no-array-index-key`, una regla de un plugin que el proyecto no usa.
+  - `buildURL` del `apiClient` tipa `params` como `unknown` en vez de `any`.
+  - `editionList` de Jugadas va en `useMemo`, porque se recreaba en cada render y disparaba el efecto.
+  - Los helpers de casilleros pasan a `lib/betNumbers.ts` y `lib/pollaNumbers.ts`, para que los archivos de componentes solo exporten componentes (Fast Refresh).
+
+### Changed - 2026-10-05 (Ajustes del cliente)
+
+#### Carga de números como en Resultados de QuiniApp
+- **`components/PollaNumberBoxes.tsx`**:
+  - Se escribe el número y **Enter** pasa a la caja siguiente; ya no salta solo al completar 2 cifras.
+  - Una cifra se completa con cero (`5` pasa a `05`) con Enter o al salir de la caja.
+  - Enter en la última caja dispara `onSubmit` (carga la jugada o guarda la edición).
+  - Se permiten **números repetidos**.
+  - Expone `focusFirst()` para volver a la primera caja después de cargar.
+- **`features/results`**:
+  - Enter pasa al siguiente resultado y en el último guarda.
+  - Al elegir fecha, quiniela y turno con un resultado ya cargado, se completa y se guarda como corrección (`PUT`). El botón "Corregir" de la tabla lleva a ese modo.
+  - Si un reproceso anula al ganador y reabre la edición, avisa que hay que procesar los días siguientes.
+
+#### Repetir ticket
+- **`features/make-bet/RepeatBetDialog.tsx`**: se busca el ticket por número, se ven sus 10 números y se elige la edición donde cargarlos. Los números pasan al formulario para revisarlos antes de cargar. Hook `useBetToRepeat`.
+
+#### Liquidación sin deje
+- **`features/current-account`**: se sacan las columnas Arrastre y Recargo, y "Liquidar día" ya no manda `leave`.
+- **`features/users`**: se saca el recargo (fee plus) del alta de pasadores y de la tabla.
+
+#### Tema claro y oscuro con alto contraste
+- **`styles/index.css` y `tailwind.config.ts`**:
+  - Los tokens pasan a canales HSL con `hsl(var(--x) / <alpha-value>)`. Antes `--primary` era hex en un tema y canales en el otro, y `hsl(var(--primary))` se rompía.
+  - Dos temas, claro y oscuro aclarado, con contraste AA (≥ 4.5:1) en todos los pares fondo/texto y ≥ 7:1 en el texto principal.
+  - Los inputs tienen su propio par (`--input` / `--input-foreground`): son claros con texto casi negro en los dos temas.
+  - Tokens nuevos `success`, `hit` (casillero acertado), `row-stripe`, `table-head` y `nav-active`.
+  - `darkMode` pasa a `['selector', '[data-theme="dark"]']`: `dark:` sigue al tema elegido, no al del sistema operativo.
+- **Componentes UI**: `Input`, `Label`, `CardTitle`, `Button` (outline/destructive/success), `Badge` (variante `success` nueva), `Select` y `Dialog` dejan los colores fijos (`text-white`, `bg-emerald-600`, `bg-red-700`) y usan tokens.
+- **`lib/theme.ts`** + **`AuthProvider.setTheme`**: el tema se guarda en la DB (`PUT /auth/preferences`) y se aplica con `data-theme` en `<html>`. La copia en `localStorage` solo evita el parpadeo; `index.html` pinta el fondo del último tema antes de cargar el bundle (antes tenía `#151933` fijo).
+- **`features/settings`** (ruta `/configuracion`, todos los roles): elección de tema con vista previa real de cada uno y acceso a Cambiar contraseña.
+
+#### Aciertos marcados y privilegios por rol
+- **`features/bets`**:
+  - Tabla tipo planilla: Ticket · Coord (grupo) · Pasador · Cliente · Aciertos · un casillero por número (1…10) · Estado · Acciones. Los casilleros acertados van en amarillo con negrita, con la fecha del acierto en el tooltip.
+  - En mobile se mantienen las tarjetas.
+  - Orden por "Más aciertos" (predeterminado) o "Más recientes".
+  - Pasador y jugador ven todas las jugadas con nombres y pueden filtrar "Solo mías" / "Mías y de mis jugadores".
+  - Se imprime lo propio y se edita o borra lo que es de uno.
+  - La cantidad de jugadas de la edición solo la ve admin+.
+- **`components/BetNumbers.tsx`**: la marca es por casillero (`hit_dates`), no por número. Si el 32 se jugó 5 veces y salió 2, se marcan 2.
+- **Rutas**: Resultados queda visible para todos los roles y en solo lectura para quien no es admin+. Configuración entra en el menú de todos.
+
 ### Added - 2026-09-28 (Frontend propio de la Polla)
 
 #### Workspace nuevo `polla-web/`
