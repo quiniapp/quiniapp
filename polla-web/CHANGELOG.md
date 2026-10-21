@@ -4,6 +4,16 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-21 (Polla: botón Actualizar en Jugadas)
+
+- **`features/bets/index.tsx`**: botón "Actualizar" junto a "Compartir PDF" (gira mientras busca). Trae lo último cargado sin recargar la página, con los mismos filtros.
+- **`hooks/fetchs/usePollaData.ts`**: `useRefreshBets(params)` refresca la lista y además los ganadores y los totales de las ediciones (pozo y cantidad de jugadas).
+- **`hooks/useApi.ts`**: `useRefreshCursorQuery` deja solo la primera página del feed por keyset y la vuelve a pedir. Un `refetch()` común volvía a pedir cada página con su cursor viejo y salteaba las filas que las jugadas nuevas corren a la página siguiente. Mientras llega se sigue viendo la primera página. `cursorQueryKey` arma la query key que comparten el hook y el refresco.
+
+### Added - 2026-10-20 (Polla: Vercel Web Analytics)
+
+- **`src/App.tsx`**: `<Analytics />` de `@vercel/analytics/react` (1.6.1, la misma versión que QuiniApp), así las visitas y páginas de la Polla se ven en la pestaña Analytics de su propio proyecto de Vercel, separadas de las de QuiniApp. Hay que activar Web Analytics en el proyecto de Vercel de polla-web para que empiece a registrar.
+
 ### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
 
 - **Cuenta corriente**: el ADMIN ya no la tiene en el menú (`AppLayout.tsx`) y la ruta lo manda a Jugadas (`routes/route.tsx`). Entran dueño, capitalista, superadmin (`POLLA_ACCOUNT_ROLES`) y el pasador, que ve la suya.

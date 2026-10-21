@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Pencil, Printer, Trash2 } from 'lucide-react';
+import { Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import {
   IPollaBetListItem,
   IPollaEditionEntityFront,
@@ -16,7 +16,13 @@ import {
   isPollaAdminRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useBets, useEditions, useUser, useWinners } from '@/hooks/fetchs/usePollaData';
+import {
+  useBets,
+  useEditions,
+  useRefreshBets,
+  useUser,
+  useWinners,
+} from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -183,22 +189,34 @@ export const BetsPage = () => {
 
   const searching = debouncedTicket.length > 0;
 
+  const betsParams = {
+    polla_edition_id: searching ? undefined : editionId || undefined,
+    ticket_number: searching ? debouncedTicket : undefined,
+    ...(searching ? {} : userFilter),
+    mine: mine ? 'true' : undefined,
+    sort,
+  };
+  const betsEnabled = Boolean(editionId) || searching;
+
   const {
     data: bets,
     isFetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useBets(
-    {
-      polla_edition_id: searching ? undefined : editionId || undefined,
-      ticket_number: searching ? debouncedTicket : undefined,
-      ...(searching ? {} : userFilter),
-      mine: mine ? 'true' : undefined,
-      sort,
-    },
-    Boolean(editionId) || searching
-  );
+  } = useBets(betsParams, betsEnabled);
+
+  // "Actualizar": trae lo último cargado (la primera página de nuevo).
+  const refreshBets = useRefreshBets();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshBets(betsParams);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const { data: winners } = useWinners(editionId || null);
 
@@ -448,10 +466,20 @@ export const BetsPage = () => {
           </Select>
         </div>
 
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-2 sm:ml-auto"
+          onClick={handleRefresh}
+          disabled={!betsEnabled || refreshing}
+        >
+          <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
+          {refreshing ? 'Actualizando…' : 'Actualizar'}
+        </Button>
+
         {/* El jugador no imprime: tampoco comparte el PDF de tickets. */}
         {hasActions && selectedEdition && !searching && (
           <ShareTicketsPdfButton
-            className="sm:ml-auto"
             edition={selectedEdition}
             lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
             scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
