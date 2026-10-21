@@ -9,14 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
-import { periodLabel, periodView } from '@/lib/accountPeriod';
+import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/lib/accountPeriod';
 import { Label } from '@/components/ui/label';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
 import { fetchWinnersByCashier } from './fetchers';
-import { fmtMoney } from './format';
+import { ReportMode, fmtMoney } from './format';
+import { ModeToggle } from './dialogs/shared';
 
+/** Pase jugadas − Borradas = Pase (más los reclamos positivos), base de la comisión. */
 const FIELDS = [
+  ['bets_pass', 'Pase jugadas'],
+  ['deleted_pass', 'Borradas'],
   ['pass', 'Pase'],
   ['cashier_commission', 'Comisión'],
   ['successes', 'Aciertos'],
@@ -31,15 +35,19 @@ const FIELDS = [
 
 /**
  * La liquidación del pasador, como su vista en QuiniApp: lo acumulado desde el
- * día siguiente a su última liquidación hasta la fecha elegida, los tickets que
- * cargó, las jugadas que ganaron y el botón para imprimirla.
+ * día siguiente a su última liquidación hasta la fecha elegida (o en un rango
+ * de fechas), los tickets que cargó, los que se borraron, las jugadas que
+ * ganaron y el botón para imprimirla.
  */
 export const CashierAccountView = () => {
   const { user } = useAuth();
+  const [mode, setMode] = useState<ReportMode>('day');
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [from, setFrom] = useState(dayjs().startOf('week').format('YYYY-MM-DD'));
   const [printing, setPrinting] = useState(false);
 
-  const { data, isFetching } = useCurrentAccountsOfDay({ date });
+  const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;
+  const { data, isFetching } = useCurrentAccountsOfDay({ date, range_from: rangeFrom });
   const row = data?.data[0];
   const account = row ? periodView(row) : undefined;
 
@@ -65,7 +73,7 @@ export const CashierAccountView = () => {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        description="Tu liquidación desde la última vez que te liquidaron: lo que pasaste, tus aciertos y comisión, y lo que cobraste o te pagaron."
+        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tus aciertos y comisión, y lo que cobraste o te pagaron."
         actions={
           <Button type="button" onClick={handlePrint} disabled={!account || printing}>
             <Printer />
@@ -74,14 +82,31 @@ export const CashierAccountView = () => {
         }
       />
 
-      <div className="flex flex-col gap-1 sm:w-[200px]">
-        <Label htmlFor="cashier-account-date">A la fecha</Label>
-        <DateInput
-          id="cashier-account-date"
-          value={date}
-          max={todayIso()}
-          onValueChange={setDate}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <ModeToggle id="cashier-account-mode" label="Ver" value={mode} onChange={setMode} />
+
+        {mode === 'range' && (
+          <div className="flex flex-col gap-1 sm:w-[200px]">
+            <Label htmlFor="cashier-account-from">Desde</Label>
+            <DateInput
+              id="cashier-account-from"
+              value={rangeFrom ?? from}
+              min={oldestRangeFrom(date)}
+              max={date}
+              onValueChange={setFrom}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1 sm:w-[200px]">
+          <Label htmlFor="cashier-account-date">{mode === 'range' ? 'Hasta' : 'A la fecha'}</Label>
+          <DateInput
+            id="cashier-account-date"
+            value={date}
+            max={todayIso()}
+            onValueChange={setDate}
+          />
+        </div>
       </div>
 
       {!account ? (

@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_ACCOUNT_RECALC_MAX_DAYS } from '@helper/polla/config/session.config';
 import {
   pollaCurrentAccountUpdateSchema,
   pollaCurrentAccountBulkUpdateSchema,
@@ -16,12 +17,26 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const queryString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
 
-const ADMIN_AND_UP = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
-];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Inicio de la liquidación por rango (`range_from`), hasta `date` inclusive y
+ * de hasta un período de recálculo. Sin `range_from`, cada pasador acumula
+ * desde el día siguiente a su última liquidación.
+ */
+const parseRangeFrom = (value: unknown, date: string): string | null => {
+  const from = queryString(value);
+  if (!from) return null;
+
+  if (!ISO_DATE.test(from) || from > date) {
+    throw new BadRequestError('Rango de fechas inválido');
+  }
+  if ((Date.parse(date) - Date.parse(from)) / DAY_MS > POLLA_ACCOUNT_RECALC_MAX_DAYS) {
+    throw new BadRequestError(`El rango no puede pasar de ${POLLA_ACCOUNT_RECALC_MAX_DAYS} días`);
+  }
+
+  return from;
+};
 
 export class PollaCurrentAccountRouter {
   public router: Router;
@@ -33,25 +48,26 @@ export class PollaCurrentAccountRouter {
     this.setupRoutes();
   }
 
+  /**
+   * Ven la cuenta corriente y liquidan dueño, capitalista y superadmin
+   * (`POLLA_ACCOUNT_ROLES`); el pasador solo ve la suya. El admin y el
+   * jugador no tienen acceso.
+   */
   private setupRoutes() {
-    const writeGuard = requirePollaRole(...ADMIN_AND_UP);
+    const readGuard = requirePollaRole(...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER);
+    const writeGuard = requirePollaRole(...POLLA_ACCOUNT_ROLES);
 
     this.router.post('/calculate', writeGuard, this.calculateHandler);
     this.router.post('/liquidate', writeGuard, this.liquidateHandler);
     this.router.put('/bulk', writeGuard, this.bulkUpdateHandler);
-    this.router.get('/totals', this.getTotalsHandler);
-    this.router.get('/', this.getAllHandler);
-    this.router.get('/:id', this.getByIdHandler);
+    this.router.get('/totals', readGuard, this.getTotalsHandler);
+    this.router.get('/', readGuard, this.getAllHandler);
+    this.router.get('/:id', readGuard, this.getByIdHandler);
     this.router.put('/:id', writeGuard, this.updateHandler);
   }
 
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-
-    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
-      throw new ForbiddenError('Los jugadores no tienen cuenta corriente');
-    }
-
     const pagination = parsePagination(req.query as Record<string, unknown>);
     const date = queryString(req.query.date);
 
@@ -67,7 +83,8 @@ export class PollaCurrentAccountRouter {
       groupId: queryString(req.query.polla_group_id),
     };
 
-    // Un día: cada fila trae además los montos acumulados de su período.
+    // Un día: cada fila trae además los montos acumulados de su período (o
+    // del rango que arranca en `range_from`).
     if (date) {
       if (!ISO_DATE.test(date)) throw new BadRequestError('Fecha inválida (YYYY-MM-DD)');
 
@@ -75,6 +92,7 @@ export class PollaCurrentAccountRouter {
         ...filters,
         organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
         date,
+        from: parseRangeFrom(req.query.range_from, date),
       });
 
       res.status(200).json({
@@ -109,11 +127,6 @@ export class PollaCurrentAccountRouter {
    */
   private getTotalsHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-
-    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
-      throw new ForbiddenError('Los jugadores no tienen cuenta corriente');
-    }
-
     const from = queryString(req.query.from);
     const to = queryString(req.query.to) ?? from;
 
@@ -153,8 +166,10 @@ export class PollaCurrentAccountRouter {
   /**
    * "Actualizar" recalcula el período abierto (desde la última liquidación de
    * cada pasador) hasta la fecha, no solo ese día: lo jugado en la semana se
-   * acumula. Liquidar además cierra el período de todos en esa fecha. La
-   * liquidación de Polla no tiene deje.
+   * acumula. Liquidar además cierra el período de todos en esa fecha. Con
+   * `range_from` (liquidación por rango) devuelve los montos de ese rango; se
+   * liquida igual en la fecha, que es el Hasta. La liquidación de Polla no
+   * tiene deje.
    */
   private runCalculation = async (req: Request, liquidated: boolean) => {
     const { user } = getPollaSession(req);
@@ -164,6 +179,7 @@ export class PollaCurrentAccountRouter {
       throw new BadRequestError('Falta la fecha (YYYY-MM-DD)');
     }
 
+    const from = parseRangeFrom(req.query.range_from ?? req.body?.range_from, date);
     const organizationId = resolveOrganizationId(
       user,
       req.query.polla_organization_id ?? req.body?.polla_organization_id
@@ -172,7 +188,7 @@ export class PollaCurrentAccountRouter {
     await this.repository.recalculateOpenPeriod(organizationId, date);
     if (liquidated) await this.repository.markDayLiquidated(organizationId, date);
 
-    return this.repository.getPeriodRows({ organizationId, date });
+    return this.repository.getPeriodRows({ organizationId, date, from });
   };
 
   private calculateHandler = asyncHandler(async (req: Request, res: Response) => {

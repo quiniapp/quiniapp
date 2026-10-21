@@ -83,7 +83,7 @@ export class PollaEditionRouter {
     const pagination = parsePagination(req.query as Record<string, unknown>);
 
     // Carga abierta ahora mismo, con la fecha y hora de Argentina del servidor.
-    // ADMIN+ carga hasta el final del día de cierre: solo cuenta la fecha.
+    // ADMIN+ no tiene cierre de carga: hasta el último día de juego.
     const loadable = req.query.loadable === 'true';
     const loadableOn =
       typeof req.query.loadable_on === 'string' ? req.query.loadable_on : undefined;
@@ -94,7 +94,8 @@ export class PollaEditionRouter {
         organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
         status: req.query.status as POLLA_EDITION_STATUS | undefined,
         playingOn: typeof req.query.playing_on === 'string' ? req.query.playing_on : undefined,
-        loadableOn: loadable && isAdmin ? pollaToday() : loadableOn,
+        loadableOn,
+        adminLoadableOn: loadable && isAdmin ? pollaToday() : undefined,
         loadableAt: loadable && !isAdmin ? { date: pollaToday(), time: pollaNowTime() } : undefined,
         periods: periods ? { list: periods, today: pollaToday() } : undefined,
       },

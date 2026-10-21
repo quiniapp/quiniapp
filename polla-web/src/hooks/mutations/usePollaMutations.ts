@@ -198,15 +198,16 @@ export const useProcessResults = () =>
 
 // --------------------------------------------------------- cuenta corriente
 
+/** `range_from`: liquidación por rango (si no, cada pasador desde su última liquidación). */
 export const useCalculateCurrentAccounts = () =>
-  useApiMutation<unknown, { date: string; polla_organization_id?: string }>(
+  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
     'post',
     BACKEND_ROUTES.currentAccount.calculate,
     { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta corriente actualizada' }
   );
 
 export const useLiquidateCurrentAccounts = () =>
-  useApiMutation<unknown, { date: string; polla_organization_id?: string }>(
+  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
     'post',
     BACKEND_ROUTES.currentAccount.liquidate,
     {

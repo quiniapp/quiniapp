@@ -132,8 +132,13 @@ export function openPDFPrintDialog(doc: jsPDF, filename: string) {
   };
 }
 
-/** Columnas de montos de la planilla de la cuenta corriente (sin Arrastre ni Deje). */
+/**
+ * Columnas de montos de la planilla de la cuenta corriente (sin Arrastre ni
+ * Deje). Pase jugadas − Borradas = Pase (más los reclamos positivos).
+ */
 export const ACCOUNT_MONEY_HEAD = [
+  'Pase jugadas',
+  'Borradas',
   'Pase',
   'Aciertos',
   'Reclamos',
@@ -145,6 +150,8 @@ export const ACCOUNT_MONEY_HEAD = [
 ];
 
 export const accountMoneyCells = (a: {
+  bets_pass: number;
+  deleted_pass: number;
   pass: number;
   successes: number;
   claims: number;
@@ -154,6 +161,8 @@ export const accountMoneyCells = (a: {
   paid: number;
   total: number;
 }) => [
+  money(a.bets_pass),
+  money(a.deleted_pass),
   money(a.pass),
   money(a.successes),
   money(a.claims),
@@ -167,6 +176,8 @@ export const accountMoneyCells = (a: {
 export const computeAccountTotals = (rows: IPollaCurrentAccountEntityFront[]) =>
   rows.reduce(
     (acc, row) => ({
+      bets_pass: acc.bets_pass + Number(row.bets_pass || 0),
+      deleted_pass: acc.deleted_pass + Number(row.deleted_pass || 0),
       pass: acc.pass + Number(row.pass || 0),
       successes: acc.successes + Number(row.successes || 0),
       claims: acc.claims + Number(row.claims || 0),
@@ -177,6 +188,8 @@ export const computeAccountTotals = (rows: IPollaCurrentAccountEntityFront[]) =>
       total: acc.total + Number(row.total || 0),
     }),
     {
+      bets_pass: 0,
+      deleted_pass: 0,
       pass: 0,
       successes: 0,
       claims: 0,

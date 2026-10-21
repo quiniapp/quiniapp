@@ -57,21 +57,23 @@ export async function downloadLiquidationSlipsPDF(params: {
     autoTable(doc, {
       startY: 22,
       body: [
+        // Pase jugadas − Borradas = Pase (más los reclamos positivos).
         [
+          `Pase jugadas: ${amount(account.bets_pass)}`,
+          `Borradas: ${amount(account.deleted_pass)}`,
           `Pase: ${amount(account.pass)}`,
+        ],
+        [
           `Aciertos: ${amount(account.successes)}`,
           `Reclamos: ${amount(account.claims)}`,
+          `Subtotal: ${amount(account.subtotal)}`,
         ],
         [
-          `Subtotal: ${amount(account.subtotal)}`,
           `Saldo: ${amount(account.previous_balance)}`,
           `Cobré: ${amount(account.collections)}`,
-        ],
-        [
           `Pagué: ${amount(account.paid)}`,
-          `Comisión: ${amount(account.cashier_commission)}`,
-          `Gastos: ${amount(account.bills)}`,
         ],
+        [`Comisión: ${amount(account.cashier_commission)}`, `Gastos: ${amount(account.bills)}`, ''],
       ],
       theme: 'grid',
       margin,

@@ -23,15 +23,19 @@ import { ALL_GROUPS, ReportMode, fmtMoney } from '../format';
 export const ModeToggle = ({
   value,
   onChange,
+  id = 'report-mode',
+  label = 'Tipo de reporte',
 }: {
   value: ReportMode;
   onChange: (mode: ReportMode) => void;
+  id?: string;
+  label?: string;
 }) => (
   <div className="flex flex-col gap-1">
-    <Label id="report-mode-label">Tipo de reporte</Label>
+    <Label id={`${id}-label`}>{label}</Label>
     <div
       role="radiogroup"
-      aria-labelledby="report-mode-label"
+      aria-labelledby={`${id}-label`}
       className="inline-flex w-fit rounded-md border bg-card p-1"
     >
       {(

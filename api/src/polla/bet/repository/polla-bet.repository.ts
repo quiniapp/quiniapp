@@ -44,6 +44,16 @@ export interface PollaBetFilters {
   loadRange?: { from: string; to: string } | null;
   /** Completadas entre estas fechas (ganadoras del período que se liquida). */
   hitRange?: { from: string; to: string } | null;
+  /**
+   * Solo las borradas que se descuentan del pase entre estas fechas (las
+   * "Borradas" del período que se liquida).
+   */
+  deductedRange?: { from: string; to: string } | null;
+  /**
+   * Además de las activas, las borradas que siguen en el pase de jugadas de su
+   * día de carga (`deducted_on`): los tickets del período cuadran con el pase.
+   */
+  withDeducted?: boolean;
   onlyWinners?: boolean;
 }
 
@@ -142,14 +152,23 @@ export class PollaBetRepository {
   ): Promise<PollaBetPage<PollaBetRow>> {
     const useKeyset = Boolean(options.cursor);
 
-    let query = supabase
-      .from('polla_bets')
-      .select(
-        BET_COLUMNS,
-        // Con keyset no tiene sentido el COUNT exacto: es lo más caro de la query.
-        pagination.withCount && !useKeyset ? { count: 'exact' } : {}
-      )
-      .is('deleted_at', null);
+    let query = supabase.from('polla_bets').select(
+      BET_COLUMNS,
+      // Con keyset no tiene sentido el COUNT exacto: es lo más caro de la query.
+      pagination.withCount && !useKeyset ? { count: 'exact' } : {}
+    );
+
+    // Las anuladas sin pasar por la cuenta corriente (`deducted_on` null) no
+    // salen nunca.
+    if (filters.deductedRange) {
+      query = query
+        .gte('deducted_on', filters.deductedRange.from)
+        .lte('deducted_on', filters.deductedRange.to);
+    } else if (filters.withDeducted) {
+      query = query.or('deleted_at.is.null,deducted_on.not.is.null');
+    } else {
+      query = query.is('deleted_at', null);
+    }
 
     if (filters.editionId) query = query.eq('polla_edition_id', filters.editionId);
     if (filters.organizationId) query = query.eq('polla_organization_id', filters.organizationId);
@@ -343,7 +362,8 @@ export class PollaBetRepository {
     });
 
     throwIfPollaError(error);
-    return data as { success: boolean };
+    // `deducted_on`: día en que la baja se descuenta del pase del pasador.
+    return data as { success: boolean; deducted_on: string };
   }
 
   /** Totales de una edición sin escanear jugadas fila por fila en el cliente. */

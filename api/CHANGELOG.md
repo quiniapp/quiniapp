@@ -4,6 +4,37 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
+
+- **`polla-current-account.route.ts`**: la cuenta corriente la ven y liquidan solo dueño, capitalista y superadmin (`POLLA_ACCOUNT_ROLES`). El pasador sigue viendo la suya. El ADMIN recibe 403 en `GET /current_account`, `/totals` y `/:id`, y en `calculate`, `liquidate`, `bulk` y `PUT /:id`. Antes podía ver todo y liquidar. El jugador queda afuera por el guard (se borran los chequeos sueltos).
+- **`polla-expense.route.ts`**: los gastos (ticket de cobros y pagos) son parte de la cuenta corriente y quedan para `POLLA_ACCOUNT_ROLES`. Antes también entraba el ADMIN.
+- **`polla-user.route.ts`**: `GET /user` ya no lista capitalistas, ni pidiéndolos con `user_type=CAPITALIST`: se ven y se administran desde Organizaciones (`pollaUserListTypes`). Crearlos ya estaba bloqueado (`POLLA_CREATABLE_TYPES`).
+
+### Changed - 2026-10-20 (Polla: jugadas borradas en el pase, liquidación por rango y carga de ADMIN+)
+
+#### Migración `20261020212216_polla_deleted_bets_range_admin_load.sql`
+- **`polla_bets.deducted_on`** (DATE): día en que la baja de una jugada se descuenta del pase de su pasador. Lo pone solo `polla_delete_bet`. Las bajas anteriores y las jugadas que anula el borrado de una edición quedan en NULL y siguen fuera de la cuenta corriente, como hasta ahora (no se reescribe lo liquidado). Índices parciales `idx_polla_bets_org_deducted_on` e `idx_polla_bets_cashier_deducted_on`.
+- **`polla_current_accounts.bets_pass` y `deleted_pass`**: "Pase jugadas" (todo lo cargado ese día, incluidas las que se borraron después) y "Borradas" (lo que se descuenta ese día). `pass` = `bets_pass − deleted_pass + reclamos positivos` y la comisión se calcula sobre ese pase. El día de una baja el pase y la comisión pueden quedar negativos: se revierte lo que ya se liquidó. Backfill: `bets_pass = pass − GREATEST(claims, 0)`.
+- **`polla_delete_bet`**: ya no tira `POLLA_BET_DELETE_LIQUIDATED`. El pasador borra lo suyo y lo de sus jugadores hasta el cierre de carga aunque su cuenta ya se haya liquidado: la jugada sigue en el pase de su día de carga (lo liquidado no cambia) y se descuenta hoy, o mañana si su cuenta ya se liquidó hoy. Recalcula la fila del día del descuento y devuelve `deducted_on`. Todas las bajas pasan por la cuenta corriente, también las del mismo período.
+- **`polla_calculate_current_account`** y **`polla_update_current_account_recompute`**: arman `bets_pass` y `deleted_pass` con la regla de arriba. Ahora tienen `REVOKE`/`GRANT` a `service_role` como el resto.
+- **`polla_recalculate_open_period`**: los días con bajas (`deducted_on`) también se recalculan.
+- **`polla_current_account_period_rows`**: nuevo `p_from DATE DEFAULT NULL`. Con `p_from` el período es `[p_from, p_date]` (liquidación por rango); sin él, cada pasador sigue arrancando el día siguiente a su última liquidación. `period` suma también `bets_pass` y `deleted_pass`. El saldo anterior es el del primer día, así que `saldo anterior + subtotal − cobros + pagos = total`.
+- **`polla_current_account_daily_totals`**: agrega `total_bets_pass` y `total_deleted_pass`.
+- **`polla_create_bet`**: con `p_force` (ADMIN y superiores) no hay cierre de carga: cargan mientras la edición esté `ACTIVE` y hasta su último día de juego (`polla_today() > end_date` → `POLLA_LOAD_LIMIT_EXCEEDED`). Con la polla en juego, los aciertos de los sorteos ya procesados no se suman solos: hay que volver a generar los ganadores de esos días. Pasador y jugador siguen con fecha y hora de cierre.
+
+#### Endpoints
+- **`GET /bet`**:
+  - `with_deducted=true`: suma a las activas las borradas que siguen en el pase de jugadas de su día (los tickets del período cuadran con "Pase jugadas").
+  - `deducted_from` / `deducted_to`: solo las borradas que se descuentan en ese rango (cuenta como filtro que acota el listado).
+  - Los dos son de la liquidación: el jugador recibe 403 y el pasador ve solo lo imputado a él.
+  - `IPollaBetPublic` trae `deducted_on`.
+- **`DELETE /bet/:id`**: devuelve `deducted_on`. `can_delete` del pasador ya no mira la liquidación (sí que la jugada no esté borrada).
+- **`GET /current_account?date=&range_from=`** y **`POST /current_account/calculate|liquidate`** con `range_from`: montos del rango `[range_from, date]` (hasta 62 días, `range_from <= date`, si no 400). Liquidar sigue marcando `date`, que es el Hasta.
+- **`GET /edition?loadable=true`**: para ADMIN y superiores filtra `end_date >= hoy` (`adminLoadableOn`) en lugar de `load_limit_date`.
+
+#### Otros
+- `PollaCurrentAccountRepository.getLastLiquidatedDate` se borra: quedó sin uso. `POLLA_BET_DELETE_LIQUIDATED` se deja en `polla-errors.ts` para la RPC anterior durante el deploy.
+
 ### Added - 2026-10-15 (Polla: filtro de ediciones por período)
 
 - **`GET /edition?periods=`**: lista separada por coma de `UPCOMING`, `PLAYING` y `FINISHED` (`POLLA_EDITION_PERIOD`). Lo usan los checkboxes "Futuras / Jugando / Pasadas" de la pantalla de ediciones; se filtra en la base para que el scroll infinito pagine bien.

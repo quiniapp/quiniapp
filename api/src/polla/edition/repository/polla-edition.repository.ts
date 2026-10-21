@@ -13,8 +13,10 @@ export interface PollaEditionFilters {
   status?: POLLA_EDITION_STATUS;
   /** Ediciones cuyo rango de juego incluye esta fecha. */
   playingOn?: string;
-  /** Ediciones que todavía aceptan carga a esta fecha (sin mirar la hora): la de ADMIN+. */
+  /** Ediciones cuyo cierre de carga es esta fecha o posterior (sin mirar la hora). */
   loadableOn?: string;
+  /** Ediciones que ADMIN+ todavía carga a esta fecha: sin cierre, hasta su último día de juego. */
+  adminLoadableOn?: string;
   /** Ediciones con la carga abierta en este momento: fecha y hora de cierre. */
   loadableAt?: { date: string; time: string };
   /** Futuras, jugando y/o pasadas a la fecha `today` (ver `pollaEditionPeriod`). */
@@ -51,6 +53,9 @@ export class PollaEditionRepository {
     }
     if (filters.loadableOn) {
       query = query.gte('load_limit_date', filters.loadableOn);
+    }
+    if (filters.adminLoadableOn) {
+      query = query.gte('end_date', filters.adminLoadableOn);
     }
     if (filters.loadableAt) {
       // Fecha y hora salen del servidor (`pollaToday`/`pollaNowTime`): no hay

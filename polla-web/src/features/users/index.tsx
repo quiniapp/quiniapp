@@ -5,11 +5,11 @@ import { newPollaUserSchema } from '@helper/polla/schemas/user.schema';
 import {
   POLLA_CREATABLE_TYPES,
   POLLA_USER_TYPE,
-  POLLA_USER_HIERARCHY,
   POLLA_USER_TYPE_LABEL,
   IPollaUserEntityFront,
   IPollaUserOption,
   canResetPollaPassword,
+  pollaUserListTypes,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useUsers } from '@/hooks/fetchs/usePollaData';
@@ -106,16 +106,8 @@ export const UsersPage = () => {
     [groups]
   );
 
-  /** Tipos que ve este rol (los inferiores). */
-  const visibleTypes = useMemo(
-    () =>
-      role
-        ? Object.values(POLLA_USER_TYPE).filter(
-            (t) => POLLA_USER_HIERARCHY[t] > POLLA_USER_HIERARCHY[role]
-          )
-        : [],
-    [role]
-  );
+  /** Tipos que ve este rol (los inferiores, sin el capitalista: está en Organizaciones). */
+  const visibleTypes = useMemo(() => (role ? pollaUserListTypes(role) : []), [role]);
 
   /** Qué da de alta este rol (ver `POLLA_CREATABLE_TYPES`). */
   const creatableTypes = role ? POLLA_CREATABLE_TYPES[role] : [];

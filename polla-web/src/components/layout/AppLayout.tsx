@@ -16,7 +16,11 @@ import {
   UsersRound,
   Building2,
 } from 'lucide-react';
-import { POLLA_USER_TYPE, POLLA_USER_TYPE_LABEL } from '@helper/polla/types/user.type';
+import {
+  POLLA_ACCOUNT_ROLES,
+  POLLA_USER_TYPE,
+  POLLA_USER_TYPE_LABEL,
+} from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import type { RouteHandle } from '@/routes/route';
 import { ROUTES } from '@/types/routes.type';
@@ -54,7 +58,13 @@ const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: ADMIN_AND_UP },
   { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
   { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
-  { to: ROUTES.CURRENT_ACCOUNT, label: 'Cuenta corriente', icon: CreditCard, roles: STAFF },
+  {
+    // El admin no ve la cuenta corriente ni liquida.
+    to: ROUTES.CURRENT_ACCOUNT,
+    label: 'Cuenta corriente',
+    icon: CreditCard,
+    roles: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
+  },
   { to: ROUTES.CATALOGS, label: 'Quinielas y turnos', icon: ListOrdered, roles: ADMIN_AND_UP },
   { to: ROUTES.GROUPS, label: 'Grupos', icon: UsersRound, roles: OWNER_AND_CAPITALIST },
   {

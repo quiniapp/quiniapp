@@ -256,8 +256,8 @@ export const BetsPage = () => {
     const isPublic = isPublicPollaBet(row);
     const canPrint = canManage || (isCashier && isPublic && row.is_mine);
     const canEdit = canManage && !row.winner;
-    // El pasador borra lo que no le pagaron, hasta el cierre de carga y si no se
-    // liquidó su cuenta desde ese día (la API decide `can_delete`).
+    // El pasador borra lo que no le pagaron, hasta el cierre de carga (la API
+    // decide `can_delete`), aunque ya se haya liquidado: se descuenta del pase.
     const canDelete = !row.winner && (canManage || (isCashier && isPublic && row.can_delete));
 
     if (!canPrint && !canEdit && !canDelete) return null;
@@ -293,7 +293,11 @@ export const BetsPage = () => {
             variant="ghost"
             title="Eliminar"
             onClick={() => {
-              if (window.confirm(`¿Eliminar la jugada ${row.ticket_number}?`)) {
+              if (
+                window.confirm(
+                  `¿Eliminar la jugada ${row.ticket_number}? Se descuenta del pase del día en que se borra.`
+                )
+              ) {
                 deleteBet({ id: row.polla_bet_id });
               }
             }}

@@ -41,7 +41,7 @@ export const POLLA_USER_HIERARCHY: Record<POLLA_USER_TYPE, number> = {
   [POLLA_USER_TYPE.PLAYER]: 5,
 };
 
-/** Roles que administran la operación (cargan resultados, liquidan, editan pasado el límite). */
+/** Roles que administran la operación (cargan resultados, editan pasado el límite). */
 export const POLLA_ADMIN_ROLES: POLLA_USER_TYPE[] = [
   POLLA_USER_TYPE.OWNER,
   POLLA_USER_TYPE.CAPITALIST,
@@ -57,6 +57,27 @@ export const isPollaAdminRole = (role: POLLA_USER_TYPE): boolean =>
 
 export const isPollaStaffRole = (role: POLLA_USER_TYPE): boolean =>
   POLLA_STAFF_ROLES.includes(role);
+
+/**
+ * Roles que ven la cuenta corriente de los pasadores, sus reportes y gastos, y
+ * liquidan. El ADMIN opera (jugadas, resultados, usuarios) pero no ve la
+ * cuenta corriente ni liquida. El pasador ve solo la suya.
+ */
+export const POLLA_ACCOUNT_ROLES: POLLA_USER_TYPE[] = [
+  POLLA_USER_TYPE.OWNER,
+  POLLA_USER_TYPE.CAPITALIST,
+  POLLA_USER_TYPE.SUPERADMIN,
+];
+
+/**
+ * Tipos que lista la pantalla de Usuarios para cada rol: los inferiores, sin el
+ * capitalista, que se ve y se administra solo desde Organizaciones.
+ */
+export const pollaUserListTypes = (role: POLLA_USER_TYPE): POLLA_USER_TYPE[] =>
+  Object.values(POLLA_USER_TYPE).filter(
+    (type) =>
+      type !== POLLA_USER_TYPE.CAPITALIST && POLLA_USER_HIERARCHY[type] > POLLA_USER_HIERARCHY[role]
+  );
 
 /**
  * Qué tipos de usuario da de alta cada rol, siempre dentro de su organización.

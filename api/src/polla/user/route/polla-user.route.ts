@@ -8,6 +8,7 @@ import {
   canCreatePollaUser,
   canResetPollaPassword,
   isPollaAdminRole,
+  pollaUserListTypes,
 } from '@helper/polla/types/user.type';
 import {
   newPollaUserSchema,
@@ -21,12 +22,6 @@ import { PollaAuthRepository } from '../../auth/repository/polla-auth.repository
 import { parsePagination } from '../../helper/pagination';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
-
-const ALL_TYPES = Object.values(POLLA_USER_TYPE);
-
-/** Cada rol ve y administra solo a los estrictamente inferiores. */
-const visibleTypesFor = (role: POLLA_USER_TYPE): POLLA_USER_TYPE[] =>
-  ALL_TYPES.filter((t) => POLLA_USER_HIERARCHY[t] > POLLA_USER_HIERARCHY[role]);
 
 const assertCanManage = (actor: IPollaSessionUser, targetType: POLLA_USER_TYPE) => {
   if (POLLA_USER_HIERARCHY[targetType] <= POLLA_USER_HIERARCHY[actor.user_type]) {
@@ -118,8 +113,10 @@ export class PollaUserRouter {
     const { user } = getPollaSession(req);
     const pagination = parsePagination(req.query as Record<string, unknown>);
 
+    // Cada rol lista a los estrictamente inferiores, sin el capitalista: se ve
+    // y se administra desde Organizaciones (pedirlo por `user_type` no lo trae).
     const requestedTypes = typeof req.query.user_type === 'string' ? [req.query.user_type] : [];
-    const visible = visibleTypesFor(user.user_type);
+    const visible = pollaUserListTypes(user.user_type);
     const userTypes = requestedTypes.length
       ? visible.filter((t) => requestedTypes.includes(t))
       : visible;
@@ -153,7 +150,7 @@ export class PollaUserRouter {
     const pagination = parsePagination(req.query as Record<string, unknown>);
 
     const requested = typeof req.query.user_type === 'string' ? req.query.user_type.split(',') : [];
-    const searchable = visibleTypesFor(user.user_type).filter(
+    const searchable = pollaUserListTypes(user.user_type).filter(
       (t) => t === POLLA_USER_TYPE.CASHIER || t === POLLA_USER_TYPE.PLAYER
     );
     const userTypes = requested.length

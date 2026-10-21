@@ -4,6 +4,21 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-20 (Polla: permisos de cuenta corriente y listado de usuarios)
+
+- **`polla/types/user.type.ts`**:
+  - `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin): ven la cuenta corriente, sus reportes y gastos, y liquidan. El ADMIN no. Lo usan los guards de la API y la ruta y el menú de la web.
+  - `pollaUserListTypes(role)`: tipos que lista la pantalla de Usuarios (los inferiores, sin el capitalista, que se ve desde Organizaciones).
+  - Se saca "liquidan" del comentario de `POLLA_ADMIN_ROLES`.
+
+### Changed - 2026-10-20 (Polla: jugadas borradas en el pase y liquidación por rango)
+
+- **`polla/types/game.type.ts`**:
+  - `IPollaBetEntityBack.deducted_on` e `IPollaBetPublic.deducted_on`: día en que la baja se descuenta del pase.
+  - `IPollaCurrentAccountEntityBack` e `IPollaCurrentAccountPeriod`: `bets_pass` (Pase jugadas) y `deleted_pass` (Borradas). `pass` es el pase real, base de la comisión.
+  - `IPollaCurrentAccountDailyTotals`: `total_bets_pass` y `total_deleted_pass`.
+  - Comentario de `IPollaBetPublic.can_delete`: el pasador borra hasta el cierre de carga aunque se haya liquidado.
+
 ### Added - 2026-10-15 (Polla: filtro de ediciones por período)
 
 - **`polla/types/game.type.ts`**:

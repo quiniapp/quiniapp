@@ -56,9 +56,9 @@ const ReadOnlyAmount = ({ label, value }: { label: string; value: number }) => (
 
 /**
  * Liquidar un pasador, como el modal de QuiniApp, pero por período: pase,
- * comisión, aciertos y lo que deja se acumulan desde el día siguiente a su
- * última liquidación. Reclamos, gastos, cobro y pago se cargan en el día que
- * se liquida. Sin deje.
+ * borradas, comisión, aciertos y lo que deja se acumulan desde el día
+ * siguiente a su última liquidación (o en el rango elegido). Reclamos, gastos,
+ * cobro y pago se cargan en el día que se liquida. Sin deje.
  */
 export const LiquidateCashierDialog = ({
   account,
@@ -110,15 +110,17 @@ export const LiquidateCashierDialog = ({
             {account.user_name} · {periodLabel(view.period_from, account.date, 'DD-MM-YYYY')}
           </DialogTitle>
           <DialogDescription>
-            Pase, comisión, aciertos y lo que deja se acumulan desde el día siguiente a la última
-            liquidación. Reclamos, gastos, cobro y pago son del{' '}
-            {dayjs(account.date).format('DD-MM-YYYY')}.
+            Pase, borradas, comisión, aciertos y lo que deja son del período. Reclamos, gastos,
+            cobro y pago son del {dayjs(account.date).format('DD-MM-YYYY')}. Pase jugadas − borradas
+            = pase.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
+              <ReadOnlyAmount label="Pase jugadas" value={view.bets_pass} />
+              <ReadOnlyAmount label="Borradas" value={view.deleted_pass} />
               <ReadOnlyAmount label="Pase" value={view.pass} />
               <ReadOnlyAmount label="Comisión" value={view.cashier_commission} />
               <ReadOnlyAmount label="Aciertos" value={view.successes} />
@@ -173,17 +175,20 @@ type BulkKey = keyof typeof BULK_LABEL;
 
 /**
  * Generar las liquidaciones de todos los pasadores en el día (como QuiniApp):
- * cada uno con lo acumulado en su período. Reclamos, cobros y pagos se
- * corrigen en la grilla (son del día), se guardan y todos los períodos quedan
- * cerrados en esa fecha.
+ * cada uno con lo acumulado en su período, o en el rango que arranca en
+ * `from`. Reclamos, cobros y pagos se corrigen en la grilla (son del día), se
+ * guardan y todos los períodos quedan cerrados en esa fecha.
  */
 export const GenerateLiquidationDialog = ({
   date,
+  from,
   rows,
   organizationId,
   onClose,
 }: {
   date: string;
+  /** Liquidación por rango: primer día del rango. */
+  from?: string;
   rows: IPollaCurrentAccountPeriodRow[];
   organizationId: string | null;
   onClose: () => void;
@@ -235,7 +240,7 @@ export const GenerateLiquidationDialog = ({
 
     try {
       if (updates.length) await bulkUpdate({ date, updates, ...scope });
-      await liquidate({ date, ...scope });
+      await liquidate({ date, range_from: from, ...scope });
       onClose();
     } catch {
       // El hook ya avisó el error.
@@ -246,10 +251,18 @@ export const GenerateLiquidationDialog = ({
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto lg:max-w-[1100px]">
         <DialogHeader>
-          <DialogTitle>Generar liquidaciones al {dayjs(date).format('DD-MM-YYYY')}</DialogTitle>
+          <DialogTitle>
+            Generar liquidaciones{' '}
+            {from
+              ? `del ${periodLabel(from, date, 'DD-MM-YYYY')}`
+              : `al ${dayjs(date).format('DD-MM-YYYY')}`}
+          </DialogTitle>
           <DialogDescription>
-            Cada pasador con lo acumulado desde su última liquidación. Corregí reclamos, cobros y
-            pagos del día; al generar, todos los períodos quedan liquidados en esta fecha.
+            {from
+              ? 'Cada pasador con lo de esos días.'
+              : 'Cada pasador con lo acumulado desde su última liquidación.'}{' '}
+            Corregí reclamos, cobros y pagos del día; al generar, todos los períodos quedan
+            liquidados el {dayjs(date).format('DD-MM-YYYY')}.
           </DialogDescription>
         </DialogHeader>
 
@@ -260,6 +273,8 @@ export const GenerateLiquidationDialog = ({
                 <TableHead>Número</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Desde</TableHead>
+                <TableHead className="whitespace-nowrap text-right">Pase jugadas</TableHead>
+                <TableHead className="text-right">Borradas</TableHead>
                 <TableHead className="text-right">Pase</TableHead>
                 <TableHead className="text-right">Aciertos</TableHead>
                 <TableHead className="text-right">Reclamos del día</TableHead>
@@ -279,6 +294,12 @@ export const GenerateLiquidationDialog = ({
                     <TableCell className="max-w-[180px] truncate">{row.user_name}</TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
                       {dayjs(view.period_from).format('DD/MM')}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(view.bets_pass)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(view.deleted_pass)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(view.pass)}
