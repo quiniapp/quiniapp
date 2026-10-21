@@ -1,9 +1,11 @@
+import { useCallback } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
   keepPreviousData,
+  InfiniteData,
   UseMutationOptions,
   UseQueryOptions,
 } from '@tanstack/react-query';
@@ -73,6 +75,14 @@ export const useApiInfiniteQuery = <T>(
   });
 };
 
+/** Query key de un feed por keyset: la comparten el hook y su "Actualizar". */
+const cursorQueryKey = (key: unknown[], params: QueryParams, limit: number) => [
+  ...key,
+  'cursor',
+  cleanParams(params),
+  limit,
+];
+
 /**
  * Igual, pero paginado por keyset (`next_cursor`). Se usa en el feed de
  * jugadas: con offset, una jugada nueva cargada mientras alguien scrollea
@@ -88,7 +98,7 @@ export const useApiCursorQuery = <T>(
   const limit = options?.limit ?? 50;
 
   return useInfiniteQuery({
-    queryKey: [...key, 'cursor', clean, limit],
+    queryKey: cursorQueryKey(key, params, limit),
     queryFn: ({ pageParam }) =>
       apiClient.get<PollaPage<T>>(url, {
         params: { ...clean, limit, ...(pageParam ? { cursor: pageParam } : {}) },
@@ -97,6 +107,28 @@ export const useApiCursorQuery = <T>(
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: options?.enabled ?? true,
   });
+};
+
+/**
+ * "Actualizar" de un feed por keyset: deja solo la primera página y la vuelve a
+ * pedir. Refrescar todas con sus cursores viejos saltearía las filas que las
+ * jugadas nuevas corren hacia la página siguiente. Mientras llega, se sigue
+ * viendo la primera página.
+ */
+export const useRefreshCursorQuery = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (key: unknown[], params: QueryParams, limit: number) => {
+      const queryKey = cursorQueryKey(key, params, limit);
+      queryClient.setQueryData<InfiniteData<unknown, string>>(
+        queryKey,
+        (data) => data && { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) }
+      );
+      return queryClient.refetchQueries({ queryKey, exact: true });
+    },
+    [queryClient]
+  );
 };
 
 /** Aplana las páginas acumuladas y saca el total de la primera. */

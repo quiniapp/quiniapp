@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   IPollaUserEntityFront,
   IPollaUserOption,
@@ -22,6 +24,7 @@ import {
   useApiCursorQuery,
   useApiInfiniteQuery,
   useApiQuery,
+  useRefreshCursorQuery,
 } from '../useApi';
 
 // ---------------------------------------------------------------- usuarios
@@ -74,11 +77,33 @@ export const useEditionList = (params: QueryParams = {}) =>
 
 // ----------------------------------------------------------------- jugadas
 
+const BETS_PAGE_SIZE = 50;
+
 export const useBets = (params: QueryParams = {}, enabled = true) =>
   useApiCursorQuery<IPollaBetListItem>(['polla-bets'], BACKEND_ROUTES.bet.base, params, {
     enabled,
-    limit: 50,
+    limit: BETS_PAGE_SIZE,
   });
+
+/**
+ * "Actualizar" de Jugadas: la lista vuelve a la primera página con lo último
+ * cargado, y se refrescan los ganadores y los totales de las ediciones (pozo y
+ * cantidad de jugadas). `params` son los mismos que recibe `useBets`.
+ */
+export const useRefreshBets = () => {
+  const queryClient = useQueryClient();
+  const refreshFeed = useRefreshCursorQuery();
+
+  return useCallback(
+    (params: QueryParams) =>
+      Promise.all([
+        refreshFeed(['polla-bets'], params, BETS_PAGE_SIZE),
+        queryClient.invalidateQueries({ queryKey: ['polla-winners'] }),
+        queryClient.invalidateQueries({ queryKey: ['polla-editions'] }),
+      ]),
+    [queryClient, refreshFeed]
+  );
+};
 
 export const useWinners = (editionId: string | null) =>
   useApiQuery<PollaPage<IPollaBetListItem>>(
