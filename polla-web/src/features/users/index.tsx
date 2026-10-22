@@ -83,6 +83,9 @@ export const UsersPage = () => {
   const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
 
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
+  // El admin opera dentro de su grupo: sus pasadores quedan en él y elige el
+  // pasador del jugador entre los del grupo.
+  const isGroupAdmin = role === POLLA_USER_TYPE.ADMIN;
   // Un superior que crea un jugador elige a qué pasador pertenece.
   const picksCashier = open && !isCashier && form.user_type === POLLA_USER_TYPE.PLAYER;
 
@@ -133,7 +136,8 @@ export const UsersPage = () => {
       username: form.username.trim() || null,
       password: form.password,
       number: needsNumber(form.user_type) && form.number ? Number(form.number) : null,
-      polla_group_id: form.polla_group_id || null,
+      // El grupo queda fijo desde el alta: el del admin lo pone el backend.
+      polla_group_id: isGroupAdmin ? null : form.polla_group_id || null,
       ...(organizationId ? { polla_organization_id: organizationId } : {}),
     };
 
@@ -229,7 +233,13 @@ export const UsersPage = () => {
   return (
     <div>
       <PageHeader
-        description={isCashier ? 'Tus jugadores' : 'Usuarios de la organización'}
+        description={
+          isCashier
+            ? 'Tus jugadores'
+            : isGroupAdmin
+              ? 'Pasadores y jugadores de tu grupo'
+              : 'Usuarios de la organización. Los admins se crean junto con su grupo, en Grupos.'
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Input
@@ -352,32 +362,35 @@ export const UsersPage = () => {
                       onChange={setParentCashier}
                       placeholder="Número o nombre del pasador"
                       emptyHint="Elegí el pasador del jugador"
+                      scope={{ writable: true }}
                     />
                   )}
 
                   {form.user_type === POLLA_USER_TYPE.CASHIER && (
                     <>
-                      <div className="flex flex-col gap-1">
-                        <Label>Grupo</Label>
-                        <Select
-                          value={form.polla_group_id || 'none'}
-                          onValueChange={(v) =>
-                            setForm({ ...form, polla_group_id: v === 'none' ? '' : v })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sin grupo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sin grupo</SelectItem>
-                            {groups?.data.map((group) => (
-                              <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-                                {group.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {!isGroupAdmin && (
+                        <div className="flex flex-col gap-1">
+                          <Label>Grupo (no se cambia después)</Label>
+                          <Select
+                            value={form.polla_group_id || 'none'}
+                            onValueChange={(v) =>
+                              setForm({ ...form, polla_group_id: v === 'none' ? '' : v })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sin grupo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Sin grupo</SelectItem>
+                              {groups?.data.map((group) => (
+                                <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
+                                  {group.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div className="flex flex-col gap-1">
                         <Label htmlFor="new-user-fee">Comisión %</Label>
                         <Input

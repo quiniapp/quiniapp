@@ -5,6 +5,7 @@ import {
   POLLA_EDITION_PERIOD,
   POLLA_EDITION_STATUS,
 } from '@helper/polla/types/game.type';
+import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
 
@@ -15,10 +16,6 @@ export interface PollaEditionFilters {
   playingOn?: string;
   /** Ediciones cuyo cierre de carga es esta fecha o posterior (sin mirar la hora). */
   loadableOn?: string;
-  /** Ediciones que ADMIN+ todavía carga a esta fecha: sin cierre, hasta su último día de juego. */
-  adminLoadableOn?: string;
-  /** Ediciones con la carga abierta en este momento: fecha y hora de cierre. */
-  loadableAt?: { date: string; time: string };
   /** Futuras, jugando y/o pasadas a la fecha `today` (ver `pollaEditionPeriod`). */
   periods?: { list: POLLA_EDITION_PERIOD[]; today: string };
 }
@@ -54,17 +51,6 @@ export class PollaEditionRepository {
     if (filters.loadableOn) {
       query = query.gte('load_limit_date', filters.loadableOn);
     }
-    if (filters.adminLoadableOn) {
-      query = query.gte('end_date', filters.adminLoadableOn);
-    }
-    if (filters.loadableAt) {
-      // Fecha y hora salen del servidor (`pollaToday`/`pollaNowTime`): no hay
-      // texto del cliente dentro del filtro `or`.
-      const { date, time } = filters.loadableAt;
-      query = query.or(
-        `load_limit_date.gt.${date},and(load_limit_date.eq.${date},load_limit_time.gte.${time})`
-      );
-    }
     if (filters.periods) {
       // La fecha sale del servidor y los períodos vienen validados contra el
       // enum: no hay texto del cliente dentro del filtro `or`.
@@ -80,18 +66,34 @@ export class PollaEditionRepository {
     return buildPaginated(data ?? [], pagination, pagination.withCount ? (count ?? 0) : null);
   }
 
-  /** Fecha y hora de cierre de carga de varias ediciones (`can_delete` del pasador). */
-  async getLoadLimits(
-    editionIds: string[]
-  ): Promise<
-    Pick<IPollaEditionEntityBack, 'polla_edition_id' | 'load_limit_date' | 'load_limit_time'>[]
-  > {
+  /**
+   * Ediciones donde el rol carga en este momento, cada una con su corte
+   * (`my_load_cutoff`). La regla vive en la base (`polla_load_cutoff`).
+   */
+  async getLoadable(organizationId: string, role: POLLA_USER_TYPE) {
+    const { data, error } = await supabase.rpc('polla_loadable_editions', {
+      p_organization_id: organizationId,
+      p_role: role,
+    });
+
+    throwIfPollaError(error);
+    return (data ?? []) as (IPollaEditionEntityBack & { my_load_cutoff: string | null })[];
+  }
+
+  /**
+   * Corte y carga abierta de varias ediciones para el rol: con eso se decide
+   * qué jugadas del listado puede editar o borrar.
+   */
+  async getLoadStates(
+    editionIds: string[],
+    role: POLLA_USER_TYPE
+  ): Promise<{ polla_edition_id: string; load_cutoff: string | null; can_load: boolean }[]> {
     if (editionIds.length === 0) return [];
 
-    const { data, error } = await supabase
-      .from('polla_editions')
-      .select('polla_edition_id, load_limit_date, load_limit_time')
-      .in('polla_edition_id', editionIds);
+    const { data, error } = await supabase.rpc('polla_editions_load_state', {
+      p_edition_ids: editionIds,
+      p_role: role,
+    });
 
     throwIfPollaError(error);
     return data ?? [];
@@ -121,18 +123,21 @@ export class PollaEditionRepository {
     return data;
   }
 
+  /**
+   * Cambios de una edición con sus reglas (`polla_update_edition`): el precio
+   * vale para las jugadas nuevas, extender una sin ganador la vuelve a poner
+   * en juego, con ganador solo se renombra y con sorteos cargados no se mueven
+   * quiniela, turno ni inicio.
+   */
   async update(editionId: string, payload: Record<string, unknown>) {
-    const { data, error } = await supabase
-      .from('polla_editions')
-      .update({ ...payload, edited_at: new Date().toISOString() })
-      .eq('polla_edition_id', editionId)
-      .is('deleted_at', null)
-      .select('*')
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('polla_update_edition', {
+      p_edition_id: editionId,
+      p_changes: payload,
+    });
 
     throwIfPollaError(error);
     if (!data) throw new NotFoundError('Edición de Polla');
-    return data;
+    return data as IPollaEditionEntityBack;
   }
 
   /**

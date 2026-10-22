@@ -140,7 +140,14 @@ export const CheckTicketPage = () => {
               {check.edition.name ? ` · ${check.edition.name}` : ''}
             </h2>
             <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-              <Detail label="Pozo">${fmtMoney(check.edition.pool_amount)}</Detail>
+              <Detail label="Pozo">
+                ${fmtMoney(check.edition.pool_amount)}
+                {Number(check.edition.surprise_pool_amount ?? 0) > 0 && (
+                  <span className="block text-xs font-semibold text-success">
+                    + sorpresa ${fmtMoney(check.edition.surprise_pool_amount)}
+                  </span>
+                )}
+              </Detail>
               <Detail label="Valor del ticket">${fmtMoney(check.edition.ticket_price)}</Detail>
               <Detail label="Juega">
                 {fmtDate(check.edition.start_date)} al {fmtDate(check.edition.end_date)}

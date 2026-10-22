@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import {
   IPollaBetListItem,
   IPollaEditionEntityFront,
   POLLA_EDITION_STATUS,
+  POLLA_HITS_FILTER,
   POLLA_NUMBERS_REQUIRED,
   isPublicPollaBet,
 } from '@helper/polla/types/game.type';
@@ -14,6 +15,7 @@ import {
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
   isPollaAdminRole,
+  isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import {
@@ -23,10 +25,10 @@ import {
   useUser,
   useWinners,
 } from '@/hooks/fetchs/usePollaData';
-import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
+import { useGroups, useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { flattenPages } from '@/hooks/useApi';
+import { PollaPage, flattenPages } from '@/hooks/useApi';
 import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
@@ -34,6 +36,7 @@ import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { pollaUserOption } from '@/lib/pollaUsers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -56,6 +59,8 @@ import { deliverPdf } from '@/functions/printPdf';
 import { betNumberClass, hitTitle } from '@/lib/betNumbers';
 import { cn } from '@/lib/utils';
 import { EditBetDialog, EditableBet } from './EditBetDialog';
+import { FreeRepeatDialog } from './FreeRepeatDialog';
+import { ResultFilters, WinnerFilter } from './ResultFilters';
 import { ShareTicketsPdfButton } from './ShareTicketsPdfButton';
 
 const fmtDate = (value?: string | null) => (value ? dayjs(value).format('DD-MM-YYYY') : '-');
@@ -76,17 +81,28 @@ const editionLabel = (
 const cashierLabel = (row: IPollaBetListItem) =>
   `${row.cashier_number ? `${row.cashier_number} · ` : ''}${row.cashier_name}`;
 
+/** `hits=10,9` de la URL → aciertos válidos, en el orden de los checkboxes. */
+const parseHits = (raw: string | null): number[] =>
+  raw ? POLLA_HITS_FILTER.filter((hit) => raw.split(',').map(Number).includes(hit)) : [];
+
+/** Página del feed de jugadas: con cuántas veces se repitió sin cargo cada ticket. */
+type BetsFeedPage = PollaPage<IPollaBetListItem> & { free_repeats?: Record<string, number> };
+
 export const BetsPage = () => {
-  const { role, organizationId } = useAuth();
+  const { user, role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const canManage = Boolean(role && isPollaAdminRole(role));
+  const isSuper = Boolean(role && isPollaSuperRole(role));
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   // El jugador solo mira: no imprime, edita ni borra.
   const hasActions = role !== POLLA_USER_TYPE.PLAYER;
   // Pasador y jugador eligen entre lo suyo ("Mis jugadas", por defecto) y todo
-  // lo que se está jugando en el capitalista; el admin filtra por pasador.
+  // lo que se está jugando en el capitalista.
   const canFilterMine = !canManage;
+  // Todos ven todas las jugadas y las acotan a un grupo: superadmin+ elige
+  // cualquiera; el resto, "Solo mi grupo" (si tiene).
+  const ownGroupId = user?.polla_group_id ?? null;
 
   const [ticketSearch, setTicketSearch] = useState(searchParams.get('ticket_number') ?? '');
   const [editing, setEditing] = useState<EditableBet | null>(null);
@@ -97,12 +113,20 @@ export const BetsPage = () => {
   const playerId = searchParams.get('polla_user_id') ?? '';
   const sort = searchParams.get('sort') === 'recent' ? 'recent' : 'hits';
   const mine = canFilterMine && searchParams.get('mine') !== '0';
+  const groupId = searchParams.get('polla_group_id') ?? '';
+  const winnerParam = searchParams.get('winner');
+  const winner: WinnerFilter = winnerParam === 'true' || winnerParam === 'false' ? winnerParam : '';
+  const hits = parseHits(searchParams.get('hits'));
 
   const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
+  const { data: groups } = useGroups(
+    { polla_organization_id: organizationId ?? undefined },
+    isSuper
+  );
 
-  // El admin filtra por pasador (sus jugadas y las de sus jugadores) o por
+  // Todos filtran por pasador (sus jugadas y las de sus jugadores) o por
   // jugador (solo las suyas). El tipo sale del filtro de la URL; sin filtro,
   // del último elegido en "Pasador | Jugador".
   const [pickedType, setPickedType] = useState(() =>
@@ -121,6 +145,7 @@ export const BetsPage = () => {
   // (recarga, link), se trae por id (y, si es un jugador, también su pasador).
   const [pickedUser, setPickedUser] = useState<IPollaUserOption | null>(null);
   const pickedMatches = Boolean(filterUserId) && pickedUser?.polla_user_id === filterUserId;
+  // Por id solo se trae a quien se administra (un pasador o jugador ajeno es 403).
   const { data: userFromUrl } = useUser(
     canManage && filterUserId && !pickedMatches ? filterUserId : null
   );
@@ -129,15 +154,21 @@ export const BetsPage = () => {
     urlUser?.user_type === POLLA_USER_TYPE.PLAYER ? urlUser.parent_polla_user_id : null;
   const { data: cashierOfUrlUser } = useUser(urlCashierId);
   const selectedUser = useMemo(() => {
-    if (!canManage || !filterUserId) return null;
+    if (!filterUserId) return null;
     if (pickedMatches) return pickedUser;
-    if (!urlUser) return null;
+    if (!canManage || !urlUser) return null;
     const cashier = cashierOfUrlUser?.polla_user_id === urlCashierId ? cashierOfUrlUser : null;
     return pollaUserOption(urlUser, cashier);
   }, [canManage, filterUserId, pickedMatches, pickedUser, urlUser, urlCashierId, cashierOfUrlUser]);
-  // Filtro de usuario para la lista y el PDF.
-  const userFilter: Record<string, string> =
-    canManage && filterUserId ? { [filterParam]: filterUserId } : {};
+  // Filtros de grupo, usuario y resultado para la lista y el PDF.
+  const userFilter: Record<string, string> = {
+    ...(filterUserId && !mine ? { [filterParam]: filterUserId } : {}),
+    ...(groupId && !mine ? { polla_group_id: groupId } : {}),
+  };
+  const resultFilter = {
+    winner: winner || undefined,
+    hits: hits.length ? hits.join(',') : undefined,
+  };
 
   const lotteryById = useMemo(
     () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
@@ -189,11 +220,17 @@ export const BetsPage = () => {
 
   const searching = debouncedTicket.length > 0;
 
+  // Repetir sin cargo: superadmin+ y el admin, con la edición ya finalizada.
+  const canFreeRepeat =
+    canManage && !searching && selectedEdition?.status === POLLA_EDITION_STATUS.FINISHED;
+
   const betsParams = {
     polla_edition_id: searching ? undefined : editionId || undefined,
     ticket_number: searching ? debouncedTicket : undefined,
     ...(searching ? {} : userFilter),
+    ...(searching ? {} : resultFilter),
     mine: mine ? 'true' : undefined,
+    with_free_repeats: canFreeRepeat ? 'true' : undefined,
     sort,
   };
   const betsEnabled = Boolean(editionId) || searching;
@@ -220,14 +257,37 @@ export const BetsPage = () => {
 
   const { data: winners } = useWinners(editionId || null);
 
+  // Tickets elegidos para repetir sin cargo (de la edición finalizada).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [freeRepeatOpen, setFreeRepeatOpen] = useState(false);
+  useEffect(() => setSelected(new Set()), [editionId]);
+  /** El admin repite solo los de su grupo; superadmin+, cualquiera. */
+  const canSelect = (row: IPollaBetListItem) =>
+    canFreeRepeat && !isPublicPollaBet(row) && (isSuper || row.polla_group_id === ownGroupId);
+  const toggleSelected = (id: string, checked: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
   // Lo que dice el PDF sobre los filtros con que se armó.
   let pdfScope = mine ? 'Mis jugadas' : 'Todas las jugadas';
-  if (selectedUser) {
+  if (selectedUser && !mine) {
     pdfScope = `${POLLA_USER_TYPE_LABEL[selectedUser.user_type]} ${
       selectedUser.number ? `${selectedUser.number} · ` : ''
     }${selectedUser.name}`;
   }
-  const pdfFiltersLabel = `${pdfScope} · ${sort === 'recent' ? 'más recientes primero' : 'por aciertos'}`;
+  const resultScope = [
+    winner === 'true' ? 'ganadores' : winner === 'false' ? 'no ganadores' : '',
+    hits.length ? `${hits.join(', ')} aciertos` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const pdfFiltersLabel = `${pdfScope}${resultScope ? ` · ${resultScope}` : ''} · ${
+    sort === 'recent' ? 'más recientes primero' : 'por aciertos'
+  }`;
   const { mutate: deleteBet } = useDeleteBet();
 
   const handlePrint = async (row: IPollaBetListItem) => {
@@ -244,39 +304,71 @@ export const BetsPage = () => {
       startDate: edition.start_date,
       endDate: edition.end_date,
       loadDate: row.load_date,
-      ticketPrice: Number(edition.ticket_price),
+      // Cada jugada guarda su precio: el de la edición puede haber cambiado.
+      ticketPrice: Number(row.amount ?? edition.ticket_price),
       poolAmount: Number(edition.pool_amount),
+      surprisePoolAmount: Number(edition.surprise_pool_amount ?? 0),
+      isFree: row.is_free,
     });
 
     await deliverPdf(blob, fileName, `Ticket Polla ${row.ticket_number}`);
   };
 
   const { rows, totalCount } = flattenPages(bets?.pages);
+  const freeRepeats = useMemo(
+    () =>
+      Object.assign(
+        {},
+        ...((bets?.pages ?? []) as BetsFeedPage[]).map((page) => page.free_repeats ?? {})
+      ) as Record<string, number>,
+    [bets]
+  );
+  const selectableRows = rows.filter(canSelect);
 
   // Estado y acciones se comparten entre la tabla (desktop) y las tarjetas (mobile).
   const renderStatus = (row: IPollaBetListItem) => {
+    const extra = (
+      <>
+        {row.is_free && <Badge variant="outline">Sin cargo</Badge>}
+        {freeRepeats[row.polla_bet_id] > 0 && (
+          <Badge variant="secondary" title="Veces que se repitió sin cargo">
+            <Gift className="mr-1 h-3 w-3" />
+            {freeRepeats[row.polla_bet_id]}
+          </Badge>
+        )}
+      </>
+    );
+
+    let main;
     if (row.winner) {
-      return <Badge variant="success">Ganadora {fmtDate(row.hit_date)}</Badge>;
-    }
-    if (isPublicPollaBet(row)) {
-      return row.is_mine ? (
+      main = <Badge variant="success">Ganadora {fmtDate(row.hit_date)}</Badge>;
+    } else if (isPublicPollaBet(row)) {
+      main = row.is_mine ? (
         <Badge variant="outline">Mía</Badge>
       ) : (
         <Badge variant="secondary">Jugando</Badge>
       );
+    } else {
+      main = <span className="text-xs text-muted-foreground">{fmtDate(row.load_date)}</span>;
     }
-    return <span className="text-xs text-muted-foreground">{fmtDate(row.load_date)}</span>;
+
+    return (
+      <span className="flex flex-wrap items-center gap-1">
+        {main}
+        {extra}
+      </span>
+    );
   };
 
-  // Owner, capitalista, superadmin y admin: todas las acciones. Pasador: solo
-  // imprimir y eliminar lo suyo. Jugador: ninguna.
+  // Todos leen todo; editar y borrar lo decide la API para cada jugada
+  // (`can_edit`/`can_delete`): superadmin+ siempre, el admin en su grupo hasta
+  // su corte, el pasador borra lo suyo hasta el cierre (aunque ya se haya
+  // liquidado: se descuenta del pase). Imprimir: admin+ y el pasador lo suyo.
   const renderActions = (row: IPollaBetListItem) => {
     const isPublic = isPublicPollaBet(row);
     const canPrint = canManage || (isCashier && isPublic && row.is_mine);
-    const canEdit = canManage && !row.winner;
-    // El pasador borra lo que no le pagaron, hasta el cierre de carga (la API
-    // decide `can_delete`), aunque ya se haya liquidado: se descuenta del pase.
-    const canDelete = !row.winner && (canManage || (isCashier && isPublic && row.can_delete));
+    const canEdit = Boolean(row.can_edit);
+    const canDelete = Boolean(row.can_delete);
 
     if (!canPrint && !canEdit && !canDelete) return null;
 
@@ -370,6 +462,11 @@ export const BetsPage = () => {
           {selectedEdition && (
             <p className="text-xs text-muted-foreground">
               Pozo ${fmtMoney(selectedEdition.pool_amount)}
+              {Number(selectedEdition.surprise_pool_amount ?? 0) > 0 && (
+                <span className="font-semibold text-success">
+                  {` + sorpresa $${fmtMoney(selectedEdition.surprise_pool_amount)}`}
+                </span>
+              )}
               {selectedEdition.bets_count !== undefined &&
                 ` · ${selectedEdition.bets_count} jugadas`}
             </p>
@@ -389,7 +486,44 @@ export const BetsPage = () => {
           />
         </div>
 
-        {canManage && (
+        {isSuper && (groups?.data.length ?? 0) > 0 && !mine && (
+          <div className="flex min-w-0 flex-col gap-1">
+            <Label>Grupo</Label>
+            <Select
+              value={groupId || 'all'}
+              onValueChange={(value) => updateParam('polla_group_id', value === 'all' ? '' : value)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {groups?.data.map((group) => (
+                  <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {!isSuper && ownGroupId && !mine && (
+          <div className="flex items-center gap-2 py-2">
+            <Checkbox
+              id="bets-own-group"
+              checked={groupId === ownGroupId}
+              onCheckedChange={(checked) =>
+                updateParam('polla_group_id', checked === true ? ownGroupId : '')
+              }
+            />
+            <Label htmlFor="bets-own-group" className="cursor-pointer">
+              Solo mi grupo
+            </Label>
+          </div>
+        )}
+
+        {!mine && (
           <UserSearchPicker
             id="bets-user"
             label="Filtrar por"
@@ -403,6 +537,7 @@ export const BetsPage = () => {
             }}
             placeholder="Todos: número o nombre"
             clearLabel="Todos"
+            scope={{ polla_group_id: groupId || null }}
             className="sm:w-[260px]"
           />
         )}
@@ -450,6 +585,13 @@ export const BetsPage = () => {
           </div>
         )}
 
+        <ResultFilters
+          winner={winner}
+          onWinnerChange={(value) => updateParam('winner', value)}
+          hits={hits}
+          onHitsChange={(value) => updateParam('hits', value.join(','))}
+        />
+
         <div className="flex min-w-0 flex-col gap-1">
           <Label>Ordenar por</Label>
           <Select
@@ -485,6 +627,8 @@ export const BetsPage = () => {
             scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
             filters={{
               ...userFilter,
+              winner: winner ? winner === 'true' : undefined,
+              hits: resultFilter.hits,
               mine,
               sort,
             }}
@@ -492,6 +636,46 @@ export const BetsPage = () => {
           />
         )}
       </div>
+
+      {canFreeRepeat && (
+        <div className="mb-3 flex flex-col gap-2 rounded-md border bg-card p-3 text-sm text-card-foreground sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1 text-muted-foreground">
+            Edición finalizada: elegí tickets (por ejemplo, con los filtros de aciertos) para
+            repetirlos sin cargo en una edición nueva.
+            {selected.size > 0 && (
+              <strong className="text-foreground">{` ${selected.size} elegidos.`}</strong>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={selectableRows.length === 0}
+              onClick={() =>
+                setSelected(
+                  selected.size === selectableRows.length
+                    ? new Set()
+                    : new Set(selectableRows.map((row) => row.polla_bet_id))
+                )
+              }
+            >
+              {selected.size === selectableRows.length && selected.size > 0
+                ? 'Quitar todos'
+                : `Elegir los ${selectableRows.length} de la lista`}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={selected.size === 0}
+              onClick={() => setFreeRepeatOpen(true)}
+            >
+              <Gift />
+              Repetir sin cargo
+            </Button>
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState message={isFetching ? 'Cargando…' : 'No hay jugadas para mostrar'} />
@@ -512,7 +696,17 @@ export const BetsPage = () => {
                 className="rounded-md border bg-card p-3 text-card-foreground"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
+                  {canSelect(row) && (
+                    <Checkbox
+                      checked={selected.has(row.polla_bet_id)}
+                      onCheckedChange={(checked) =>
+                        toggleSelected(row.polla_bet_id, checked === true)
+                      }
+                      aria-label={`Elegir el ticket ${row.ticket_number}`}
+                      className="mt-1"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-mono text-xs text-muted-foreground">
                       {row.ticket_number}
                     </p>
@@ -549,6 +743,7 @@ export const BetsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canFreeRepeat && <TableHead className="w-8" />}
                   <TableHead>Ticket</TableHead>
                   <TableHead>Coord</TableHead>
                   <TableHead>Pasador</TableHead>
@@ -566,6 +761,19 @@ export const BetsPage = () => {
               <TableBody>
                 {rows.map((row: IPollaBetListItem) => (
                   <TableRow key={row.polla_bet_id}>
+                    {canFreeRepeat && (
+                      <TableCell>
+                        {canSelect(row) && (
+                          <Checkbox
+                            checked={selected.has(row.polla_bet_id)}
+                            onCheckedChange={(checked) =>
+                              toggleSelected(row.polla_bet_id, checked === true)
+                            }
+                            aria-label={`Elegir el ticket ${row.ticket_number}`}
+                          />
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="font-mono text-xs">{row.ticket_number}</TableCell>
                     <TableCell>{row.group_name ?? ''}</TableCell>
                     <TableCell>{cashierLabel(row)}</TableCell>
@@ -605,6 +813,21 @@ export const BetsPage = () => {
       )}
 
       {canManage && <EditBetDialog bet={editing} onClose={() => setEditing(null)} />}
+      {freeRepeatOpen && (
+        <FreeRepeatDialog
+          betIds={[...selected]}
+          organizationId={organizationId}
+          editionLabel={(edition) =>
+            editionLabel(
+              edition,
+              lotteryById.get(edition.polla_lottery_id),
+              scheduleById.get(edition.polla_schedule_id)
+            )
+          }
+          onClose={() => setFreeRepeatOpen(false)}
+          onDone={() => setSelected(new Set())}
+        />
+      )}
     </div>
   );
 };

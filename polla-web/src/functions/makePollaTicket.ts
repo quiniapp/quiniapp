@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import type { jsPDF } from 'jspdf';
 
 // Mismas convenciones que makeTicket.ts: impresora térmica de 58mm, texto
 // monoespaciado (Courier) para que las columnas no se desalineen en el
@@ -26,32 +27,34 @@ export interface PollaTicketData {
   loadDate: string;
   ticketPrice: number;
   poolAmount: number;
+  /** Pozo sorpresa: se imprime aparte si hay. */
+  surprisePoolAmount?: number;
+  /** Repetido sin cargo: en lugar del precio dice SIN CARGO. */
+  isFree?: boolean;
 }
 
-export async function makePollaTicketPdf(data: PollaTicketData) {
-  const { jsPDF } = await import('jspdf');
+/** Alto exacto del ticket (mm): cada página del PDF mide lo que su ticket. */
+const ticketHeight = (data: PollaTicketData) =>
+  MARGIN +
+  2 +
+  (data.cashier_number !== undefined ? 7 : 0) +
+  6 + // Ticket
+  3 + // divider
+  8 + // edición (2 líneas)
+  5 + // fecha/hora
+  3 + // divider
+  5 * 5 + // 5 filas de números
+  3 + // divider
+  9 + // precio ticket
+  9 + // pozo
+  (data.surprisePoolAmount ? 4 : 0) + // sorpresa
+  3 + // divider
+  3 +
+  3 +
+  2; // margen final
 
-  // 1 línea de header (usuario) + 1 (ticket) + 2 (edición, puede wrapear) +
-  // 1 (fecha/hora) + 5 filas de números + total + pozo + márgenes/divisores.
-  const exactH =
-    MARGIN +
-    2 +
-    (data.cashier_number !== undefined ? 7 : 0) +
-    6 + // Ticket
-    3 + // divider
-    8 + // edición (2 líneas)
-    5 + // fecha/hora
-    3 + // divider
-    5 * 5 + // 5 filas de números
-    3 + // divider
-    9 + // precio ticket
-    9 + // pozo
-    3 + // divider
-    3 +
-    3 +
-    2; // margen final
-
-  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, exactH] });
+/** Dibuja un ticket en la página actual del documento. */
+const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
   let y = MARGIN + 2;
   const cx = PAGE_W / 2;
 
@@ -122,12 +125,20 @@ export async function makePollaTicketPdf(data: PollaTicketData) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Valor ticket: $${fmtAmount(data.ticketPrice)}`, MARGIN, y);
+  doc.text(
+    data.isFree ? 'Valor ticket: SIN CARGO' : `Valor ticket: $${fmtAmount(data.ticketPrice)}`,
+    MARGIN,
+    y
+  );
   y += 5;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.text(`Pozo: $${fmtAmount(data.poolAmount)}`, MARGIN, y);
   y += 4;
+  if (data.surprisePoolAmount) {
+    doc.text(`+ Pozo sorpresa: $${fmtAmount(data.surprisePoolAmount)}`, MARGIN, y);
+    y += 4;
+  }
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(data.user_name, MARGIN, y);
@@ -136,8 +147,25 @@ export async function makePollaTicketPdf(data: PollaTicketData) {
   divider(true);
   divider();
   divider();
+};
+
+/** Varios tickets en un solo PDF, uno por página (repetir varios a la vez). */
+export async function makePollaTicketsPdf(list: PollaTicketData[]) {
+  const { jsPDF: JsPDF } = await import('jspdf');
+
+  const [first, ...rest] = list;
+  const doc = new JsPDF({ unit: 'mm', format: [PAGE_W, ticketHeight(first)] });
+  drawTicket(doc, first);
+
+  for (const data of rest) {
+    doc.addPage([PAGE_W, ticketHeight(data)]);
+    drawTicket(doc, data);
+  }
 
   const blob = doc.output('blob');
-  const fileName = `polla-${data.ticket_number}.pdf`;
+  const fileName =
+    list.length === 1 ? `polla-${first.ticket_number}.pdf` : `polla-${list.length}-tickets.pdf`;
   return { blob, fileName };
 }
+
+export const makePollaTicketPdf = (data: PollaTicketData) => makePollaTicketsPdf([data]);

@@ -24,6 +24,8 @@ export const BACKEND_ROUTES = {
   group: {
     base: `${PRIVATE}/group`,
     id: (id: string) => `${PRIVATE}/group/${id}`,
+    adminsWithoutGroup: `${PRIVATE}/group/admins-without-group`,
+    assignAdmin: (id: string) => `${PRIVATE}/group/${id}/admin`,
   },
   lottery: {
     base: `${PRIVATE}/lottery`,
@@ -48,6 +50,9 @@ export const BACKEND_ROUTES = {
     id: (id: string) => `${PRIVATE}/bet/${id}`,
     winners: `${PRIVATE}/bet/winners`,
     last: `${PRIVATE}/bet/last`,
+    lastEdition: `${PRIVATE}/bet/mine/last-edition`,
+    repeat: `${PRIVATE}/bet/repeat`,
+    freeRepeat: `${PRIVATE}/bet/free-repeat`,
     sales: `${PRIVATE}/bet/sales`,
     ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
     check: (ticketNumber: string) => `${PRIVATE}/bet/check/${encodeURIComponent(ticketNumber)}`,
@@ -64,6 +69,11 @@ export const BACKEND_ROUTES = {
     liquidate: `${PRIVATE}/current_account/liquidate`,
     bulk: `${PRIVATE}/current_account/bulk`,
     totals: `${PRIVATE}/current_account/totals`,
+  },
+  groupAccount: {
+    base: `${PRIVATE}/group_account`,
+    previews: `${PRIVATE}/group_account/previews`,
+    liquidate: `${PRIVATE}/group_account/liquidate`,
   },
   expense: {
     base: `${PRIVATE}/expense`,

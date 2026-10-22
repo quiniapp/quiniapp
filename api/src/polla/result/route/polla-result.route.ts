@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { ForbiddenError } from '@helper/errors';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_SUPER_ROLES } from '@helper/polla/types/user.type';
 import {
   newPollaResultSchema,
   updatePollaResultSchema,
@@ -12,13 +12,10 @@ import { parsePagination } from '../../helper/pagination';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
-const ADMIN_AND_UP = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
-];
-
+/**
+ * Los resultados valen para todos los grupos: los carga y procesa superadmin+.
+ * El resto (admin de grupo incluido) los lee.
+ */
 export class PollaResultRouter {
   public router: Router;
 
@@ -30,7 +27,7 @@ export class PollaResultRouter {
   }
 
   private setupRoutes() {
-    const writeGuard = requirePollaRole(...ADMIN_AND_UP);
+    const writeGuard = requirePollaRole(...POLLA_SUPER_ROLES);
 
     this.router.post('/process', writeGuard, this.processHandler);
     this.router.get('/', this.getAllHandler);

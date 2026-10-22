@@ -46,30 +46,11 @@ const DIVIDER = '- '.repeat(CHARS / 2);
 
 const fileSlug = (s?: string) => (s ? `_${s.trim().replace(/\s+/g, '_')}` : '');
 
-/**
- * Descuento del pozo y parte del capitalista sobre lo que queda:
- * `p% POZO` = base × p%, `SALDO SIN POZO` = base − pozo, y el % del
- * capitalista se calcula sobre ese saldo.
- */
-const pushPoolAndCapitalist = (
-  lines: string[],
-  base: number,
-  percentage?: number,
-  poolPercentage?: number
-) => {
-  let remaining = base;
-
-  if (poolPercentage && poolPercentage > 0) {
-    const poolAmount = (base * poolPercentage) / 100;
-    remaining = base - poolAmount;
-    lines.push(DIVIDER);
-    lines.push(padLine(`${poolPercentage}% POZO:`, money(poolAmount)));
-    lines.push(padLine('SALDO SIN POZO:', money(remaining)));
-  }
-
+/** Parte del capitalista sobre el saldo (la liquidación no descuenta el pozo). */
+const pushCapitalist = (lines: string[], base: number, percentage?: number) => {
   if (percentage && percentage > 0) {
     lines.push(DIVIDER);
-    lines.push(padLine(`${percentage}% CAPITALISTA:`, money((remaining * percentage) / 100)));
+    lines.push(padLine(`${percentage}% CAPITALISTA:`, money((base * percentage) / 100)));
   }
 };
 
@@ -79,10 +60,8 @@ export async function printDailyTotalsTicket(params: {
   orgName: string;
   groupName?: string;
   expenses: { nombre: string; monto: number }[];
-  /** % del pozo que se descuenta del saldo del día (si deja). */
-  poolPercentage?: number;
 }) {
-  const { data, date, orgName, groupName, expenses, poolPercentage } = params;
+  const { data, date, orgName, groupName, expenses } = params;
   const { jsPDF } = await getPDFDeps();
 
   const mePago = data.filter((a) => Number(a.collections ?? 0) > 0);
@@ -137,7 +116,6 @@ export async function printDailyTotalsTicket(params: {
   lines.push(padLine('Subtotal Gastos:', money(totalExpenses)));
   lines.push(DIVIDER);
   lines.push(padLine('SALDO DEL DIA:', money(saldoDia)));
-  if (saldoDia > 0) pushPoolAndCapitalist(lines, saldoDia, undefined, poolPercentage);
 
   // Extra padding — same pattern as makeTicket.ts to flush printer buffer
   lines.push(DIVIDER);
@@ -170,13 +148,10 @@ export async function printRangeTotalsTicket(params: {
   date_from: string;
   date_to: string;
   percentage: number;
-  /** % del pozo que se descuenta de lo que deja antes del capitalista. */
-  poolPercentage?: number;
   orgName: string;
   groupName?: string;
 }) {
-  const { dailyTotals, date_from, date_to, percentage, poolPercentage, orgName, groupName } =
-    params;
+  const { dailyTotals, date_from, date_to, percentage, orgName, groupName } = params;
   const { jsPDF } = await getPDFDeps();
 
   const grandTotal = dailyTotals.reduce((s, d) => s + Number(d.net_balance), 0);
@@ -213,17 +188,8 @@ export async function printRangeTotalsTicket(params: {
   lines.push('Ud a la fecha');
   lines.push(padLine('', `${isGana ? 'GANA' : 'DEJA'}  ${money(grandTotal)}`));
   if (!isGana) {
-    // El % del capitalista se calcula sobre lo que queda después del pozo.
-    let remaining = grandTotal;
-    if (poolPercentage && poolPercentage > 0) {
-      const poolAmount = (grandTotal * poolPercentage) / 100;
-      remaining = grandTotal - poolAmount;
-      lines.push(DIVIDER);
-      lines.push(padLine(`${poolPercentage}% POZO:`, money(poolAmount)));
-      lines.push(padLine('SALDO SIN POZO:', money(remaining)));
-    }
     lines.push(DIVIDER);
-    lines.push(padLine(`${percentage}% DEJA:`, money((remaining * percentage) / 100)));
+    lines.push(padLine(`${percentage}% DEJA:`, money((grandTotal * percentage) / 100)));
   }
 
   // Extra padding — flush printer buffer
@@ -261,10 +227,8 @@ export async function printSubtotalsDayTicket(params: {
   groupName?: string;
   expenses?: { nombre: string; monto: number }[];
   percentage?: number;
-  /** % del pozo que se descuenta antes del capitalista. */
-  poolPercentage?: number;
 }) {
-  const { data, date, orgName, groupName, expenses = [], percentage, poolPercentage } = params;
+  const { data, date, orgName, groupName, expenses = [], percentage } = params;
   const { jsPDF } = await getPDFDeps();
 
   const dateStr = dayjs(date).format('DD/MM/YYYY');
@@ -302,12 +266,7 @@ export async function printSubtotalsDayTicket(params: {
     lines.push(padLine('SALDO NETO:', money(saldoNeto)));
   }
 
-  pushPoolAndCapitalist(
-    lines,
-    expenses.length > 0 ? saldoNeto : grandTotal,
-    percentage,
-    poolPercentage
-  );
+  pushCapitalist(lines, expenses.length > 0 ? saldoNeto : grandTotal, percentage);
 
   lines.push(DIVIDER);
   lines.push(DIVIDER);
@@ -335,11 +294,8 @@ export async function printSubtotalsRangeTicket(params: {
   orgName: string;
   groupName?: string;
   percentage?: number;
-  /** % del pozo que se descuenta antes del capitalista. */
-  poolPercentage?: number;
 }) {
-  const { dailySummary, date_from, date_to, orgName, groupName, percentage, poolPercentage } =
-    params;
+  const { dailySummary, date_from, date_to, orgName, groupName, percentage } = params;
   const { jsPDF } = await getPDFDeps();
 
   const fromStr = dayjs(date_from).format('DD/MM/YYYY');
@@ -367,7 +323,7 @@ export async function printSubtotalsRangeTicket(params: {
 
   lines.push(DIVIDER);
   lines.push(padLine('TOTAL:', money(grandTotal)));
-  pushPoolAndCapitalist(lines, grandTotal, percentage, poolPercentage);
+  pushCapitalist(lines, grandTotal, percentage);
   lines.push(DIVIDER);
   lines.push(DIVIDER);
   lines.push(DIVIDER);

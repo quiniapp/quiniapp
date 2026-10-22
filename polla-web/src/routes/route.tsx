@@ -1,6 +1,10 @@
 import { lazy, ReactNode, Suspense } from 'react';
 import { Navigate, RouteObject } from 'react-router-dom';
-import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import {
+  POLLA_ACCOUNT_ROLES,
+  POLLA_SUPER_ROLES,
+  POLLA_USER_TYPE,
+} from '@helper/polla/types/user.type';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute, RoleRoute } from '@/protected/ProtectedRoute';
 import { ROUTES } from '@/types/routes.type';
@@ -83,11 +87,11 @@ export const RoutesContent: RouteObject[] = [
       },
       {
         path: ROUTES.EDITIONS,
-        element: guarded(ADMIN_AND_UP, <EditionsPage />),
+        element: guarded(POLLA_SUPER_ROLES, <EditionsPage />),
         handle: { title: 'Ediciones' } satisfies RouteHandle,
       },
       {
-        // Todos los ven (como en QuiniApp); solo ADMIN+ carga y procesa.
+        // Todos los ven (como en QuiniApp); solo superadmin+ carga y procesa.
         path: ROUTES.RESULTS,
         element: withSuspense(<ResultsPage />),
         handle: { title: 'Resultados' } satisfies RouteHandle,
@@ -98,14 +102,18 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Usuarios' } satisfies RouteHandle,
       },
       {
-        // Dueño, capitalista y superadmin; el pasador ve la suya. El admin no.
+        // Dueño, capitalista y superadmin; el admin ve la de su grupo y el
+        // pasador, la suya.
         path: ROUTES.CURRENT_ACCOUNT,
-        element: guarded([...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER], <CurrentAccountPage />),
+        element: guarded(
+          [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
+          <CurrentAccountPage />
+        ),
         handle: { title: 'Cuenta corriente' } satisfies RouteHandle,
       },
       {
         path: ROUTES.CATALOGS,
-        element: guarded(ADMIN_AND_UP, <CatalogsPage />),
+        element: guarded(POLLA_SUPER_ROLES, <CatalogsPage />),
         handle: { title: 'Quinielas y turnos' } satisfies RouteHandle,
       },
       {
@@ -115,7 +123,7 @@ export const RoutesContent: RouteObject[] = [
       },
       {
         path: ROUTES.GROUPS,
-        element: guarded([POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST], <GroupsPage />),
+        element: guarded(POLLA_SUPER_ROLES, <GroupsPage />),
         handle: { title: 'Grupos' } satisfies RouteHandle,
       },
       {

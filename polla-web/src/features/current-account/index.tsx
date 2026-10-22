@@ -35,7 +35,9 @@ import {
 import { downloadDailyAccountsPDF } from '@/functions/current-account/accountTablePDF';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
+import { cn } from '@/lib/utils';
 import { CashierAccountView } from './CashierAccountView';
+import { GroupAccountView, GroupAccountsPanel } from './GroupAccounts';
 import { fetchWinnersByCashier } from './fetchers';
 import { ReportMode, fmtMoney } from './format';
 import { GenerateLiquidationDialog, LiquidateCashierDialog } from './dialogs/LiquidationDialogs';
@@ -403,9 +405,53 @@ const AdminAccountView = () => {
   );
 };
 
+type AccountTab = 'cashiers' | 'groups';
+
+const ACCOUNT_TABS: { value: AccountTab; label: string }[] = [
+  { value: 'cashiers', label: 'Pasadores' },
+  { value: 'groups', label: 'Grupos' },
+];
+
+/**
+ * Superadmin+ liquida a cada pasador y, con los de un grupo liquidados, al
+ * grupo (comisión del admin). El admin ve solo la cuenta de su grupo; el
+ * pasador, la suya.
+ */
 export const CurrentAccountPage = () => {
   const { role } = useAuth();
-  return role === POLLA_USER_TYPE.CASHIER ? <CashierAccountView /> : <AdminAccountView />;
+  const [tab, setTab] = useState<AccountTab>('cashiers');
+
+  if (role === POLLA_USER_TYPE.CASHIER) return <CashierAccountView />;
+  if (role === POLLA_USER_TYPE.ADMIN) return <GroupAccountView />;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div
+        role="tablist"
+        aria-label="Cuenta corriente"
+        className="inline-flex w-fit rounded-md border bg-card p-1"
+      >
+        {ACCOUNT_TABS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.value}
+            onClick={() => setTab(item.value)}
+            className={cn(
+              'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+              tab === item.value
+                ? 'bg-nav-active text-nav-active-foreground'
+                : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {tab === 'cashiers' ? <AdminAccountView /> : <GroupAccountsPanel />}
+    </div>
+  );
 };
 
 export default CurrentAccountPage;

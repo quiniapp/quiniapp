@@ -40,7 +40,7 @@ const COPY: Record<ReportKind, { title: string; description: string; action: str
   collections: {
     title: 'Exportar cobros y pagos',
     description:
-      'Ticket con lo que cobraste y pagaste a cada pasador y los gastos del día, o el balance de un período, menos el % del pozo.',
+      'Ticket con lo que cobraste y pagaste a cada pasador y los gastos del día, o el balance de un período.',
     action: 'Generar ticket',
   },
   summary: {
@@ -52,7 +52,7 @@ const COPY: Record<ReportKind, { title: string; description: string; action: str
   subtotals: {
     title: 'Exportar subtotales',
     description:
-      'Ticket con el subtotal acumulado de cada pasador a la fecha, o de cada día del período, menos el % del pozo y con el % del capitalista.',
+      'Ticket con el subtotal acumulado de cada pasador a la fecha, o de cada día del período, con el % del capitalista.',
     action: 'Generar ticket',
   },
 };
@@ -85,8 +85,6 @@ export const ReportDialog = ({
   const [to, setTo] = useState(initialDate);
   const [groupId, setGroupId] = useState(initialGroupId || ALL_GROUPS);
   const [percentage, setPercentage] = useState('50');
-  /** % del pozo que se descuenta del saldo antes de calcular el del capitalista. */
-  const [poolPercentage, setPoolPercentage] = useState('0');
   const [printing, setPrinting] = useState(false);
 
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
@@ -94,7 +92,6 @@ export const ReportDialog = ({
   const copy = COPY[kind];
   const hasExpenses = kind !== 'summary' && mode === 'day';
   const hasPercentage = kind !== 'summary' && (mode === 'range' || kind === 'subtotals');
-  const hasPoolPercentage = kind !== 'summary';
 
   const base = {
     polla_group_id: effectiveGroupId,
@@ -138,7 +135,6 @@ export const ReportDialog = ({
               orgName,
               groupName,
               expenses,
-              poolPercentage: Number(poolPercentage) || 0,
             });
           } else {
             await printSubtotalsDayTicket({
@@ -148,7 +144,6 @@ export const ReportDialog = ({
               groupName,
               expenses,
               percentage: Number(percentage) || 0,
-              poolPercentage: Number(poolPercentage) || 0,
             });
           }
         }
@@ -167,7 +162,6 @@ export const ReportDialog = ({
             date_from: from,
             date_to: to,
             percentage: Number(percentage) || 0,
-            poolPercentage: Number(poolPercentage) || 0,
             orgName,
             groupName,
           });
@@ -179,7 +173,6 @@ export const ReportDialog = ({
             orgName,
             groupName,
             percentage: Number(percentage) || 0,
-            poolPercentage: Number(poolPercentage) || 0,
           });
         }
       }
@@ -210,24 +203,6 @@ export const ReportDialog = ({
             <div className="grid grid-cols-2 gap-3">
               <DateField id="report-from" label="Desde" value={from} onChange={setFrom} />
               <DateField id="report-to" label="Hasta" value={to} onChange={setTo} />
-            </div>
-          )}
-
-          {hasPoolPercentage && (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="report-pool-percentage">Porcentaje del pozo</Label>
-              <Input
-                id="report-pool-percentage"
-                inputMode="decimal"
-                className="w-28"
-                value={poolPercentage}
-                onChange={(e) => setPoolPercentage(e.target.value.replace(/[^\d.]/g, ''))}
-              />
-              <p className="text-xs text-muted-foreground">
-                {hasPercentage
-                  ? 'Se descuenta antes de calcular el del capitalista.'
-                  : 'Se descuenta del saldo del día.'}
-              </p>
             </div>
           )}
 

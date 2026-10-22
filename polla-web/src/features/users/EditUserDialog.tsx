@@ -19,13 +19,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
 interface EditUserDialogProps {
@@ -36,7 +29,10 @@ interface EditUserDialogProps {
   onClose: () => void;
 }
 
-/** Datos del usuario. La contraseña se cambia aparte, con el blanqueo. */
+/**
+ * Datos del usuario. La contraseña se cambia aparte, con el blanqueo. El grupo
+ * del pasador queda fijo desde el alta (el jugador toma el de su pasador).
+ */
 export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDialogProps) => {
   const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
   const hasNumber = isCashier || user.user_type === POLLA_USER_TYPE.PLAYER;
@@ -46,7 +42,6 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
     last_name: user.last_name ?? '',
     username: user.username ?? '',
     number: user.number ? String(user.number) : '',
-    polla_group_id: user.polla_group_id ?? '',
     fee: user.fee !== null ? String(user.fee) : '',
     disabled: user.disabled,
   });
@@ -62,7 +57,6 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
       username: form.username.trim() || null,
       disabled: form.disabled,
       ...(hasNumber ? { number: form.number ? Number(form.number) : null } : {}),
-      ...(isCashier ? { polla_group_id: form.polla_group_id || null } : {}),
       ...(isCashier && canEditFee ? { fee: form.fee === '' ? null : Number(form.fee) } : {}),
     };
 
@@ -130,23 +124,16 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
             )}
             {isCashier && (
               <div className="flex flex-col gap-1">
-                <Label>Grupo</Label>
-                <Select
-                  value={form.polla_group_id || 'none'}
-                  onValueChange={(v) => setForm({ ...form, polla_group_id: v === 'none' ? '' : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin grupo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin grupo</SelectItem>
-                    {groups.map((group) => (
-                      <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-user-group">Grupo (no se cambia)</Label>
+                <Input
+                  id="edit-user-group"
+                  readOnly
+                  disabled
+                  value={
+                    groups.find((group) => group.polla_group_id === user.polla_group_id)?.name ??
+                    'Sin grupo'
+                  }
+                />
               </div>
             )}
             {isCashier && canEditFee && (

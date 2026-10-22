@@ -147,6 +147,7 @@ export class PollaUserRepository {
     number: number;
     userTypes: POLLA_USER_TYPE[];
     parentId?: string | null;
+    groupId?: string | null;
   }): Promise<IPollaUserByNumber> {
     let query = supabase
       .from('polla_users')
@@ -158,6 +159,7 @@ export class PollaUserRepository {
       .is('deleted_at', null);
 
     if (params.parentId) query = query.eq('parent_polla_user_id', params.parentId);
+    if (params.groupId) query = query.eq('polla_group_id', params.groupId);
 
     // El número es único por tipo: un pasador y un jugador pueden compartirlo.
     const { data, error } = await query.limit(2);
@@ -198,7 +200,15 @@ export class PollaUserRepository {
    * jugador lo comparten, el pasador primero.
    */
   async search(
-    params: { organizationId: string; userTypes: POLLA_USER_TYPE[]; q: string },
+    params: {
+      organizationId: string;
+      userTypes: POLLA_USER_TYPE[];
+      q: string;
+      /** Solo los de ese grupo. */
+      groupId?: string | null;
+      /** Solo los jugadores de ese pasador. */
+      parentId?: string | null;
+    },
     pagination: PollaPagination
   ) {
     let query = supabase
@@ -214,6 +224,9 @@ export class PollaUserRepository {
       .in('user_type', params.userTypes)
       .eq('disabled', false)
       .is('deleted_at', null);
+
+    if (params.groupId) query = query.eq('polla_group_id', params.groupId);
+    if (params.parentId) query = query.eq('parent_polla_user_id', params.parentId);
 
     const searchedNumber = searchNumber(params.q);
     if (searchedNumber !== null) {
@@ -248,6 +261,47 @@ export class PollaUserRepository {
     }));
 
     return buildPaginated(options, pagination, pagination.withCount ? (count ?? 0) : null);
+  }
+
+  /** Admin de cada grupo pedido (para el listado de Grupos). */
+  async getGroupAdmins(groupIds: string[]) {
+    if (groupIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('polla_users')
+      .select('polla_user_id, name, last_name, username, polla_group_id')
+      .eq('user_type', POLLA_USER_TYPE.ADMIN)
+      .in('polla_group_id', groupIds)
+      .is('deleted_at', null);
+
+    throwIfPollaError(error);
+    return (data ?? []) as {
+      polla_user_id: string;
+      name: string;
+      last_name: string | null;
+      username: string | null;
+      polla_group_id: string;
+    }[];
+  }
+
+  /** Admins del modelo anterior, sin grupo: se asignan desde Grupos. */
+  async getAdminsWithoutGroup(organizationId: string) {
+    const { data, error } = await supabase
+      .from('polla_users')
+      .select('polla_user_id, name, last_name, username')
+      .eq('polla_organization_id', organizationId)
+      .eq('user_type', POLLA_USER_TYPE.ADMIN)
+      .is('polla_group_id', null)
+      .is('deleted_at', null)
+      .order('name', { ascending: true });
+
+    throwIfPollaError(error);
+    return (data ?? []) as {
+      polla_user_id: string;
+      name: string;
+      last_name: string | null;
+      username: string | null;
+    }[];
   }
 
   /** Capitalista de cada organización pedida (para el listado del OWNER). */

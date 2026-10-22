@@ -4,6 +4,26 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
+
+- **`polla/types/user.type.ts`**:
+  - `POLLA_SUPER_ROLES` / `isPollaSuperRole` (dueño, capitalista y superadmin): ediciones, quinielas, turnos, resultados, grupos y cuenta corriente. `POLLA_ACCOUNT_ROLES` es el mismo conjunto. `POLLA_ADMIN_ROLES` suma al ADMIN, que opera dentro de su grupo.
+  - `POLLA_CREATABLE_TYPES`: nadie crea ADMIN desde Usuarios (nace con su grupo). El superadmin no crea superadmins. El admin crea pasadores y jugadores.
+  - `POLLA_PASSWORD_RESET_TARGETS`: el superadmin también blanquea jugadores; el admin, pasadores y jugadores.
+- **`polla/types/game.type.ts`**:
+  - `IPollaEditionEntityBack.surprise_pool_amount`, `my_load_cutoff` en el front y `pollaTotalPool()`.
+  - `IPollaBetEntityBack.is_free` y `repeated_from_bet_id`.
+  - `IPollaBetActions` (`can_edit`, `can_delete`) en todas las jugadas listadas, más `IPollaBetPublic.is_free`.
+  - `POLLA_HITS_FILTER` (10, 9, 8, 7).
+  - `IPollaBetToRepeat` con id, dueño (`user_name`, `holder_type`) y día de carga, más `IPollaRepeatResult` / `IPollaRepeatSkipped`.
+  - `IPollaGroupAccountEntityBack`, `IPollaGroupAccountPreview` e `IPollaGroupPendingCashier`.
+  - `IPollaTicketCheck.edition` trae `surprise_pool_amount`.
+- **`polla/types/catalog.type.ts`**: `IPollaGroupWithAdmin`.
+- **`polla/schemas/game.schema.ts`**:
+  - El cierre de carga puede ser el mismo día del inicio (`load_limit_date <= start_date`); que sea antes de la hora del turno lo valida la base.
+  - `surprise_pool_amount`, `repeatPollaBetsSchema` (hasta `POLLA_REPEAT_MAX_BETS` = 500) y `liquidatePollaGroupSchema`.
+- **`polla/schemas/user.schema.ts`**: `newPollaGroupWithAdminSchema` y `assignPollaGroupAdminSchema` (admin existente o nuevo).
+
 ### Added - 2026-10-20 (Polla: permisos de cuenta corriente y listado de usuarios)
 
 - **`polla/types/user.type.ts`**:

@@ -16,7 +16,12 @@ export interface TicketsPdfFilters {
   cashier_polla_user_id?: string;
   /** Las de un jugador (filtro "Jugador" de Jugadas). */
   polla_user_id?: string;
+  polla_group_id?: string;
   mine?: boolean;
+  /** `true`: ganadoras; `false`: no ganadoras. */
+  winner?: boolean;
+  /** Aciertos exactos separados por coma (`10,9`). */
+  hits?: string;
   sort?: 'hits' | 'recent';
 }
 
@@ -50,7 +55,10 @@ const fetchAllTickets = async (
         sort: filters.sort ?? 'hits',
         cashier_polla_user_id: filters.cashier_polla_user_id,
         polla_user_id: filters.polla_user_id,
+        polla_group_id: filters.polla_group_id,
         mine: filters.mine ? true : undefined,
+        winner: filters.winner,
+        hits: filters.hits,
       }),
     });
 
