@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-21 (Polla: usuarios por número y sin @)
+
+- **Usuarios** (`features/users/index.tsx`): pasadores y jugadores salen de menor a mayor número. El orden lo da la API (`GET /user`) porque la lista viene paginada.
+- **`lib/pollaUsers.ts` → `pollaUserTypeLine`**: el buscador de usuarios (`UserSearchPicker`) muestra el usuario sin `@` adelante ("pasador · juanp").
+
 ### Added - 2026-10-21 (Polla: botón Actualizar en Jugadas)
 
 - **`features/bets/index.tsx`**: botón "Actualizar" junto a "Compartir PDF" (gira mientras busca). Trae lo último cargado sin recargar la página, con los mismos filtros.
