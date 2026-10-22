@@ -52,8 +52,10 @@ export class PollaUserRepository {
       query = query.eq('disabled', false);
     }
 
+    // Agrupado por tipo; pasadores y jugadores, de menor a mayor número.
     const { data, error, count } = await query
       .order('user_type', { ascending: true })
+      .order('number', { ascending: true, nullsFirst: false })
       .order('name', { ascending: true })
       .range(pagination.from, pagination.to);
 

@@ -4,6 +4,10 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-21 (Polla: usuarios ordenados por número)
+
+- **`polla-user.repository.ts` → `getAll`** (`GET /user`): sigue agrupado por tipo, pero dentro de cada tipo ordena por `number` de menor a mayor (los que no tienen número al final) y después por nombre. Antes ordenaba por nombre, así que pasadores y jugadores no salían en orden de número.
+
 ### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
 
 - **`polla-current-account.route.ts`**: la cuenta corriente la ven y liquidan solo dueño, capitalista y superadmin (`POLLA_ACCOUNT_ROLES`). El pasador sigue viendo la suya. El ADMIN recibe 403 en `GET /current_account`, `/totals` y `/:id`, y en `calculate`, `liquidate`, `bulk` y `PUT /:id`. Antes podía ver todo y liquidar. El jugador queda afuera por el guard (se borran los chequeos sueltos).

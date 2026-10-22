@@ -20,7 +20,7 @@ export const describePollaUser = (user: IPollaUserOption) =>
 
 /** Segunda línea de cada fila del buscador: el tipo y el usuario. */
 export const pollaUserTypeLine = (user: IPollaUserOption) =>
-  user.username ? `${roleText(user)} · @${user.username}` : roleText(user);
+  user.username ? `${roleText(user)} · ${user.username}` : roleText(user);
 
 /**
  * Un usuario traído por id (p. ej. el filtro que quedó en la URL) como opción
