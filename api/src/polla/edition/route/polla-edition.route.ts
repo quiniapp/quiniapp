@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
-import { POLLA_USER_TYPE, isPollaAdminRole } from '@helper/polla/types/user.type';
+import { POLLA_SUPER_ROLES, isPollaSuperRole } from '@helper/polla/types/user.type';
 import {
   IPollaEditionEntityBack,
   POLLA_EDITION_PERIOD,
@@ -9,20 +9,16 @@ import {
 import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaEditionRepository } from '../repository/polla-edition.repository';
-import { parsePagination } from '../../helper/pagination';
-import { pollaNowTime, pollaToday } from '../../helper/date';
+import { buildPaginated, parsePagination } from '../../helper/pagination';
+import { pollaToday } from '../../helper/date';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
-const ADMIN_AND_UP = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
-];
-
-/** Recaudado y cantidad de jugadas son totales: solo los ve un admin. */
-const withoutTotals = (edition: IPollaEditionEntityBack) => {
+/**
+ * Recaudado y cantidad de jugadas son totales de toda la organización: solo
+ * los ve superadmin+ (el admin de grupo no ve la plata de los demás grupos).
+ */
+const withoutTotals = <T extends IPollaEditionEntityBack>(edition: T) => {
   const { bets_count: _count, collected_amount: _collected, ...rest } = edition;
   void _count;
   void _collected;
@@ -56,8 +52,9 @@ export class PollaEditionRouter {
     this.setupRoutes();
   }
 
+  /** Las ediciones (y su pozo) son de toda la organización: las escribe superadmin+. */
   private setupRoutes() {
-    const writeGuard = requirePollaRole(...ADMIN_AND_UP);
+    const writeGuard = requirePollaRole(...POLLA_SUPER_ROLES);
 
     this.router.get('/', this.getAllHandler);
     this.router.get('/:id', this.getByIdHandler);
@@ -79,12 +76,28 @@ export class PollaEditionRouter {
 
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-    const isAdmin = isPollaAdminRole(user.user_type);
+    const isSuper = isPollaSuperRole(user.user_type);
     const pagination = parsePagination(req.query as Record<string, unknown>);
+    const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
 
-    // Carga abierta ahora mismo, con la fecha y hora de Argentina del servidor.
-    // ADMIN+ no tiene cierre de carga: hasta el último día de juego.
-    const loadable = req.query.loadable === 'true';
+    // Carga abierta ahora mismo para el rol (fecha y hora de Argentina), cada
+    // una con su corte: pasador y jugador, el de la edición; el admin, el del
+    // turno más tarde; superadmin+, hasta el último día de juego.
+    if (req.query.loadable === 'true') {
+      const rows = await this.repository.getLoadable(organizationId, user.user_type);
+      const data = isSuper ? rows : rows.map(withoutTotals);
+      res.status(200).json({
+        data: {
+          editions: buildPaginated(
+            data,
+            { ...pagination, page: 1, limit: data.length },
+            data.length
+          ),
+        },
+      });
+      return;
+    }
+
     const loadableOn =
       typeof req.query.loadable_on === 'string' ? req.query.loadable_on : undefined;
     const periods = parsePeriods(req.query.periods);
@@ -95,14 +108,13 @@ export class PollaEditionRouter {
         status: req.query.status as POLLA_EDITION_STATUS | undefined,
         playingOn: typeof req.query.playing_on === 'string' ? req.query.playing_on : undefined,
         loadableOn,
-        adminLoadableOn: loadable && isAdmin ? pollaToday() : undefined,
-        loadableAt: loadable && !isAdmin ? { date: pollaToday(), time: pollaNowTime() } : undefined,
         periods: periods ? { list: periods, today: pollaToday() } : undefined,
       },
       pagination
     );
 
-    const data = isAdmin ? result.data : result.data.map(withoutTotals);
+    const editions = result.data as IPollaEditionEntityBack[];
+    const data = isSuper ? editions : editions.map(withoutTotals);
 
     res.status(200).json({ data: { editions: { ...result, data } } });
   });
@@ -112,7 +124,7 @@ export class PollaEditionRouter {
     const edition = await this.assertScope(req, req.params.id);
 
     res.status(200).json({
-      data: { edition: isPollaAdminRole(user.user_type) ? edition : withoutTotals(edition) },
+      data: { edition: isPollaSuperRole(user.user_type) ? edition : withoutTotals(edition) },
     });
   });
 
@@ -128,20 +140,25 @@ export class PollaEditionRouter {
     res.status(201).json({ data: { edition: created } });
   });
 
+  /**
+   * Superadmin+ cambia precio, fechas, horas, pozo y pozo sorpresa. Cada
+   * jugada guarda el precio con el que se cargó: un precio nuevo vale para las
+   * que se carguen después. Extender una edición que terminó sin ganador la
+   * vuelve a poner en juego (la carga no se reabre). Las reglas las controla
+   * la base (`polla_update_edition`).
+   */
   private updateHandler = asyncHandler(async (req: Request, res: Response) => {
     const edition = await this.assertScope(req, req.params.id);
     const payload = updatePollaEditionSchema.parse(req.body);
 
-    // Cada jugada guarda el precio con el que se cargó y la cuenta corriente
-    // suma ese monto: cambiar el precio con jugadas cargadas desfasa el pase.
-    if (
-      payload.ticket_price !== undefined &&
-      Number(payload.ticket_price) !== Number(edition.ticket_price) &&
-      edition.bets_count > 0
-    ) {
-      throw new BadRequestError(
-        'No se puede cambiar el precio del ticket: la edición ya tiene jugadas cargadas'
-      );
+    // Con una sola fecha nueva, el control de fechas se hace contra la otra.
+    const start = payload.start_date ?? edition.start_date;
+    const end = payload.end_date ?? edition.end_date;
+    if (start > end) {
+      throw new BadRequestError('La fecha de fin debe ser posterior o igual a la fecha de inicio');
+    }
+    if ((payload.load_limit_date ?? edition.load_limit_date) > start) {
+      throw new BadRequestError('El cierre de carga no puede ser después de la fecha de inicio');
     }
 
     const updated = await this.repository.update(req.params.id, payload);

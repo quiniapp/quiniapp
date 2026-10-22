@@ -23,9 +23,9 @@ const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
 /**
- * Boletas vendidas en el día. Superadmin y admin ven el total del capitalista y
- * el desglose por grupo, con filtro por grupo o todos; el pasador, lo suyo y
- * lo de sus jugadores.
+ * Boletas vendidas en el día (sin las repetidas sin cargo). Superadmin+ ve el
+ * total del capitalista y el desglose por grupo, con filtro por grupo o todos;
+ * el admin, solo su grupo; el pasador, lo suyo y lo de sus jugadores.
  */
 export const SalesPage = () => {
   const { role, organizationId } = useAuth();
@@ -33,6 +33,8 @@ export const SalesPage = () => {
   const [groupId, setGroupId] = useState(ALL_GROUPS);
 
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
+  // El admin recibe solo su grupo: no hay nada que elegir.
+  const picksGroup = !isCashier && role !== POLLA_USER_TYPE.ADMIN;
   const { data: sales, isFetching } = useDailySales({
     date,
     polla_organization_id: organizationId,
@@ -65,7 +67,9 @@ export const SalesPage = () => {
         description={
           isCashier
             ? 'Boletas que vendiste en el día, sumando las de tus jugadores.'
-            : 'Boletas vendidas en el día, en total y por grupo.'
+            : picksGroup
+              ? 'Boletas vendidas en el día, en total y por grupo.'
+              : 'Boletas vendidas en el día en tu grupo.'
         }
       />
 
@@ -75,7 +79,7 @@ export const SalesPage = () => {
           <DateInput id="sales-date" value={date} max={todayIso()} onValueChange={setDate} />
         </div>
 
-        {!isCashier && (
+        {picksGroup && (
           <div className="sm:w-[220px]">
             <GroupSelect groups={groups?.data ?? []} value={groupId} onChange={setGroupId} />
           </div>

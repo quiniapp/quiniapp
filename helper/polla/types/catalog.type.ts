@@ -32,6 +32,16 @@ export interface IPollaGroupEntityBack {
 
 export type IPollaGroupEntityFront = Omit<IPollaGroupEntityBack, 'deleted_at'>;
 
+/** Grupo como lo lista Grupos: con su admin (`null` = grupo del modelo viejo sin admin). */
+export interface IPollaGroupWithAdmin extends IPollaGroupEntityFront {
+  admin: {
+    polla_user_id: string;
+    name: string;
+    last_name: string | null;
+    username: string | null;
+  } | null;
+}
+
 export interface IPollaLotteryEntityBack {
   polla_lottery_id: string;
   polla_organization_id: string;

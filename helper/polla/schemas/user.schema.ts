@@ -93,7 +93,38 @@ export const newPollaOrganizationWithCapitalistSchema = z.object({
   }),
 });
 
+const groupAdmin = z.object({
+  name: baseUser.name,
+  last_name: baseUser.last_name,
+  username: z.string().trim().min(3, 'El usuario necesita al menos 3 caracteres').max(60),
+  password,
+  email: baseUser.email,
+  phone: baseUser.phone,
+});
+
+/** Alta de un grupo con su admin: se crean juntos, como la organización. */
+export const newPollaGroupWithAdminSchema = z.object({
+  group: z.object({
+    name: z.string().trim().min(1, 'El nombre del grupo es obligatorio').max(120),
+  }),
+  admin: groupAdmin,
+});
+
+/**
+ * Admin para un grupo del modelo viejo que no tiene: uno existente sin grupo
+ * (`polla_user_id`) o uno nuevo (`admin`).
+ */
+export const assignPollaGroupAdminSchema = z
+  .object({
+    polla_user_id: z.string().uuid().optional(),
+    admin: groupAdmin.optional(),
+  })
+  .refine((data) => Boolean(data.polla_user_id) !== Boolean(data.admin), {
+    message: 'Elegí un admin existente o cargá uno nuevo',
+  });
+
 export type INewPollaUserPayload = z.infer<typeof newPollaUserSchema>;
+export type INewPollaGroupWithAdminPayload = z.infer<typeof newPollaGroupWithAdminSchema>;
 export type IUpdatePollaUserPayload = z.infer<typeof updatePollaUserSchema>;
 export type IResetPollaPasswordPayload = z.infer<typeof resetPollaPasswordSchema>;
 export type INewPollaOrganizationWithCapitalistPayload = z.infer<

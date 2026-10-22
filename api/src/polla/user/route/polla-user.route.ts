@@ -20,8 +20,16 @@ import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaUserRepository } from '../repository/polla-user.repository';
 import { PollaAuthRepository } from '../../auth/repository/polla-auth.repository';
 import { parsePagination } from '../../helper/pagination';
-import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
+import {
+  assertInWritableGroup,
+  resolveOptionalOrganizationId,
+  resolveOrganizationId,
+  writableGroupId,
+} from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
+
+const queryString = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null;
 
 const assertCanManage = (actor: IPollaSessionUser, targetType: POLLA_USER_TYPE) => {
   if (POLLA_USER_HIERARCHY[targetType] <= POLLA_USER_HIERARCHY[actor.user_type]) {
@@ -60,7 +68,9 @@ export class PollaUserRouter {
     );
 
     this.router.get('/', staffOnly, this.getAllHandler);
-    this.router.get('/search', adminAndUp, this.searchHandler);
+    // Todos buscan pasadores y jugadores para filtrar las jugadas (que ya ven
+    // con nombre); `scope=writable` es para cargar a nombre de otro (admin+).
+    this.router.get('/search', this.searchHandler);
     this.router.get('/by-number/:number', adminAndUp, this.getByNumberHandler);
     this.router.get('/:id', staffOnly, this.getByIdHandler);
     this.router.post('/', staffOnly, this.createHandler);
@@ -69,7 +79,10 @@ export class PollaUserRouter {
     this.router.delete('/:id', staffOnly, this.deleteHandler);
   }
 
-  /** Un pasador solo alcanza a sus propios jugadores. */
+  /**
+   * Un pasador solo alcanza a sus propios jugadores; el admin, a los
+   * pasadores y jugadores de su grupo.
+   */
   private assertReachable = async (actor: IPollaSessionUser, targetId: string) => {
     const target = await this.repository.getById(targetId);
 
@@ -84,8 +97,22 @@ export class PollaUserRouter {
       throw new ForbiddenError('Solo podés administrar a tus propios jugadores');
     }
 
+    assertInWritableGroup(actor, target.polla_group_id);
     assertCanManage(actor, target.user_type);
     return target;
+  };
+
+  /** El jugador cuelga de un pasador activo; el admin elige uno de su grupo. */
+  private assertParentInScope = async (actor: IPollaSessionUser, parentId: string) => {
+    const parent = await this.repository.getById(parentId);
+
+    if (parent.user_type !== POLLA_USER_TYPE.CASHIER) {
+      throw new BadRequestError('El jugador tiene que colgar de un pasador');
+    }
+    if (parent.polla_organization_id !== actor.polla_organization_id) {
+      throw new ForbiddenError('El pasador pertenece a otra organización');
+    }
+    assertInWritableGroup(actor, parent.polla_group_id);
   };
 
   /**
@@ -125,12 +152,12 @@ export class PollaUserRouter {
       {
         organizationId: resolveOptionalOrganizationId(user, req.query.polla_organization_id),
         userTypes,
-        // El pasador solo ve a sus jugadores.
+        // El pasador solo ve a sus jugadores; el admin, los de su grupo.
         parentId:
           user.user_type === POLLA_USER_TYPE.CASHIER
             ? user.polla_user_id
-            : ((req.query.parent_polla_user_id as string) ?? null),
-        groupId: (req.query.polla_group_id as string) ?? null,
+            : queryString(req.query.parent_polla_user_id),
+        groupId: writableGroupId(user) ?? queryString(req.query.polla_group_id),
         search: typeof req.query.search === 'string' ? req.query.search : undefined,
         includeDisabled: req.query.include_disabled === 'true',
       },
@@ -141,18 +168,26 @@ export class PollaUserRouter {
   });
 
   /**
-   * Buscador para elegir un pasador o jugador de una lista (ADMIN+): `q` con
-   * solo dígitos es el número exacto; otro texto busca en nombre, apellido y
-   * usuario. `user_type` acota los tipos (separados por coma).
+   * Buscador para elegir un pasador o jugador de una lista: `q` con solo
+   * dígitos es el número exacto; otro texto busca en nombre, apellido y
+   * usuario. `user_type` acota los tipos (separados por coma); `polla_group_id`
+   * y `parent_polla_user_id`, el grupo y el pasador.
+   *
+   * Todos lo usan para filtrar jugadas (solo datos públicos). Con
+   * `scope=writable` es para cargar a nombre de otro: ADMIN+ y, el admin, solo
+   * dentro de su grupo.
    */
   private searchHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const pagination = parsePagination(req.query as Record<string, unknown>);
+    const writable = req.query.scope === 'writable';
+
+    if (writable && !isPollaAdminRole(user.user_type)) {
+      throw new ForbiddenError('Solo podés cargar jugadas a tu nombre');
+    }
 
     const requested = typeof req.query.user_type === 'string' ? req.query.user_type.split(',') : [];
-    const searchable = pollaUserListTypes(user.user_type).filter(
-      (t) => t === POLLA_USER_TYPE.CASHIER || t === POLLA_USER_TYPE.PLAYER
-    );
+    const searchable = [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER];
     const userTypes = requested.length
       ? searchable.filter((t) => requested.includes(t))
       : searchable;
@@ -166,6 +201,8 @@ export class PollaUserRouter {
         organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
         userTypes,
         q: typeof req.query.q === 'string' ? req.query.q : '',
+        groupId: (writable ? writableGroupId(user) : null) ?? queryString(req.query.polla_group_id),
+        parentId: queryString(req.query.parent_polla_user_id),
       },
       pagination
     );
@@ -173,7 +210,10 @@ export class PollaUserRouter {
     res.status(200).json({ data: { users: result } });
   });
 
-  /** Pasador o jugador de la organización por número, para cargarle una jugada (ADMIN+). */
+  /**
+   * Pasador o jugador de la organización por número, para cargarle una jugada
+   * (ADMIN+; el admin, solo de su grupo).
+   */
   private getByNumberHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const number = Number(req.params.number);
@@ -187,6 +227,7 @@ export class PollaUserRouter {
       number,
       userTypes: [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
       parentId: null,
+      groupId: writableGroupId(user),
     });
 
     res.status(200).json({ data: { user: found } });
@@ -218,8 +259,29 @@ export class PollaUserRouter {
     const organizationId = resolveOrganizationId(user, payload.polla_organization_id);
     const parentId = payload.parent_polla_user_id ?? null;
 
-    const { password, polla_organization_id: _ignored, ...rest } = payload;
+    // El admin elige el pasador del jugador dentro de su grupo.
+    if (
+      payload.user_type === POLLA_USER_TYPE.PLAYER &&
+      user.user_type !== POLLA_USER_TYPE.CASHIER
+    ) {
+      await this.assertParentInScope(user, parentId!);
+    }
+
+    const {
+      password,
+      polla_organization_id: _ignored,
+      polla_group_id: requestedGroup,
+      ...rest
+    } = payload;
     void _ignored;
+
+    // Grupo fijo desde el alta: el pasador del admin queda en su grupo; el de
+    // un superadmin+, en el que elija (o sin grupo). El jugador toma el de su
+    // pasador (lo resuelve la base).
+    const groupId =
+      payload.user_type === POLLA_USER_TYPE.CASHIER
+        ? (writableGroupId(user) ?? requestedGroup ?? null)
+        : null;
 
     await this.assertNumberFree({
       organizationId,
@@ -232,6 +294,7 @@ export class PollaUserRouter {
       // La liquidación de Polla no tiene deje: el pasador no lleva recargo.
       fee_plus: payload.user_type === POLLA_USER_TYPE.CASHIER ? 0 : null,
       parent_polla_user_id: parentId,
+      polla_group_id: groupId,
       polla_organization_id: organizationId,
       password_hash: await hashPassword(password),
       password_changed_at: new Date().toISOString(),
@@ -246,9 +309,18 @@ export class PollaUserRouter {
 
     const payload = updatePollaUserSchema.parse(req.body);
     // fee_plus no se edita: queda en 0 (la liquidación no tiene deje). La
-    // contraseña se cambia solo con el blanqueo de un superior.
-    const { fee_plus: _feePlus, parent_polla_user_id: parentId, fee, ...rest } = payload;
+    // contraseña se cambia solo con el blanqueo de un superior. El grupo no se
+    // cambia: el del pasador queda fijo al crearlo y el del jugador sale de su
+    // pasador (el admin del modelo viejo se asigna desde Grupos).
+    const {
+      fee_plus: _feePlus,
+      polla_group_id: _group,
+      parent_polla_user_id: parentId,
+      fee,
+      ...rest
+    } = payload;
     void _feePlus;
+    void _group;
 
     if (rest.number !== undefined && rest.number !== target.number) {
       await this.assertNumberFree({
@@ -262,13 +334,16 @@ export class PollaUserRouter {
     const changes: Record<string, unknown> = { ...rest };
 
     // La comisión es del pasador y la fija un superior; el pasador de un
-    // jugador solo lo cambia un ADMIN+.
+    // jugador solo lo cambia un ADMIN+, a otro del mismo grupo (la base lo
+    // vuelve a controlar).
     if (target.user_type === POLLA_USER_TYPE.CASHIER && fee !== undefined) changes.fee = fee;
     if (
       target.user_type === POLLA_USER_TYPE.PLAYER &&
       parentId &&
+      parentId !== target.parent_polla_user_id &&
       isPollaAdminRole(user.user_type)
     ) {
+      await this.assertParentInScope(user, parentId);
       changes.parent_polla_user_id = parentId;
     }
 

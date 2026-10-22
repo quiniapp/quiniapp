@@ -41,16 +41,27 @@ export const POLLA_USER_HIERARCHY: Record<POLLA_USER_TYPE, number> = {
   [POLLA_USER_TYPE.PLAYER]: 5,
 };
 
-/** Roles que administran la operación (cargan resultados, editan pasado el límite). */
-export const POLLA_ADMIN_ROLES: POLLA_USER_TYPE[] = [
+/**
+ * Roles de toda la organización: ediciones, quinielas, turnos, resultados,
+ * grupos y cuenta corriente. Cargan sin corte hasta el último día de juego.
+ */
+export const POLLA_SUPER_ROLES: POLLA_USER_TYPE[] = [
   POLLA_USER_TYPE.OWNER,
   POLLA_USER_TYPE.CAPITALIST,
   POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
 ];
+
+/**
+ * Roles que cargan a nombre de otros y repiten sin cargo. El ADMIN lo hace
+ * solo dentro de su grupo; los `POLLA_SUPER_ROLES`, en toda la organización.
+ */
+export const POLLA_ADMIN_ROLES: POLLA_USER_TYPE[] = [...POLLA_SUPER_ROLES, POLLA_USER_TYPE.ADMIN];
 
 /** Roles que pueden filtrar y ver los datos completos de las jugadas ajenas. */
 export const POLLA_STAFF_ROLES: POLLA_USER_TYPE[] = [...POLLA_ADMIN_ROLES, POLLA_USER_TYPE.CASHIER];
+
+export const isPollaSuperRole = (role: POLLA_USER_TYPE): boolean =>
+  POLLA_SUPER_ROLES.includes(role);
 
 export const isPollaAdminRole = (role: POLLA_USER_TYPE): boolean =>
   POLLA_ADMIN_ROLES.includes(role);
@@ -60,14 +71,10 @@ export const isPollaStaffRole = (role: POLLA_USER_TYPE): boolean =>
 
 /**
  * Roles que ven la cuenta corriente de los pasadores, sus reportes y gastos, y
- * liquidan. El ADMIN opera (jugadas, resultados, usuarios) pero no ve la
- * cuenta corriente ni liquida. El pasador ve solo la suya.
+ * liquidan (pasadores y grupos). El ADMIN ve solo la cuenta de su grupo; el
+ * pasador, solo la suya.
  */
-export const POLLA_ACCOUNT_ROLES: POLLA_USER_TYPE[] = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-];
+export const POLLA_ACCOUNT_ROLES: POLLA_USER_TYPE[] = POLLA_SUPER_ROLES;
 
 /**
  * Tipos que lista la pantalla de Usuarios para cada rol: los inferiores, sin el
@@ -80,12 +87,38 @@ export const pollaUserListTypes = (role: POLLA_USER_TYPE): POLLA_USER_TYPE[] =>
   );
 
 /**
- * Qué tipos de usuario da de alta cada rol, siempre dentro de su organización.
- * El capitalista no figura: se crea únicamente junto con su organización. El
- * jugador lo crea su pasador o, eligiendo el pasador, un superadmin o superior.
+ * Qué tipos de usuario da de alta cada rol desde Usuarios, siempre dentro de
+ * su organización. El capitalista se crea únicamente junto con su
+ * organización y el admin, junto con su grupo (Grupos). El superadmin lo crean
+ * el capitalista y el dueño. El admin crea pasadores y jugadores de su grupo;
+ * el pasador, sus jugadores.
  */
 export const POLLA_CREATABLE_TYPES: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
   [POLLA_USER_TYPE.OWNER]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.CAPITALIST]: [
+    POLLA_USER_TYPE.SUPERADMIN,
+    POLLA_USER_TYPE.CASHIER,
+    POLLA_USER_TYPE.PLAYER,
+  ],
+  [POLLA_USER_TYPE.SUPERADMIN]: [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
+  [POLLA_USER_TYPE.PLAYER]: [],
+};
+
+/**
+ * A quién le blanquea la contraseña cada rol. Nadie se la cambia a sí mismo:
+ * siempre la pone un superior. El OWNER llega a los capitalistas de todas las
+ * organizaciones (desde Organizaciones) y al resto solo dentro de la suya. El
+ * admin, solo dentro de su grupo.
+ */
+export const POLLA_PASSWORD_RESET_TARGETS: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
+  [POLLA_USER_TYPE.OWNER]: [
+    POLLA_USER_TYPE.CAPITALIST,
     POLLA_USER_TYPE.SUPERADMIN,
     POLLA_USER_TYPE.ADMIN,
     POLLA_USER_TYPE.CASHIER,
@@ -102,32 +135,7 @@ export const POLLA_CREATABLE_TYPES: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> =
     POLLA_USER_TYPE.CASHIER,
     POLLA_USER_TYPE.PLAYER,
   ],
-  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER],
-  [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
-  [POLLA_USER_TYPE.PLAYER]: [],
-};
-
-/**
- * A quién le blanquea la contraseña cada rol. Nadie se la cambia a sí mismo:
- * siempre la pone un superior. El OWNER llega a los capitalistas de todas las
- * organizaciones (desde Organizaciones) y al resto solo dentro de la suya.
- */
-export const POLLA_PASSWORD_RESET_TARGETS: Record<POLLA_USER_TYPE, POLLA_USER_TYPE[]> = {
-  [POLLA_USER_TYPE.OWNER]: [
-    POLLA_USER_TYPE.CAPITALIST,
-    POLLA_USER_TYPE.SUPERADMIN,
-    POLLA_USER_TYPE.ADMIN,
-    POLLA_USER_TYPE.CASHIER,
-    POLLA_USER_TYPE.PLAYER,
-  ],
-  [POLLA_USER_TYPE.CAPITALIST]: [
-    POLLA_USER_TYPE.SUPERADMIN,
-    POLLA_USER_TYPE.ADMIN,
-    POLLA_USER_TYPE.CASHIER,
-    POLLA_USER_TYPE.PLAYER,
-  ],
-  [POLLA_USER_TYPE.SUPERADMIN]: [POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
-  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER],
+  [POLLA_USER_TYPE.ADMIN]: [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
   [POLLA_USER_TYPE.CASHIER]: [POLLA_USER_TYPE.PLAYER],
   [POLLA_USER_TYPE.PLAYER]: [],
 };

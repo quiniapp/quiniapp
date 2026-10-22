@@ -79,6 +79,18 @@ export const isPollaAuthenticated = asyncHandler(
       throw new ForbiddenError('Tenés que cambiar tu contraseña antes de seguir');
     }
 
+    // El admin opera dentro de su grupo. Los del modelo anterior (sin grupo)
+    // esperan a que un superadmin o superior los asigne a uno.
+    if (
+      user.user_type === POLLA_USER_TYPE.ADMIN &&
+      !user.polla_group_id &&
+      !PASSWORD_RESET_PATHS.some((p) => req.path.endsWith(p))
+    ) {
+      throw new ForbiddenError(
+        'Tu usuario de administrador no tiene grupo: pedile a un superadministrador que te asigne uno'
+      );
+    }
+
     req.pollaUser = {
       user,
       session_id: decoded.session_id,

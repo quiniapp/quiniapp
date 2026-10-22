@@ -4,6 +4,62 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
+
+#### Roles y grupos
+- **Menú y rutas** (`AppLayout.tsx`, `routes/route.tsx`):
+  - Ediciones, Quinielas y turnos y Grupos quedan para superadmin+.
+  - El admin entra a Cuenta corriente y ve la de su grupo.
+  - Resultados: solo superadmin+ los carga y procesa (`features/results`).
+- **Admin sin grupo** (`protected/ProtectedRoute.tsx`): pantalla que explica que tiene que asignarle un grupo un superadministrador.
+- **Grupos** (`features/groups`):
+  - Alta del grupo con su admin en un diálogo, como Organizaciones.
+  - El listado muestra el admin. "Asignar admin" (uno sin grupo o uno nuevo) aparece en los grupos del modelo anterior.
+  - Borrar avisa que se van también admin, pasadores y jugadores.
+- **Usuarios** (`features/users`):
+  - El admin ve y crea solo pasadores y jugadores de su grupo: su pasador queda en el grupo y el jugador cuelga de un pasador del grupo.
+  - El grupo de un pasador se elige al crearlo y después se ve de solo lectura (`EditUserDialog.tsx`).
+- **`UserSearchPicker`**: prop `scope` (grupo, pasador o `writable` para cargar a nombre de otro).
+
+#### Cargar y repetir
+- **Cargar jugada** (`features/make-bet`):
+  - El admin ve hasta cuándo carga (`my_load_cutoff`) y busca pasadores de su grupo.
+  - El aviso de "edición en juego" es solo para superadmin+.
+  - Pozo sorpresa destacado.
+- **Repetir directo** (`RepeatBetDialog.tsx`):
+  - Pasador y admin+: nº de ticket → números y dueño → "Cargar e imprimir". La jugada va a nombre del dueño original (el jugador, si era de uno) y el diálogo queda listo para el siguiente.
+  - Jugador: "Repetir mis tickets" lista sus tickets de la última edición en que jugó, con checkboxes, y los carga todos.
+  - Lo que no se pudo repetir se avisa con el motivo (`lib/repeatReasons.ts`).
+- **Tickets** (`functions/makePollaTicket.ts`): `makePollaTicketsPdf` arma varios tickets en un PDF (una página por ticket). Imprime "+ Pozo sorpresa" y "SIN CARGO" en los repetidos sin cargo.
+
+#### Jugadas
+- **Filtros** (`features/bets/index.tsx`, `ResultFilters.tsx`):
+  - Para todos: Resultado (Todos / Ganadores / No ganadores) y Aciertos (10, 9, 8, 7).
+  - Superadmin+ elige grupo; el resto tiene "Solo mi grupo". Todos filtran por pasador o jugador.
+  - Los filtros viajan también al PDF de tickets.
+- **Acciones**: editar y borrar según `can_edit` / `can_delete` de la API. Imprimir usa el precio guardado en la jugada.
+- **Repetir sin cargo** (`FreeRepeatDialog.tsx`): con una edición finalizada, admin+ elige tickets de su alcance (o todos los de la lista) y los repite en una edición abierta. Ve cuántos se cargaron y cuáles no. Badges "Sin cargo" y cantidad de veces que se repitió cada ticket.
+
+#### Ediciones
+- **`features/editions`**:
+  - Editar una edición: precio (vale para las jugadas nuevas), fechas, horas, pozo y pozo sorpresa.
+  - "Extender" en las cerradas sin ganador.
+  - Con ganador solo se renombra.
+  - El cierre de carga puede ser el mismo día del primer sorteo.
+- **Pozo sorpresa** destacado en Ediciones, Jugadas, Cargar jugada, Revisar ticket y el PDF de tickets.
+
+#### Cuenta corriente
+- **Pestaña "Grupos"** (`GroupAccounts.tsx`, superadmin+):
+  - Previa de cada grupo a la fecha (deja de los pasadores, gastos, arrastre, base) con los pasadores que faltan liquidar.
+  - "Liquidar" con % del admin, ajustes y pago, más ticket térmico (`functions/current-account/groupLiquidationTicket.ts`).
+  - Historial de liquidaciones.
+- **Admin**: ve la cuenta de su grupo (previa e historial, solo lectura).
+- **Reportes** (`dialogs/ReportDialogs.tsx`, `totalsTicket.ts`): se saca el "% del pozo"; la liquidación no descuenta del pozo.
+- **Ventas** (`features/sales`): el admin ve su grupo, sin selector de grupo.
+
+#### Fixed
+- **`components/ui/checkbox.tsx`**: el borde usaba `border-input` (el fondo blanco de los inputs) y no se veía sobre fondo blanco. Ahora usa `border-input-border`.
+
 ### Changed - 2026-10-21 (Polla: usuarios por número y sin @)
 
 - **Usuarios** (`features/users/index.tsx`): pasadores y jugadores salen de menor a mayor número. El orden lo da la API (`GET /user`) porque la lista viene paginada.
