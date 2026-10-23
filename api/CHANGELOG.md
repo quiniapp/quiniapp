@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-23 (Polla: Jugadas de solo lectura y Administrar jugadas)
+
+- **`GET /polla/private/bet`** (`polla/bet/route/polla-bet.route.ts`): nuevo parámetro `view`.
+  - `view=public` (Jugadas): toda la organización en la versión pública (`toPublicBet`) para todos los roles, admin+ incluido, sin acciones (`can_edit`/`can_delete` en false). No consulta cortes de carga.
+  - `view=manage` (Administrar jugadas): `manageScope` pisa los filtros de alcance. El pasador ve lo suyo y lo de sus jugadores (`cashierId`); el admin, su grupo (`groupId`), aunque pida otro; superadmin+, la organización. El jugador recibe 403. `with_free_repeats` solo se calcula acá.
+  - `export=true` (PDF de tickets) usa el mismo alcance que `view=manage`.
+  - Sin `view` (cuenta corriente) no cambia nada.
+  - Sin migración.
+
 ### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
 
 #### Migración `20261021233442_polla_groups_with_admin.sql`

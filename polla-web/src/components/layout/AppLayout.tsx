@@ -3,6 +3,7 @@ import { NavLink, Outlet, useMatches, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   CalendarDays,
+  ClipboardList,
   CreditCard,
   FileText,
   ListOrdered,
@@ -52,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: PlusCircle,
     roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
   },
+  { to: ROUTES.MANAGE_BETS, label: 'Administrar jugadas', icon: ClipboardList, roles: STAFF },
   { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: STAFF },
   { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },
   // Ediciones, quinielas, turnos y grupos son de toda la organización.

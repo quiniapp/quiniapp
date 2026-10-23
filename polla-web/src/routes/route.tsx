@@ -12,6 +12,7 @@ import LoginPage from '@/features/login';
 
 const BetsPage = lazy(() => import('@/features/bets'));
 const MakeBetPage = lazy(() => import('@/features/make-bet'));
+const ManageBetsPage = lazy(() => import('@/features/manage-bets'));
 const EditionsPage = lazy(() => import('@/features/editions'));
 const ResultsPage = lazy(() => import('@/features/results'));
 const UsersPage = lazy(() => import('@/features/users'));
@@ -73,6 +74,13 @@ export const RoutesContent: RouteObject[] = [
         path: ROUTES.MAKE_BET,
         element: guarded([POLLA_USER_TYPE.PLAYER, ...STAFF], <MakeBetPage />),
         handle: { title: 'Cargar jugada' } satisfies RouteHandle,
+      },
+      {
+        // Jugadas es de solo lectura para todos; acá cada rol administra lo
+        // suyo (el pasador, lo suyo y de sus jugadores; el admin, su grupo).
+        path: ROUTES.MANAGE_BETS,
+        element: guarded(STAFF, <ManageBetsPage />),
+        handle: { title: 'Administrar jugadas' } satisfies RouteHandle,
       },
       {
         // Todos menos el jugador, siempre dentro de la propia organización.

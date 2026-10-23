@@ -4,6 +4,22 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-23 (Jugadas de solo lectura y Administrar jugadas)
+
+Se separa mirar las jugadas de administrarlas.
+
+- **Jugadas** (`features/bets/index.tsx`): de solo lectura e igual para todos los roles. Pide `view=public`, así que la API manda la versión pública (sin montos ni ids) también a admin+.
+  - Selector de edición (abre en la activa), pozo y banner de ganadores.
+  - Buscar Nº de ticket y "Todas / Mis jugadas". Abre en Todas; `mine=1` en la URL (y `/mis-jugadas`) abre en Mis jugadas.
+  - Orden fijo: más aciertos primero y, a igual cantidad, lo último cargado.
+  - Sin acciones, filtros ni PDF. "Actualizar" para todos menos el jugador, que ve lo cargado al entrar.
+- **Administrar jugadas** (`features/manage-bets`, ruta `/administrar-jugadas`, debajo de "Cargar jugada" en el menú): pasador y admin+. El jugador no la ve y por URL vuelve a Jugadas.
+  - Pide `view=manage`: el pasador ve lo suyo y lo de sus jugadores; el admin, su grupo; superadmin+, toda la organización.
+  - Tiene lo que antes estaba en Jugadas: filtros (grupo solo superadmin+; el pasador filtra por uno de sus jugadores; el admin busca en su grupo), fecha de carga, resultado, aciertos, orden, Actualizar, Compartir PDF, imprimir, editar, borrar y repetir sin cargo. Los permisos de cada acción no cambian.
+  - Ya no tiene "Solo mi grupo" ni "Mis jugadas / Jugando": el alcance lo fija el rol.
+- **Compartidos** (`features/bets`): `BetsList` (tarjetas en mobile, planilla en desktop), `EditionPicker`, `WinnersBanner`, `useBetsEdition` y `format.ts`.
+- **PDF de tickets** (`ShareTicketsPdfButton.tsx`): se saca el filtro `mine`. La API lo acota al alcance de cada rol, así que el pasador ya no comparte el PDF de todo lo que se juega.
+
 ### Added - 2026-10-22 (Jugadas: filtro por fecha de carga)
 
 - **Filtro "Cargadas desde / Hasta"** (`features/bets/LoadDateFilter.tsx`, `features/bets/index.tsx`):
