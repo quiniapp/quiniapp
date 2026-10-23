@@ -110,6 +110,19 @@ interface ActionContext {
   openEditions: Set<string>;
 }
 
+const NO_ACTIONS: IPollaBetActions = { can_edit: false, can_delete: false };
+
+/**
+ * Lo que administra cada rol ("Administrar jugadas" y el PDF de tickets): el
+ * pasador, lo suyo y lo de sus jugadores; el admin, su grupo; superadmin+,
+ * toda la organización.
+ */
+const manageScope = (user: IPollaSessionUser): Pick<PollaBetFilters, 'cashierId' | 'groupId'> => {
+  if (user.user_type === POLLA_USER_TYPE.CASHIER) return { cashierId: user.polla_user_id };
+  if (user.user_type === POLLA_USER_TYPE.ADMIN) return { groupId: user.polla_group_id };
+  return {};
+};
+
 /**
  * Qué puede hacer el usuario con cada jugada ahora. Todos leen todo; cada rol
  * escribe en su alcance y hasta su corte (la base vuelve a controlarlo):
@@ -123,7 +136,7 @@ const actionsFor = (
   ctx: ActionContext
 ): IPollaBetActions => {
   const alive = !bet.winner && !bet.deleted_at;
-  if (!alive) return { can_edit: false, can_delete: false };
+  if (!alive) return NO_ACTIONS;
 
   if (isPollaSuperRole(viewer.user_type)) return { can_edit: true, can_delete: true };
 
@@ -253,10 +266,15 @@ export class PollaBetRouter {
   };
 
   /**
-   * Todos ven todas las jugadas de la organización (con nombres y aciertos) y
-   * filtran por grupo, pasador y jugador; "solo mías" es, para el pasador, lo
-   * imputado a él. Filtros de resultado: ganadoras o no (`winner`) y aciertos
-   * exactos (`hits`).
+   * Jugadas de la organización (con nombres y aciertos), filtradas por grupo,
+   * pasador y jugador; "solo mías" es, para el pasador, lo imputado a él.
+   * Filtros de resultado: ganadoras o no (`winner`) y aciertos exactos (`hits`).
+   *
+   * - `view=public` ("Jugadas"): solo lectura e igual para todos los roles,
+   *   toda la organización en la versión pública y sin acciones.
+   * - `view=manage` ("Administrar jugadas") y el PDF de tickets: solo lo que
+   *   administra cada rol (`manageScope`), con sus acciones. El jugador no.
+   * - Sin `view` (cuenta corriente): todos leen todo, como siempre.
    */
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
@@ -264,6 +282,8 @@ export class PollaBetRouter {
     const onlyMine = req.query.mine === 'true';
     // PDF de tickets: páginas de hasta 1000 de una edición. El jugador no imprime.
     const exporting = req.query.export === 'true';
+    const managing = exporting || req.query.view === 'manage';
+    const publicView = !managing && req.query.view === 'public';
     const pagination = parsePagination(
       req.query as Record<string, unknown>,
       exporting ? POLLA_EXPORT_PAGE_SIZE : undefined
@@ -276,6 +296,10 @@ export class PollaBetRouter {
         throw new ForbiddenError('Los jugadores no imprimen jugadas');
       }
       if (!editionId) throw new BadRequestError('Elegí una edición para el PDF');
+    }
+
+    if (managing && user.user_type === POLLA_USER_TYPE.PLAYER) {
+      throw new ForbiddenError('Los jugadores no administran jugadas');
     }
 
     if (editionId) await this.assertEditionScope(user, editionId);
@@ -335,6 +359,8 @@ export class PollaBetRouter {
     if (deletedOnes && user.user_type === POLLA_USER_TYPE.ADMIN) {
       filters.groupId = user.polla_group_id;
     }
+    // Administrar: cada rol solo lo suyo, aunque pida otro grupo o pasador.
+    if (managing) Object.assign(filters, manageScope(user));
 
     // Sin acotar por edición, ticket o días, el listado sería toda la historia.
     if (
@@ -354,12 +380,15 @@ export class PollaBetRouter {
       cursor: queryString(req.query.cursor),
     });
 
-    const ctx = await this.buildActionContext(user, result.data);
-    const data = result.data.map((bet) => forViewer(bet, user, ctx));
+    // La vista pública no tiene acciones: no hace falta mirar cortes.
+    const ctx = publicView ? null : await this.buildActionContext(user, result.data);
+    const data = result.data.map((bet) =>
+      ctx ? forViewer(bet, user, ctx) : toPublicBet(bet, user, NO_ACTIONS)
+    );
 
     // Cuántas veces se repitió sin cargo cada ticket (para quien puede hacerlo).
     const freeRepeats =
-      isAdmin && req.query.with_free_repeats === 'true'
+      isAdmin && managing && req.query.with_free_repeats === 'true'
         ? await this.repository.getFreeRepeatCounts(result.data.map((bet) => bet.polla_bet_id))
         : undefined;
 
