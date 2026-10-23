@@ -22,6 +22,9 @@ export interface TicketsPdfFilters {
   winner?: boolean;
   /** Aciertos exactos separados por coma (`10,9`). */
   hits?: string;
+  /** Días de carga (`YYYY-MM-DD`, los dos o ninguno). */
+  load_from?: string;
+  load_to?: string;
   sort?: 'hits' | 'recent';
 }
 
@@ -59,6 +62,8 @@ const fetchAllTickets = async (
         mine: filters.mine ? true : undefined,
         winner: filters.winner,
         hits: filters.hits,
+        load_from: filters.load_from,
+        load_to: filters.load_to,
       }),
     });
 

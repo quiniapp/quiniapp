@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-10-22 (Jugadas: filtro por fecha de carga)
+
+- **Filtro "Cargadas desde / Hasta"** (`features/bets/LoadDateFilter.tsx`, `features/bets/index.tsx`):
+  - Acota el listado de Jugadas a las cargadas entre esas fechas, sumado a los demás filtros (edición, grupo, pasador/jugador, resultado, aciertos). Viaja en la URL (`load_from` / `load_to`) y la API ya lo aceptaba.
+  - Elegir una sola fecha filtra ese día. Si el otro extremo queda fuera de rango (desde después de hasta, o más de `POLLA_ACCOUNT_RECALC_MAX_DAYS` días), se corre al mismo día. La cruz vuelve a todos los días.
+  - Pasador y admin+: el jugador no lo ve, y si la URL trae fechas no se mandan.
+  - Lo ignora la búsqueda por número de ticket, como el resto de los filtros.
+- **PDF de tickets** (`ShareTicketsPdfButton.tsx`): el export lleva también el rango de carga y el encabezado lo menciona ("cargadas 12/10 al 13/10").
+
 ### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
 
 #### Roles y grupos

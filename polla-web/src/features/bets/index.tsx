@@ -56,10 +56,12 @@ import {
 } from '@/components/ui/table';
 import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
+import { periodLabel } from '@/lib/accountPeriod';
 import { betNumberClass, hitTitle } from '@/lib/betNumbers';
 import { cn } from '@/lib/utils';
 import { EditBetDialog, EditableBet } from './EditBetDialog';
 import { FreeRepeatDialog } from './FreeRepeatDialog';
+import { LoadDateFilter, LoadRange } from './LoadDateFilter';
 import { ResultFilters, WinnerFilter } from './ResultFilters';
 import { ShareTicketsPdfButton } from './ShareTicketsPdfButton';
 
@@ -100,6 +102,8 @@ export const BetsPage = () => {
   // Pasador y jugador eligen entre lo suyo ("Mis jugadas", por defecto) y todo
   // lo que se está jugando en el capitalista.
   const canFilterMine = !canManage;
+  // Pasador y admin+ acotan por día de carga; el jugador no.
+  const canFilterLoadDate = role !== POLLA_USER_TYPE.PLAYER;
   // Todos ven todas las jugadas y las acotan a un grupo: superadmin+ elige
   // cualquiera; el resto, "Solo mi grupo" (si tiene).
   const ownGroupId = user?.polla_group_id ?? null;
@@ -117,6 +121,10 @@ export const BetsPage = () => {
   const winnerParam = searchParams.get('winner');
   const winner: WinnerFilter = winnerParam === 'true' || winnerParam === 'false' ? winnerParam : '';
   const hits = parseHits(searchParams.get('hits'));
+  const loadFrom = searchParams.get('load_from');
+  const loadTo = searchParams.get('load_to');
+  const loadRange: LoadRange | null =
+    canFilterLoadDate && loadFrom && loadTo ? { from: loadFrom, to: loadTo } : null;
 
   const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
@@ -169,6 +177,7 @@ export const BetsPage = () => {
     winner: winner || undefined,
     hits: hits.length ? hits.join(',') : undefined,
   };
+  const loadFilter = { load_from: loadRange?.from, load_to: loadRange?.to };
 
   const lotteryById = useMemo(
     () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
@@ -218,6 +227,21 @@ export const BetsPage = () => {
     });
   };
 
+  /** Desde y hasta viajan juntos en la URL (la API pide los dos). */
+  const changeLoadRange = (range: LoadRange | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (range) {
+        next.set('load_from', range.from);
+        next.set('load_to', range.to);
+      } else {
+        next.delete('load_from');
+        next.delete('load_to');
+      }
+      return next;
+    });
+  };
+
   const searching = debouncedTicket.length > 0;
 
   // Repetir sin cargo: superadmin+ y el admin, con la edición ya finalizada.
@@ -229,6 +253,7 @@ export const BetsPage = () => {
     ticket_number: searching ? debouncedTicket : undefined,
     ...(searching ? {} : userFilter),
     ...(searching ? {} : resultFilter),
+    ...(searching ? {} : loadFilter),
     mine: mine ? 'true' : undefined,
     with_free_repeats: canFreeRepeat ? 'true' : undefined,
     sort,
@@ -279,13 +304,14 @@ export const BetsPage = () => {
       selectedUser.number ? `${selectedUser.number} · ` : ''
     }${selectedUser.name}`;
   }
-  const resultScope = [
+  const filtersScope = [
+    loadRange ? `cargadas ${periodLabel(loadRange.from, loadRange.to)}` : '',
     winner === 'true' ? 'ganadores' : winner === 'false' ? 'no ganadores' : '',
     hits.length ? `${hits.join(', ')} aciertos` : '',
   ]
     .filter(Boolean)
     .join(' · ');
-  const pdfFiltersLabel = `${pdfScope}${resultScope ? ` · ${resultScope}` : ''} · ${
+  const pdfFiltersLabel = `${pdfScope}${filtersScope ? ` · ${filtersScope}` : ''} · ${
     sort === 'recent' ? 'más recientes primero' : 'por aciertos'
   }`;
   const { mutate: deleteBet } = useDeleteBet();
@@ -585,6 +611,8 @@ export const BetsPage = () => {
           </div>
         )}
 
+        {canFilterLoadDate && <LoadDateFilter value={loadRange} onChange={changeLoadRange} />}
+
         <ResultFilters
           winner={winner}
           onWinnerChange={(value) => updateParam('winner', value)}
@@ -629,6 +657,7 @@ export const BetsPage = () => {
               ...userFilter,
               winner: winner ? winner === 'true' : undefined,
               hits: resultFilter.hits,
+              ...loadFilter,
               mine,
               sort,
             }}
