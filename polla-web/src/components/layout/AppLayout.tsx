@@ -46,13 +46,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
   {
     to: ROUTES.MAKE_BET,
     label: 'Cargar jugada',
     icon: PlusCircle,
     roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
   },
+  { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
   { to: ROUTES.MANAGE_BETS, label: 'Administrar jugadas', icon: ClipboardList, roles: STAFF },
   { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: STAFF },
   { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },

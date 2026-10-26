@@ -39,11 +39,12 @@ import { BetsList } from '@/features/bets/BetsList';
 import { EditBetDialog, EditableBet } from '@/features/bets/EditBetDialog';
 import { EditionPicker } from '@/features/bets/EditionPicker';
 import { FreeRepeatDialog } from '@/features/bets/FreeRepeatDialog';
-import { LoadDateFilter, LoadRange } from '@/features/bets/LoadDateFilter';
+import { LoadDateFilter } from '@/features/bets/LoadDateFilter';
 import { ResultFilters, WinnerFilter } from '@/features/bets/ResultFilters';
 import { ShareTicketsPdfButton } from '@/features/bets/ShareTicketsPdfButton';
 import { WinnersBanner } from '@/features/bets/WinnersBanner';
 import { useBetsEdition } from '@/features/bets/useBetsEdition';
+import { useLoadRangeParam } from '@/features/bets/useLoadRangeParam';
 
 /** `hits=10,9` de la URL → aciertos válidos, en el orden de los checkboxes. */
 const parseHits = (raw: string | null): number[] =>
@@ -82,9 +83,7 @@ export const ManageBetsPage = () => {
   const winnerParam = searchParams.get('winner');
   const winner: WinnerFilter = winnerParam === 'true' || winnerParam === 'false' ? winnerParam : '';
   const hits = parseHits(searchParams.get('hits'));
-  const loadFrom = searchParams.get('load_from');
-  const loadTo = searchParams.get('load_to');
-  const loadRange: LoadRange | null = loadFrom && loadTo ? { from: loadFrom, to: loadTo } : null;
+  const [loadRange, changeLoadRange] = useLoadRangeParam();
 
   const { data: groups } = useGroups(
     { polla_organization_id: organizationId ?? undefined },
@@ -158,21 +157,6 @@ export const ManageBetsPage = () => {
       const next = new URLSearchParams(prev);
       next.delete('cashier_polla_user_id');
       next.delete('polla_user_id');
-      return next;
-    });
-  };
-
-  /** Desde y hasta viajan juntos en la URL (la API pide los dos). */
-  const changeLoadRange = (range: LoadRange | null) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (range) {
-        next.set('load_from', range.from);
-        next.set('load_to', range.to);
-      } else {
-        next.delete('load_from');
-        next.delete('load_to');
-      }
       return next;
     });
   };

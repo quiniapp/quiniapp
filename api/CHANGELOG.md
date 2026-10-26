@@ -4,6 +4,13 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-26 (Polla: PDF de Jugadas)
+
+- **`GET /polla/private/bet`** (`polla/bet/route/polla-bet.route.ts`): `export=true&view=public` (PDF de Jugadas) devuelve lo mismo que la lista de Jugadas: toda la organización en la versión pública, sin acciones y sin `manageScope`. Respeta `mine` y `load_from`/`load_to`.
+  - El jugador sigue recibiendo 403 con `export=true`.
+  - `export=true` sin `view` o con `view=manage` (PDF de Administrar jugadas) no cambia: sigue acotado a lo que administra cada rol.
+  - Sin migración.
+
 ### Changed - 2026-10-23 (Polla: Jugadas de solo lectura y Administrar jugadas)
 
 - **`GET /polla/private/bet`** (`polla/bet/route/polla-bet.route.ts`): nuevo parámetro `view`.

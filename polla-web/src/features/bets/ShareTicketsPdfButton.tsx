@@ -13,6 +13,10 @@ import { sharePdf } from '@/functions/printPdf';
 import { fetchOrganizationName } from '@/features/current-account/fetchers';
 
 export interface TicketsPdfFilters {
+  /** `public`: lo que muestra Jugadas (toda la organización). Sin esto, lo que administra el rol. */
+  view?: 'public';
+  /** "Mis jugadas" de Jugadas: el pasador, lo suyo y lo de sus jugadores; el resto, lo suyo. */
+  mine?: boolean;
   cashier_polla_user_id?: string;
   /** Las de un jugador (filtro "Jugador" de Jugadas). */
   polla_user_id?: string;
@@ -55,6 +59,8 @@ const fetchAllTickets = async (
         limit: POLLA_EXPORT_PAGE_SIZE,
         cursor,
         sort: filters.sort ?? 'hits',
+        view: filters.view,
+        mine: filters.mine ? 'true' : undefined,
         cashier_polla_user_id: filters.cashier_polla_user_id,
         polla_user_id: filters.polla_user_id,
         polla_group_id: filters.polla_group_id,
@@ -79,7 +85,8 @@ const fetchAllTickets = async (
  * "Compartir PDF": baja todas las jugadas de la edición (con los filtros que se
  * eligieron), arma el PDF para imprimir en blanco y negro y lo comparte (mobile)
  * o lo descarga (desktop). Mientras tanto muestra un spinner con el progreso.
- * La API lo acota a lo que administra cada rol, como Administrar jugadas.
+ * La API lo acota a lo que administra cada rol, como Administrar jugadas; con
+ * `view: 'public'` (Jugadas) trae lo mismo que la lista: toda la organización.
  */
 export const ShareTicketsPdfButton = ({
   edition,
