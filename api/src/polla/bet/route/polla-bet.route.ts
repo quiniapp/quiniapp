@@ -113,7 +113,7 @@ interface ActionContext {
 const NO_ACTIONS: IPollaBetActions = { can_edit: false, can_delete: false };
 
 /**
- * Lo que administra cada rol ("Administrar jugadas" y el PDF de tickets): el
+ * Lo que administra cada rol ("Administrar jugadas" y su PDF de tickets): el
  * pasador, lo suyo y lo de sus jugadores; el admin, su grupo; superadmin+,
  * toda la organización.
  */
@@ -271,9 +271,10 @@ export class PollaBetRouter {
    * Filtros de resultado: ganadoras o no (`winner`) y aciertos exactos (`hits`).
    *
    * - `view=public` ("Jugadas"): solo lectura e igual para todos los roles,
-   *   toda la organización en la versión pública y sin acciones.
-   * - `view=manage` ("Administrar jugadas") y el PDF de tickets: solo lo que
-   *   administra cada rol (`manageScope`), con sus acciones. El jugador no.
+   *   toda la organización en la versión pública y sin acciones. Su PDF
+   *   (`export=true&view=public`) es lo mismo, para todos menos el jugador.
+   * - `view=manage` ("Administrar jugadas") y su PDF (`export=true`): solo lo
+   *   que administra cada rol (`manageScope`), con sus acciones. El jugador no.
    * - Sin `view` (cuenta corriente): todos leen todo, como siempre.
    */
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -282,8 +283,9 @@ export class PollaBetRouter {
     const onlyMine = req.query.mine === 'true';
     // PDF de tickets: páginas de hasta 1000 de una edición. El jugador no imprime.
     const exporting = req.query.export === 'true';
-    const managing = exporting || req.query.view === 'manage';
-    const publicView = !managing && req.query.view === 'public';
+    // El PDF de Jugadas (`view=public`) trae lo mismo que la lista.
+    const publicView = req.query.view === 'public';
+    const managing = !publicView && (exporting || req.query.view === 'manage');
     const pagination = parsePagination(
       req.query as Record<string, unknown>,
       exporting ? POLLA_EXPORT_PAGE_SIZE : undefined

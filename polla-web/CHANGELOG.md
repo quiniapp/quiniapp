@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-26 (Menú y PDF de Jugadas)
+
+- **Menú lateral** (`components/layout/AppLayout.tsx`): "Cargar jugada" pasa primero, después "Jugadas" y "Administrar jugadas". El resto queda igual.
+- **Jugadas** (`features/bets/index.tsx`): el pasador y superiores tienen de nuevo "Cargadas desde / Hasta" y "Compartir PDF". El jugador sigue sin filtros ni PDF.
+  - El PDF imprime lo que muestra la lista: toda la organización en "Todas", o "Mis jugadas" (el pasador, lo suyo y lo de sus jugadores), con las fechas elegidas y por aciertos. Pide `export=true&view=public`.
+  - Esto vuelve atrás, solo en Jugadas, lo de 2026-10-23: el pasador puede compartir el PDF de todo lo que se juega. En Administrar jugadas el PDF sigue acotado a lo que administra cada rol.
+- **PDF de tickets** (`features/bets/ShareTicketsPdfButton.tsx`): `TicketsPdfFilters` suma `view: 'public'` y `mine`.
+- **`useLoadRangeParam`** (`features/bets/useLoadRangeParam.ts`): lee y escribe juntos `load_from`/`load_to` de la URL. Lo usan Jugadas y Administrar jugadas (antes estaba inline en `features/manage-bets/index.tsx`).
+
 ### Changed - 2026-10-23 (Jugadas de solo lectura y Administrar jugadas)
 
 Se separa mirar las jugadas de administrarlas.

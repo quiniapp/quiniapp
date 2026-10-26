@@ -10,24 +10,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { periodLabel } from '@/lib/accountPeriod';
 import { BetsList } from './BetsList';
 import { EditionPicker } from './EditionPicker';
+import { LoadDateFilter } from './LoadDateFilter';
+import { ShareTicketsPdfButton } from './ShareTicketsPdfButton';
 import { WinnersBanner } from './WinnersBanner';
 import { useBetsEdition } from './useBetsEdition';
+import { useLoadRangeParam } from './useLoadRangeParam';
 
 /**
  * Jugadas: lo que se está jugando en la organización, de solo lectura e igual
  * para todos los roles (la API manda la versión pública con `view=public`).
- * Siempre por aciertos y, a igual cantidad, lo último cargado primero. Filtros,
- * imprimir, editar y borrar están en Administrar jugadas.
+ * Siempre por aciertos y, a igual cantidad, lo último cargado primero. El
+ * pasador y superiores además filtran por fecha de carga y comparten el PDF de
+ * lo que se ve. Los demás filtros, imprimir cada ticket, editar y borrar están
+ * en Administrar jugadas.
  */
 export const BetsPage = () => {
   const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { editionId, editionList, labelFor } = useBetsEdition();
+  const { editionId, editionList, selectedEdition, lotteryById, scheduleById, labelFor } =
+    useBetsEdition();
 
-  // El jugador ve lo cargado al entrar; el resto, además, "Actualizar".
-  const canRefresh = role !== POLLA_USER_TYPE.PLAYER;
+  // El jugador ve lo cargado al entrar; el resto, además, "Actualizar", la
+  // fecha de carga y el PDF.
+  const isStaff = role !== POLLA_USER_TYPE.PLAYER;
+  const [urlLoadRange, changeLoadRange] = useLoadRangeParam();
+  const loadRange = isStaff ? urlLoadRange : null;
 
   const [ticketSearch, setTicketSearch] = useState(searchParams.get('ticket_number') ?? '');
   const debouncedTicket = useDebouncedValue(ticketSearch.trim());
@@ -44,11 +54,14 @@ export const BetsPage = () => {
     });
   };
 
+  const loadFilter = searching ? {} : { load_from: loadRange?.from, load_to: loadRange?.to };
+
   const betsParams = {
     view: 'public',
     polla_edition_id: searching ? undefined : editionId || undefined,
     ticket_number: searching ? debouncedTicket : undefined,
     mine: mine ? 'true' : undefined,
+    ...loadFilter,
     sort: 'hits',
   };
   const betsEnabled = Boolean(editionId) || searching;
@@ -74,6 +87,15 @@ export const BetsPage = () => {
   };
 
   const { rows, totalCount } = flattenPages(bets?.pages);
+
+  // Lo que dice el PDF sobre lo que se está viendo.
+  const pdfFiltersLabel = [
+    mine ? 'Mis jugadas' : 'Todas las jugadas',
+    loadRange ? `cargadas ${periodLabel(loadRange.from, loadRange.to)}` : '',
+    'por aciertos',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div>
@@ -143,7 +165,9 @@ export const BetsPage = () => {
           </div>
         </div>
 
-        {canRefresh && (
+        {isStaff && <LoadDateFilter value={loadRange} onChange={changeLoadRange} />}
+
+        {isStaff && (
           <Button
             type="button"
             variant="outline"
@@ -154,6 +178,22 @@ export const BetsPage = () => {
             <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
             {refreshing ? 'Actualizando…' : 'Actualizar'}
           </Button>
+        )}
+
+        {isStaff && selectedEdition && !searching && (
+          <ShareTicketsPdfButton
+            edition={selectedEdition}
+            lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
+            scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
+            filters={{
+              view: 'public',
+              mine,
+              load_from: loadRange?.from,
+              load_to: loadRange?.to,
+              sort: 'hits',
+            }}
+            filtersLabel={pdfFiltersLabel}
+          />
         )}
       </div>
 
