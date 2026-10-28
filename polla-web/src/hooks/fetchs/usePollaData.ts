@@ -18,6 +18,7 @@ import {
   IPollaOrgExpenseEntityFront,
   IPollaResultEntityFront,
   IPollaTicketCheck,
+  POLLA_TICKET_SEARCH,
 } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import {
@@ -46,11 +47,33 @@ export const useUser = (id: string | null) =>
     { enabled: Boolean(id) }
   );
 
+/**
+ * Siguiente número libre para el alta: el de un pasador en su grupo o el de un
+ * jugador en su pasador (el pasador, de los suyos).
+ */
+export const useNextUserNumber = (
+  params: {
+    user_type: POLLA_USER_TYPE | '';
+    polla_group_id?: string | null;
+    parent_polla_user_id?: string | null;
+  },
+  enabled = true
+) =>
+  useApiQuery<number>(['polla-user-next-number'], BACKEND_ROUTES.user.nextNumber, params, {
+    enabled,
+    // Cada alta cambia el siguiente: se pide de nuevo al abrir el formulario.
+    staleTime: 0,
+    placeholderData: undefined,
+  });
+
 /** Acota el buscador: grupo, pasador (sus jugadores) o solo a quién se le puede cargar. */
 export interface UserSearchScope {
   polla_group_id?: string | null;
   parent_polla_user_id?: string | null;
-  /** Para cargar a nombre de otro (admin+; el admin, solo en su grupo). */
+  /**
+   * Para cargar a nombre de otro: admin+ y el Super (el admin, solo en su
+   * grupo) y el pasador, a sus jugadores.
+   */
   writable?: boolean;
 }
 
@@ -144,9 +167,6 @@ export const useBetToRepeat = (ticketNumber: string | null) =>
     { enabled: Boolean(ticketNumber), retry: false, placeholderData: undefined }
   );
 
-/** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
-export const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
-
 /** "Revisar ticket": la jugada, su titular y el reparto del pozo de su edición. */
 export const useTicketCheck = (ticketNumber: string) =>
   useApiQuery<IPollaTicketCheck>(
@@ -154,7 +174,7 @@ export const useTicketCheck = (ticketNumber: string) =>
     BACKEND_ROUTES.bet.check(ticketNumber),
     {},
     // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
-    { enabled: TICKET_SEARCH.test(ticketNumber), retry: false, placeholderData: undefined }
+    { enabled: POLLA_TICKET_SEARCH.test(ticketNumber), retry: false, placeholderData: undefined }
   );
 
 /**

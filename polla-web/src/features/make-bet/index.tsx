@@ -5,12 +5,14 @@ import { Repeat2 } from 'lucide-react';
 import {
   IPollaBetEntityBack,
   IPollaEditionEntityFront,
+  POLLA_BET_IDENTIFIER_MAX,
   POLLA_EDITION_STATUS,
+  pollaTicketCashierCode,
 } from '@helper/polla/types/game.type';
 import {
   IPollaUserOption,
   POLLA_USER_TYPE,
-  isPollaAdminRole,
+  isPollaLoaderRole,
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
@@ -22,6 +24,7 @@ import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { createEmptyPollaNumbers, pollaNumbersError } from '@/lib/pollaNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -43,7 +46,14 @@ const fmtMoney = (value: number) =>
 /** Lo que el ticket impreso necesita de la jugada. */
 type TicketBet = Pick<
   IPollaBetEntityBack,
-  'ticket_number' | 'user_name' | 'cashier_number' | 'numbers' | 'load_date' | 'amount' | 'is_free'
+  | 'ticket_number'
+  | 'user_name'
+  | 'identifier'
+  | 'cashier_number'
+  | 'numbers'
+  | 'load_date'
+  | 'amount'
+  | 'is_free'
 >;
 
 const fmtCutoff = (value: string) => `${fmtDate(value.slice(0, 10))} ${value.slice(11, 16)}`;
@@ -51,18 +61,28 @@ const fmtCutoff = (value: string) => `${fmtDate(value.slice(0, 10))} ${value.sli
 export const MakeBetPage = () => {
   const { role, organizationId } = useAuth();
 
-  // Owner, capitalista, superadmin y admin no juegan a su nombre: siempre
-  // cargan para un pasador (el admin, de su grupo). Pasador y jugador, solo a
-  // su nombre.
-  const canManage = Boolean(role && isPollaAdminRole(role));
+  // Owner, capitalista, superadmin, Super y admin no juegan a su nombre:
+  // siempre cargan para un pasador o un jugador (el admin, de su grupo). El
+  // pasador carga a su nombre o al de sus jugadores; el jugador, al suyo.
+  const isLoader = Boolean(role && isPollaLoaderRole(role));
   const isSuper = Boolean(role && isPollaSuperRole(role));
+  const isCashier = role === POLLA_USER_TYPE.CASHIER;
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
 
   const [editionId, setEditionId] = useState('');
   const [target, setTarget] = useState<IPollaUserOption | null>(null);
+  // "Pasador | Jugador" del buscador de quienes cargan a nombre de otro.
+  const [targetType, setTargetType] = useState(POLLA_USER_TYPE.CASHIER);
+  const [identifier, setIdentifier] = useState('');
   const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
   const [repeatOpen, setRepeatOpen] = useState(false);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
+
+  // Todo ticket lleva nombre de jugador o identificador: el pasador lo pone
+  // siempre y, a nombre de un pasador, cualquiera (la base lo vuelve a exigir).
+  const showIdentifier = !isPlayer;
+  const identifierRequired = isCashier || (isLoader && targetType === POLLA_USER_TYPE.CASHIER);
 
   // Las que tienen la carga abierta ahora para el rol (hora de Argentina):
   // pasador y jugador hasta el cierre; el admin hasta el turno más tarde del
@@ -95,7 +115,8 @@ export const MakeBetPage = () => {
   const ticketDataOf = (bet: TicketBet, of: IPollaEditionEntityFront): PollaTicketData => ({
     ticket_number: bet.ticket_number,
     user_name: bet.user_name,
-    cashier_number: bet.cashier_number ?? undefined,
+    identifier: bet.identifier,
+    cashier_code: pollaTicketCashierCode(bet.ticket_number, bet.cashier_number) || undefined,
     numbers: bet.numbers,
     lotteryName: lotteryById.get(of.polla_lottery_id) ?? '',
     scheduleName: scheduleById.get(of.polla_schedule_id) ?? '',
@@ -132,8 +153,15 @@ export const MakeBetPage = () => {
       return;
     }
 
-    if (canManage && !target) {
-      toast.error('Elegí el pasador');
+    if (isLoader && !target) {
+      toast.error(targetType === POLLA_USER_TYPE.CASHIER ? 'Elegí el pasador' : 'Elegí el jugador');
+      return;
+    }
+
+    const cleanIdentifier = identifier.trim();
+    if (identifierRequired && !cleanIdentifier) {
+      toast.error('Poné el identificador del ticket');
+      identifierRef.current?.focus();
       return;
     }
 
@@ -147,7 +175,8 @@ export const MakeBetPage = () => {
       {
         polla_edition_id: edition.polla_edition_id,
         numbers: values,
-        ...(canManage && target ? { polla_user_id: target.polla_user_id } : {}),
+        ...(target ? { polla_user_id: target.polla_user_id } : {}),
+        ...(cleanIdentifier ? { identifier: cleanIdentifier } : {}),
       },
       {
         onSuccess: async (bet) => {
@@ -212,19 +241,71 @@ export const MakeBetPage = () => {
             )}
           </div>
 
-          {canManage && (
+          {isLoader && (
             <UserSearchPicker
               id="target-user"
-              label="Cargar a nombre del pasador"
-              userTypes={[POLLA_USER_TYPE.CASHIER]}
+              label="Cargar a nombre de"
+              userTypes={[POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER]}
+              typeFilter={{
+                value: targetType,
+                onChange: (type) => {
+                  setTargetType(type);
+                  setTarget(null);
+                },
+              }}
               value={target}
               onChange={setTarget}
-              placeholder="Número o nombre del pasador"
+              placeholder={
+                targetType === POLLA_USER_TYPE.CASHIER
+                  ? 'Número (o grupo-número) o nombre del pasador'
+                  : 'Número o nombre del jugador'
+              }
               emptyHint="Escribí el número o elegilo de la lista"
               scope={{ writable: true }}
               clearOnType
-              onEnter={() => boxesRef.current?.focusFirst()}
+              onEnter={() => identifierRef.current?.focus()}
             />
+          )}
+
+          {isCashier && (
+            <UserSearchPicker
+              id="target-user"
+              label="Cargar a nombre de"
+              userTypes={[POLLA_USER_TYPE.PLAYER]}
+              value={target}
+              onChange={setTarget}
+              placeholder="A tu nombre · número o nombre del jugador"
+              emptyHint="A tu nombre. Elegí uno de tus jugadores para cargarle a él."
+              clearLabel="A mi nombre"
+              scope={{ writable: true }}
+              onEnter={() => identifierRef.current?.focus()}
+            />
+          )}
+
+          {showIdentifier && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="bet-identifier">
+                Identificador{' '}
+                <span className="font-normal text-muted-foreground">
+                  {identifierRequired ? '(obligatorio)' : '(opcional)'}
+                </span>
+              </Label>
+              <Input
+                ref={identifierRef}
+                id="bet-identifier"
+                value={identifier}
+                maxLength={POLLA_BET_IDENTIFIER_MAX}
+                autoComplete="off"
+                placeholder="De quién es el ticket, por ejemplo: chicho"
+                onChange={(e) => setIdentifier(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    boxesRef.current?.focusFirst();
+                  }
+                }}
+              />
+            </div>
           )}
 
           <PollaNumberBoxes

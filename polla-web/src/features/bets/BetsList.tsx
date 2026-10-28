@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { Gift } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { Copy, Gift } from 'lucide-react';
 import {
   IPollaBetListItem,
   POLLA_NUMBERS_REQUIRED,
@@ -9,6 +10,7 @@ import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -20,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { betNumberClass, hitTitle } from '@/lib/betNumbers';
 import { cn } from '@/lib/utils';
-import { cashierLabel, fmtDate } from './format';
+import { cashierLabel, clientLabel, fmtDate } from './format';
 
 const SLOTS = Array.from({ length: POLLA_NUMBERS_REQUIRED }, (_, i) => i);
 
@@ -43,7 +45,30 @@ interface BetsListProps {
   /** Acciones de cada jugada (Administrar). Sin esto no hay columna de acciones. */
   renderActions?: (row: IPollaBetListItem) => ReactNode;
   selection?: BetsSelection;
+  /** Botón para copiar el número de ticket (pasador y superiores). */
+  canCopyTicket?: boolean;
 }
+
+const CopyTicketButton = ({ ticketNumber }: { ticketNumber: string }) => (
+  <Button
+    type="button"
+    size="icon"
+    variant="ghost"
+    className="size-7 shrink-0"
+    title="Copiar número de ticket"
+    aria-label={`Copiar el ticket ${ticketNumber}`}
+    onClick={async () => {
+      try {
+        await navigator.clipboard.writeText(ticketNumber);
+        toast.success('Número de ticket copiado');
+      } catch {
+        toast.error('No se pudo copiar el número de ticket');
+      }
+    }}
+  >
+    <Copy className="size-3.5" />
+  </Button>
+);
 
 const BetStatus = ({ row, freeRepeats }: { row: IPollaBetListItem; freeRepeats: number }) => {
   let main;
@@ -88,6 +113,7 @@ export const BetsList = ({
   freeRepeats = {},
   renderActions,
   selection,
+  canCopyTicket = false,
 }: BetsListProps) => {
   if (rows.length === 0) {
     return <EmptyState message={isFetching ? 'Cargando…' : 'No hay jugadas para mostrar'} />;
@@ -119,15 +145,16 @@ export const BetsList = ({
             <div className="flex items-start justify-between gap-2">
               {selectBox(row, 'mt-1')}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-xs text-muted-foreground">
-                  {row.ticket_number}
+                <p className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                  <span className="truncate">{row.ticket_number}</span>
+                  {canCopyTicket && <CopyTicketButton ticketNumber={row.ticket_number} />}
                 </p>
                 <p className="truncate text-sm">
                   {row.group_name && (
                     <span className="text-muted-foreground">{row.group_name} · </span>
                   )}
                   {cashierLabel(row)}
-                  {row.client_name && <span className="font-semibold"> · {row.client_name}</span>}
+                  {clientLabel(row) && <span className="font-semibold"> · {clientLabel(row)}</span>}
                 </p>
               </div>
               <Badge variant="success" className="shrink-0 text-sm tabular-nums">
@@ -172,10 +199,15 @@ export const BetsList = ({
             {rows.map((row) => (
               <TableRow key={row.polla_bet_id}>
                 {selection && <TableCell>{selectBox(row)}</TableCell>}
-                <TableCell className="font-mono text-xs">{row.ticket_number}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    {row.ticket_number}
+                    {canCopyTicket && <CopyTicketButton ticketNumber={row.ticket_number} />}
+                  </span>
+                </TableCell>
                 <TableCell>{row.group_name ?? ''}</TableCell>
                 <TableCell>{cashierLabel(row)}</TableCell>
-                <TableCell className="font-medium">{row.client_name ?? ''}</TableCell>
+                <TableCell className="font-medium">{clientLabel(row)}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant="success" className="tabular-nums">
                     {row.hits}

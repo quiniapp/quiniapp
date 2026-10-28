@@ -5,13 +5,16 @@ import {
   IPollaBetListItem,
   POLLA_EDITION_STATUS,
   POLLA_HITS_FILTER,
+  POLLA_TICKET_SEARCH,
   isPublicPollaBet,
+  pollaTicketCashierCode,
 } from '@helper/polla/types/game.type';
 import {
   IPollaUserOption,
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
   isPollaAdminRole,
+  isPollaLoaderRole,
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
@@ -21,7 +24,8 @@ import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PollaPage, flattenPages } from '@/hooks/useApi';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
-import { pollaUserOption } from '@/lib/pollaUsers';
+import { pollaUserCode, pollaUserOption } from '@/lib/pollaUsers';
+import { groupLabel } from '@/lib/pollaGroups';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,19 +71,23 @@ export const ManageBetsPage = () => {
 
   const canManage = Boolean(role && isPollaAdminRole(role));
   const isSuper = Boolean(role && isPollaSuperRole(role));
+  // Admin+ y el Super editan, imprimen y filtran por cualquier pasador o
+  // jugador de su alcance; superadmin+ y el Super ven toda la organización.
+  const canLoad = Boolean(role && isPollaLoaderRole(role));
+  const orgWide = isSuper || role === POLLA_USER_TYPE.ASSISTANT;
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   // El admin queda en su grupo: la API ya lo acota, el buscador también.
   const ownGroupId = user?.polla_group_id ?? null;
 
-  const [ticketSearch, setTicketSearch] = useState(searchParams.get('ticket_number') ?? '');
+  const [search, setSearch] = useState(searchParams.get('ticket_number') ?? '');
   const [editing, setEditing] = useState<EditableBet | null>(null);
 
-  const debouncedTicket = useDebouncedValue(ticketSearch.trim());
+  const debouncedSearch = useDebouncedValue(search.trim());
   // El pasador no filtra por pasador: todo lo que ve ya es suyo.
   const cashierId = isCashier ? '' : (searchParams.get('cashier_polla_user_id') ?? '');
   const playerId = searchParams.get('polla_user_id') ?? '';
   const sort = searchParams.get('sort') === 'recent' ? 'recent' : 'hits';
-  const groupId = isSuper ? (searchParams.get('polla_group_id') ?? '') : '';
+  const groupId = orgWide ? (searchParams.get('polla_group_id') ?? '') : '';
   const winnerParam = searchParams.get('winner');
   const winner: WinnerFilter = winnerParam === 'true' || winnerParam === 'false' ? winnerParam : '';
   const hits = parseHits(searchParams.get('hits'));
@@ -87,7 +95,7 @@ export const ManageBetsPage = () => {
 
   const { data: groups } = useGroups(
     { polla_organization_id: organizationId ?? undefined },
-    isSuper
+    orgWide
   );
 
   // Admin+ filtra por pasador (sus jugadas y las de sus jugadores) o por
@@ -117,9 +125,7 @@ export const ManageBetsPage = () => {
   const { data: userFromUrl } = useUser(filterUserId && !pickedMatches ? filterUserId : null);
   const urlUser = userFromUrl?.polla_user_id === filterUserId ? userFromUrl : null;
   const urlCashierId =
-    canManage && urlUser?.user_type === POLLA_USER_TYPE.PLAYER
-      ? urlUser.parent_polla_user_id
-      : null;
+    canLoad && urlUser?.user_type === POLLA_USER_TYPE.PLAYER ? urlUser.parent_polla_user_id : null;
   const { data: cashierOfUrlUser } = useUser(urlCashierId);
   const selectedUser = useMemo(() => {
     if (!filterUserId) return null;
@@ -161,7 +167,10 @@ export const ManageBetsPage = () => {
     });
   };
 
-  const searching = debouncedTicket.length > 0;
+  // Un nº de ticket se busca en todas las ediciones (sin los demás filtros);
+  // otro texto, el jugador o el identificador del ticket en la edición elegida.
+  const searching = POLLA_TICKET_SEARCH.test(debouncedSearch);
+  const nameSearch = !searching && debouncedSearch ? debouncedSearch : undefined;
 
   // Repetir sin cargo: superadmin+ y el admin, con la edición ya finalizada.
   const canFreeRepeat =
@@ -170,7 +179,8 @@ export const ManageBetsPage = () => {
   const betsParams = {
     view: 'manage',
     polla_edition_id: searching ? undefined : editionId || undefined,
-    ticket_number: searching ? debouncedTicket : undefined,
+    ticket_number: searching ? debouncedSearch : undefined,
+    search: nameSearch,
     ...(searching ? {} : userFilter),
     ...(searching ? {} : resultFilter),
     ...(searching ? {} : loadFilter),
@@ -217,16 +227,17 @@ export const ManageBetsPage = () => {
   // Lo que dice el PDF sobre los filtros con que se armó (y el alcance del rol).
   let pdfScope = 'Todas las jugadas';
   if (isCashier) pdfScope = 'Mis jugadas';
-  else if (!isSuper) pdfScope = 'Mi grupo';
+  else if (!orgWide) pdfScope = 'Mi grupo';
   if (selectedUser) {
     pdfScope = `${POLLA_USER_TYPE_LABEL[selectedUser.user_type]} ${
-      selectedUser.number ? `${selectedUser.number} · ` : ''
+      selectedUser.number ? `${pollaUserCode(selectedUser)} · ` : ''
     }${selectedUser.name}`;
   }
   const filtersScope = [
     loadRange ? `cargadas ${periodLabel(loadRange.from, loadRange.to)}` : '',
     winner === 'true' ? 'ganadores' : winner === 'false' ? 'no ganadores' : '',
     hits.length ? `${hits.join(', ')} aciertos` : '',
+    nameSearch ? `"${nameSearch}"` : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -242,7 +253,8 @@ export const ManageBetsPage = () => {
     const { blob, fileName } = await makePollaTicketPdf({
       ticket_number: row.ticket_number,
       user_name: isPublicPollaBet(row) ? (row.client_name ?? row.cashier_name) : row.user_name,
-      cashier_number: row.cashier_number ?? undefined,
+      identifier: row.identifier,
+      cashier_code: pollaTicketCashierCode(row.ticket_number, row.cashier_number) || undefined,
       numbers: row.numbers,
       lotteryName: lotteryById.get(edition.polla_lottery_id) ?? '',
       scheduleName: scheduleById.get(edition.polla_schedule_id) ?? '',
@@ -271,12 +283,13 @@ export const ManageBetsPage = () => {
   const selectableRows = rows.filter(canSelect);
 
   // Editar y borrar lo decide la API para cada jugada (`can_edit`/`can_delete`):
-  // superadmin+ siempre, el admin en su grupo hasta su corte, el pasador borra
-  // lo suyo hasta el cierre (aunque ya se haya liquidado: se descuenta del
-  // pase). Imprimir: admin+ y el pasador lo suyo (acá todo es suyo).
+  // superadmin+ siempre, el admin en su grupo y el Super en la organización
+  // hasta su corte, el pasador borra lo suyo hasta el cierre (aunque ya se
+  // haya liquidado: se descuenta del pase). Imprimir: admin+, el Super y el
+  // pasador lo suyo (acá todo es suyo).
   const renderActions = (row: IPollaBetListItem) => {
     const isPublic = isPublicPollaBet(row);
-    const canPrint = canManage || (isCashier && isPublic && row.is_mine);
+    const canPrint = canLoad || (isCashier && isPublic && row.is_mine);
     const canEdit = Boolean(row.can_edit);
     const canDelete = Boolean(row.can_delete);
 
@@ -345,19 +358,18 @@ export const ManageBetsPage = () => {
         />
 
         <div className="flex min-w-0 flex-col gap-1">
-          <Label>Buscar ticket</Label>
+          <Label htmlFor="manage-bets-search">Buscar</Label>
           <Input
-            value={ticketSearch}
-            placeholder="Nº de ticket"
-            inputMode="numeric"
-            onChange={(e) => {
-              setTicketSearch(e.target.value);
-            }}
-            className="w-full sm:w-[220px]"
+            id="manage-bets-search"
+            type="search"
+            value={search}
+            placeholder="Nº de ticket, jugador o identificador"
+            onChange={(e) => setSearch(e.target.value.slice(0, 50))}
+            className="w-full sm:w-[260px]"
           />
         </div>
 
-        {isSuper && (groups?.data.length ?? 0) > 0 && (
+        {orgWide && (groups?.data.length ?? 0) > 0 && (
           <div className="flex min-w-0 flex-col gap-1">
             <Label>Grupo</Label>
             <Select
@@ -371,7 +383,7 @@ export const ManageBetsPage = () => {
                 <SelectItem value="all">Todos</SelectItem>
                 {groups?.data.map((group) => (
                   <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-                    {group.name}
+                    {groupLabel(group)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -408,7 +420,7 @@ export const ManageBetsPage = () => {
             }}
             placeholder="Todos: número o nombre"
             clearLabel="Todos"
-            scope={{ polla_group_id: (isSuper ? groupId : ownGroupId) || null }}
+            scope={{ polla_group_id: (orgWide ? groupId : ownGroupId) || null }}
             className="sm:w-[260px]"
           />
         )}
@@ -456,6 +468,7 @@ export const ManageBetsPage = () => {
             scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
             filters={{
               ...userFilter,
+              search: nameSearch,
               winner: winner ? winner === 'true' : undefined,
               hits: resultFilter.hits,
               ...loadFilter,
@@ -515,10 +528,11 @@ export const ManageBetsPage = () => {
         fetchNextPage={fetchNextPage}
         freeRepeats={freeRepeats}
         renderActions={renderActions}
+        canCopyTicket
         selection={canFreeRepeat ? { canSelect, selected, onToggle: toggleSelected } : undefined}
       />
 
-      {canManage && <EditBetDialog bet={editing} onClose={() => setEditing(null)} />}
+      {canLoad && <EditBetDialog bet={editing} onClose={() => setEditing(null)} />}
       {freeRepeatOpen && (
         <FreeRepeatDialog
           betIds={[...selected]}

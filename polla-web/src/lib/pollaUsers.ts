@@ -2,16 +2,28 @@ import {
   IPollaUserEntityFront,
   IPollaUserOption,
   POLLA_USER_TYPE,
+  pollaCashierCode,
 } from '@helper/polla/types/user.type';
 
 export const pollaUserFullName = (user: IPollaUserOption) =>
   `${user.name} ${user.last_name ?? ''}`.trim();
 
-/** "pasador" / "jugador de 3 · Pedro" (solo "jugador" sin el pasador a mano). */
+/**
+ * Número con que se muestra en el buscador: el pasador como `{grupo}-{número}`
+ * (se repite entre grupos); el jugador, su número dentro de su pasador.
+ */
+export const pollaUserCode = (user: IPollaUserOption) =>
+  user.user_type === POLLA_USER_TYPE.CASHIER
+    ? pollaCashierCode(user.group_number, user.number)
+    : String(user.number);
+
+/** "pasador" / "jugador de 2-3 · Pedro" (solo "jugador" sin el pasador a mano). */
 const roleText = (user: IPollaUserOption) => {
-  if (user.user_type !== POLLA_USER_TYPE.PLAYER) return 'pasador';
-  if (!user.cashier_name) return 'jugador';
-  return `jugador de ${user.cashier_number ? `${user.cashier_number} · ` : ''}${user.cashier_name}`;
+  const street = user.is_street ? ' de calle' : '';
+  if (user.user_type !== POLLA_USER_TYPE.PLAYER) return `pasador${street}`;
+  if (!user.cashier_name) return `jugador${street}`;
+  const code = pollaCashierCode(user.group_number, user.cashier_number);
+  return `jugador${street} de ${code ? `${code} · ` : ''}${user.cashier_name}`;
 };
 
 /** "Juan Pérez · pasador" / "Ana Gómez · jugador de 3 · Pedro". */
@@ -29,7 +41,8 @@ export const pollaUserTypeLine = (user: IPollaUserOption) =>
  */
 export const pollaUserOption = (
   user: IPollaUserEntityFront,
-  cashier?: IPollaUserEntityFront | null
+  cashier?: IPollaUserEntityFront | null,
+  groupNumber: number | null = null
 ): IPollaUserOption => {
   const owner = user.user_type === POLLA_USER_TYPE.PLAYER ? cashier : user;
   return {
@@ -41,5 +54,7 @@ export const pollaUserOption = (
     user_type: user.user_type,
     cashier_name: owner?.name ?? '',
     cashier_number: owner?.number ?? null,
+    group_number: groupNumber,
+    is_street: user.is_street,
   };
 };

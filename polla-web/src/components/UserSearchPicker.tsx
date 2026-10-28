@@ -9,12 +9,18 @@ import { UserSearchScope, useUserSearch } from '@/hooks/fetchs/usePollaData';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { flattenPages } from '@/hooks/useApi';
 import { cn } from '@/lib/utils';
-import { describePollaUser, pollaUserFullName, pollaUserTypeLine } from '@/lib/pollaUsers';
+import {
+  describePollaUser,
+  pollaUserCode,
+  pollaUserFullName,
+  pollaUserTypeLine,
+} from '@/lib/pollaUsers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const isDigits = (text: string) => /^\d{1,9}$/.test(text);
+/** Un número o un `grupo-número` de pasador: si trae a uno solo, se elige solo. */
+const isDigits = (text: string) => /^(\d{1,4}-)?\d{1,9}$/.test(text);
 
 /** Cerca del final del panel se pide la página siguiente. */
 const LOAD_MORE_THRESHOLD_PX = 40;
@@ -82,7 +88,7 @@ export const UserSearchPicker = ({
   className,
 }: UserSearchPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState(value ? String(value.number) : '');
+  const [text, setText] = useState(value ? pollaUserCode(value) : '');
   // `dirty`: lo escrito es una búsqueda y no el número del elegido.
   const [dirty, setDirty] = useState(false);
   const [open, setOpen] = useState(false);
@@ -112,7 +118,7 @@ export const UserSearchPicker = ({
   // Si el elegido cambia desde afuera (p. ej. al recargar la página con un
   // filtro en la URL), el input muestra su número.
   useEffect(() => {
-    if (!dirty) setText(value ? String(value.number) : '');
+    if (!dirty) setText(value ? pollaUserCode(value) : '');
   }, [value?.polla_user_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -130,7 +136,7 @@ export const UserSearchPicker = ({
 
   const pick = useCallback(
     (user: IPollaUserOption) => {
-      setText(String(user.number));
+      setText(pollaUserCode(user));
       setDirty(false);
       setOpen(false);
       setNavigated(false);
@@ -156,7 +162,7 @@ export const UserSearchPicker = ({
   const dismiss = () => {
     setOpen(false);
     if (dirty && value) {
-      setText(String(value.number));
+      setText(pollaUserCode(value));
       setDirty(false);
     }
   };
@@ -349,7 +355,7 @@ export const UserSearchPicker = ({
                   onClick={() => pick(user)}
                 >
                   <div className="font-medium">
-                    {user.number} · {pollaUserFullName(user)}
+                    {pollaUserCode(user)} · {pollaUserFullName(user)}
                   </div>
                   <div
                     className={cn(

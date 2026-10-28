@@ -38,6 +38,9 @@ const ADMIN_AND_UP = [
 
 const STAFF = [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER];
 
+/** El Super (ASSISTANT) solo carga, ve y administra jugadas. */
+const BET_STAFF = [...STAFF, POLLA_USER_TYPE.ASSISTANT];
+
 interface NavItem {
   to: string;
   label: string;
@@ -50,11 +53,16 @@ const NAV_ITEMS: NavItem[] = [
     to: ROUTES.MAKE_BET,
     label: 'Cargar jugada',
     icon: PlusCircle,
-    roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
+    roles: [POLLA_USER_TYPE.PLAYER, ...BET_STAFF],
   },
   { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
-  { to: ROUTES.MANAGE_BETS, label: 'Administrar jugadas', icon: ClipboardList, roles: STAFF },
-  { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: STAFF },
+  {
+    to: ROUTES.MANAGE_BETS,
+    label: 'Administrar jugadas',
+    icon: ClipboardList,
+    roles: BET_STAFF,
+  },
+  { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: BET_STAFF },
   { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },
   // Ediciones, quinielas, turnos y grupos son de toda la organización.
   { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: POLLA_SUPER_ROLES },

@@ -4,6 +4,18 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-27 (Polla: números por grupo, tickets nuevos, usuarios de calle y rol Super)
+
+- **`polla/types/user.type.ts`**:
+  - `POLLA_USER_TYPE.ASSISTANT` ("Super") y la jerarquía corrida: OWNER 0 · CAPITALIST 1 · SUPERADMIN 2 · ASSISTANT 3 · ADMIN 4 · CASHIER 5 · PLAYER 6.
+  - `POLLA_LOADER_ROLES` / `isPollaLoaderRole` (admin+ y el Super: cargan y administran a nombre de otros). `POLLA_STAFF_ROLES` suma al Super.
+  - Dueño, capitalista y superadmin crean y blanquean al Super; el Super no crea a nadie.
+  - `IPollaUserEntityBack.is_street`, `IPollaUserOption.group_number` / `is_street`, `canBePollaStreetUser` y `pollaCashierCode(grupo, número)` → `"2-5"`.
+- **`polla/types/game.type.ts`**: `identifier` en la jugada (también la pública y la de repetir), `group_number` en los campos derivados, `POLLA_BET_IDENTIFIER_MAX` (60), `POLLA_TICKET_SEARCH` (formato nuevo y viejo, compartido por API y web), `pollaTicketCashierCode` y `POLLA_LIQUIDATION_NO_GROUP`. `IPollaTicketHolder.identifier` y `group_number` en el pasador y los ganadores de "Revisar ticket".
+- **`polla/types/catalog.type.ts`**: `IPollaGroupEntityBack.number`.
+- **`polla/schemas/user.schema.ts`**: `is_street` en el alta (sin usuario ni contraseña; si no es de calle la contraseña es obligatoria) y en la edición, con `password` solo para pasar de calle a aplicación.
+- **`polla/schemas/game.schema.ts`**: `newPollaBetSchema.identifier`.
+
 ### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
 
 - **`polla/types/user.type.ts`**:

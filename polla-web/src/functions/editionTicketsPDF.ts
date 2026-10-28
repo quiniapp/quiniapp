@@ -4,6 +4,7 @@ import {
   IPollaEditionEntityFront,
   POLLA_NUMBERS_REQUIRED,
 } from '@helper/polla/types/game.type';
+import { cashierLabel, clientLabel } from '@/features/bets/format';
 import {
   PdfDoc,
   addFooterPageNumbers,
@@ -137,8 +138,8 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
     ],
     body: rows.map((row) => [
       row.ticket_number,
-      `${row.cashier_number ? `${row.cashier_number} · ` : ''}${row.cashier_name}`,
-      row.client_name ?? '',
+      cashierLabel(row),
+      clientLabel(row),
       ...NUMBER_COLUMNS.map((slot) => row.numbers[slot] ?? ''),
       String(row.hits),
       row.winner ? 'SÍ' : '',

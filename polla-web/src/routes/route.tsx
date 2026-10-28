@@ -34,6 +34,9 @@ const ADMIN_AND_UP = [
 
 const STAFF = [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER];
 
+/** El Super (ASSISTANT) solo carga, ve y administra jugadas. */
+const BET_STAFF = [...STAFF, POLLA_USER_TYPE.ASSISTANT];
+
 const withSuspense = (node: ReactNode) => (
   <Suspense fallback={<div className="p-6 text-muted-foreground">Cargando…</div>}>{node}</Suspense>
 );
@@ -72,20 +75,21 @@ export const RoutesContent: RouteObject[] = [
       },
       {
         path: ROUTES.MAKE_BET,
-        element: guarded([POLLA_USER_TYPE.PLAYER, ...STAFF], <MakeBetPage />),
+        element: guarded([POLLA_USER_TYPE.PLAYER, ...BET_STAFF], <MakeBetPage />),
         handle: { title: 'Cargar jugada' } satisfies RouteHandle,
       },
       {
         // Jugadas es de solo lectura para todos; acá cada rol administra lo
-        // suyo (el pasador, lo suyo y de sus jugadores; el admin, su grupo).
+        // suyo (el pasador, lo suyo y de sus jugadores; el admin, su grupo;
+        // el Super, toda la organización).
         path: ROUTES.MANAGE_BETS,
-        element: guarded(STAFF, <ManageBetsPage />),
+        element: guarded(BET_STAFF, <ManageBetsPage />),
         handle: { title: 'Administrar jugadas' } satisfies RouteHandle,
       },
       {
         // Todos menos el jugador, siempre dentro de la propia organización.
         path: ROUTES.CHECK_TICKET,
-        element: guarded(STAFF, <CheckTicketPage />),
+        element: guarded(BET_STAFF, <CheckTicketPage />),
         handle: { title: 'Revisar ticket' } satisfies RouteHandle,
       },
       {

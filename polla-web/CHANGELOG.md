@@ -4,6 +4,21 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-27 (Números por grupo, tickets nuevos, usuarios de calle, rol Super y liquidación por grupo)
+
+- **Rol Super** (`routes/route.tsx`, `components/layout/AppLayout.tsx`): entra a Cargar jugada, Jugadas, Administrar jugadas, Revisar ticket, Resultados y Configuración.
+- **Cargar jugada** (`features/make-bet/index.tsx`):
+  - El pasador carga a su nombre o al de uno de sus jugadores.
+  - Admin+ y el Super eligen "Pasador | Jugador"; el pasador se busca por número, `grupo-número` o nombre.
+  - Campo "Identificador": obligatorio para el pasador y para cualquier jugada a nombre de un pasador; el jugador no lo ve.
+- **Ticket impreso** (`functions/makePollaTicket.ts`): "Usuario: grupo-pasador", el número de ticket achica la letra hasta entrar y una línea "Id:" con el identificador.
+- **Jugadas y Administrar jugadas**: un solo "Buscar": un nº de ticket busca en todas las ediciones; otro texto, el jugador o el identificador en la edición elegida (también en el PDF). El Super administra toda la organización (grupo, editar, borrar, imprimir).
+- **Listado de jugadas** (`features/bets/BetsList.tsx`, `format.ts`): botón para copiar el nº de ticket (todos menos el jugador), pasador como `grupo-número` y el cliente con su identificador.
+- **Usuarios** (`features/users`): "De calle" para pasadores y jugadores (sin usuario ni contraseña); el número se precarga con el siguiente libre del grupo o del pasador; badge "Calle"; sin blanqueo para los de calle; al editar se pasa de calle a aplicación (pide usuario y contraseña) o al revés (avisa que se borran las credenciales).
+- **Grupos** (`features/groups/index.tsx`): columna Nº. `lib/pollaGroups.ts`: `groupLabel` ("2 · Zona norte").
+- **Cuenta corriente** (`features/current-account`): se ven todos los pasadores como `grupo-número`; "Generar liquidación" pide elegir un grupo (o "Sin grupo") y liquida solo ese grupo.
+- **Revisar ticket, ganadores y PDFs de tickets**: pasador como `grupo-número` e identificador del ticket.
+
 ### Changed - 2026-10-26 (Menú y PDF de Jugadas)
 
 - **Menú lateral** (`components/layout/AppLayout.tsx`): "Cargar jugada" pasa primero, después "Jugadas" y "Administrar jugadas". El resto queda igual.

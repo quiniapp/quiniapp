@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { POLLA_USER_TYPE } from '../types/user.type';
+import { POLLA_USER_TYPE, canBePollaStreetUser } from '../types/user.type';
 
 const password = z.string().min(6, 'La contraseña debe tener al menos 6 caracteres');
 
@@ -18,7 +18,9 @@ export const newPollaUserSchema = z
   .object({
     ...baseUser,
     user_type: z.nativeEnum(POLLA_USER_TYPE),
-    password,
+    /** De calle: sin usuario ni contraseña (solo pasadores y jugadores). */
+    is_street: z.boolean().optional(),
+    password: password.optional(),
     polla_organization_id: z.string().uuid().optional(),
     parent_polla_user_id: z.string().uuid().nullable().optional(),
     fee: z.number().min(0).max(100).nullable().optional(),
@@ -26,6 +28,29 @@ export const newPollaUserSchema = z
     fee_plus: z.number().min(0).max(100).nullable().optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.is_street) {
+      if (!canBePollaStreetUser(data.user_type)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['is_street'],
+          message: 'Solo pasadores y jugadores pueden ser de calle',
+        });
+      }
+      if (data.username || data.password) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['username'],
+          message: 'Un usuario de calle no lleva usuario ni contraseña',
+        });
+      }
+    } else if (!data.password) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['password'],
+        message: 'La contraseña es obligatoria',
+      });
+    }
+
     if (data.user_type === POLLA_USER_TYPE.CASHIER) {
       if (data.fee === null || data.fee === undefined) {
         ctx.addIssue({
@@ -73,6 +98,12 @@ export const updatePollaUserSchema = z.object({
   parent_polla_user_id: z.string().uuid().nullable().optional(),
   fee: z.number().min(0).max(100).nullable().optional(),
   fee_plus: z.number().min(0).max(100).nullable().optional(),
+  /**
+   * Pasar de aplicación a calle borra usuario y contraseña; de calle a
+   * aplicación pide `username` y `password` (la única vez que se manda acá).
+   */
+  is_street: z.boolean().optional(),
+  password: password.optional(),
 });
 
 /** Blanqueo de contraseña: la que pone el superior queda definitiva. */

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
+import { POLLA_TICKET_SEARCH } from '@helper/polla/types/game.type';
 import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useBets, useRefreshBets } from '@/hooks/fetchs/usePollaData';
@@ -39,9 +40,12 @@ export const BetsPage = () => {
   const [urlLoadRange, changeLoadRange] = useLoadRangeParam();
   const loadRange = isStaff ? urlLoadRange : null;
 
-  const [ticketSearch, setTicketSearch] = useState(searchParams.get('ticket_number') ?? '');
-  const debouncedTicket = useDebouncedValue(ticketSearch.trim());
-  const searching = debouncedTicket.length > 0;
+  const [search, setSearch] = useState(searchParams.get('ticket_number') ?? '');
+  const debouncedSearch = useDebouncedValue(search.trim());
+  // Un nº de ticket se busca en todas las ediciones; otro texto, el jugador o
+  // el identificador del ticket dentro de la edición elegida.
+  const searching = POLLA_TICKET_SEARCH.test(debouncedSearch);
+  const nameSearch = !searching && debouncedSearch ? debouncedSearch : undefined;
   // "Mis jugadas": el pasador, lo suyo y lo de sus jugadores; el resto, lo suyo.
   const mine = searchParams.get('mine') === '1';
 
@@ -59,7 +63,8 @@ export const BetsPage = () => {
   const betsParams = {
     view: 'public',
     polla_edition_id: searching ? undefined : editionId || undefined,
-    ticket_number: searching ? debouncedTicket : undefined,
+    ticket_number: searching ? debouncedSearch : undefined,
+    search: nameSearch,
     mine: mine ? 'true' : undefined,
     ...loadFilter,
     sort: 'hits',
@@ -92,6 +97,7 @@ export const BetsPage = () => {
   const pdfFiltersLabel = [
     mine ? 'Mis jugadas' : 'Todas las jugadas',
     loadRange ? `cargadas ${periodLabel(loadRange.from, loadRange.to)}` : '',
+    nameSearch ? `"${nameSearch}"` : '',
     'por aciertos',
   ]
     .filter(Boolean)
@@ -112,15 +118,14 @@ export const BetsPage = () => {
         />
 
         <div className="flex min-w-0 flex-col gap-1">
-          <Label>Buscar ticket</Label>
+          <Label htmlFor="bets-search">Buscar</Label>
           <Input
-            value={ticketSearch}
-            placeholder="Nº de ticket"
-            inputMode="numeric"
-            onChange={(e) => {
-              setTicketSearch(e.target.value);
-            }}
-            className="w-full sm:w-[220px]"
+            id="bets-search"
+            type="search"
+            value={search}
+            placeholder="Nº de ticket, jugador o identificador"
+            onChange={(e) => setSearch(e.target.value.slice(0, 50))}
+            className="w-full sm:w-[260px]"
           />
         </div>
 
@@ -187,6 +192,7 @@ export const BetsPage = () => {
             scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
             filters={{
               view: 'public',
+              search: nameSearch,
               mine,
               load_from: loadRange?.from,
               load_to: loadRange?.to,
@@ -204,6 +210,7 @@ export const BetsPage = () => {
         hasNextPage={Boolean(hasNextPage)}
         isFetchingNextPage={isFetchingNextPage}
         fetchNextPage={fetchNextPage}
+        canCopyTicket={isStaff}
       />
     </div>
   );

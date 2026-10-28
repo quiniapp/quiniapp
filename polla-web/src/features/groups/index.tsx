@@ -349,6 +349,7 @@ export const GroupsPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12 text-right">Nº</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Admin</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -357,6 +358,7 @@ export const GroupsPage = () => {
             <TableBody>
               {groups.map((group) => (
                 <TableRow key={group.polla_group_id}>
+                  <TableCell className="text-right tabular-nums">{group.number}</TableCell>
                   <TableCell className="font-medium">{group.name}</TableCell>
                   <TableCell>
                     {adminLabel(group) ?? (

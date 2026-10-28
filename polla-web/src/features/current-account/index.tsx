@@ -2,8 +2,11 @@ import { ComponentProps, ReactNode, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { BarChart2, CreditCard, FileDown, FileText, List, RefreshCw, Wallet } from 'lucide-react';
-import { IPollaCurrentAccountPeriodRow } from '@helper/polla/types/game.type';
-import { IPollaUserOption, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import {
+  IPollaCurrentAccountPeriodRow,
+  POLLA_LIQUIDATION_NO_GROUP,
+} from '@helper/polla/types/game.type';
+import { IPollaUserOption, POLLA_USER_TYPE, pollaCashierCode } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
@@ -36,6 +39,7 @@ import { downloadDailyAccountsPDF } from '@/functions/current-account/accountTab
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
 import { cn } from '@/lib/utils';
+import { groupLabel } from '@/lib/pollaGroups';
 import { CashierAccountView } from './CashierAccountView';
 import { GroupAccountView, GroupAccountsPanel } from './GroupAccounts';
 import { fetchWinnersByCashier } from './fetchers';
@@ -72,10 +76,12 @@ const ActionButton = ({
 /**
  * Cuenta corriente de los pasadores, como la de QuiniApp sin Arrastre ni Deje
  * (la liquidación de Polla no tiene deje): filtros, planilla con total general,
- * liquidar por pasador o todo el día y los exportes. Por día, cada pasador se
- * muestra acumulado desde el día siguiente a su última liquidación (en
- * general, la semana) hasta la fecha elegida; por rango, lo de esos días. En
- * los dos casos se liquida en la última fecha.
+ * liquidar por pasador o un grupo entero en el día, y los exportes. Se ven
+ * todos los pasadores (como `{grupo}-{número}`: el número se repite entre
+ * grupos), pero "Generar liquidación" es de un grupo por vez. Por día, cada
+ * pasador se muestra acumulado desde el día siguiente a su última liquidación
+ * (en general, la semana) hasta la fecha elegida; por rango, lo de esos días.
+ * En los dos casos se liquida en la última fecha.
  */
 const AdminAccountView = () => {
   const { organizationId } = useAuth();
@@ -92,16 +98,22 @@ const AdminAccountView = () => {
 
   const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;
 
+  // "Sin grupo" no es un filtro de la API: se acota acá abajo.
+  const noGroup = groupId === POLLA_LIQUIDATION_NO_GROUP;
+
   const filters = {
     date,
     range_from: rangeFrom,
-    polla_group_id: groupId || undefined,
+    polla_group_id: groupId && !noGroup ? groupId : undefined,
     polla_user_id: cashier?.polla_user_id,
     polla_organization_id: organizationId ?? undefined,
   };
 
   const { data, isFetching } = useCurrentAccountsOfDay(filters);
-  const rows = useMemo(() => data?.data ?? [], [data]);
+  const rows = useMemo(
+    () => (data?.data ?? []).filter((row) => !noGroup || !row.polla_group_id),
+    [data, noGroup]
+  );
   // Lo que se muestra y se exporta: los montos acumulados del período.
   const views = useMemo(() => rows.map(periodView), [rows]);
   const totals = useMemo(() => computeAccountTotals(views), [views]);
@@ -109,9 +121,24 @@ const AdminAccountView = () => {
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
   const groupList = useMemo(() => groups?.data ?? [], [groups]);
   const groupById = useMemo(
-    () => new Map(groupList.map((group) => [group.polla_group_id, group.name])),
+    () => new Map(groupList.map((group) => [group.polla_group_id, group])),
     [groupList]
   );
+  type AccountRow = Pick<IPollaCurrentAccountPeriodRow, 'polla_group_id' | 'user_number'>;
+  const groupOf = (row: AccountRow) =>
+    row.polla_group_id ? groupById.get(row.polla_group_id) : undefined;
+  /** `2-5`: el número de pasador se repite entre grupos. */
+  const cashierCode = (row: AccountRow) => pollaCashierCode(groupOf(row)?.number, row.user_number);
+
+  // Grupo que se liquida con "Generar liquidación" (uno por vez).
+  const selectedGroup = noGroup ? null : groupById.get(groupId);
+  const liquidationGroup = groupId
+    ? {
+        id: groupId,
+        number: selectedGroup?.number ?? null,
+        label: noGroup ? 'Sin grupo' : groupLabel(selectedGroup),
+      }
+    : null;
 
   const { mutate: calculate, isPending: isCalculating } = useCalculateCurrentAccounts();
 
@@ -128,7 +155,7 @@ const AdminAccountView = () => {
         date,
         from: rangeFrom,
         rows: views,
-        groupName: groupId ? groupById.get(groupId) : undefined,
+        groupName: groupId ? (noGroup ? 'Sin grupo' : groupById.get(groupId)?.name) : undefined,
       });
     } catch {
       toast.error('No se pudo generar el PDF');
@@ -180,7 +207,8 @@ const AdminAccountView = () => {
         <ActionButton
           icon={<Wallet />}
           onClick={() => setGenerating(true)}
-          disabled={rows.length === 0}
+          disabled={rows.length === 0 || !liquidationGroup}
+          title={liquidationGroup ? undefined : 'Elegí un grupo para liquidarlo'}
         >
           Generar liquidación
         </ActionButton>
@@ -226,9 +254,10 @@ const AdminAccountView = () => {
               <SelectItem value="all">Todos</SelectItem>
               {groupList.map((group) => (
                 <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-                  {group.name}
+                  {groupLabel(group)}
                 </SelectItem>
               ))}
+              <SelectItem value={POLLA_LIQUIDATION_NO_GROUP}>Sin grupo</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -244,6 +273,12 @@ const AdminAccountView = () => {
           className="sm:w-[260px]"
         />
       </div>
+
+      {!liquidationGroup && rows.length > 0 && (
+        <p className="mb-2 text-sm text-muted-foreground">
+          Para generar la liquidación elegí un grupo: se liquida un grupo por vez.
+        </p>
+      )}
 
       <p className="mb-2 text-sm text-muted-foreground">
         {rangeFrom
@@ -268,7 +303,7 @@ const AdminAccountView = () => {
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="min-w-0">
                     <span className="block font-medium">
-                      {row.user_number ? `${row.user_number} · ` : ''}
+                      {cashierCode(row) ? `${cashierCode(row)} · ` : ''}
                       {row.user_name}
                     </span>
                     <span className="block text-xs text-muted-foreground">
@@ -340,7 +375,9 @@ const AdminAccountView = () => {
                         {row.is_liquidated ? 'Liquidado' : 'Liquidar'}
                       </Button>
                     </TableCell>
-                    <TableCell className="tabular-nums">{row.user_number ?? ''}</TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {cashierCode(row)}
+                    </TableCell>
                     <TableCell className="max-w-[220px] truncate">{row.user_name}</TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
                       {dayjs(row.period_from).format('DD/MM')}
@@ -357,8 +394,8 @@ const AdminAccountView = () => {
                         ${fmtMoney(row[key])}
                       </TableCell>
                     ))}
-                    <TableCell>
-                      {row.polla_group_id ? (groupById.get(row.polla_group_id) ?? '') : ''}
+                    <TableCell className="whitespace-nowrap">
+                      {groupOf(row) ? groupLabel(groupOf(row)) : ''}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -382,11 +419,12 @@ const AdminAccountView = () => {
       {liquidating && (
         <LiquidateCashierDialog account={liquidating} onClose={() => setLiquidating(null)} />
       )}
-      {generating && (
+      {generating && liquidationGroup && (
         <GenerateLiquidationDialog
           date={date}
           from={rangeFrom}
           rows={rows}
+          group={liquidationGroup}
           organizationId={organizationId}
           onClose={() => setGenerating(false)}
         />

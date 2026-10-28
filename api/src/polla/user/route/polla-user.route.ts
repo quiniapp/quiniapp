@@ -3,11 +3,12 @@ import { BadRequestError, ConflictError, ForbiddenError } from '@helper/errors';
 import {
   POLLA_USER_TYPE,
   POLLA_USER_HIERARCHY,
-  POLLA_USER_TYPE_LABEL,
   IPollaSessionUser,
+  canBePollaStreetUser,
   canCreatePollaUser,
   canResetPollaPassword,
   isPollaAdminRole,
+  isPollaLoaderRole,
   pollaUserListTypes,
 } from '@helper/polla/types/user.type';
 import {
@@ -17,7 +18,7 @@ import {
 } from '@helper/polla/schemas/user.schema';
 import { hashPassword } from 'api/helper/password';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
-import { PollaUserRepository } from '../repository/polla-user.repository';
+import { PollaNumberScope, PollaUserRepository } from '../repository/polla-user.repository';
 import { PollaAuthRepository } from '../../auth/repository/polla-auth.repository';
 import { parsePagination } from '../../helper/pagination';
 import {
@@ -58,8 +59,7 @@ export class PollaUserRouter {
       POLLA_USER_TYPE.CASHIER
     );
 
-    // Cargar a nombre de otro es solo de ADMIN y superiores: el pasador carga a
-    // su nombre, así que no busca usuarios por número.
+    // Cargar a nombre de otro por número es de ADMIN y superiores.
     const adminAndUp = requirePollaRole(
       POLLA_USER_TYPE.OWNER,
       POLLA_USER_TYPE.CAPITALIST,
@@ -67,12 +67,24 @@ export class PollaUserRouter {
       POLLA_USER_TYPE.ADMIN
     );
 
+    // El Super no administra usuarios, pero trae por id al pasador o jugador
+    // con que filtra las jugadas.
+    const staffAndAssistant = requirePollaRole(
+      POLLA_USER_TYPE.OWNER,
+      POLLA_USER_TYPE.CAPITALIST,
+      POLLA_USER_TYPE.SUPERADMIN,
+      POLLA_USER_TYPE.ASSISTANT,
+      POLLA_USER_TYPE.ADMIN,
+      POLLA_USER_TYPE.CASHIER
+    );
+
     this.router.get('/', staffOnly, this.getAllHandler);
     // Todos buscan pasadores y jugadores para filtrar las jugadas (que ya ven
-    // con nombre); `scope=writable` es para cargar a nombre de otro (admin+).
+    // con nombre); `scope=writable` es para cargar a nombre de otro.
     this.router.get('/search', this.searchHandler);
+    this.router.get('/next-number', staffOnly, this.nextNumberHandler);
     this.router.get('/by-number/:number', adminAndUp, this.getByNumberHandler);
-    this.router.get('/:id', staffOnly, this.getByIdHandler);
+    this.router.get('/:id', staffAndAssistant, this.getByIdHandler);
     this.router.post('/', staffOnly, this.createHandler);
     this.router.put('/:id', staffOnly, this.updateHandler);
     this.router.post('/:id/reset-password', staffOnly, this.resetPasswordHandler);
@@ -116,24 +128,43 @@ export class PollaUserRouter {
   };
 
   /**
-   * El número es único por tipo dentro de la organización: un pasador y un
-   * jugador pueden compartirlo, dos jugadores no. Se chequea antes para dar un
-   * mensaje claro; el índice único queda de respaldo.
+   * El número del pasador es único dentro de su grupo (los sin grupo, entre
+   * ellos) y el del jugador, dentro de su pasador: se repiten entre grupos y
+   * pasadores. Se chequea antes para dar un mensaje claro; los índices únicos
+   * quedan de respaldo.
    */
   private assertNumberFree = async (params: {
     organizationId: string;
-    userType: POLLA_USER_TYPE;
+    scope: PollaNumberScope | null;
     number: number | null | undefined;
     excludeId?: string;
   }) => {
-    if (params.number === null || params.number === undefined) return;
+    if (params.number === null || params.number === undefined || !params.scope) return;
 
-    const taken = await this.repository.isNumberTaken({ ...params, number: params.number });
+    const taken = await this.repository.isNumberTaken({
+      organizationId: params.organizationId,
+      scope: params.scope,
+      number: params.number,
+      excludeId: params.excludeId,
+    });
     if (taken) {
       throw new ConflictError(
-        `Ese número de ${POLLA_USER_TYPE_LABEL[params.userType].toLowerCase()} ya está en uso`
+        params.scope.userType === POLLA_USER_TYPE.CASHIER
+          ? 'Ese número de pasador ya está en uso en el grupo'
+          : 'Ese número de jugador ya está en uso en el pasador'
       );
     }
+  };
+
+  /** Ámbito del número de un pasador (su grupo) o de un jugador (su pasador). */
+  private numberScope = (
+    userType: POLLA_USER_TYPE,
+    groupId: string | null,
+    parentId: string | null
+  ): PollaNumberScope | null => {
+    if (userType === POLLA_USER_TYPE.CASHIER) return { userType, groupId };
+    if (userType === POLLA_USER_TYPE.PLAYER && parentId) return { userType, parentId };
+    return null;
   };
 
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -169,25 +200,29 @@ export class PollaUserRouter {
 
   /**
    * Buscador para elegir un pasador o jugador de una lista: `q` con solo
-   * dígitos es el número exacto; otro texto busca en nombre, apellido y
-   * usuario. `user_type` acota los tipos (separados por coma); `polla_group_id`
-   * y `parent_polla_user_id`, el grupo y el pasador.
+   * dígitos es el número exacto; `2-5`, el pasador 5 del grupo 2; otro texto
+   * busca en nombre, apellido y usuario. `user_type` acota los tipos
+   * (separados por coma); `polla_group_id` y `parent_polla_user_id`, el grupo
+   * y el pasador.
    *
    * Todos lo usan para filtrar jugadas (solo datos públicos). Con
-   * `scope=writable` es para cargar a nombre de otro: ADMIN+ y, el admin, solo
-   * dentro de su grupo.
+   * `scope=writable` es para cargar a nombre de otro: ADMIN+ y el Super (el
+   * admin, solo dentro de su grupo) y el pasador, solo a sus jugadores.
    */
   private searchHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const pagination = parsePagination(req.query as Record<string, unknown>);
     const writable = req.query.scope === 'writable';
+    const cashierLoading = writable && user.user_type === POLLA_USER_TYPE.CASHIER;
 
-    if (writable && !isPollaAdminRole(user.user_type)) {
+    if (writable && !isPollaLoaderRole(user.user_type) && !cashierLoading) {
       throw new ForbiddenError('Solo podés cargar jugadas a tu nombre');
     }
 
     const requested = typeof req.query.user_type === 'string' ? req.query.user_type.split(',') : [];
-    const searchable = [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER];
+    const searchable = cashierLoading
+      ? [POLLA_USER_TYPE.PLAYER]
+      : [POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER];
     const userTypes = requested.length
       ? searchable.filter((t) => requested.includes(t))
       : searchable;
@@ -202,7 +237,7 @@ export class PollaUserRouter {
         userTypes,
         q: typeof req.query.q === 'string' ? req.query.q : '',
         groupId: (writable ? writableGroupId(user) : null) ?? queryString(req.query.polla_group_id),
-        parentId: queryString(req.query.parent_polla_user_id),
+        parentId: cashierLoading ? user.polla_user_id : queryString(req.query.parent_polla_user_id),
       },
       pagination
     );
@@ -231,6 +266,42 @@ export class PollaUserRouter {
     });
 
     res.status(200).json({ data: { user: found } });
+  });
+
+  /**
+   * Siguiente número libre para el alta: el de un pasador en un grupo
+   * (`polla_group_id`; sin grupo si falta, y el admin siempre en el suyo) o el
+   * de un jugador de un pasador (`parent_polla_user_id`; el pasador, de los
+   * suyos).
+   */
+  private nextNumberHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const userType = req.query.user_type;
+    const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
+
+    let scope: PollaNumberScope | null = null;
+    if (userType === POLLA_USER_TYPE.CASHIER) {
+      scope = {
+        userType,
+        groupId: writableGroupId(user) ?? queryString(req.query.polla_group_id),
+      };
+    } else if (userType === POLLA_USER_TYPE.PLAYER) {
+      const parentId =
+        user.user_type === POLLA_USER_TYPE.CASHIER
+          ? user.polla_user_id
+          : queryString(req.query.parent_polla_user_id);
+      if (parentId) {
+        if (user.user_type !== POLLA_USER_TYPE.CASHIER) {
+          await this.assertParentInScope(user, parentId);
+        }
+        scope = { userType, parentId };
+      }
+    }
+
+    if (!scope) throw new BadRequestError('Falta el grupo o el pasador');
+
+    const number = await this.repository.nextNumber(organizationId, scope);
+    res.status(200).json({ data: { number } });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -271,9 +342,12 @@ export class PollaUserRouter {
       password,
       polla_organization_id: _ignored,
       polla_group_id: requestedGroup,
+      is_street: street,
       ...rest
     } = payload;
     void _ignored;
+    // De calle: sin usuario ni contraseña, no entra (el schema ya lo controló).
+    const isStreet = Boolean(street);
 
     // Grupo fijo desde el alta: el pasador del admin queda en su grupo; el de
     // un superadmin+, en el que elija (o sin grupo). El jugador toma el de su
@@ -285,7 +359,7 @@ export class PollaUserRouter {
 
     await this.assertNumberFree({
       organizationId,
-      userType: payload.user_type,
+      scope: this.numberScope(payload.user_type, groupId, parentId),
       number: payload.number,
     });
 
@@ -296,8 +370,10 @@ export class PollaUserRouter {
       parent_polla_user_id: parentId,
       polla_group_id: groupId,
       polla_organization_id: organizationId,
-      password_hash: await hashPassword(password),
-      password_changed_at: new Date().toISOString(),
+      is_street: isStreet,
+      username: isStreet ? null : (rest.username ?? null),
+      password_hash: isStreet || !password ? null : await hashPassword(password),
+      password_changed_at: isStreet ? null : new Date().toISOString(),
     });
 
     res.status(201).json({ data: { user: created } });
@@ -317,37 +393,74 @@ export class PollaUserRouter {
       polla_group_id: _group,
       parent_polla_user_id: parentId,
       fee,
+      is_street: street,
+      password,
       ...rest
     } = payload;
     void _feePlus;
     void _group;
 
-    if (rest.number !== undefined && rest.number !== target.number) {
+    const changesParent =
+      target.user_type === POLLA_USER_TYPE.PLAYER &&
+      Boolean(parentId) &&
+      parentId !== target.parent_polla_user_id &&
+      isPollaAdminRole(user.user_type);
+    const finalNumber = rest.number !== undefined ? rest.number : target.number;
+
+    // El número se controla en su ámbito final: un jugador que cambia de
+    // pasador no puede chocar con los del nuevo.
+    if (finalNumber !== target.number || changesParent) {
       await this.assertNumberFree({
         organizationId: target.polla_organization_id,
-        userType: target.user_type,
-        number: rest.number,
+        scope: this.numberScope(
+          target.user_type,
+          target.polla_group_id,
+          changesParent ? parentId! : target.parent_polla_user_id
+        ),
+        number: finalNumber,
         excludeId: target.polla_user_id,
       });
     }
 
     const changes: Record<string, unknown> = { ...rest };
 
+    // Aplicación → calle: se borran usuario y contraseña y se cierran sus
+    // sesiones. Calle → aplicación: necesita usuario y contraseña.
+    const toStreet = street === true && !target.is_street;
+    const toApp = street === false && target.is_street;
+    const staysStreet = target.is_street && !toApp;
+
+    if (street === true && !canBePollaStreetUser(target.user_type)) {
+      throw new BadRequestError('Solo pasadores y jugadores pueden ser de calle');
+    }
+    if (toStreet || staysStreet) {
+      changes.username = null;
+    }
+    if (toStreet) {
+      changes.is_street = true;
+      changes.password_hash = null;
+      changes.password_changed_at = null;
+    }
+    if (toApp) {
+      if (!rest.username || !password) {
+        throw new BadRequestError('Para que entre a la aplicación necesita usuario y contraseña');
+      }
+      changes.is_street = false;
+      changes.password_hash = await hashPassword(password);
+      changes.password_changed_at = new Date().toISOString();
+    }
+
     // La comisión es del pasador y la fija un superior; el pasador de un
     // jugador solo lo cambia un ADMIN+, a otro del mismo grupo (la base lo
     // vuelve a controlar).
     if (target.user_type === POLLA_USER_TYPE.CASHIER && fee !== undefined) changes.fee = fee;
-    if (
-      target.user_type === POLLA_USER_TYPE.PLAYER &&
-      parentId &&
-      parentId !== target.parent_polla_user_id &&
-      isPollaAdminRole(user.user_type)
-    ) {
-      await this.assertParentInScope(user, parentId);
+    if (changesParent) {
+      await this.assertParentInScope(user, parentId!);
       changes.parent_polla_user_id = parentId;
     }
 
     const updated = await this.repository.update(req.params.id, changes);
+    if (toStreet) await this.authRepository.revokeAllSessions(target.polla_user_id);
 
     res.status(200).json({ data: { user: updated } });
   });
@@ -368,6 +481,9 @@ export class PollaUserRouter {
 
     if (!canResetPollaPassword(user.user_type, target.user_type)) {
       throw new ForbiddenError('No podés blanquear la contraseña de ese tipo de usuario');
+    }
+    if (target.is_street) {
+      throw new BadRequestError('Es de calle: no tiene contraseña (pasalo a aplicación)');
     }
 
     const { password } = resetPollaPasswordSchema.parse(req.body);

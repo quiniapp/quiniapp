@@ -18,7 +18,10 @@ function fmtAmount(n: number): string {
 export interface PollaTicketData {
   ticket_number: string;
   user_name: string;
-  cashier_number?: number;
+  /** Identificador del ticket ("chicho"), si tiene. */
+  identifier?: string | null;
+  /** Pasador como `{grupo}-{número}` (ver `pollaTicketCashierCode`). */
+  cashier_code?: string;
   numbers: string[]; // 10 números de 2 cifras
   lotteryName: string;
   scheduleName: string;
@@ -37,7 +40,7 @@ export interface PollaTicketData {
 const ticketHeight = (data: PollaTicketData) =>
   MARGIN +
   2 +
-  (data.cashier_number !== undefined ? 7 : 0) +
+  (data.cashier_code ? 7 : 0) +
   6 + // Ticket
   3 + // divider
   8 + // edición (2 líneas)
@@ -48,10 +51,23 @@ const ticketHeight = (data: PollaTicketData) =>
   9 + // precio ticket
   9 + // pozo
   (data.surprisePoolAmount ? 4 : 0) + // sorpresa
+  (data.identifier ? 4 : 0) + // identificador
   3 + // divider
   3 +
   3 +
   2; // margen final
+
+/** Tamaño de letra (hasta `max`) con que `text` entra en el ancho imprimible. */
+const fitFontSize = (doc: jsPDF, text: string, max: number) => {
+  const width = PAGE_W - 2 * MARGIN;
+  let size = max;
+  doc.setFontSize(size);
+  while (size > 7 && doc.getTextWidth(text) > width) {
+    size -= 0.5;
+    doc.setFontSize(size);
+  }
+  return size;
+};
 
 /** Dibuja un ticket en la página actual del documento. */
 const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
@@ -67,11 +83,14 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  if (data.cashier_number !== undefined) {
-    doc.text(`Usuario: ${data.cashier_number}`, cx, y, { align: 'center' });
+  if (data.cashier_code) {
+    doc.text(`Usuario: ${data.cashier_code}`, cx, y, { align: 'center' });
     y += 7;
   }
-  doc.text(`Ticket: ${data.ticket_number}`, cx, y, { align: 'center' });
+  // El número nuevo ({grupo}-{hora}-{pasador}-{jugador}) no entra en 12 pt.
+  const ticketLine = `Ticket: ${data.ticket_number}`;
+  doc.setFontSize(fitFontSize(doc, ticketLine, 12));
+  doc.text(ticketLine, cx, y, { align: 'center' });
   y += 6;
 
   divider(true);
@@ -142,7 +161,13 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(data.user_name, MARGIN, y);
-  y += 5;
+  y += 4;
+  if (data.identifier) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Id: ${data.identifier}`, MARGIN, y);
+    y += 4;
+  }
+  y += 1;
 
   divider(true);
   divider();
