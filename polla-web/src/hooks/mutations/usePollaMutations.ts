@@ -120,7 +120,7 @@ export const useDeleteSchedule = () =>
 
 export const useCreateUser = () =>
   useApiMutation('post', BACKEND_ROUTES.user.base, {
-    invalidate: ['polla-users', 'polla-user-search'],
+    invalidate: ['polla-users', 'polla-user-search', 'polla-user-next-number'],
     successMessage: 'Usuario creado',
   });
 
@@ -174,7 +174,13 @@ export const useDeleteEdition = () =>
 export const useCreateBet = () =>
   useApiMutation<
     IPollaBetEntityFront,
-    { polla_edition_id: string; numbers: string[]; polla_user_id?: string; date?: string }
+    {
+      polla_edition_id: string;
+      numbers: string[];
+      polla_user_id?: string;
+      date?: string;
+      identifier?: string;
+    }
   >('post', BACKEND_ROUTES.bet.base, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
     successMessage: 'Jugada cargada',
@@ -247,15 +253,20 @@ export const useCalculateCurrentAccounts = () =>
     { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta corriente actualizada' }
   );
 
+/** Liquida en `date` a los pasadores de un grupo (`POLLA_LIQUIDATION_NO_GROUP`: sin grupo). */
 export const useLiquidateCurrentAccounts = () =>
-  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
-    'post',
-    BACKEND_ROUTES.currentAccount.liquidate,
+  useApiMutation<
+    unknown,
     {
-      invalidate: ['polla-current-accounts'],
-      successMessage: 'Cuentas liquidadas',
+      date: string;
+      range_from?: string;
+      polla_group_id: string;
+      polla_organization_id?: string;
     }
-  );
+  >('post', BACKEND_ROUTES.currentAccount.liquidate, {
+    invalidate: ['polla-current-accounts'],
+    successMessage: 'Cuentas liquidadas',
+  });
 
 export const useUpdateCurrentAccount = () =>
   useApiMutation<unknown, { id: string } & Record<string, unknown>>(

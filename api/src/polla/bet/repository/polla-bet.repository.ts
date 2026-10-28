@@ -12,18 +12,25 @@ import {
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
 import { pollaToday } from '../../helper/date';
+import { ilikeAny } from '../../helper/search';
 
-/** El grupo del pasador viaja embebido: es la columna "Coord" del listado. */
-const BET_COLUMNS = '*, polla_groups(name)';
+/**
+ * El grupo del pasador viaja embebido: es la columna "Coord" del listado y su
+ * número encabeza el del pasador (`{grupo}-{pasador}`).
+ */
+const BET_COLUMNS = '*, polla_groups(name, number)';
 
 /** Jugada tal como la devuelve el repositorio: la fila más los campos derivados. */
 export type PollaBetRow = IPollaBetEntityBack & IPollaBetDerivedFields;
 
-type RawBetRow = IPollaBetEntityBack & { polla_groups: { name: string } | null };
+type RawBetRow = IPollaBetEntityBack & {
+  polla_groups: { name: string; number: number } | null;
+};
 
 const withDerivedFields = ({ polla_groups: group, ...bet }: RawBetRow): PollaBetRow => ({
   ...bet,
   group_name: group?.name ?? null,
+  group_number: group?.number ?? null,
   // Si la jugó el propio pasador no hay cliente.
   client_name: bet.polla_user_id === bet.cashier_polla_user_id ? null : bet.user_name,
 });
@@ -38,6 +45,8 @@ export interface PollaBetFilters {
   userId?: string | null;
   groupId?: string | null;
   ticketNumber?: string | null;
+  /** Nombre del jugador o identificador del ticket (contiene, sin mayúsculas). */
+  search?: string | null;
   loadDate?: string | null;
   /** Día en que se completó (ganadoras de ese día, para la liquidación). */
   hitDate?: string | null;
@@ -82,7 +91,7 @@ export interface PollaBetTicketScope {
 
 /** Columnas de un ticket para repetirlo. */
 const REPEAT_COLUMNS =
-  'polla_bet_id, ticket_number, polla_edition_id, numbers, user_name, polla_user_id, cashier_polla_user_id, load_date';
+  'polla_bet_id, ticket_number, polla_edition_id, numbers, user_name, identifier, polla_user_id, cashier_polla_user_id, load_date';
 
 type RepeatRow = Omit<IPollaBetToRepeat, 'holder_type'> & {
   polla_user_id: string;
@@ -99,14 +108,15 @@ const toRepeat = ({
 });
 
 /**
- * Un ticket sin el sufijo `-<pasador>` (solo los 17 dígitos) se busca por
- * prefijo, como en QuiniApp. Llega validado (dígitos y un guion), así que el
- * LIKE no recibe comodines.
+ * Un ticket completo se busca exacto. Solo los 17 dígitos de la hora de carga
+ * traen el ticket en los dos formatos: el viejo `<17>-<pasador>` (prefijo) y
+ * el nuevo `<grupo>-<17>-<pasador>-<jugador>`. Llega validado (dígitos y
+ * guiones), así que el LIKE no recibe comodines.
  */
-const ticketPattern = (ticketNumber: string) =>
+const ticketFilter = (ticketNumber: string) =>
   /^\d{17}$/.test(ticketNumber)
-    ? { op: 'like' as const, value: `${ticketNumber}-%` }
-    : { op: 'eq' as const, value: ticketNumber };
+    ? `ticket_number.like.${ticketNumber}-*,ticket_number.like.*-${ticketNumber}-*`
+    : `ticket_number.eq.${ticketNumber}`;
 
 interface CursorPosition {
   hits: number;
@@ -199,7 +209,11 @@ export class PollaBetRepository {
     if (filters.cashierId) query = query.eq('cashier_polla_user_id', filters.cashierId);
     if (filters.userId) query = query.eq('polla_user_id', filters.userId);
     if (filters.groupId) query = query.eq('polla_group_id', filters.groupId);
-    if (filters.ticketNumber) query = query.eq('ticket_number', filters.ticketNumber);
+    if (filters.ticketNumber) query = query.or(ticketFilter(filters.ticketNumber));
+    if (filters.search) {
+      const searchFilter = ilikeAny(['user_name', 'identifier'], filters.search);
+      if (searchFilter) query = query.or(searchFilter);
+    }
     if (filters.loadDate) query = query.eq('load_date', filters.loadDate);
     if (filters.hitDate) query = query.eq('hit_date', filters.hitDate);
     if (filters.loadRange) {
@@ -260,19 +274,18 @@ export class PollaBetRepository {
   }
 
   /**
-   * Ticket a repetir, completo o por prefijo (ver `ticketPattern`); el alcance
+   * Ticket a repetir, completo o por la hora de carga (ver `ticketFilter`); el alcance
    * evita mezclar pasadores.
    */
   async getByTicketNumber(
     ticketNumber: string,
     scope: PollaBetTicketScope
   ): Promise<IPollaBetToRepeat> {
-    const ticket = ticketPattern(ticketNumber);
     let query = supabase
       .from('polla_bets')
       .select(REPEAT_COLUMNS)
       .is('deleted_at', null)
-      .filter('ticket_number', ticket.op, ticket.value);
+      .or(ticketFilter(ticketNumber));
 
     if (scope.organizationId) query = query.eq('polla_organization_id', scope.organizationId);
     if (scope.groupId) query = query.eq('polla_group_id', scope.groupId);
@@ -291,13 +304,12 @@ export class PollaBetRepository {
 
   /** Jugada completa de un ticket de la organización, para "Revisar ticket". */
   async getForCheck(ticketNumber: string, organizationId: string): Promise<PollaBetRow> {
-    const ticket = ticketPattern(ticketNumber);
     const { data, error } = await supabase
       .from('polla_bets')
       .select(BET_COLUMNS)
       .is('deleted_at', null)
       .eq('polla_organization_id', organizationId)
-      .filter('ticket_number', ticket.op, ticket.value)
+      .or(ticketFilter(ticketNumber))
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -387,8 +399,9 @@ export class PollaBetRepository {
   }
 
   /**
-   * Alta de una jugada. El corte y a nombre de quién puede cargar salen del
-   * rol del actor (la RPC); `date` solo lo respeta para superadmin+.
+   * Alta de una jugada. El corte, a nombre de quién puede cargar y si el
+   * identificador es obligatorio salen del rol del actor (la RPC); `date` solo
+   * lo respeta para superadmin+.
    */
   async create(params: {
     editionId: string;
@@ -396,6 +409,7 @@ export class PollaBetRepository {
     targetUserId: string;
     numbers: string[];
     date?: string;
+    identifier?: string | null;
   }) {
     const { data, error } = await supabase.rpc('polla_create_bet', {
       p_edition_id: params.editionId,
@@ -403,6 +417,7 @@ export class PollaBetRepository {
       p_target_user_id: params.targetUserId,
       p_numbers: params.numbers,
       p_date: params.date ?? pollaToday(),
+      p_identifier: params.identifier || null,
     });
 
     throwIfPollaError(error);

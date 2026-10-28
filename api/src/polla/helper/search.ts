@@ -25,3 +25,12 @@ export const searchNumber = (raw: string): number | null => {
   const text = raw.trim();
   return /^\d{1,9}$/.test(text) ? Number(text) : null;
 };
+
+/**
+ * `2-5` es el pasador 5 del grupo 2 (`0-5`, el pasador 5 sin grupo): los
+ * números de pasador se repiten entre grupos.
+ */
+export const searchCashierCode = (raw: string): { group: number; number: number } | null => {
+  const match = /^(\d{1,4})-(\d{1,9})$/.exec(raw.trim());
+  return match ? { group: Number(match[1]), number: Number(match[2]) } : null;
+};

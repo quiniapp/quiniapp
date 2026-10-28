@@ -20,6 +20,32 @@ export const POLLA_EDITION_PERIOD_LABEL: Record<POLLA_EDITION_PERIOD, string> = 
 
 export const POLLA_NUMBERS_REQUIRED = 10;
 
+/**
+ * Nº de ticket a buscar: completo, en el formato nuevo
+ * (`<grupo>-<17 dígitos>-<pasador>-<jugador>`) o el viejo
+ * (`<17 dígitos>-<pasador>`), o solo los 17 dígitos de la hora de carga.
+ */
+export const POLLA_TICKET_SEARCH = /^(\d{1,17}(-\d{1,9})?|\d{1,4}-\d{17}-\d{1,9}-\d{1,9})$/;
+
+/**
+ * Pasador de un ticket como `{grupo}-{número}`: sale del número de ticket
+ * nuevo (`{grupo}-{hora}-{pasador}-{jugador}`); en los viejos, solo el número.
+ */
+export const pollaTicketCashierCode = (
+  ticketNumber: string,
+  cashierNumber: number | null | undefined
+): string => {
+  const match = /^(\d{1,4})-\d{17}-(\d+)-\d+$/.exec(ticketNumber);
+  if (match) return `${match[1]}-${match[2]}`;
+  return cashierNumber ? String(cashierNumber) : '';
+};
+
+/** `polla_group_id` de "Generar liquidación" para los pasadores sin grupo. */
+export const POLLA_LIQUIDATION_NO_GROUP = 'none';
+
+/** Largo máximo del identificador libre del ticket ("chicho"). */
+export const POLLA_BET_IDENTIFIER_MAX = 60;
+
 // ---------------------------------------------------------------- ediciones
 
 export interface IPollaEditionEntityBack {
@@ -161,12 +187,20 @@ export interface IPollaBetEntityBack {
    * edición borrada).
    */
   deducted_on: string | null;
+  /**
+   * Identificador libre ("chicho", no único) de quién es la jugada. Obligatorio
+   * en todo lo que carga un pasador y en las jugadas a nombre de un pasador.
+   * `null` en tickets viejos.
+   */
+  identifier: string | null;
 }
 
 /** Campos que la API agrega a cada jugada que lista. */
 export interface IPollaBetDerivedFields {
   /** Grupo del pasador (la columna "Coord"). */
   group_name: string | null;
+  /** Número del grupo del pasador; `null` = sin grupo (0 en el ticket). */
+  group_number: number | null;
   /** Jugador dueño de la jugada; `null` si la jugó el propio pasador. */
   client_name: string | null;
 }
@@ -211,6 +245,7 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields, IPollaBetAction
   is_mine: boolean;
   /** Repetida sin cargo. */
   is_free: boolean;
+  identifier: string | null;
 }
 
 export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
@@ -232,6 +267,8 @@ export interface IPollaBetToRepeat {
   numbers: string[];
   /** Dueño original: la jugada repetida se carga a su nombre. */
   user_name: string;
+  /** Se copia a la jugada repetida. */
+  identifier: string | null;
   holder_type: 'CASHIER' | 'PLAYER';
   load_date: string;
 }
@@ -256,6 +293,8 @@ export interface IPollaRepeatResult {
 export interface IPollaTicketHolder {
   type: 'CASHIER' | 'PLAYER';
   name: string;
+  /** Identificador del ticket ("chicho"), si tiene. */
+  identifier: string | null;
 }
 
 export interface IPollaTicketWinner {
@@ -263,6 +302,8 @@ export interface IPollaTicketWinner {
   holder: IPollaTicketHolder;
   cashier_name: string;
   cashier_number: number | null;
+  /** Grupo del pasador (`null` = sin grupo). */
+  group_number: number | null;
   prize: number;
 }
 
@@ -281,7 +322,7 @@ export interface IPollaTicketCheck {
   >;
   holder: IPollaTicketHolder;
   /** Pasador al que se imputa la jugada (para un jugador, el suyo). */
-  cashier: { name: string; number: number | null };
+  cashier: { name: string; number: number | null; group_number: number | null };
   edition: Pick<
     IPollaEditionEntityBack,
     | 'polla_edition_id'

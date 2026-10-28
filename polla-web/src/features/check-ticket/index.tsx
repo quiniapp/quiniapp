@@ -4,8 +4,10 @@ import {
   IPollaTicketCheck,
   IPollaTicketHolder,
   POLLA_EDITION_STATUS,
+  POLLA_TICKET_SEARCH,
 } from '@helper/polla/types/game.type';
-import { TICKET_SEARCH, useTicketCheck } from '@/hooks/fetchs/usePollaData';
+import { pollaCashierCode } from '@helper/polla/types/user.type';
+import { useTicketCheck } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { BetNumbers } from '@/components/BetNumbers';
@@ -27,11 +29,20 @@ const fmtDate = (value?: string | null) => (value ? dayjs(value).format('DD-MM-Y
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
-const cashierLabel = (cashier: { name: string; number: number | null }) =>
-  `${cashier.number ? `${cashier.number} · ` : ''}${cashier.name}`;
+/** `2-5 · Pedro`: el número de pasador se repite entre grupos. */
+const cashierLabel = (cashier: {
+  name: string;
+  number: number | null;
+  group_number: number | null;
+}) => {
+  const code = pollaCashierCode(cashier.group_number, cashier.number);
+  return `${code ? `${code} · ` : ''}${cashier.name}`;
+};
 
 const holderLabel = (holder: IPollaTicketHolder) =>
-  `${holder.type === 'PLAYER' ? 'Jugador' : 'Pasador'} · ${holder.name}`;
+  `${holder.type === 'PLAYER' ? 'Jugador' : 'Pasador'} · ${holder.name}${
+    holder.identifier ? ` · ${holder.identifier}` : ''
+  }`;
 
 const TicketStatus = ({ check }: { check: IPollaTicketCheck }) => {
   if (check.bet.winner) {
@@ -77,7 +88,7 @@ export const CheckTicketPage = () => {
     [schedules, check]
   );
 
-  const isValid = TICKET_SEARCH.test(ticketNumber);
+  const isValid = POLLA_TICKET_SEARCH.test(ticketNumber);
 
   let emptyMessage = 'Escribí el número de ticket';
   if (ticketNumber && !isValid) emptyMessage = 'Número de ticket inválido';
@@ -116,7 +127,9 @@ export const CheckTicketPage = () => {
                   </p>
                 )}
                 {check.holder.type === 'CASHIER' && check.cashier.number && (
-                  <p className="text-sm text-muted-foreground">Pasador Nº {check.cashier.number}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pasador Nº {pollaCashierCode(check.cashier.group_number, check.cashier.number)}
+                  </p>
                 )}
               </div>
               <TicketStatus check={check} />
@@ -187,6 +200,7 @@ export const CheckTicketPage = () => {
                           {cashierLabel({
                             name: winner.cashier_name,
                             number: winner.cashier_number,
+                            group_number: winner.group_number,
                           })}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">

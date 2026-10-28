@@ -6,6 +6,7 @@ import {
   POLLA_STAFF_ROLES,
   IPollaSessionUser,
   isPollaAdminRole,
+  isPollaLoaderRole,
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import {
@@ -15,6 +16,7 @@ import {
   IPollaTicketCheck,
   IPollaTicketHolder,
   POLLA_HITS_FILTER,
+  POLLA_TICKET_SEARCH,
 } from '@helper/polla/types/game.type';
 import {
   newPollaBetSchema,
@@ -44,8 +46,12 @@ import {
 } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
-/** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
-const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
+/** El ticket va interpolado en un filtro `or=` de PostgREST: solo dígitos y guiones. */
+const assertTicketSearch = (ticketNumber: string) => {
+  if (!POLLA_TICKET_SEARCH.test(ticketNumber)) {
+    throw new BadRequestError('Número de ticket inválido');
+  }
+};
 
 const queryString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
@@ -114,8 +120,8 @@ const NO_ACTIONS: IPollaBetActions = { can_edit: false, can_delete: false };
 
 /**
  * Lo que administra cada rol ("Administrar jugadas" y su PDF de tickets): el
- * pasador, lo suyo y lo de sus jugadores; el admin, su grupo; superadmin+,
- * toda la organización.
+ * pasador, lo suyo y lo de sus jugadores; el admin, su grupo; el Super y
+ * superadmin+, toda la organización.
  */
 const manageScope = (user: IPollaSessionUser): Pick<PollaBetFilters, 'cashierId' | 'groupId'> => {
   if (user.user_type === POLLA_USER_TYPE.CASHIER) return { cashierId: user.polla_user_id };
@@ -126,9 +132,10 @@ const manageScope = (user: IPollaSessionUser): Pick<PollaBetFilters, 'cashierId'
 /**
  * Qué puede hacer el usuario con cada jugada ahora. Todos leen todo; cada rol
  * escribe en su alcance y hasta su corte (la base vuelve a controlarlo):
- * superadmin+ siempre; el admin, en su grupo hasta su corte; el pasador solo
- * borra lo suyo y lo de sus jugadores hasta el cierre de carga (da de baja lo
- * que no le pagaron, aunque ya se haya liquidado); el jugador nada.
+ * superadmin+ siempre; el admin, en su grupo hasta su corte; el Super, en toda
+ * la organización hasta el mismo corte; el pasador solo borra lo suyo y lo de
+ * sus jugadores hasta el cierre de carga (da de baja lo que no le pagaron,
+ * aunque ya se haya liquidado); el jugador nada.
  */
 const actionsFor = (
   bet: PollaBetRow,
@@ -147,6 +154,10 @@ const actionsFor = (
     return { can_edit: inGroup && open, can_delete: inGroup && open };
   }
 
+  if (viewer.user_type === POLLA_USER_TYPE.ASSISTANT) {
+    return { can_edit: open, can_delete: open };
+  }
+
   if (viewer.user_type === POLLA_USER_TYPE.CASHIER) {
     return { can_edit: false, can_delete: isOwnOrImputed(bet, viewer) && open };
   }
@@ -158,11 +169,12 @@ const actionsFor = (
 const holderOf = (bet: PollaBetRow): IPollaTicketHolder => ({
   type: bet.polla_user_id === bet.cashier_polla_user_id ? 'CASHIER' : 'PLAYER',
   name: bet.user_name,
+  identifier: bet.identifier,
 });
 
 /**
- * Lo que ve un pasador o un jugador de cada jugada: quién la jugó y sus
- * aciertos, sin ids internos ni montos (los totales son solo de admin).
+ * Lo que ve un pasador, un jugador o el Super de cada jugada: quién la jugó y
+ * sus aciertos, sin ids internos ni montos (los totales son solo de admin).
  */
 const toPublicBet = (
   bet: PollaBetRow,
@@ -173,6 +185,7 @@ const toPublicBet = (
   ticket_number: bet.ticket_number,
   polla_edition_id: bet.polla_edition_id,
   group_name: bet.group_name,
+  group_number: bet.group_number,
   cashier_name: bet.cashier_name,
   cashier_number: bet.cashier_number,
   client_name: bet.client_name,
@@ -187,6 +200,7 @@ const toPublicBet = (
   deducted_on: bet.deducted_on,
   is_mine: isOwnOrImputed(bet, viewer),
   is_free: bet.is_free,
+  identifier: bet.identifier,
   // El monto de lo propio se ve (lo cobra el pasador); el de lo ajeno es un total.
   amount: isOwnOrImputed(bet, viewer) ? Number(bet.amount) : null,
   ...actions,
@@ -306,6 +320,9 @@ export class PollaBetRouter {
 
     if (editionId) await this.assertEditionScope(user, editionId);
 
+    const ticketNumber = queryString(req.query.ticket_number);
+    if (ticketNumber) assertTicketSearch(ticketNumber);
+
     const loadRange = queryDateRange(req.query.load_from, req.query.load_to);
     const hitRange = queryDateRange(req.query.hit_from, req.query.hit_to);
 
@@ -342,7 +359,9 @@ export class PollaBetRouter {
         : user.polla_organization_id,
       ...mineFilter(),
       groupId: queryString(req.query.polla_group_id),
-      ticketNumber: queryString(req.query.ticket_number),
+      ticketNumber,
+      // Nombre del jugador o identificador: siempre dentro de una edición.
+      search: queryString(req.query.search),
       loadDate: queryDate(req.query.load_date),
       hitDate: queryDate(req.query.hit_date),
       loadRange,
@@ -411,7 +430,7 @@ export class PollaBetRouter {
 
   /** Dónde busca cada rol los tickets que puede repetir. */
   private repeatScope = (user: IPollaSessionUser): PollaBetTicketScope => {
-    if (isPollaSuperRole(user.user_type)) {
+    if (isPollaSuperRole(user.user_type) || user.user_type === POLLA_USER_TYPE.ASSISTANT) {
       return { organizationId: user.polla_organization_id };
     }
     if (user.user_type === POLLA_USER_TYPE.ADMIN) {
@@ -425,16 +444,13 @@ export class PollaBetRouter {
 
   /**
    * Ticket a repetir por número: sus números y a nombre de quién se carga (su
-   * dueño). Superadmin+ busca en la organización, el admin en su grupo, el
-   * pasador en lo suyo y lo de sus jugadores, el jugador en lo suyo.
+   * dueño). El Super y superadmin+ buscan en la organización, el admin en su
+   * grupo, el pasador en lo suyo y lo de sus jugadores, el jugador en lo suyo.
    */
   private getByTicketHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const ticketNumber = req.params.ticketNumber.trim();
-
-    if (!TICKET_SEARCH.test(ticketNumber)) {
-      throw new BadRequestError('Número de ticket inválido');
-    }
+    assertTicketSearch(ticketNumber);
 
     const bet = await this.repository.getByTicketNumber(ticketNumber, this.repeatScope(user));
 
@@ -449,10 +465,7 @@ export class PollaBetRouter {
   private checkTicketHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const ticketNumber = req.params.ticketNumber.trim();
-
-    if (!TICKET_SEARCH.test(ticketNumber)) {
-      throw new BadRequestError('Número de ticket inválido');
-    }
+    assertTicketSearch(ticketNumber);
 
     const bet = await this.repository.getForCheck(ticketNumber, user.polla_organization_id);
     const edition = await this.editionRepository.getById(bet.polla_edition_id);
@@ -474,7 +487,11 @@ export class PollaBetRouter {
         hit_date: bet.hit_date,
       },
       holder: holderOf(bet),
-      cashier: { name: bet.cashier_name, number: bet.cashier_number },
+      cashier: {
+        name: bet.cashier_name,
+        number: bet.cashier_number,
+        group_number: bet.group_number,
+      },
       edition: {
         polla_edition_id: edition.polla_edition_id,
         polla_lottery_id: edition.polla_lottery_id,
@@ -495,6 +512,7 @@ export class PollaBetRouter {
         holder: holderOf(winner),
         cashier_name: winner.cashier_name,
         cashier_number: winner.cashier_number,
+        group_number: winner.group_number,
         prize: Number(winner.prize),
       })),
     };
@@ -518,9 +536,10 @@ export class PollaBetRouter {
 
   /**
    * Repetir tickets (pagos) en una edición abierta, cada uno a nombre de su
-   * dueño original: el pasador repite lo suyo y lo de sus jugadores; el
-   * jugador, lo suyo; el admin, lo de su grupo; superadmin+, cualquiera. Los
-   * que no se pueden repetir vuelven en `skipped` con el motivo.
+   * dueño original y con su identificador: el pasador repite lo suyo y lo de
+   * sus jugadores; el jugador, lo suyo; el admin, lo de su grupo; el Super y
+   * superadmin+, cualquiera. Los que no se pueden repetir vuelven en
+   * `skipped` con el motivo.
    */
   private repeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
@@ -559,13 +578,16 @@ export class PollaBetRouter {
   /**
    * Boletas vendidas en el día (sin las repetidas sin cargo). Superadmin+ ve el
    * total de la organización y el desglose por grupo; el admin, su grupo; el
-   * pasador, solo lo imputado a él.
+   * pasador, solo lo imputado a él. El jugador y el Super no las ven.
    */
   private getDailySalesHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
 
     if (user.user_type === POLLA_USER_TYPE.PLAYER) {
       throw new ForbiddenError('Los jugadores no ven las ventas');
+    }
+    if (user.user_type === POLLA_USER_TYPE.ASSISTANT) {
+      throw new ForbiddenError('El Super no ve las ventas');
     }
 
     const date = queryString(req.query.date) ?? pollaToday();
@@ -617,12 +639,16 @@ export class PollaBetRouter {
 
     await this.assertEditionScope(user, payload.polla_edition_id);
 
-    const isAdmin = isPollaAdminRole(user.user_type);
     const targetUserId = payload.polla_user_id ?? user.polla_user_id;
 
-    // ADMIN+ carga a nombre de un pasador o jugador (el admin, solo de su
-    // grupo; la RPC lo valida). Pasador y jugador, solo a su nombre.
-    if (targetUserId !== user.polla_user_id && !isAdmin) {
+    // ADMIN+ y el Super cargan a nombre de un pasador o jugador (el admin,
+    // solo de su grupo); el pasador, al suyo o al de sus jugadores; el
+    // jugador, solo al suyo. La RPC lo valida y exige el identificador.
+    if (
+      targetUserId !== user.polla_user_id &&
+      !isPollaLoaderRole(user.user_type) &&
+      user.user_type !== POLLA_USER_TYPE.CASHIER
+    ) {
       throw new ForbiddenError('Solo podés cargar jugadas a tu nombre');
     }
 
@@ -634,6 +660,7 @@ export class PollaBetRouter {
       // Solo superadmin+ elige el día de carga: para el resto es hoy, y el
       // corte de cada rol lo controla la RPC.
       date: isPollaSuperRole(user.user_type) ? payload.date : undefined,
+      identifier: payload.identifier,
     });
 
     res.status(201).json({ data: { bet } });
@@ -641,7 +668,8 @@ export class PollaBetRouter {
 
   /**
    * Superadmin+ edita o borra cualquier jugada no ganadora, en cualquier
-   * momento. El admin, las de su grupo hasta su corte. El pasador solo borra
+   * momento. El admin, las de su grupo hasta su corte; el Super, las de la
+   * organización hasta el mismo corte. El pasador solo borra
    * (no edita) las suyas o las de sus jugadores, hasta el cierre de carga; si
    * ya se liquidaron, la baja se descuenta del pase el día que se borra. El
    * jugador no tiene acciones. La RPC vuelve a controlar todo.
@@ -661,6 +689,8 @@ export class PollaBetRouter {
       assertInWritableGroup(user, bet.polla_group_id);
       return bet;
     }
+
+    if (user.user_type === POLLA_USER_TYPE.ASSISTANT) return bet;
 
     if (action === 'edit' || user.user_type !== POLLA_USER_TYPE.CASHIER) {
       throw new ForbiddenError('No podés modificar jugadas');

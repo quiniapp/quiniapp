@@ -4,6 +4,38 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-27 (Polla: números por grupo, tickets nuevos, usuarios de calle, rol Super y liquidación por grupo)
+
+#### Migración `20261027221618_polla_assistant_role.sql`
+- **`polla_user_type_enum`** suma `ASSISTANT` (en pantalla, "Super"): asistente de carga de toda la organización. Va sola porque el valor nuevo de un enum no se puede usar en la misma transacción.
+
+#### Migración `20261027221619_polla_group_numbers_street_users.sql`
+- **`polla_groups.number`**: 1 a N dentro de la organización (backfill por orden de alta), `CHECK (number > 0)` e índice único `unique_polla_group_number_active`. El trigger `trg_assign_polla_group_number` le pone el siguiente libre al alta (también a la de `polla_create_group_with_admin`). El 0 es "sin grupo".
+- **Números de usuario**: se reemplaza `unique_polla_user_number_active` (org + tipo) por `unique_polla_cashier_number_active` (pasador único dentro de su grupo; los sin grupo, entre ellos) y `unique_polla_player_number_active` (jugador único dentro de su pasador). Índice `idx_polla_users_org_number` para el buscador. Sin backfill: los datos cumplían una regla más estricta.
+- **`polla_users.is_street`**: pasadores y jugadores de calle, sin usuario ni contraseña (`polla_users_street_check`). El login ya rechazaba `password_hash` NULL.
+- **`ASSISTANT` en las reglas de usuarios**: `polla_users_role_fields_check` (sin comisión ni pasador) y `sync_polla_user_group` (sin grupo).
+- **`polla_bets.identifier`**: identificador libre del ticket ("chicho", no único), hasta 60 letras (`polla_bets_identifier_length`).
+- **`polla_load_cutoff`**: `ASSISTANT` tiene el corte del admin.
+- **`polla_create_bet`** suma `p_identifier`:
+  - Número de ticket `{grupo}-{YYYYMMDDHHmmssSSS}-{pasador}-{jugador}` (grupo 0 sin grupo; jugador 0 si es del propio pasador). Los tickets viejos no se tocan.
+  - El identificador es obligatorio si carga un pasador o si la jugada es a nombre de un pasador (`POLLA_BET_IDENTIFIER_REQUIRED`); las repeticiones copian el del original, aunque sea NULL.
+  - `ASSISTANT` carga a nombre de cualquier pasador o jugador de la organización, con la fecha de hoy y sin "sin cargo".
+- **`polla_assert_bet_writable`**: `ASSISTANT` edita y borra en toda la organización hasta su corte.
+- **`polla_repeat_bets`**: `ASSISTANT` repite en toda la organización; pasa el identificador del ticket original.
+
+#### Endpoints
+- **`POST /polla/private/bet`**: el pasador carga a nombre de sus jugadores (antes solo al suyo) y el Super, de cualquiera; recibe `identifier`.
+- **`GET /polla/private/bet`**: `search` (nombre del jugador o identificador, dentro de la edición); `ticket_number` acepta el formato nuevo y se valida (va en un filtro `or=`). Los 17 dígitos sueltos traen el ticket en los dos formatos. Cada jugada trae `group_number` e `identifier`. El Super administra (`view=manage`) toda la organización con la versión pública y sus acciones.
+- **`GET /polla/private/bet/sales`**: 403 para el Super.
+- **`GET /polla/private/bet/check/:ticket`**: `holder.identifier` y `group_number` del pasador y de los ganadores.
+- **`GET /polla/private/user/search`**: con `scope=writable` también el Super (toda la organización) y el pasador (solo sus jugadores). `q=2-5` busca el pasador 5 del grupo 2. Cada opción trae `group_number` e `is_street`.
+- **`GET /polla/private/user/next-number`** (nuevo): siguiente número libre de un pasador en su grupo o de un jugador en su pasador, para precargar el alta.
+- **`GET /polla/private/user/:id`**: también el Super (para el filtro de Administrar jugadas).
+- **`POST/PUT /polla/private/user`**: `is_street`. De calle no lleva usuario ni contraseña; pasar a calle borra las credenciales y revoca las sesiones; pasar a aplicación pide usuario y contraseña. El número se controla en su ámbito (grupo o pasador), también al cambiar el pasador de un jugador. El blanqueo de contraseña da 400 para uno de calle.
+- **`POST /polla/private/current_account/liquidate`**: exige `polla_group_id` (uuid o `none` para los sin grupo) y liquida solo ese grupo. La planilla sigue mostrando a todos.
+- **Grupos** (`GET /polla/private/group`): ordenados por número.
+- **`polla-errors.ts`**: mensajes para los índices y checks nuevos y `POLLA_BET_IDENTIFIER_REQUIRED`.
+
 ### Changed - 2026-10-26 (Polla: PDF de Jugadas)
 
 - **`GET /polla/private/bet`** (`polla/bet/route/polla-bet.route.ts`): `export=true&view=public` (PDF de Jugadas) devuelve lo mismo que la lista de Jugadas: toda la organización en la versión pública, sin acciones y sin `manageScope`. Respeta `mine` y `load_from`/`load_to`.

@@ -24,6 +24,8 @@ export interface IPollaOrganizationWithCapitalist extends IPollaOrganizationEnti
 export interface IPollaGroupEntityBack {
   polla_group_id: string;
   polla_organization_id: string;
+  /** 1 a N dentro de la organización (lo pone la base); encabeza el ticket. */
+  number: number;
   name: string;
   created_at: string;
   edited_at: string;

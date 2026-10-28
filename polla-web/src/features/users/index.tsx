@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { newPollaUserSchema } from '@helper/polla/schemas/user.schema';
@@ -8,11 +8,13 @@ import {
   POLLA_USER_TYPE_LABEL,
   IPollaUserEntityFront,
   IPollaUserOption,
+  canBePollaStreetUser,
   canResetPollaPassword,
+  pollaCashierCode,
   pollaUserListTypes,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useUsers } from '@/hooks/fetchs/usePollaData';
+import { useNextUserNumber, useUsers } from '@/hooks/fetchs/usePollaData';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
@@ -52,6 +54,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ResetPasswordDialog } from '@/components/ResetPasswordDialog';
+import { Switch } from '@/components/ui/switch';
+import { groupLabel } from '@/lib/pollaGroups';
 import { EditUserDialog } from './EditUserDialog';
 
 const emptyForm = {
@@ -63,6 +67,8 @@ const emptyForm = {
   number: '',
   fee: '',
   polla_group_id: '',
+  /** De calle: sin usuario ni contraseña, no entra (solo pasadores y jugadores). */
+  is_street: false,
 };
 
 /** Pasadores y jugadores se buscan por número para cargarles jugadas. */
@@ -81,6 +87,8 @@ export const UsersPage = () => {
   const [parentCashier, setParentCashier] = useState<IPollaUserOption | null>(null);
   const [editing, setEditing] = useState<IPollaUserEntityFront | null>(null);
   const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
+  // El número se precarga con el siguiente libre hasta que lo cambian a mano.
+  const [numberTouched, setNumberTouched] = useState(false);
 
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   // El admin opera dentro de su grupo: sus pasadores quedan en él y elige el
@@ -105,9 +113,29 @@ export const UsersPage = () => {
   const { mutate: resetPassword, isPending: isResetting } = useResetUserPassword();
 
   const groupById = useMemo(
-    () => new Map(groups?.data.map((group) => [group.polla_group_id, group.name])),
+    () => new Map(groups?.data.map((group) => [group.polla_group_id, group])),
     [groups]
   );
+
+  // Siguiente número libre: el del pasador en su grupo (el admin, en el suyo),
+  // el del jugador en su pasador (el pasador, en los suyos).
+  const isNewCashier = form.user_type === POLLA_USER_TYPE.CASHIER;
+  const isNewPlayer = form.user_type === POLLA_USER_TYPE.PLAYER;
+  const { data: nextNumber } = useNextUserNumber(
+    {
+      user_type: form.user_type,
+      polla_group_id: isNewCashier && !isGroupAdmin ? form.polla_group_id || null : null,
+      parent_polla_user_id:
+        isNewPlayer && !isCashier ? (parentCashier?.polla_user_id ?? null) : null,
+    },
+    open && (isNewCashier || (isNewPlayer && (isCashier || Boolean(parentCashier))))
+  );
+
+  useEffect(() => {
+    if (open && !numberTouched && nextNumber) {
+      setForm((prev) => ({ ...prev, number: String(nextNumber) }));
+    }
+  }, [open, numberTouched, nextNumber]);
 
   /** Tipos que ve este rol (los inferiores, sin el capitalista: está en Organizaciones). */
   const visibleTypes = useMemo(() => (role ? pollaUserListTypes(role) : []), [role]);
@@ -119,6 +147,7 @@ export const UsersPage = () => {
     if (next) {
       setForm({ ...emptyForm, user_type: creatableTypes[0] ?? '' });
       setParentCashier(null);
+      setNumberTouched(false);
     }
     setOpen(next);
   };
@@ -129,12 +158,14 @@ export const UsersPage = () => {
       return;
     }
 
+    const isStreet = canBePollaStreetUser(form.user_type) && form.is_street;
     const payload: Record<string, unknown> = {
       user_type: form.user_type,
       name: form.name.trim(),
       last_name: form.last_name.trim() || null,
-      username: form.username.trim() || null,
-      password: form.password,
+      // De calle: sin usuario ni contraseña.
+      username: isStreet ? null : form.username.trim() || null,
+      ...(isStreet ? { is_street: true } : { password: form.password }),
       number: needsNumber(form.user_type) && form.number ? Number(form.number) : null,
       // El grupo queda fijo desde el alta: el del admin lo pone el backend.
       polla_group_id: isGroupAdmin ? null : form.polla_group_id || null,
@@ -171,15 +202,26 @@ export const UsersPage = () => {
     });
   };
 
-  const groupName = (item: IPollaUserEntityFront) =>
+  const groupOf = (item: IPollaUserEntityFront) =>
     item.polla_group_id ? (groupById.get(item.polla_group_id) ?? null) : null;
+
+  /**
+   * Número con que se lo busca: el pasador, `{grupo}-{número}` (se repite entre
+   * grupos); el jugador, su número dentro de su pasador.
+   */
+  const userCode = (item: IPollaUserEntityFront) =>
+    item.user_type === POLLA_USER_TYPE.CASHIER
+      ? pollaCashierCode(groupOf(item)?.number, item.number)
+      : item.number
+        ? String(item.number)
+        : '';
 
   /** Usuario, grupo y comisión de la tarjeta mobile; lo que falta no se muestra. */
   const userDetails = (item: IPollaUserEntityFront) => {
-    const group = groupName(item);
+    const group = groupOf(item);
     return [
       item.username && `${item.username}`,
-      group && `Grupo ${group}`,
+      group && `Grupo ${groupLabel(group)}`,
       item.fee !== null && `Comisión ${item.fee}%`,
     ]
       .filter(Boolean)
@@ -198,9 +240,11 @@ export const UsersPage = () => {
       >
         <Pencil />
       </Button>
-      {/* Cada rol blanquea solo a ciertos tipos y nadie a sí mismo. */}
+      {/* Cada rol blanquea solo a ciertos tipos y nadie a sí mismo. Los de
+          calle no tienen contraseña. */}
       {role &&
         canResetPollaPassword(role, item.user_type) &&
+        !item.is_street &&
         item.polla_user_id !== user?.polla_user_id && (
           <Button
             type="button"
@@ -320,38 +364,62 @@ export const UsersPage = () => {
 
                   {needsNumber(form.user_type) && (
                     <div className="flex flex-col gap-1">
-                      <Label htmlFor="new-user-number">Número</Label>
+                      <Label htmlFor="new-user-number">
+                        {form.user_type === POLLA_USER_TYPE.CASHIER
+                          ? 'Número en el grupo'
+                          : 'Número en el pasador'}
+                      </Label>
                       <Input
                         id="new-user-number"
                         inputMode="numeric"
                         value={form.number}
-                        onChange={(e) =>
-                          setForm({ ...form, number: e.target.value.replace(/\D/g, '') })
-                        }
+                        onChange={(e) => {
+                          setNumberTouched(true);
+                          setForm({ ...form, number: e.target.value.replace(/\D/g, '') });
+                        }}
                       />
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor="new-user-username">Usuario</Label>
-                    <Input
-                      id="new-user-username"
-                      autoComplete="off"
-                      value={form.username}
-                      onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    />
-                  </div>
+                  {canBePollaStreetUser(form.user_type) && (
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <Switch
+                        id="new-user-street"
+                        checked={form.is_street}
+                        onCheckedChange={(checked) =>
+                          setForm({ ...form, is_street: checked, username: '', password: '' })
+                        }
+                      />
+                      <Label htmlFor="new-user-street">
+                        De calle (sin usuario ni contraseña: no entra, solo identifica sus tickets)
+                      </Label>
+                    </div>
+                  )}
 
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor="new-user-password">Contraseña</Label>
-                    <Input
-                      id="new-user-password"
-                      type="password"
-                      autoComplete="new-password"
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    />
-                  </div>
+                  {!(canBePollaStreetUser(form.user_type) && form.is_street) && (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="new-user-username">Usuario</Label>
+                        <Input
+                          id="new-user-username"
+                          autoComplete="off"
+                          value={form.username}
+                          onChange={(e) => setForm({ ...form, username: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="new-user-password">Contraseña</Label>
+                        <Input
+                          id="new-user-password"
+                          type="password"
+                          autoComplete="new-password"
+                          value={form.password}
+                          onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {picksCashier && (
                     <UserSearchPicker
@@ -359,7 +427,10 @@ export const UsersPage = () => {
                       label="Pasador"
                       userTypes={[POLLA_USER_TYPE.CASHIER]}
                       value={parentCashier}
-                      onChange={setParentCashier}
+                      onChange={(picked) => {
+                        setParentCashier(picked);
+                        setNumberTouched(false);
+                      }}
                       placeholder="Número o nombre del pasador"
                       emptyHint="Elegí el pasador del jugador"
                       scope={{ writable: true }}
@@ -373,9 +444,10 @@ export const UsersPage = () => {
                           <Label>Grupo (no se cambia después)</Label>
                           <Select
                             value={form.polla_group_id || 'none'}
-                            onValueChange={(v) =>
-                              setForm({ ...form, polla_group_id: v === 'none' ? '' : v })
-                            }
+                            onValueChange={(v) => {
+                              setNumberTouched(false);
+                              setForm({ ...form, polla_group_id: v === 'none' ? '' : v });
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Sin grupo" />
@@ -384,7 +456,7 @@ export const UsersPage = () => {
                               <SelectItem value="none">Sin grupo</SelectItem>
                               {groups?.data.map((group) => (
                                 <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-                                  {group.name}
+                                  {groupLabel(group)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -442,11 +514,12 @@ export const UsersPage = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="break-words font-medium">
-                      {item.number ? `${item.number} · ` : ''}
+                      {userCode(item) ? `${userCode(item)} · ` : ''}
                       {item.name} {item.last_name ?? ''}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-1">
                       <Badge variant="secondary">{POLLA_USER_TYPE_LABEL[item.user_type]}</Badge>
+                      {item.is_street && <Badge variant="outline">Calle</Badge>}
                       {item.disabled && <Badge variant="outline">Deshabilitado</Badge>}
                     </div>
                     {userDetails(item) && (
@@ -477,8 +550,13 @@ export const UsersPage = () => {
                 {rows.map((item) => (
                   <TableRow key={item.polla_user_id}>
                     <TableCell>
-                      {item.number ? `${item.number} · ` : ''}
+                      {userCode(item) ? `${userCode(item)} · ` : ''}
                       {item.name} {item.last_name ?? ''}
+                      {item.is_street && (
+                        <Badge variant="outline" className="ml-2">
+                          Calle
+                        </Badge>
+                      )}
                       {item.disabled && (
                         <Badge variant="outline" className="ml-2">
                           Deshabilitado
@@ -487,7 +565,7 @@ export const UsersPage = () => {
                     </TableCell>
                     <TableCell>{POLLA_USER_TYPE_LABEL[item.user_type]}</TableCell>
                     <TableCell>{item.username ?? '-'}</TableCell>
-                    <TableCell>{groupName(item) ?? '-'}</TableCell>
+                    <TableCell>{groupOf(item) ? groupLabel(groupOf(item)) : '-'}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.fee !== null ? `${item.fee}%` : '-'}
                     </TableCell>

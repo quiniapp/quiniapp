@@ -29,7 +29,8 @@ export class PollaGroupRouter {
     table: 'polla_groups',
     idColumn: 'polla_group_id',
     orgScoped: true,
-    orderBy: { column: 'name', ascending: true },
+    // Por número: es el que encabeza el de sus pasadores y sus tickets.
+    orderBy: { column: 'number', ascending: true },
   });
 
   private groupRepository = new PollaGroupRepository();

@@ -93,7 +93,7 @@ export const fetchWinnersByCashier = async (params: {
     const list = byCashier.get(cashierId) ?? [];
     list.push({
       ticket_number: bet.ticket_number,
-      player: bet.client_name ?? bet.cashier_name,
+      player: bet.client_name ?? bet.identifier ?? bet.cashier_name,
       hits: bet.hits,
       prize: Number(bet.prize),
     });

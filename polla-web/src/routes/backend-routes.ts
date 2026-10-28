@@ -39,6 +39,7 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/user`,
     id: (id: string) => `${PRIVATE}/user/${id}`,
     search: `${PRIVATE}/user/search`,
+    nextNumber: `${PRIVATE}/user/next-number`,
     resetPassword: (id: string) => `${PRIVATE}/user/${id}/reset-password`,
   },
   edition: {

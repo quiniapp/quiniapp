@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dateRegex } from '../../functions/dateRegex';
-import { POLLA_NUMBERS_REQUIRED } from '../types/game.type';
+import { POLLA_BET_IDENTIFIER_MAX, POLLA_NUMBERS_REQUIRED } from '../types/game.type';
 
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Hora inválida (HH:mm)');
@@ -119,6 +119,19 @@ export const newPollaBetSchema = z.object({
   polla_user_id: z.string().uuid().optional(),
   numbers: betNumbers,
   date: isoDate.optional(),
+  /**
+   * Identificador libre ("chicho") de quién es el ticket. La base lo exige si
+   * carga un pasador o si la jugada es a nombre de un pasador.
+   */
+  identifier: z
+    .string()
+    .trim()
+    .max(
+      POLLA_BET_IDENTIFIER_MAX,
+      `El identificador tiene hasta ${POLLA_BET_IDENTIFIER_MAX} letras`
+    )
+    .nullable()
+    .optional(),
 });
 
 export const updatePollaBetSchema = z.object({
