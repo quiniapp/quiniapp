@@ -4,6 +4,16 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-29 (Polla: identificador opcional con jugador y ventas de la edición)
+
+#### Migración `20261029064157_polla_identifier_rule_edition_sales.sql`
+- **`polla_create_bet`**: el identificador ya no es obligatorio en todo lo que carga un pasador. Todo ticket tiene jugador o identificador: es obligatorio solo a nombre de un pasador (sin jugador), cargue quien cargue; a nombre de un jugador es opcional. Las repeticiones siguen copiando el del original.
+- **`polla_daily_sales`** suma `p_edition_id`: sin fecha trae el total de la edición (todos los días de carga); con los dos, ese día en esa edición; sin ninguno, nada. Devuelve `group_number` y ordena por número de grupo.
+
+#### Endpoints
+- **`GET /polla/private/bet/sales`**: `polla_edition_id` (opcional) trae las ventas de toda la edición en vez de las del día (404 si no existe, 403 si es de otra organización). La respuesta suma `polla_edition_id` (`date` es `null` en ese caso) y cada grupo trae `group_number`. `PollaBetRepository.getDailySales` pasa a `getSales({ organizationId, date, editionId, cashierId, groupId })`.
+- **`POLLA_BET_IDENTIFIER_REQUIRED`**: "Poné el identificador del ticket o cargalo a nombre de un jugador".
+
 ### Changed - 2026-10-27 (Polla: números por grupo, tickets nuevos, usuarios de calle, rol Super y liquidación por grupo)
 
 #### Migración `20261027221618_polla_assistant_role.sql`

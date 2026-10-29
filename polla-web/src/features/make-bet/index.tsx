@@ -79,10 +79,12 @@ export const MakeBetPage = () => {
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
 
-  // Todo ticket lleva nombre de jugador o identificador: el pasador lo pone
-  // siempre y, a nombre de un pasador, cualquiera (la base lo vuelve a exigir).
+  // Todo ticket lleva jugador o identificador: a nombre de un pasador (el
+  // pasador a su nombre, o quien carga para un pasador) el identificador es
+  // obligatorio; a nombre de un jugador, opcional (la base lo vuelve a exigir).
   const showIdentifier = !isPlayer;
-  const identifierRequired = isCashier || (isLoader && targetType === POLLA_USER_TYPE.CASHIER);
+  const identifierRequired =
+    (isCashier && !target) || (isLoader && targetType === POLLA_USER_TYPE.CASHIER);
 
   // Las que tienen la carga abierta ahora para el rol (hora de Argentina):
   // pasador y jugador hasta el cierre; el admin hasta el turno más tarde del
@@ -160,7 +162,11 @@ export const MakeBetPage = () => {
 
     const cleanIdentifier = identifier.trim();
     if (identifierRequired && !cleanIdentifier) {
-      toast.error('Poné el identificador del ticket');
+      toast.error(
+        isCashier
+          ? 'Poné el identificador o elegí uno de tus jugadores'
+          : 'Poné el identificador del ticket'
+      );
       identifierRef.current?.focus();
       return;
     }

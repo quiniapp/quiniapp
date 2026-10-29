@@ -120,8 +120,8 @@ export const newPollaBetSchema = z.object({
   numbers: betNumbers,
   date: isoDate.optional(),
   /**
-   * Identificador libre ("chicho") de quién es el ticket. La base lo exige si
-   * carga un pasador o si la jugada es a nombre de un pasador.
+   * Identificador libre ("chicho") de quién es el ticket. Todo ticket tiene
+   * jugador o identificador: la base lo exige a nombre de un pasador.
    */
   identifier: z
     .string()

@@ -576,9 +576,10 @@ export class PollaBetRouter {
   });
 
   /**
-   * Boletas vendidas en el día (sin las repetidas sin cargo). Superadmin+ ve el
-   * total de la organización y el desglose por grupo; el admin, su grupo; el
-   * pasador, solo lo imputado a él. El jugador y el Super no las ven.
+   * Boletas vendidas (sin las repetidas sin cargo) en el día o, con
+   * `polla_edition_id`, en toda la edición. Superadmin+ ve el total de la
+   * organización y el desglose por grupo; el admin, su grupo; el pasador, solo
+   * lo imputado a él. El jugador y el Super no las ven.
    */
   private getDailySalesHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
@@ -590,19 +591,27 @@ export class PollaBetRouter {
       throw new ForbiddenError('El Super no ve las ventas');
     }
 
-    const date = queryString(req.query.date) ?? pollaToday();
-    if (!ISO_DATE.test(date)) throw new BadRequestError('Fecha inválida (YYYY-MM-DD)');
+    const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
+
+    // Total de la edición (todos los días de carga) o lo de un día.
+    const editionId = queryString(req.query.polla_edition_id);
+    if (editionId) await this.assertEditionScope(user, editionId);
+
+    const date = editionId ? null : (queryString(req.query.date) ?? pollaToday());
+    if (date && !ISO_DATE.test(date)) throw new BadRequestError('Fecha inválida (YYYY-MM-DD)');
 
     const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
-    const groups = await this.repository.getDailySales(
-      resolveOrganizationId(user, req.query.polla_organization_id),
+    const groups = await this.repository.getSales({
+      organizationId,
       date,
-      isCashier ? user.polla_user_id : null,
-      writableGroupId(user)
-    );
+      editionId,
+      cashierId: isCashier ? user.polla_user_id : null,
+      groupId: writableGroupId(user),
+    });
 
     const sales: IPollaDailySales = {
       date,
+      polla_edition_id: editionId,
       bets_count: groups.reduce((acc, group) => acc + group.bets_count, 0),
       amount: groups.reduce((acc, group) => acc + group.amount, 0),
       groups: isCashier ? null : groups,
@@ -643,7 +652,8 @@ export class PollaBetRouter {
 
     // ADMIN+ y el Super cargan a nombre de un pasador o jugador (el admin,
     // solo de su grupo); el pasador, al suyo o al de sus jugadores; el
-    // jugador, solo al suyo. La RPC lo valida y exige el identificador.
+    // jugador, solo al suyo. La RPC lo valida y, a nombre de un pasador, exige
+    // el identificador.
     if (
       targetUserId !== user.polla_user_id &&
       !isPollaLoaderRole(user.user_type) &&

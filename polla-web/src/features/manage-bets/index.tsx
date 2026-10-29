@@ -38,7 +38,6 @@ import {
 } from '@/components/ui/select';
 import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
-import { periodLabel } from '@/lib/accountPeriod';
 import { BetsList } from '@/features/bets/BetsList';
 import { EditBetDialog, EditableBet } from '@/features/bets/EditBetDialog';
 import { EditionPicker } from '@/features/bets/EditionPicker';
@@ -233,8 +232,8 @@ export const ManageBetsPage = () => {
       selectedUser.number ? `${pollaUserCode(selectedUser)} · ` : ''
     }${selectedUser.name}`;
   }
+  // El día de carga lo suma el botón: se elige al compartir.
   const filtersScope = [
-    loadRange ? `cargadas ${periodLabel(loadRange.from, loadRange.to)}` : '',
     winner === 'true' ? 'ganadores' : winner === 'false' ? 'no ganadores' : '',
     hits.length ? `${hits.join(', ')} aciertos` : '',
     nameSearch ? `"${nameSearch}"` : '',
@@ -475,6 +474,7 @@ export const ManageBetsPage = () => {
               sort,
             }}
             filtersLabel={pdfFiltersLabel}
+            pickLoadDate
           />
         )}
       </div>

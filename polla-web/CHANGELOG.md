@@ -4,6 +4,17 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-29 (Identificador opcional con jugador, ventas de la edición y fecha del PDF de Administrar)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`): el pasador que elige uno de sus jugadores ya no tiene que poner identificador ("opcional"); a su nombre sigue siendo obligatorio ("Poné el identificador o elegí uno de tus jugadores").
+- **Ventas del día** (`features/sales/index.tsx`): "Ver: Del día | Total de la edición". Con la edición, las boletas y lo recaudado de todos los días de carga de la edición elegida (en la URL, como en Jugadas), con el mismo desglose por grupo. Los grupos se muestran con su número (`groupLabel`). `useDailySales` acepta `polla_edition_id` y `enabled`; `useBetsEdition` devuelve `updateEdition`.
+- **Administrar jugadas** (`features/bets/ShareTicketsPdfButton.tsx`, `features/manage-bets/index.tsx`): "Compartir PDF" abre un diálogo para elegir de qué día son las jugadas que se imprimen: hoy, otra fecha, todas las fechas o, si la lista tiene "Cargadas desde / Hasta", ese rango (elegido de entrada). Los demás filtros de la lista se aplican igual y el PDF dice qué fecha se eligió. Prop nueva `pickLoadDate`; Jugadas y Resultados no cambian.
+- **Selector de grupo** (`features/current-account/dialogs/shared.tsx`): los grupos con su número.
+
+### Fixed - 2026-10-29
+
+- **Selects** (`components/ui/select.tsx`): el valor elegido se trunca con "…" en vez de desbordar. Las variantes `*:data-[slot=select-value]:` de shadcn son de Tailwind 4 y en el 3 no aplicaban: el nombre largo de una edición agrandaba la página en mobile (scroll horizontal en Jugadas, Administrar jugadas y Ventas). Pasan a `[&>[data-slot=select-value]]:`.
+
 ### Changed - 2026-10-27 (Números por grupo, tickets nuevos, usuarios de calle, rol Super y liquidación por grupo)
 
 - **Rol Super** (`routes/route.tsx`, `components/layout/AppLayout.tsx`): entra a Cargar jugada, Jugadas, Administrar jugadas, Revisar ticket, Resultados y Configuración.

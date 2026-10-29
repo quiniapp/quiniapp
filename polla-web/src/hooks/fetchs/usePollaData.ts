@@ -198,9 +198,14 @@ export const useLastEditionBets = (enabled: boolean) =>
     { enabled, retry: false, placeholderData: undefined }
   );
 
-/** Boletas vendidas en el día (total y, para admin+, por grupo). */
-export const useDailySales = (params: { date: string; polla_organization_id?: string | null }) =>
-  useApiQuery<IPollaDailySales>(['polla-sales'], BACKEND_ROUTES.bet.sales, params);
+/**
+ * Boletas vendidas en el día `date` o en toda la edición `polla_edition_id`
+ * (total y, para admin+, por grupo).
+ */
+export const useDailySales = (
+  params: { date?: string; polla_edition_id?: string; polla_organization_id?: string | null },
+  enabled = true
+) => useApiQuery<IPollaDailySales>(['polla-sales'], BACKEND_ROUTES.bet.sales, params, { enabled });
 
 // -------------------------------------------------------------- resultados
 
