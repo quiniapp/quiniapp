@@ -56,5 +56,23 @@ export const useBetsEdition = () => {
     [lotteryById, scheduleById]
   );
 
-  return { editionId, editionList, selectedEdition, lotteryById, scheduleById, labelFor };
+  const updateEdition = useCallback(
+    (value: string) =>
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('polla_edition_id', value);
+        return next;
+      }),
+    [setSearchParams]
+  );
+
+  return {
+    editionId,
+    editionList,
+    selectedEdition,
+    lotteryById,
+    scheduleById,
+    labelFor,
+    updateEdition,
+  };
 };

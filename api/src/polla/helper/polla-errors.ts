@@ -89,7 +89,7 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new BadRequestError('Solo pasadores y jugadores son de calle, y sin usuario ni contraseña'),
   polla_bets_identifier_length: () => new BadRequestError('El identificador tiene hasta 60 letras'),
   POLLA_BET_IDENTIFIER_REQUIRED: () =>
-    new BadRequestError('Poné el identificador del ticket (por ejemplo, el nombre del cliente)'),
+    new BadRequestError('Poné el identificador del ticket o cargalo a nombre de un jugador'),
   unique_polla_organization_name_active: () =>
     new ConflictError('Ya existe una organización con ese nombre'),
   unique_polla_group_name_active: () => new ConflictError('Ya existe un grupo con ese nombre'),

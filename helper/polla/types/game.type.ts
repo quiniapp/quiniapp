@@ -188,9 +188,9 @@ export interface IPollaBetEntityBack {
    */
   deducted_on: string | null;
   /**
-   * Identificador libre ("chicho", no único) de quién es la jugada. Obligatorio
-   * en todo lo que carga un pasador y en las jugadas a nombre de un pasador.
-   * `null` en tickets viejos.
+   * Identificador libre ("chicho", no único) de quién es la jugada. Todo ticket
+   * tiene jugador o identificador: es obligatorio a nombre de un pasador y
+   * opcional a nombre de un jugador. `null` en tickets viejos.
    */
   identifier: string | null;
 }
@@ -342,18 +342,21 @@ export interface IPollaTicketCheck {
   winners: IPollaTicketWinner[];
 }
 
-// ----------------------------------------------------------- ventas del día
+// ----------------------------------------------------------- ventas
 
-/** Boletas vendidas en un día por un grupo (`polla_group_id` null = sin grupo). */
+/** Boletas vendidas por un grupo (`polla_group_id` null = sin grupo). */
 export interface IPollaDailySalesGroup {
   polla_group_id: string | null;
   group_name: string | null;
+  group_number: number | null;
   bets_count: number;
   amount: number;
 }
 
+/** Ventas de un día (`date`) o de toda una edición (`polla_edition_id`). */
 export interface IPollaDailySales {
-  date: string;
+  date: string | null;
+  polla_edition_id: string | null;
   bets_count: number;
   amount: number;
   /** Desglose por grupo: solo admin+. El pasador recibe `null` (ve lo suyo). */

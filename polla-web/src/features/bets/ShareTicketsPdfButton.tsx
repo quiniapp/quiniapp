@@ -1,16 +1,30 @@
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import dayjs from 'dayjs';
 import { FileDown, LoaderCircle } from 'lucide-react';
 import { POLLA_EXPORT_PAGE_SIZE } from '@helper/polla/config/session.config';
 import { IPollaBetListItem, IPollaEditionEntityFront } from '@helper/polla/types/game.type';
 import { useAuth } from '@/providers/AuthContext';
 import { apiClient } from '@/lib/apiClient';
+import { periodLabel } from '@/lib/accountPeriod';
+import { todayIso } from '@/lib/dates';
+import { cn } from '@/lib/utils';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { PollaPage, cleanParams } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { makeEditionTicketsPdf } from '@/functions/editionTicketsPDF';
 import { sharePdf } from '@/functions/printPdf';
 import { fetchOrganizationName } from '@/features/current-account/fetchers';
+import { LoadRange } from './LoadDateFilter';
 
 export interface TicketsPdfFilters {
   /** `public`: lo que muestra Jugadas (toda la organización). Sin esto, lo que administra el rol. */
@@ -84,12 +98,112 @@ const fetchAllTickets = async (
   return rows;
 };
 
+type LoadChoice = 'list' | 'today' | 'day' | 'all';
+
+/**
+ * Qué días de carga entran al PDF: hoy, otra fecha, todas o, si la lista tiene
+ * el filtro "Cargadas desde / Hasta", ese rango (elegido de entrada).
+ */
+const LoadDateDialog = ({
+  listRange,
+  onConfirm,
+  onClose,
+}: {
+  listRange: LoadRange | null;
+  onConfirm: (range: LoadRange | null) => void;
+  onClose: () => void;
+}) => {
+  const today = todayIso();
+  const [choice, setChoice] = useState<LoadChoice>(listRange ? 'list' : 'today');
+  const [day, setDay] = useState(today);
+
+  const options: { value: LoadChoice; label: string }[] = [
+    ...(listRange
+      ? [
+          {
+            value: 'list' as const,
+            label: `Las de la lista (cargadas ${periodLabel(listRange.from, listRange.to)})`,
+          },
+        ]
+      : []),
+    { value: 'today', label: `Las de hoy (${dayjs(today).format('DD/MM')})` },
+    { value: 'day', label: 'Las de otra fecha' },
+    { value: 'all', label: 'Todas las fechas' },
+  ];
+
+  const handleConfirm = () => {
+    if (choice === 'list') onConfirm(listRange);
+    else if (choice === 'today') onConfirm({ from: today, to: today });
+    else if (choice === 'day') onConfirm({ from: day, to: day });
+    else onConfirm(null);
+  };
+
+  return (
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-w-[95vw] sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>Compartir PDF</DialogTitle>
+          <DialogDescription>
+            ¿De qué día son las jugadas que imprimís? Los demás filtros de la lista se aplican
+            igual.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div role="radiogroup" aria-label="Día de carga" className="flex flex-col gap-2">
+          {options.map((option) => {
+            const selected = choice === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setChoice(option.value)}
+                className={cn(
+                  'rounded-md border-2 px-3 py-2 text-left text-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                  selected ? 'border-primary font-medium' : 'border-border hover:border-primary/60'
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {choice === 'day' && (
+          <DateInput
+            id="pdf-load-day"
+            aria-label="Fecha de carga"
+            value={day}
+            max={today}
+            onValueChange={setDay}
+          />
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={handleConfirm} disabled={choice === 'day' && !day}>
+            <FileDown />
+            Compartir PDF
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 /**
  * "Compartir PDF": baja todas las jugadas de la edición (con los filtros que se
  * eligieron), arma el PDF para imprimir en blanco y negro y lo comparte (mobile)
  * o lo descarga (desktop). Mientras tanto muestra un spinner con el progreso.
  * La API lo acota a lo que administra cada rol, como Administrar jugadas; con
  * `view: 'public'` (Jugadas) trae lo mismo que la lista: toda la organización.
+ * Con `pickLoadDate` (Administrar jugadas) antes se elige de qué día son las
+ * jugadas: reemplaza `load_from`/`load_to` de `filters` y se suma al final de
+ * `filtersLabel`.
  */
 export const ShareTicketsPdfButton = ({
   edition,
@@ -97,6 +211,7 @@ export const ShareTicketsPdfButton = ({
   scheduleName,
   filters = {},
   filtersLabel,
+  pickLoadDate = false,
   className,
 }: {
   edition: IPollaEditionEntityFront;
@@ -104,17 +219,19 @@ export const ShareTicketsPdfButton = ({
   scheduleName: string;
   filters?: TicketsPdfFilters;
   filtersLabel?: string;
+  pickLoadDate?: boolean;
   className?: string;
 }) => {
   const { organizationId } = useAuth();
   const [progress, setProgress] = useState<Progress>({ phase: 'idle' });
+  const [picking, setPicking] = useState(false);
   const busy = progress.phase !== 'idle';
 
-  const handleClick = async () => {
+  const generate = async (pdfFilters: TicketsPdfFilters, pdfFiltersLabel?: string) => {
     setProgress({ phase: 'loading', loaded: 0, total: edition.bets_count ?? 0 });
     try {
       const [rows, orgName] = await Promise.all([
-        fetchAllTickets(edition.polla_edition_id, filters, (loaded, total) =>
+        fetchAllTickets(edition.polla_edition_id, pdfFilters, (loaded, total) =>
           setProgress({ phase: 'loading', loaded, total })
         ),
         fetchOrganizationName(organizationId),
@@ -130,7 +247,7 @@ export const ShareTicketsPdfButton = ({
         lotteryName,
         scheduleName,
         orgName,
-        filtersLabel,
+        filtersLabel: pdfFiltersLabel,
       });
 
       await sharePdf(blob, fileName, `Tickets de la Polla ${lotteryName} · ${scheduleName}`);
@@ -139,6 +256,20 @@ export const ShareTicketsPdfButton = ({
     } finally {
       setProgress({ phase: 'idle' });
     }
+  };
+
+  const handleClick = () => {
+    if (pickLoadDate) setPicking(true);
+    else void generate(filters, filtersLabel);
+  };
+
+  const handlePicked = (range: LoadRange | null) => {
+    setPicking(false);
+    const loadLabel = range ? `cargadas ${periodLabel(range.from, range.to)}` : 'todas las fechas';
+    void generate(
+      { ...filters, load_from: range?.from, load_to: range?.to },
+      [filtersLabel, loadLabel].filter(Boolean).join(' · ')
+    );
   };
 
   let label = 'Compartir PDF';
@@ -150,17 +281,30 @@ export const ShareTicketsPdfButton = ({
     label = 'Generando PDF…';
   }
 
+  const listRange =
+    filters.load_from && filters.load_to ? { from: filters.load_from, to: filters.load_to } : null;
+
   return (
-    <Button
-      type="button"
-      variant="outline"
-      className={className}
-      onClick={handleClick}
-      disabled={busy}
-      aria-busy={busy}
-    >
-      {busy ? <LoaderCircle className="animate-spin" /> : <FileDown />}
-      {label}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        className={className}
+        onClick={handleClick}
+        disabled={busy}
+        aria-busy={busy}
+      >
+        {busy ? <LoaderCircle className="animate-spin" /> : <FileDown />}
+        {label}
+      </Button>
+
+      {picking && (
+        <LoadDateDialog
+          listRange={listRange}
+          onConfirm={handlePicked}
+          onClose={() => setPicking(false)}
+        />
+      )}
+    </>
   );
 };

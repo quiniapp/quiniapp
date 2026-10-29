@@ -374,20 +374,23 @@ export class PollaBetRepository {
   }
 
   /**
-   * Boletas vendidas en el día por grupo (sin las repetidas sin cargo); con
-   * `cashierId`, solo las de ese pasador; con `groupId`, solo ese grupo.
+   * Boletas vendidas por grupo (sin las repetidas sin cargo) en el día `date` o
+   * en toda la edición `editionId`; con `cashierId`, solo las de ese pasador;
+   * con `groupId`, solo ese grupo.
    */
-  async getDailySales(
-    organizationId: string,
-    date: string,
-    cashierId: string | null,
-    groupId: string | null = null
-  ): Promise<IPollaDailySalesGroup[]> {
+  async getSales(params: {
+    organizationId: string;
+    date: string | null;
+    editionId: string | null;
+    cashierId: string | null;
+    groupId: string | null;
+  }): Promise<IPollaDailySalesGroup[]> {
     const { data, error } = await supabase.rpc('polla_daily_sales', {
-      p_organization_id: organizationId,
-      p_date: date,
-      p_cashier_id: cashierId,
-      p_group_id: groupId,
+      p_organization_id: params.organizationId,
+      p_date: params.date,
+      p_cashier_id: params.cashierId,
+      p_group_id: params.groupId,
+      p_edition_id: params.editionId,
     });
 
     throwIfPollaError(error);
@@ -399,9 +402,9 @@ export class PollaBetRepository {
   }
 
   /**
-   * Alta de una jugada. El corte, a nombre de quién puede cargar y si el
-   * identificador es obligatorio salen del rol del actor (la RPC); `date` solo
-   * lo respeta para superadmin+.
+   * Alta de una jugada. El corte y a nombre de quién puede cargar salen del rol
+   * del actor (la RPC), que exige el identificador a nombre de un pasador;
+   * `date` solo lo respeta para superadmin+.
    */
   async create(params: {
     editionId: string;

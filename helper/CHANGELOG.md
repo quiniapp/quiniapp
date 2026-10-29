@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-29 (Polla: identificador opcional con jugador y ventas de la edición)
+
+- **`polla/types/game.type.ts`**: `IPollaDailySales.date` puede ser `null` y suma `polla_edition_id` (ventas de toda la edición); `IPollaDailySalesGroup.group_number`. El comentario de `identifier` dice la regla nueva: obligatorio a nombre de un pasador, opcional a nombre de un jugador.
+- **`polla/schemas/game.schema.ts`**: comentario de `newPollaBetSchema.identifier` con la misma regla.
+
 ### Changed - 2026-10-27 (Polla: números por grupo, tickets nuevos, usuarios de calle y rol Super)
 
 - **`polla/types/user.type.ts`**:
