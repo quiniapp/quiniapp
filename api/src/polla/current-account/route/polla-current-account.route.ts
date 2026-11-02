@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { POLLA_ACCOUNT_RECALC_MAX_DAYS } from '@helper/polla/config/session.config';
+import { POLLA_LIQUIDATION_NO_GROUP as LIQUIDATION_NO_GROUP } from '@helper/polla/types/game.type';
 import {
   pollaCurrentAccountUpdateSchema,
   pollaCurrentAccountBulkUpdateSchema,
@@ -18,6 +19,8 @@ const queryString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Inicio de la liquidación por rango (`range_from`), hasta `date` inclusive y
@@ -166,10 +169,12 @@ export class PollaCurrentAccountRouter {
   /**
    * "Actualizar" recalcula el período abierto (desde la última liquidación de
    * cada pasador) hasta la fecha, no solo ese día: lo jugado en la semana se
-   * acumula. Liquidar además cierra el período de todos en esa fecha. Con
-   * `range_from` (liquidación por rango) devuelve los montos de ese rango; se
-   * liquida igual en la fecha, que es el Hasta. La liquidación de Polla no
-   * tiene deje.
+   * acumula. Liquidar además cierra en esa fecha el período de los pasadores
+   * de un grupo (`polla_group_id`, o `none` para los sin grupo): los números
+   * de pasador se repiten entre grupos, así que se ven todos pero se liquida
+   * por grupo. Con `range_from` (liquidación por rango) devuelve los montos de
+   * ese rango; se liquida igual en la fecha, que es el Hasta. La liquidación
+   * de Polla no tiene deje.
    */
   private runCalculation = async (req: Request, liquidated: boolean) => {
     const { user } = getPollaSession(req);
@@ -185,8 +190,25 @@ export class PollaCurrentAccountRouter {
       req.query.polla_organization_id ?? req.body?.polla_organization_id
     );
 
+    const groupParam = req.body?.polla_group_id ?? req.query.polla_group_id;
+    if (
+      liquidated &&
+      !(
+        groupParam === LIQUIDATION_NO_GROUP ||
+        (typeof groupParam === 'string' && UUID.test(groupParam))
+      )
+    ) {
+      throw new BadRequestError('Elegí el grupo a liquidar');
+    }
+
     await this.repository.recalculateOpenPeriod(organizationId, date);
-    if (liquidated) await this.repository.markDayLiquidated(organizationId, date);
+    if (liquidated) {
+      await this.repository.markDayLiquidated(
+        organizationId,
+        date,
+        groupParam === LIQUIDATION_NO_GROUP ? null : groupParam
+      );
+    }
 
     return this.repository.getPeriodRows({ organizationId, date, from });
   };

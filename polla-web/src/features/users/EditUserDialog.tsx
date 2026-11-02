@@ -5,6 +5,7 @@ import {
   IPollaUserEntityFront,
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
+  canBePollaStreetUser,
 } from '@helper/polla/types/user.type';
 import { IPollaGroupEntityFront } from '@helper/polla/types/catalog.type';
 import { useUpdateUser } from '@/hooks/mutations/usePollaMutations';
@@ -19,14 +20,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { groupLabel } from '@/lib/pollaGroups';
 
 interface EditUserDialogProps {
   user: IPollaUserEntityFront;
@@ -36,20 +31,30 @@ interface EditUserDialogProps {
   onClose: () => void;
 }
 
-/** Datos del usuario. La contraseña se cambia aparte, con el blanqueo. */
+/**
+ * Datos del usuario. La contraseña se cambia aparte, con el blanqueo; solo se
+ * pone acá al pasar a aplicación a un usuario de calle (que no tenía). El
+ * grupo del pasador queda fijo desde el alta (el jugador toma el de su
+ * pasador).
+ */
 export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDialogProps) => {
   const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
   const hasNumber = isCashier || user.user_type === POLLA_USER_TYPE.PLAYER;
+  const canBeStreet = canBePollaStreetUser(user.user_type);
 
   const [form, setForm] = useState({
     name: user.name,
     last_name: user.last_name ?? '',
     username: user.username ?? '',
+    password: '',
     number: user.number ? String(user.number) : '',
-    polla_group_id: user.polla_group_id ?? '',
     fee: user.fee !== null ? String(user.fee) : '',
     disabled: user.disabled,
+    is_street: user.is_street,
   });
+
+  // De calle a aplicación: necesita usuario y contraseña para entrar.
+  const toApp = user.is_street && !form.is_street;
 
   const { mutate: updateUser, isPending } = useUpdateUser();
 
@@ -59,10 +64,11 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
     const payload: Record<string, unknown> = {
       name: form.name.trim(),
       last_name: form.last_name.trim() || null,
-      username: form.username.trim() || null,
+      username: form.is_street ? null : form.username.trim() || null,
       disabled: form.disabled,
+      ...(canBeStreet ? { is_street: form.is_street } : {}),
+      ...(toApp ? { password: form.password } : {}),
       ...(hasNumber ? { number: form.number ? Number(form.number) : null } : {}),
-      ...(isCashier ? { polla_group_id: form.polla_group_id || null } : {}),
       ...(isCashier && canEditFee ? { fee: form.fee === '' ? null : Number(form.fee) } : {}),
     };
 
@@ -71,9 +77,24 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
       return;
     }
 
+    if (toApp && (!payload.username || !form.password)) {
+      toast.error('Para que entre a la aplicación poné usuario y contraseña');
+      return;
+    }
+
     const parsed = updatePollaUserSchema.safeParse(payload);
     if (!parsed.success) {
       toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      return;
+    }
+
+    if (
+      form.is_street &&
+      !user.is_street &&
+      !window.confirm(
+        `${user.name} pasa a ser de calle: se borran su usuario y su contraseña y no va a poder entrar. ¿Seguir?`
+      )
+    ) {
       return;
     }
 
@@ -86,7 +107,9 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
         <DialogHeader>
           <DialogTitle>Editar {POLLA_USER_TYPE_LABEL[user.user_type].toLowerCase()}</DialogTitle>
           <DialogDescription>
-            Para cambiar la contraseña usá Blanquear contraseña.
+            {user.is_street
+              ? 'Es de calle: no entra a la aplicación.'
+              : 'Para cambiar la contraseña usá Blanquear contraseña.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -108,18 +131,34 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
                 onChange={(e) => setForm({ ...form, last_name: e.target.value })}
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="edit-user-username">Usuario</Label>
-              <Input
-                id="edit-user-username"
-                autoComplete="off"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-              />
-            </div>
+            {!form.is_street && (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="edit-user-username">Usuario</Label>
+                <Input
+                  id="edit-user-username"
+                  autoComplete="off"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                />
+              </div>
+            )}
+            {toApp && (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="edit-user-password">Contraseña</Label>
+                <Input
+                  id="edit-user-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+              </div>
+            )}
             {hasNumber && (
               <div className="flex flex-col gap-1">
-                <Label htmlFor="edit-user-number">Número</Label>
+                <Label htmlFor="edit-user-number">
+                  {isCashier ? 'Número en el grupo' : 'Número en el pasador'}
+                </Label>
                 <Input
                   id="edit-user-number"
                   inputMode="numeric"
@@ -130,23 +169,15 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
             )}
             {isCashier && (
               <div className="flex flex-col gap-1">
-                <Label>Grupo</Label>
-                <Select
-                  value={form.polla_group_id || 'none'}
-                  onValueChange={(v) => setForm({ ...form, polla_group_id: v === 'none' ? '' : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin grupo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin grupo</SelectItem>
-                    {groups.map((group) => (
-                      <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-user-group">Grupo (no se cambia)</Label>
+                <Input
+                  id="edit-user-group"
+                  readOnly
+                  disabled
+                  value={groupLabel(
+                    groups.find((group) => group.polla_group_id === user.polla_group_id)
+                  )}
+                />
               </div>
             )}
             {isCashier && canEditFee && (
@@ -161,6 +192,19 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
               </div>
             )}
           </div>
+
+          {canBeStreet && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="edit-user-street"
+                checked={form.is_street}
+                onCheckedChange={(checked) => setForm({ ...form, is_street: checked })}
+              />
+              <Label htmlFor="edit-user-street">
+                De calle (sin usuario ni contraseña, no entra)
+              </Label>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <Switch

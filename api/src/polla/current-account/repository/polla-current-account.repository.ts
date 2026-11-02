@@ -96,13 +96,20 @@ export class PollaCurrentAccountRepository {
     throwIfPollaError(error);
   }
 
-  /** Liquida el día de todos los pasadores de la organización (cierra sus períodos). */
-  async markDayLiquidated(organizationId: string, date: string) {
-    const { error } = await supabase
+  /**
+   * Liquida el día de los pasadores de un grupo (`null`: los sin grupo) y
+   * cierra sus períodos.
+   */
+  async markDayLiquidated(organizationId: string, date: string, groupId: string | null) {
+    let query = supabase
       .from('polla_current_accounts')
       .update({ is_liquidated: true, edited_at: new Date().toISOString() })
       .eq('polla_organization_id', organizationId)
       .eq('date', date);
+
+    query = groupId ? query.eq('polla_group_id', groupId) : query.is('polla_group_id', null);
+
+    const { error } = await query;
 
     throwIfPollaError(error);
   }

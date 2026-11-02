@@ -13,9 +13,12 @@ import {
   IPollaCurrentAccountPeriodRow,
   IPollaDailySales,
   IPollaEditionEntityFront,
+  IPollaGroupAccountEntityFront,
+  IPollaGroupAccountPreview,
   IPollaOrgExpenseEntityFront,
   IPollaResultEntityFront,
   IPollaTicketCheck,
+  POLLA_TICKET_SEARCH,
 } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import {
@@ -45,14 +48,55 @@ export const useUser = (id: string | null) =>
   );
 
 /**
+ * Siguiente número libre para el alta: el de un pasador en su grupo o el de un
+ * jugador en su pasador (el pasador, de los suyos).
+ */
+export const useNextUserNumber = (
+  params: {
+    user_type: POLLA_USER_TYPE | '';
+    polla_group_id?: string | null;
+    parent_polla_user_id?: string | null;
+  },
+  enabled = true
+) =>
+  useApiQuery<number>(['polla-user-next-number'], BACKEND_ROUTES.user.nextNumber, params, {
+    enabled,
+    // Cada alta cambia el siguiente: se pide de nuevo al abrir el formulario.
+    staleTime: 0,
+    placeholderData: undefined,
+  });
+
+/** Acota el buscador: grupo, pasador (sus jugadores) o solo a quién se le puede cargar. */
+export interface UserSearchScope {
+  polla_group_id?: string | null;
+  parent_polla_user_id?: string | null;
+  /**
+   * Para cargar a nombre de otro: admin+ y el Super (el admin, solo en su
+   * grupo) y el pasador, a sus jugadores.
+   */
+  writable?: boolean;
+}
+
+/**
  * Buscador de pasadores y jugadores (`UserSearchPicker`): número exacto si `q`
  * son solo dígitos; si no, nombre, apellido y usuario. Vacío trae todos.
  */
-export const useUserSearch = (q: string, userTypes: POLLA_USER_TYPE[], enabled = true) =>
+export const useUserSearch = (
+  q: string,
+  userTypes: POLLA_USER_TYPE[],
+  enabled = true,
+  scope: UserSearchScope = {}
+) =>
   useApiInfiniteQuery<IPollaUserOption>(
     ['polla-user-search'],
     BACKEND_ROUTES.user.search,
-    { q, user_type: userTypes.join(',') },
+    {
+      q,
+      user_type: userTypes.join(','),
+      polla_group_id: scope.polla_group_id,
+      parent_polla_user_id: scope.parent_polla_user_id,
+      scope: scope.writable ? 'writable' : undefined,
+    },
     { enabled, limit: 30, keepPrevious: true }
   );
 
@@ -123,9 +167,6 @@ export const useBetToRepeat = (ticketNumber: string | null) =>
     { enabled: Boolean(ticketNumber), retry: false, placeholderData: undefined }
   );
 
-/** Nº de ticket completo (`<17 dígitos>-<pasador>`) o solo los 17 dígitos. */
-export const TICKET_SEARCH = /^\d{1,17}(-\d{1,6})?$/;
-
 /** "Revisar ticket": la jugada, su titular y el reparto del pozo de su edición. */
 export const useTicketCheck = (ticketNumber: string) =>
   useApiQuery<IPollaTicketCheck>(
@@ -133,7 +174,7 @@ export const useTicketCheck = (ticketNumber: string) =>
     BACKEND_ROUTES.bet.check(ticketNumber),
     {},
     // Un ticket que no existe es un 404 esperable: sin reintentos ni datos viejos.
-    { enabled: TICKET_SEARCH.test(ticketNumber), retry: false, placeholderData: undefined }
+    { enabled: POLLA_TICKET_SEARCH.test(ticketNumber), retry: false, placeholderData: undefined }
   );
 
 /**
@@ -148,18 +189,23 @@ export const useBetsOfDay = (params: QueryParams, enabled = true) =>
     { enabled, placeholderData: undefined }
   );
 
-/** La última jugada propia, para "Repetir última jugada". */
-export const useLastBet = (enabled: boolean) =>
-  useApiQuery<IPollaBetToRepeat>(
-    ['polla-bet-last'],
-    BACKEND_ROUTES.bet.last,
+/** Los tickets propios de la última edición en que jugó (jugador), para repetirlos. */
+export const useLastEditionBets = (enabled: boolean) =>
+  useApiQuery<IPollaBetToRepeat[]>(
+    ['polla-bet-last-edition'],
+    BACKEND_ROUTES.bet.lastEdition,
     {},
     { enabled, retry: false, placeholderData: undefined }
   );
 
-/** Boletas vendidas en el día (total y, para admin+, por grupo). */
-export const useDailySales = (params: { date: string; polla_organization_id?: string | null }) =>
-  useApiQuery<IPollaDailySales>(['polla-sales'], BACKEND_ROUTES.bet.sales, params);
+/**
+ * Boletas vendidas en el día `date` o en toda la edición `polla_edition_id`
+ * (total y, para admin+, por grupo).
+ */
+export const useDailySales = (
+  params: { date?: string; polla_edition_id?: string; polla_organization_id?: string | null },
+  enabled = true
+) => useApiQuery<IPollaDailySales>(['polla-sales'], BACKEND_ROUTES.bet.sales, params, { enabled });
 
 // -------------------------------------------------------------- resultados
 
@@ -216,6 +262,26 @@ export const useCurrentAccountTotals = (params: QueryParams = {}, enabled = true
     ['polla-current-accounts', 'totals'],
     BACKEND_ROUTES.currentAccount.totals,
     params,
+    { enabled }
+  );
+
+// ------------------------------------------------------- cuenta del grupo
+
+/** Liquidaciones de grupos (el admin recibe solo las del suyo). */
+export const useGroupAccounts = (params: QueryParams = {}, enabled = true) =>
+  useApiInfiniteQuery<IPollaGroupAccountEntityFront>(
+    ['polla-group-accounts'],
+    BACKEND_ROUTES.groupAccount.base,
+    params,
+    { enabled, limit: 50 }
+  );
+
+/** Lo que se liquidaría a cada grupo a la fecha y qué pasadores faltan. */
+export const useGroupAccountPreviews = (date: string, enabled = true) =>
+  useApiQuery<IPollaGroupAccountPreview[]>(
+    ['polla-group-accounts', 'previews'],
+    BACKEND_ROUTES.groupAccount.previews,
+    { date },
     { enabled }
   );
 

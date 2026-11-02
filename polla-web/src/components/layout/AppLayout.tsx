@@ -3,6 +3,7 @@ import { NavLink, Outlet, useMatches, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   CalendarDays,
+  ClipboardList,
   CreditCard,
   FileText,
   ListOrdered,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import {
   POLLA_ACCOUNT_ROLES,
+  POLLA_SUPER_ROLES,
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
 } from '@helper/polla/types/user.type';
@@ -36,7 +38,8 @@ const ADMIN_AND_UP = [
 
 const STAFF = [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER];
 
-const OWNER_AND_CAPITALIST = [POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST];
+/** El Super (ASSISTANT) solo carga, ve y administra jugadas. */
+const BET_STAFF = [...STAFF, POLLA_USER_TYPE.ASSISTANT];
 
 interface NavItem {
   to: string;
@@ -46,27 +49,39 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
   {
     to: ROUTES.MAKE_BET,
     label: 'Cargar jugada',
     icon: PlusCircle,
-    roles: [POLLA_USER_TYPE.PLAYER, POLLA_USER_TYPE.CASHIER, ...ADMIN_AND_UP],
+    roles: [POLLA_USER_TYPE.PLAYER, ...BET_STAFF],
   },
-  { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: STAFF },
+  { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
+  {
+    to: ROUTES.MANAGE_BETS,
+    label: 'Administrar jugadas',
+    icon: ClipboardList,
+    roles: BET_STAFF,
+  },
+  { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: BET_STAFF },
   { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },
-  { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: ADMIN_AND_UP },
+  // Ediciones, quinielas, turnos y grupos son de toda la organización.
+  { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: POLLA_SUPER_ROLES },
   { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
   { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
   {
-    // El admin no ve la cuenta corriente ni liquida.
+    // El admin ve solo la cuenta de su grupo; el pasador, la suya.
     to: ROUTES.CURRENT_ACCOUNT,
     label: 'Cuenta corriente',
     icon: CreditCard,
-    roles: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
+    roles: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
   },
-  { to: ROUTES.CATALOGS, label: 'Quinielas y turnos', icon: ListOrdered, roles: ADMIN_AND_UP },
-  { to: ROUTES.GROUPS, label: 'Grupos', icon: UsersRound, roles: OWNER_AND_CAPITALIST },
+  {
+    to: ROUTES.CATALOGS,
+    label: 'Quinielas y turnos',
+    icon: ListOrdered,
+    roles: POLLA_SUPER_ROLES,
+  },
+  { to: ROUTES.GROUPS, label: 'Grupos', icon: UsersRound, roles: POLLA_SUPER_ROLES },
   {
     to: ROUTES.ORGANIZATIONS,
     label: 'Organizaciones',

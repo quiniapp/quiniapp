@@ -1,4 +1,9 @@
-import { IPollaBetEntityFront, IPollaProcessResult } from '@helper/polla/types/game.type';
+import {
+  IPollaBetEntityFront,
+  IPollaGroupAccountEntityFront,
+  IPollaProcessResult,
+  IPollaRepeatResult,
+} from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
 
@@ -46,11 +51,33 @@ export const useDeleteOrganization = () =>
     { invalidate: ['polla-organizations'], successMessage: 'Organización eliminada' }
   );
 
+export interface NewGroupAdmin {
+  name: string;
+  last_name?: string | null;
+  username: string;
+  password: string;
+  email?: string | null;
+  phone?: number | null;
+}
+
+/** El grupo nace con su admin, como la organización con su capitalista. */
 export const useCreateGroup = () =>
-  useApiMutation('post', BACKEND_ROUTES.group.base, {
-    invalidate: ['polla-groups'],
-    successMessage: 'Grupo creado',
-  });
+  useApiMutation<unknown, { group: { name: string }; admin: NewGroupAdmin }>(
+    'post',
+    BACKEND_ROUTES.group.base,
+    {
+      invalidate: ['polla-groups', 'polla-users'],
+      successMessage: 'Grupo y admin creados',
+    }
+  );
+
+/** A un grupo sin admin: un admin del modelo anterior (sin grupo) o uno nuevo. */
+export const useAssignGroupAdmin = () =>
+  useApiMutation<unknown, { id: string; polla_user_id?: string; admin?: NewGroupAdmin }>(
+    'post',
+    ({ id }) => BACKEND_ROUTES.group.assignAdmin(id),
+    { invalidate: ['polla-groups', 'polla-users'], successMessage: 'Admin asignado al grupo' }
+  );
 
 export const useUpdateGroup = () =>
   useApiMutation<unknown, { id: string; name: string }>(
@@ -61,8 +88,8 @@ export const useUpdateGroup = () =>
 
 export const useDeleteGroup = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.group.id(id), {
-    invalidate: ['polla-groups'],
-    successMessage: 'Grupo eliminado',
+    invalidate: ['polla-groups', 'polla-users', 'polla-user-search'],
+    successMessage: 'Grupo eliminado con su admin, pasadores y jugadores',
   });
 
 export const useCreateLottery = () =>
@@ -93,7 +120,7 @@ export const useDeleteSchedule = () =>
 
 export const useCreateUser = () =>
   useApiMutation('post', BACKEND_ROUTES.user.base, {
-    invalidate: ['polla-users', 'polla-user-search'],
+    invalidate: ['polla-users', 'polla-user-search', 'polla-user-next-number'],
     successMessage: 'Usuario creado',
   });
 
@@ -147,7 +174,13 @@ export const useDeleteEdition = () =>
 export const useCreateBet = () =>
   useApiMutation<
     IPollaBetEntityFront,
-    { polla_edition_id: string; numbers: string[]; polla_user_id?: string; date?: string }
+    {
+      polla_edition_id: string;
+      numbers: string[];
+      polla_user_id?: string;
+      date?: string;
+      identifier?: string;
+    }
   >('post', BACKEND_ROUTES.bet.base, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
     successMessage: 'Jugada cargada',
@@ -164,6 +197,20 @@ export const useDeleteBet = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.bet.id(id), {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
     successMessage: 'Jugada eliminada',
+  });
+
+type RepeatVariables = { polla_edition_id: string; polla_bet_ids: string[] };
+
+/** Repetir tickets (pagos) a nombre de su dueño original. Avisa la pantalla. */
+export const useRepeatBets = () =>
+  useApiMutation<IPollaRepeatResult, RepeatVariables>('post', BACKEND_ROUTES.bet.repeat, {
+    invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
+  });
+
+/** Repetir sin cargo (admin+) tickets de una edición finalizada. Avisa la pantalla. */
+export const useFreeRepeatBets = () =>
+  useApiMutation<IPollaRepeatResult, RepeatVariables>('post', BACKEND_ROUTES.bet.freeRepeat, {
+    invalidate: ['polla-bets', 'polla-editions'],
   });
 
 // ------------------------------------------------------------- resultados
@@ -206,15 +253,20 @@ export const useCalculateCurrentAccounts = () =>
     { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta corriente actualizada' }
   );
 
+/** Liquida en `date` a los pasadores de un grupo (`POLLA_LIQUIDATION_NO_GROUP`: sin grupo). */
 export const useLiquidateCurrentAccounts = () =>
-  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
-    'post',
-    BACKEND_ROUTES.currentAccount.liquidate,
+  useApiMutation<
+    unknown,
     {
-      invalidate: ['polla-current-accounts'],
-      successMessage: 'Cuentas liquidadas',
+      date: string;
+      range_from?: string;
+      polla_group_id: string;
+      polla_organization_id?: string;
     }
-  );
+  >('post', BACKEND_ROUTES.currentAccount.liquidate, {
+    invalidate: ['polla-current-accounts'],
+    successMessage: 'Cuentas liquidadas',
+  });
 
 export const useUpdateCurrentAccount = () =>
   useApiMutation<unknown, { id: string } & Record<string, unknown>>(
@@ -234,6 +286,23 @@ export const useBulkUpdateCurrentAccounts = () =>
   >('put', BACKEND_ROUTES.currentAccount.bulk, {
     // Siempre va seguido de "liquidar día", que es el que avisa.
     invalidate: ['polla-current-accounts'],
+  });
+
+// ------------------------------------------------------- cuenta del grupo
+
+export const useLiquidateGroup = () =>
+  useApiMutation<
+    IPollaGroupAccountEntityFront,
+    {
+      polla_group_id: string;
+      date: string;
+      admin_percentage: number;
+      adjustments?: number;
+      paid?: number;
+    }
+  >('post', BACKEND_ROUTES.groupAccount.liquidate, {
+    invalidate: ['polla-group-accounts'],
+    successMessage: 'Grupo liquidado',
   });
 
 // ------------------------------------------------------------------ gastos

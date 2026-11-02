@@ -1,5 +1,5 @@
 import {
-  IPollaGroupEntityFront,
+  IPollaGroupWithAdmin,
   IPollaLotteryEntityFront,
   IPollaOrganizationWithCapitalist,
   IPollaScheduleEntityFront,
@@ -8,6 +8,8 @@ import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { PollaPage, QueryParams, useApiQuery } from '../useApi';
 
 const CATALOG_STALE_TIME = 5 * 60 * 1000;
+
+type IPollaGroupAdmin = NonNullable<IPollaGroupWithAdmin['admin']>;
 
 /** Cada organización viene con su capitalista (usuario y nombre). */
 export const useOrganizations = (params: QueryParams = {}, enabled = true) =>
@@ -18,12 +20,22 @@ export const useOrganizations = (params: QueryParams = {}, enabled = true) =>
     { staleTime: CATALOG_STALE_TIME, enabled }
   );
 
-export const useGroups = (params: QueryParams = {}) =>
-  useApiQuery<PollaPage<IPollaGroupEntityFront>>(
+/** Cada grupo viene con su admin (solo para superadmin+; para el resto, `null`). */
+export const useGroups = (params: QueryParams = {}, enabled = true) =>
+  useApiQuery<PollaPage<IPollaGroupWithAdmin>>(
     ['polla-groups'],
     BACKEND_ROUTES.group.base,
     { limit: 200, ...params },
-    { staleTime: CATALOG_STALE_TIME }
+    { staleTime: CATALOG_STALE_TIME, enabled }
+  );
+
+/** Admins del modelo anterior, sin grupo: se asignan a un grupo sin admin. */
+export const useAdminsWithoutGroup = (enabled = true) =>
+  useApiQuery<IPollaGroupAdmin[]>(
+    ['polla-groups', 'admins-without-group'],
+    BACKEND_ROUTES.group.adminsWithoutGroup,
+    {},
+    { enabled }
   );
 
 export const useLotteries = (params: QueryParams = {}) =>

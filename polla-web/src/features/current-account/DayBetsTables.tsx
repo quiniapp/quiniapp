@@ -22,7 +22,7 @@ interface DayBetsTablesProps {
   enabled?: boolean;
 }
 
-const player = (bet: IPollaBetListItem) => bet.client_name ?? bet.cashier_name;
+const player = (bet: IPollaBetListItem) => bet.client_name ?? bet.identifier ?? bet.cashier_name;
 
 const money = (bet: IPollaBetListItem) => (bet.amount !== null ? `$${fmtMoney(bet.amount)}` : '-');
 

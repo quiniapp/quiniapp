@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { IPollaCurrentAccountPeriodRow } from '@helper/polla/types/game.type';
+import { pollaCashierCode } from '@helper/polla/types/user.type';
 import {
   useBulkUpdateCurrentAccounts,
   useLiquidateCurrentAccounts,
@@ -174,22 +175,28 @@ const BULK_LABEL = { claims: 'Reclamos', collections: 'Cobros', paid: 'Pagos' } 
 type BulkKey = keyof typeof BULK_LABEL;
 
 /**
- * Generar las liquidaciones de todos los pasadores en el día (como QuiniApp):
- * cada uno con lo acumulado en su período, o en el rango que arranca en
- * `from`. Reclamos, cobros y pagos se corrigen en la grilla (son del día), se
- * guardan y todos los períodos quedan cerrados en esa fecha.
+ * Generar las liquidaciones de los pasadores de un grupo en el día (como
+ * QuiniApp): cada uno con lo acumulado en su período, o en el rango que
+ * arranca en `from`. Los números de pasador se repiten entre grupos, así que
+ * se liquida grupo por grupo. Reclamos, cobros y pagos se corrigen en la
+ * grilla (son del día), se guardan y los períodos del grupo quedan cerrados en
+ * esa fecha.
  */
 export const GenerateLiquidationDialog = ({
   date,
   from,
   rows,
+  group,
   organizationId,
   onClose,
 }: {
   date: string;
   /** Liquidación por rango: primer día del rango. */
   from?: string;
+  /** Pasadores del grupo. */
   rows: IPollaCurrentAccountPeriodRow[];
+  /** Grupo que se liquida (`id` = `POLLA_LIQUIDATION_NO_GROUP`: los sin grupo). */
+  group: { id: string; number: number | null; label: string };
   organizationId: string | null;
   onClose: () => void;
 }) => {
@@ -240,7 +247,7 @@ export const GenerateLiquidationDialog = ({
 
     try {
       if (updates.length) await bulkUpdate({ date, updates, ...scope });
-      await liquidate({ date, range_from: from, ...scope });
+      await liquidate({ date, range_from: from, polla_group_id: group.id, ...scope });
       onClose();
     } catch {
       // El hook ya avisó el error.
@@ -252,7 +259,7 @@ export const GenerateLiquidationDialog = ({
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto lg:max-w-[1100px]">
         <DialogHeader>
           <DialogTitle>
-            Generar liquidaciones{' '}
+            Generar liquidaciones · {group.label}{' '}
             {from
               ? `del ${periodLabel(from, date, 'DD-MM-YYYY')}`
               : `al ${dayjs(date).format('DD-MM-YYYY')}`}
@@ -261,8 +268,8 @@ export const GenerateLiquidationDialog = ({
             {from
               ? 'Cada pasador con lo de esos días.'
               : 'Cada pasador con lo acumulado desde su última liquidación.'}{' '}
-            Corregí reclamos, cobros y pagos del día; al generar, todos los períodos quedan
-            liquidados el {dayjs(date).format('DD-MM-YYYY')}.
+            Corregí reclamos, cobros y pagos del día; al generar, los períodos de los pasadores del
+            grupo quedan liquidados el {dayjs(date).format('DD-MM-YYYY')}.
           </DialogDescription>
         </DialogHeader>
 
@@ -290,7 +297,9 @@ export const GenerateLiquidationDialog = ({
                 const view = periodView(row);
                 return (
                   <TableRow key={row.polla_current_account_id}>
-                    <TableCell>{row.user_number ?? ''}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {pollaCashierCode(group.number, row.user_number)}
+                    </TableCell>
                     <TableCell className="max-w-[180px] truncate">{row.user_name}</TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
                       {dayjs(view.period_from).format('DD/MM')}

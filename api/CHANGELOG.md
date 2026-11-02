@@ -4,6 +4,139 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-29 (Polla: identificador opcional con jugador y ventas de la edición)
+
+#### Migración `20261029064157_polla_identifier_rule_edition_sales.sql`
+- **`polla_create_bet`**: el identificador ya no es obligatorio en todo lo que carga un pasador. Todo ticket tiene jugador o identificador: es obligatorio solo a nombre de un pasador (sin jugador), cargue quien cargue; a nombre de un jugador es opcional. Las repeticiones siguen copiando el del original.
+- **`polla_daily_sales`** suma `p_edition_id`: sin fecha trae el total de la edición (todos los días de carga); con los dos, ese día en esa edición; sin ninguno, nada. Devuelve `group_number` y ordena por número de grupo.
+
+#### Endpoints
+- **`GET /polla/private/bet/sales`**: `polla_edition_id` (opcional) trae las ventas de toda la edición en vez de las del día (404 si no existe, 403 si es de otra organización). La respuesta suma `polla_edition_id` (`date` es `null` en ese caso) y cada grupo trae `group_number`. `PollaBetRepository.getDailySales` pasa a `getSales({ organizationId, date, editionId, cashierId, groupId })`.
+- **`POLLA_BET_IDENTIFIER_REQUIRED`**: "Poné el identificador del ticket o cargalo a nombre de un jugador".
+
+### Changed - 2026-10-27 (Polla: números por grupo, tickets nuevos, usuarios de calle, rol Super y liquidación por grupo)
+
+#### Migración `20261027221618_polla_assistant_role.sql`
+- **`polla_user_type_enum`** suma `ASSISTANT` (en pantalla, "Super"): asistente de carga de toda la organización. Va sola porque el valor nuevo de un enum no se puede usar en la misma transacción.
+
+#### Migración `20261027221619_polla_group_numbers_street_users.sql`
+- **`polla_groups.number`**: 1 a N dentro de la organización (backfill por orden de alta), `CHECK (number > 0)` e índice único `unique_polla_group_number_active`. El trigger `trg_assign_polla_group_number` le pone el siguiente libre al alta (también a la de `polla_create_group_with_admin`). El 0 es "sin grupo".
+- **Números de usuario**: se reemplaza `unique_polla_user_number_active` (org + tipo) por `unique_polla_cashier_number_active` (pasador único dentro de su grupo; los sin grupo, entre ellos) y `unique_polla_player_number_active` (jugador único dentro de su pasador). Índice `idx_polla_users_org_number` para el buscador. Sin backfill: los datos cumplían una regla más estricta.
+- **`polla_users.is_street`**: pasadores y jugadores de calle, sin usuario ni contraseña (`polla_users_street_check`). El login ya rechazaba `password_hash` NULL.
+- **`ASSISTANT` en las reglas de usuarios**: `polla_users_role_fields_check` (sin comisión ni pasador) y `sync_polla_user_group` (sin grupo).
+- **`polla_bets.identifier`**: identificador libre del ticket ("chicho", no único), hasta 60 letras (`polla_bets_identifier_length`).
+- **`polla_load_cutoff`**: `ASSISTANT` tiene el corte del admin.
+- **`polla_create_bet`** suma `p_identifier`:
+  - Número de ticket `{grupo}-{YYYYMMDDHHmmssSSS}-{pasador}-{jugador}` (grupo 0 sin grupo; jugador 0 si es del propio pasador). Los tickets viejos no se tocan.
+  - El identificador es obligatorio si carga un pasador o si la jugada es a nombre de un pasador (`POLLA_BET_IDENTIFIER_REQUIRED`); las repeticiones copian el del original, aunque sea NULL.
+  - `ASSISTANT` carga a nombre de cualquier pasador o jugador de la organización, con la fecha de hoy y sin "sin cargo".
+- **`polla_assert_bet_writable`**: `ASSISTANT` edita y borra en toda la organización hasta su corte.
+- **`polla_repeat_bets`**: `ASSISTANT` repite en toda la organización; pasa el identificador del ticket original.
+
+#### Endpoints
+- **`POST /polla/private/bet`**: el pasador carga a nombre de sus jugadores (antes solo al suyo) y el Super, de cualquiera; recibe `identifier`.
+- **`GET /polla/private/bet`**: `search` (nombre del jugador o identificador, dentro de la edición); `ticket_number` acepta el formato nuevo y se valida (va en un filtro `or=`). Los 17 dígitos sueltos traen el ticket en los dos formatos. Cada jugada trae `group_number` e `identifier`. El Super administra (`view=manage`) toda la organización con la versión pública y sus acciones.
+- **`GET /polla/private/bet/sales`**: 403 para el Super.
+- **`GET /polla/private/bet/check/:ticket`**: `holder.identifier` y `group_number` del pasador y de los ganadores.
+- **`GET /polla/private/user/search`**: con `scope=writable` también el Super (toda la organización) y el pasador (solo sus jugadores). `q=2-5` busca el pasador 5 del grupo 2. Cada opción trae `group_number` e `is_street`.
+- **`GET /polla/private/user/next-number`** (nuevo): siguiente número libre de un pasador en su grupo o de un jugador en su pasador, para precargar el alta.
+- **`GET /polla/private/user/:id`**: también el Super (para el filtro de Administrar jugadas).
+- **`POST/PUT /polla/private/user`**: `is_street`. De calle no lleva usuario ni contraseña; pasar a calle borra las credenciales y revoca las sesiones; pasar a aplicación pide usuario y contraseña. El número se controla en su ámbito (grupo o pasador), también al cambiar el pasador de un jugador. El blanqueo de contraseña da 400 para uno de calle.
+- **`POST /polla/private/current_account/liquidate`**: exige `polla_group_id` (uuid o `none` para los sin grupo) y liquida solo ese grupo. La planilla sigue mostrando a todos.
+- **Grupos** (`GET /polla/private/group`): ordenados por número.
+- **`polla-errors.ts`**: mensajes para los índices y checks nuevos y `POLLA_BET_IDENTIFIER_REQUIRED`.
+
+### Changed - 2026-10-26 (Polla: PDF de Jugadas)
+
+- **`GET /polla/private/bet`** (`polla/bet/route/polla-bet.route.ts`): `export=true&view=public` (PDF de Jugadas) devuelve lo mismo que la lista de Jugadas: toda la organización en la versión pública, sin acciones y sin `manageScope`. Respeta `mine` y `load_from`/`load_to`.
+  - El jugador sigue recibiendo 403 con `export=true`.
+  - `export=true` sin `view` o con `view=manage` (PDF de Administrar jugadas) no cambia: sigue acotado a lo que administra cada rol.
+  - Sin migración.
+
+### Changed - 2026-10-23 (Polla: Jugadas de solo lectura y Administrar jugadas)
+
+- **`GET /polla/private/bet`** (`polla/bet/route/polla-bet.route.ts`): nuevo parámetro `view`.
+  - `view=public` (Jugadas): toda la organización en la versión pública (`toPublicBet`) para todos los roles, admin+ incluido, sin acciones (`can_edit`/`can_delete` en false). No consulta cortes de carga.
+  - `view=manage` (Administrar jugadas): `manageScope` pisa los filtros de alcance. El pasador ve lo suyo y lo de sus jugadores (`cashierId`); el admin, su grupo (`groupId`), aunque pida otro; superadmin+, la organización. El jugador recibe 403. `with_free_repeats` solo se calcula acá.
+  - `export=true` (PDF de tickets) usa el mismo alcance que `view=manage`.
+  - Sin `view` (cuenta corriente) no cambia nada.
+  - Sin migración.
+
+### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
+
+#### Migración `20261021233442_polla_groups_with_admin.sql`
+- **Un admin por grupo**: índice único parcial `unique_polla_group_admin_active`.
+- **`sync_polla_user_group`** (trigger `trg_sync_polla_user_group`): el jugador toma el grupo de su pasador y solo cambia a otro pasador del mismo grupo (`POLLA_PARENT_OTHER_GROUP`). El grupo del pasador queda fijo desde el alta y el del admin solo se asigna si no tenía (`POLLA_USER_GROUP_LOCKED`). Owner, capitalista y superadmin no van en un grupo. Backfill del grupo de los jugadores existentes.
+- **`polla_create_group_with_admin(org, nombre, admin JSONB)`**: crea grupo y admin en una sola transacción, como `polla_create_organization_with_capitalist`.
+
+#### Migración `20261021233443_polla_group_accounts.sql`
+- **Tabla `polla_group_accounts`**: una fila por grupo y fecha de liquidación. Guarda lo que dejaron los pasadores (suma de `subtotal` de las filas del grupo), los gastos del grupo, el arrastre, el % y la comisión del admin, el saldo, los ajustes, lo pagado y el total (lo que la organización le debe al admin).
+- **`polla_group_pending_cashiers(grupo, fecha)`**: pasadores del grupo con movimientos sin liquidar hasta la fecha (filas calculadas o jugadas que todavía no se calcularon).
+- **`polla_group_account_preview(org, grupo, fecha)`**: período desde el día siguiente a la última liquidación del grupo, base = deja de los pasadores − gastos del grupo + arrastre anterior, y pasadores pendientes.
+- **`polla_liquidate_group(...)`**: con base positiva la comisión es `base × %` y el arrastre vuelve a 0; si no, no hay comisión y se arrastra. Falla con pasadores pendientes (`POLLA_GROUP_CASHIERS_PENDING`) o si hay una liquidación posterior (`POLLA_GROUP_ACCOUNT_LATER_EXISTS`). Una liquidación de la misma fecha se rehace.
+- **`polla_delete_group(grupo, actor)`**: borra el grupo con su admin, pasadores y jugadores y les revoca las sesiones. Lo rechaza con jugadas en ediciones activas (`POLLA_GROUP_HAS_ACTIVE_BETS`), pasadores sin liquidar o un período del grupo sin liquidar (`POLLA_GROUP_ACCOUNT_OPEN`).
+
+#### Migración `20261021233444_polla_cutoffs_editions_repeat.sql`
+- **Columnas**: `polla_editions.surprise_pool_amount` (pozo sorpresa), `polla_bets.is_free` (repetida sin cargo) y `polla_bets.repeated_from_bet_id`, con sus índices.
+- **Cierre de carga hasta el primer sorteo**: se saca el CHECK `load_limit_date < start_date`. El trigger `validate_polla_edition_load_limit` exige `cierre < inicio + hora del turno`, así que una polla de un día puede cerrar la carga el mismo día (`POLLA_LOAD_LIMIT_AFTER_FIRST_DRAW`).
+- **`polla_load_cutoff(edición, rol)`**: única fuente de la regla de corte.
+  - Pasador y jugador: fecha y hora de cierre de la edición.
+  - Admin: el día de cierre a la hora del turno activo más tarde de la organización (nunca antes que el cierre del pasador) y nunca después del primer sorteo.
+  - Superadmin+: sin corte, hasta `end_date`.
+- **`polla_can_load`, `polla_loadable_editions`, `polla_editions_load_state`**: se arman sobre `polla_load_cutoff`. `polla_now()` da la hora de Argentina.
+- **`polla_create_bet`**:
+  - El rol sale del actor; `p_force` queda sin uso para la API del deploy.
+  - A nombre de quién carga cada rol: el admin, en su grupo (`POLLA_USER_OTHER_GROUP`); el pasador, a él o a sus jugadores; el jugador, a él (`POLLA_BET_TARGET_FORBIDDEN`).
+  - `p_date` solo cuenta para superadmin+.
+  - Nuevos `p_free` (amount 0, solo admin+) y `p_repeated_from`.
+- **`polla_update_bet_numbers` / `polla_delete_bet`**: el permiso sale de `polla_assert_bet_writable`. Superadmin+ siempre; el admin, en su grupo hasta su corte; el pasador solo borra lo suyo hasta el cierre de carga. El pasador no edita (`POLLA_BET_WRITE_FORBIDDEN`).
+- **`polla_repeat_bets(actor, edición, ids, free)`**:
+  - Repite tickets a nombre de su dueño original (un jugador, con su pasador actual).
+  - Los que no puede repetir vuelven en `skipped` con el motivo (`POLLA_BET_OUT_OF_SCOPE`, `POLLA_SOURCE_EDITION_NOT_FINISHED`, etc.).
+  - Sin cargo exige edición fuente `FINISHED` y actor admin+, sin límite de veces.
+- **`polla_update_edition(edición, cambios)`**:
+  - El precio vale para las jugadas nuevas: cada jugada guarda el suyo.
+  - Con ganador solo se renombra (`POLLA_EDITION_HAS_WINNERS_LOCKED`).
+  - Con sorteos cargados no cambian quiniela, turno ni inicio (`POLLA_EDITION_DRAWS_LOCKED`), y el fin no puede quedar antes del último sorteo (`POLLA_EDITION_END_BEFORE_DRAW`).
+  - Extender una edición `FINISHED` sin ganador la vuelve a `ACTIVE`, salvo que ya se hayan repetido tickets sin cargo desde ella (`POLLA_EDITION_EXTEND_AFTER_FREE_REPEAT`). El solape sigue bloqueado por `no_overlapping_polla_editions`.
+- **`polla_process_edition_hits`**: premio = `(pozo + pozo sorpresa) / ganadores`.
+- **`polla_daily_sales`**: nuevo `p_group_id` y deja afuera las jugadas sin cargo.
+
+#### Endpoints
+- **Grupos (`/group`, nuevo `group/route/polla-group.route.ts`)**:
+  - Los arman superadmin, capitalista y dueño. `POST` crea grupo + admin.
+  - `POST /:id/admin` asigna a un grupo sin admin uno del modelo anterior o uno nuevo; `GET /admins-without-group` los lista.
+  - `DELETE` llama a `polla_delete_group`.
+  - El listado trae el admin de cada grupo (solo para superadmin+).
+- **Cuenta del grupo (`/group_account`, nuevo)**:
+  - `GET /` lista las liquidaciones; el admin ve solo las de su grupo.
+  - `GET /previews?date=` muestra lo que se liquidaría a cada grupo, con pasadores pendientes y `liquidated_on_date`.
+  - `POST /liquidate` es solo para superadmin+.
+- **Middleware**: un ADMIN sin grupo (modelo anterior) recibe 403 en todo menos validar sesión, cambiar contraseña y salir.
+- **Usuarios**:
+  - El admin lista, crea y edita solo pasadores y jugadores de su grupo. Su pasador queda en su grupo y el jugador cuelga de un pasador del grupo.
+  - El grupo no se edita en `PUT /user/:id`.
+  - `GET /user/search` lo usan todos para filtrar jugadas. Con `scope=writable` (para cargar a nombre de otro) es solo admin+, y el admin solo busca en su grupo. Acepta `polla_group_id` y `parent_polla_user_id`.
+  - `GET /user/by-number` del admin busca solo en su grupo.
+- **Jugadas**:
+  - Todos ven las jugadas de la organización y filtran por grupo, pasador, jugador, `winner=true|false` y `hits=10,9,8,7`.
+  - Cada jugada trae `can_edit` y `can_delete`, calculados con el corte del rol.
+  - Nuevos `POST /bet/repeat` (pago), `POST /bet/free-repeat` (admin+) y `GET /bet/mine/last-edition`.
+  - `GET /bet/ticket/:n` busca en el alcance del rol y trae el dueño.
+  - `with_free_repeats=true` agrega las veces que se repitió sin cargo cada ticket.
+  - Ventas: el admin ve solo su grupo.
+- **Ediciones**:
+  - Crear, editar y borrar es solo para superadmin+.
+  - `PUT` usa `polla_update_edition`: se saca el bloqueo del precio con jugadas cargadas y se suma `surprise_pool_amount`.
+  - `loadable=true` usa `polla_loadable_editions` y trae `my_load_cutoff`.
+  - Los totales (recaudado y cantidad) son solo para superadmin+.
+- **Quinielas, turnos y resultados**: escritura solo para superadmin+; el admin lee.
+- **`polla-errors.ts`**: mensajes para los códigos nuevos. Si varios matchean, gana el más largo (`POLLA_EDITION_HAS_WINNERS` es prefijo de `..._LOCKED`).
+
+### Changed - 2026-10-21 (Polla: usuarios ordenados por número)
+
+- **`polla-user.repository.ts` → `getAll`** (`GET /user`): sigue agrupado por tipo, pero dentro de cada tipo ordena por `number` de menor a mayor (los que no tienen número al final) y después por nombre. Antes ordenaba por nombre, así que pasadores y jugadores no salían en orden de número.
+
 ### Changed - 2026-10-20 (Polla: el admin no ve la cuenta corriente; capitalistas fuera de Usuarios)
 
 - **`polla-current-account.route.ts`**: la cuenta corriente la ven y liquidan solo dueño, capitalista y superadmin (`POLLA_ACCOUNT_ROLES`). El pasador sigue viendo la suya. El ADMIN recibe 403 en `GET /current_account`, `/totals` y `/:id`, y en `calculate`, `liquidate`, `bulk` y `PUT /:id`. Antes podía ver todo y liquidar. El jugador queda afuera por el guard (se borran los chequeos sueltos).

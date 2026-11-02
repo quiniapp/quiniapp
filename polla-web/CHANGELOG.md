@@ -4,6 +4,127 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-10-29 (Identificador opcional con jugador, ventas de la edición y fecha del PDF de Administrar)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`): el pasador que elige uno de sus jugadores ya no tiene que poner identificador ("opcional"); a su nombre sigue siendo obligatorio ("Poné el identificador o elegí uno de tus jugadores").
+- **Ventas del día** (`features/sales/index.tsx`): "Ver: Del día | Total de la edición". Con la edición, las boletas y lo recaudado de todos los días de carga de la edición elegida (en la URL, como en Jugadas), con el mismo desglose por grupo. Los grupos se muestran con su número (`groupLabel`). `useDailySales` acepta `polla_edition_id` y `enabled`; `useBetsEdition` devuelve `updateEdition`.
+- **Administrar jugadas** (`features/bets/ShareTicketsPdfButton.tsx`, `features/manage-bets/index.tsx`): "Compartir PDF" abre un diálogo para elegir de qué día son las jugadas que se imprimen: hoy, otra fecha, todas las fechas o, si la lista tiene "Cargadas desde / Hasta", ese rango (elegido de entrada). Los demás filtros de la lista se aplican igual y el PDF dice qué fecha se eligió. Prop nueva `pickLoadDate`; Jugadas y Resultados no cambian.
+- **Selector de grupo** (`features/current-account/dialogs/shared.tsx`): los grupos con su número.
+
+### Fixed - 2026-10-29
+
+- **Selects** (`components/ui/select.tsx`): el valor elegido se trunca con "…" en vez de desbordar. Las variantes `*:data-[slot=select-value]:` de shadcn son de Tailwind 4 y en el 3 no aplicaban: el nombre largo de una edición agrandaba la página en mobile (scroll horizontal en Jugadas, Administrar jugadas y Ventas). Pasan a `[&>[data-slot=select-value]]:`.
+
+### Changed - 2026-10-27 (Números por grupo, tickets nuevos, usuarios de calle, rol Super y liquidación por grupo)
+
+- **Rol Super** (`routes/route.tsx`, `components/layout/AppLayout.tsx`): entra a Cargar jugada, Jugadas, Administrar jugadas, Revisar ticket, Resultados y Configuración.
+- **Cargar jugada** (`features/make-bet/index.tsx`):
+  - El pasador carga a su nombre o al de uno de sus jugadores.
+  - Admin+ y el Super eligen "Pasador | Jugador"; el pasador se busca por número, `grupo-número` o nombre.
+  - Campo "Identificador": obligatorio para el pasador y para cualquier jugada a nombre de un pasador; el jugador no lo ve.
+- **Ticket impreso** (`functions/makePollaTicket.ts`): "Usuario: grupo-pasador", el número de ticket achica la letra hasta entrar y una línea "Id:" con el identificador.
+- **Jugadas y Administrar jugadas**: un solo "Buscar": un nº de ticket busca en todas las ediciones; otro texto, el jugador o el identificador en la edición elegida (también en el PDF). El Super administra toda la organización (grupo, editar, borrar, imprimir).
+- **Listado de jugadas** (`features/bets/BetsList.tsx`, `format.ts`): botón para copiar el nº de ticket (todos menos el jugador), pasador como `grupo-número` y el cliente con su identificador.
+- **Usuarios** (`features/users`): "De calle" para pasadores y jugadores (sin usuario ni contraseña); el número se precarga con el siguiente libre del grupo o del pasador; badge "Calle"; sin blanqueo para los de calle; al editar se pasa de calle a aplicación (pide usuario y contraseña) o al revés (avisa que se borran las credenciales).
+- **Grupos** (`features/groups/index.tsx`): columna Nº. `lib/pollaGroups.ts`: `groupLabel` ("2 · Zona norte").
+- **Cuenta corriente** (`features/current-account`): se ven todos los pasadores como `grupo-número`; "Generar liquidación" pide elegir un grupo (o "Sin grupo") y liquida solo ese grupo.
+- **Revisar ticket, ganadores y PDFs de tickets**: pasador como `grupo-número` e identificador del ticket.
+
+### Changed - 2026-10-26 (Menú y PDF de Jugadas)
+
+- **Menú lateral** (`components/layout/AppLayout.tsx`): "Cargar jugada" pasa primero, después "Jugadas" y "Administrar jugadas". El resto queda igual.
+- **Jugadas** (`features/bets/index.tsx`): el pasador y superiores tienen de nuevo "Cargadas desde / Hasta" y "Compartir PDF". El jugador sigue sin filtros ni PDF.
+  - El PDF imprime lo que muestra la lista: toda la organización en "Todas", o "Mis jugadas" (el pasador, lo suyo y lo de sus jugadores), con las fechas elegidas y por aciertos. Pide `export=true&view=public`.
+  - Esto vuelve atrás, solo en Jugadas, lo de 2026-10-23: el pasador puede compartir el PDF de todo lo que se juega. En Administrar jugadas el PDF sigue acotado a lo que administra cada rol.
+- **PDF de tickets** (`features/bets/ShareTicketsPdfButton.tsx`): `TicketsPdfFilters` suma `view: 'public'` y `mine`.
+- **`useLoadRangeParam`** (`features/bets/useLoadRangeParam.ts`): lee y escribe juntos `load_from`/`load_to` de la URL. Lo usan Jugadas y Administrar jugadas (antes estaba inline en `features/manage-bets/index.tsx`).
+
+### Changed - 2026-10-23 (Jugadas de solo lectura y Administrar jugadas)
+
+Se separa mirar las jugadas de administrarlas.
+
+- **Jugadas** (`features/bets/index.tsx`): de solo lectura e igual para todos los roles. Pide `view=public`, así que la API manda la versión pública (sin montos ni ids) también a admin+.
+  - Selector de edición (abre en la activa), pozo y banner de ganadores.
+  - Buscar Nº de ticket y "Todas / Mis jugadas". Abre en Todas; `mine=1` en la URL (y `/mis-jugadas`) abre en Mis jugadas.
+  - Orden fijo: más aciertos primero y, a igual cantidad, lo último cargado.
+  - Sin acciones, filtros ni PDF. "Actualizar" para todos menos el jugador, que ve lo cargado al entrar.
+- **Administrar jugadas** (`features/manage-bets`, ruta `/administrar-jugadas`, debajo de "Cargar jugada" en el menú): pasador y admin+. El jugador no la ve y por URL vuelve a Jugadas.
+  - Pide `view=manage`: el pasador ve lo suyo y lo de sus jugadores; el admin, su grupo; superadmin+, toda la organización.
+  - Tiene lo que antes estaba en Jugadas: filtros (grupo solo superadmin+; el pasador filtra por uno de sus jugadores; el admin busca en su grupo), fecha de carga, resultado, aciertos, orden, Actualizar, Compartir PDF, imprimir, editar, borrar y repetir sin cargo. Los permisos de cada acción no cambian.
+  - Ya no tiene "Solo mi grupo" ni "Mis jugadas / Jugando": el alcance lo fija el rol.
+- **Compartidos** (`features/bets`): `BetsList` (tarjetas en mobile, planilla en desktop), `EditionPicker`, `WinnersBanner`, `useBetsEdition` y `format.ts`.
+- **PDF de tickets** (`ShareTicketsPdfButton.tsx`): se saca el filtro `mine`. La API lo acota al alcance de cada rol, así que el pasador ya no comparte el PDF de todo lo que se juega.
+
+### Added - 2026-10-22 (Jugadas: filtro por fecha de carga)
+
+- **Filtro "Cargadas desde / Hasta"** (`features/bets/LoadDateFilter.tsx`, `features/bets/index.tsx`):
+  - Acota el listado de Jugadas a las cargadas entre esas fechas, sumado a los demás filtros (edición, grupo, pasador/jugador, resultado, aciertos). Viaja en la URL (`load_from` / `load_to`) y la API ya lo aceptaba.
+  - Elegir una sola fecha filtra ese día. Si el otro extremo queda fuera de rango (desde después de hasta, o más de `POLLA_ACCOUNT_RECALC_MAX_DAYS` días), se corre al mismo día. La cruz vuelve a todos los días.
+  - Pasador y admin+: el jugador no lo ve, y si la URL trae fechas no se mandan.
+  - Lo ignora la búsqueda por número de ticket, como el resto de los filtros.
+- **PDF de tickets** (`ShareTicketsPdfButton.tsx`): el export lleva también el rango de carga y el encabezado lo menciona ("cargadas 12/10 al 13/10").
+
+### Changed - 2026-10-22 (Polla: grupos con admin, corte por rol, edición de pollas y repetir tickets)
+
+#### Roles y grupos
+- **Menú y rutas** (`AppLayout.tsx`, `routes/route.tsx`):
+  - Ediciones, Quinielas y turnos y Grupos quedan para superadmin+.
+  - El admin entra a Cuenta corriente y ve la de su grupo.
+  - Resultados: solo superadmin+ los carga y procesa (`features/results`).
+- **Admin sin grupo** (`protected/ProtectedRoute.tsx`): pantalla que explica que tiene que asignarle un grupo un superadministrador.
+- **Grupos** (`features/groups`):
+  - Alta del grupo con su admin en un diálogo, como Organizaciones.
+  - El listado muestra el admin. "Asignar admin" (uno sin grupo o uno nuevo) aparece en los grupos del modelo anterior.
+  - Borrar avisa que se van también admin, pasadores y jugadores.
+- **Usuarios** (`features/users`):
+  - El admin ve y crea solo pasadores y jugadores de su grupo: su pasador queda en el grupo y el jugador cuelga de un pasador del grupo.
+  - El grupo de un pasador se elige al crearlo y después se ve de solo lectura (`EditUserDialog.tsx`).
+- **`UserSearchPicker`**: prop `scope` (grupo, pasador o `writable` para cargar a nombre de otro).
+
+#### Cargar y repetir
+- **Cargar jugada** (`features/make-bet`):
+  - El admin ve hasta cuándo carga (`my_load_cutoff`) y busca pasadores de su grupo.
+  - El aviso de "edición en juego" es solo para superadmin+.
+  - Pozo sorpresa destacado.
+- **Repetir directo** (`RepeatBetDialog.tsx`):
+  - Pasador y admin+: nº de ticket → números y dueño → "Cargar e imprimir". La jugada va a nombre del dueño original (el jugador, si era de uno) y el diálogo queda listo para el siguiente.
+  - Jugador: "Repetir mis tickets" lista sus tickets de la última edición en que jugó, con checkboxes, y los carga todos.
+  - Lo que no se pudo repetir se avisa con el motivo (`lib/repeatReasons.ts`).
+- **Tickets** (`functions/makePollaTicket.ts`): `makePollaTicketsPdf` arma varios tickets en un PDF (una página por ticket). Imprime "+ Pozo sorpresa" y "SIN CARGO" en los repetidos sin cargo.
+
+#### Jugadas
+- **Filtros** (`features/bets/index.tsx`, `ResultFilters.tsx`):
+  - Para todos: Resultado (Todos / Ganadores / No ganadores) y Aciertos (10, 9, 8, 7).
+  - Superadmin+ elige grupo; el resto tiene "Solo mi grupo". Todos filtran por pasador o jugador.
+  - Los filtros viajan también al PDF de tickets.
+- **Acciones**: editar y borrar según `can_edit` / `can_delete` de la API. Imprimir usa el precio guardado en la jugada.
+- **Repetir sin cargo** (`FreeRepeatDialog.tsx`): con una edición finalizada, admin+ elige tickets de su alcance (o todos los de la lista) y los repite en una edición abierta. Ve cuántos se cargaron y cuáles no. Badges "Sin cargo" y cantidad de veces que se repitió cada ticket.
+
+#### Ediciones
+- **`features/editions`**:
+  - Editar una edición: precio (vale para las jugadas nuevas), fechas, horas, pozo y pozo sorpresa.
+  - "Extender" en las cerradas sin ganador.
+  - Con ganador solo se renombra.
+  - El cierre de carga puede ser el mismo día del primer sorteo.
+- **Pozo sorpresa** destacado en Ediciones, Jugadas, Cargar jugada, Revisar ticket y el PDF de tickets.
+
+#### Cuenta corriente
+- **Pestaña "Grupos"** (`GroupAccounts.tsx`, superadmin+):
+  - Previa de cada grupo a la fecha (deja de los pasadores, gastos, arrastre, base) con los pasadores que faltan liquidar.
+  - "Liquidar" con % del admin, ajustes y pago, más ticket térmico (`functions/current-account/groupLiquidationTicket.ts`).
+  - Historial de liquidaciones.
+- **Admin**: ve la cuenta de su grupo (previa e historial, solo lectura).
+- **Reportes** (`dialogs/ReportDialogs.tsx`, `totalsTicket.ts`): se saca el "% del pozo"; la liquidación no descuenta del pozo.
+- **Ventas** (`features/sales`): el admin ve su grupo, sin selector de grupo.
+
+#### Fixed
+- **`components/ui/checkbox.tsx`**: el borde usaba `border-input` (el fondo blanco de los inputs) y no se veía sobre fondo blanco. Ahora usa `border-input-border`.
+
+### Changed - 2026-10-21 (Polla: usuarios por número y sin @)
+
+- **Usuarios** (`features/users/index.tsx`): pasadores y jugadores salen de menor a mayor número. El orden lo da la API (`GET /user`) porque la lista viene paginada.
+- **`lib/pollaUsers.ts` → `pollaUserTypeLine`**: el buscador de usuarios (`UserSearchPicker`) muestra el usuario sin `@` adelante ("pasador · juanp").
+
 ### Added - 2026-10-21 (Polla: botón Actualizar en Jugadas)
 
 - **`features/bets/index.tsx`**: botón "Actualizar" junto a "Compartir PDF" (gira mientras busca). Trae lo último cargado sin recargar la página, con los mismos filtros.

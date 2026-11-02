@@ -24,6 +24,8 @@ export interface IPollaOrganizationWithCapitalist extends IPollaOrganizationEnti
 export interface IPollaGroupEntityBack {
   polla_group_id: string;
   polla_organization_id: string;
+  /** 1 a N dentro de la organización (lo pone la base); encabeza el ticket. */
+  number: number;
   name: string;
   created_at: string;
   edited_at: string;
@@ -31,6 +33,16 @@ export interface IPollaGroupEntityBack {
 }
 
 export type IPollaGroupEntityFront = Omit<IPollaGroupEntityBack, 'deleted_at'>;
+
+/** Grupo como lo lista Grupos: con su admin (`null` = grupo del modelo viejo sin admin). */
+export interface IPollaGroupWithAdmin extends IPollaGroupEntityFront {
+  admin: {
+    polla_user_id: string;
+    name: string;
+    last_name: string | null;
+    username: string | null;
+  } | null;
+}
 
 export interface IPollaLotteryEntityBack {
   polla_lottery_id: string;

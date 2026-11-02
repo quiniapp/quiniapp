@@ -1,10 +1,8 @@
 import { Request, Response, Router } from 'express';
 import { ZodSchema } from 'zod';
 import { ForbiddenError } from '@helper/errors';
-import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_SUPER_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import {
-  newPollaGroupSchema,
-  updatePollaGroupSchema,
   newPollaLotterySchema,
   updatePollaLotterySchema,
   newPollaScheduleSchema,
@@ -24,8 +22,9 @@ interface CatalogRouterConfig extends CatalogTableConfig {
 }
 
 /**
- * Router genérico para los catálogos de Polla. Las cuatro entidades comparten
- * el mismo CRUD paginado y solo cambian tabla, schema y quién puede escribir.
+ * Router genérico para los catálogos de Polla (quinielas y turnos): comparten
+ * el mismo CRUD paginado y solo cambian tabla y schema. Los grupos tienen su
+ * propio router (nacen con su admin).
  */
 const createCatalogRouter = (config: CatalogRouterConfig): Router => {
   const router = Router();
@@ -117,25 +116,7 @@ const createCatalogRouter = (config: CatalogRouterConfig): Router => {
   return router;
 };
 
-const ADMIN_AND_UP = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
-];
-
-/** Los grupos los arman el OWNER y el capitalista, cada uno en su organización. */
-export const pollaGroupRouter = createCatalogRouter({
-  table: 'polla_groups',
-  idColumn: 'polla_group_id',
-  orgScoped: true,
-  orderBy: { column: 'name', ascending: true },
-  resourceKey: 'groups',
-  newSchema: newPollaGroupSchema,
-  updateSchema: updatePollaGroupSchema,
-  writeRoles: [POLLA_USER_TYPE.OWNER, POLLA_USER_TYPE.CAPITALIST],
-});
-
+/** Quinielas y turnos son de toda la organización: el admin de grupo solo los lee. */
 export const pollaLotteryRouter = createCatalogRouter({
   table: 'polla_lotteries',
   idColumn: 'polla_lottery_id',
@@ -144,7 +125,7 @@ export const pollaLotteryRouter = createCatalogRouter({
   resourceKey: 'lotteries',
   newSchema: newPollaLotterySchema,
   updateSchema: updatePollaLotterySchema,
-  writeRoles: ADMIN_AND_UP,
+  writeRoles: POLLA_SUPER_ROLES,
 });
 
 export const pollaScheduleRouter = createCatalogRouter({
@@ -155,5 +136,5 @@ export const pollaScheduleRouter = createCatalogRouter({
   resourceKey: 'schedules',
   newSchema: newPollaScheduleSchema,
   updateSchema: updatePollaScheduleSchema,
-  writeRoles: ADMIN_AND_UP,
+  writeRoles: POLLA_SUPER_ROLES,
 });

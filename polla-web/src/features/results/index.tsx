@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Pencil, Trash2 } from 'lucide-react';
 import { newPollaResultSchema } from '@helper/polla/schemas/game.schema';
 import { IPollaResultEntityFront } from '@helper/polla/types/game.type';
-import { isPollaAdminRole } from '@helper/polla/types/user.type';
+import { isPollaSuperRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions, useResultFor, useResults } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
@@ -57,8 +57,9 @@ export const ResultsPage = () => {
   const { role, organizationId } = useAuth();
   const today = dayjs().format('YYYY-MM-DD');
 
-  // Todos ven los resultados; solo ADMIN+ los carga, corrige y procesa.
-  const canManage = Boolean(role && isPollaAdminRole(role));
+  // Todos ven los resultados (el admin de grupo incluido). Valen para todos
+  // los grupos: solo superadmin+ los carga, corrige y procesa.
+  const canManage = Boolean(role && isPollaSuperRole(role));
 
   const [date, setDate] = useState(today);
   const [lotteryId, setLotteryId] = useState('');

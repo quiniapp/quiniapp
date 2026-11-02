@@ -5,16 +5,22 @@ import {
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
 } from '@helper/polla/types/user.type';
-import { useUserSearch } from '@/hooks/fetchs/usePollaData';
+import { UserSearchScope, useUserSearch } from '@/hooks/fetchs/usePollaData';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { flattenPages } from '@/hooks/useApi';
 import { cn } from '@/lib/utils';
-import { describePollaUser, pollaUserFullName, pollaUserTypeLine } from '@/lib/pollaUsers';
+import {
+  describePollaUser,
+  pollaUserCode,
+  pollaUserFullName,
+  pollaUserTypeLine,
+} from '@/lib/pollaUsers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const isDigits = (text: string) => /^\d{1,9}$/.test(text);
+/** Un número o un `grupo-número` de pasador: si trae a uno solo, se elige solo. */
+const isDigits = (text: string) => /^(\d{1,4}-)?\d{1,9}$/.test(text);
 
 /** Cerca del final del panel se pide la página siguiente. */
 const LOAD_MORE_THRESHOLD_PX = 40;
@@ -50,6 +56,11 @@ interface UserSearchPickerProps {
   clearOnType?: boolean;
   /** Enter con alguien elegido (p. ej. pasar a los números). */
   onEnter?: () => void;
+  /**
+   * Acota la búsqueda: grupo, jugadores de un pasador o solo a quién se le
+   * puede cargar (`writable`: el admin, dentro de su grupo).
+   */
+  scope?: UserSearchScope;
   className?: string;
 }
 
@@ -58,7 +69,8 @@ interface UserSearchPickerProps {
  * por número (scroll infinito dentro del panel) y lo escrito refina la lista.
  * Con solo dígitos busca el número exacto (si hay uno solo, lo elige solo);
  * con letras busca en nombre, apellido y usuario. Se elige con clic o con ↑/↓
- * y Enter. Solo para ADMIN y superiores (`GET /user/search`).
+ * y Enter. Todos lo usan para filtrar; con `scope.writable`, solo ADMIN y
+ * superiores para cargar a nombre de otro (`GET /user/search`).
  */
 export const UserSearchPicker = ({
   id,
@@ -72,10 +84,11 @@ export const UserSearchPicker = ({
   clearLabel,
   clearOnType = false,
   onEnter,
+  scope,
   className,
 }: UserSearchPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState(value ? String(value.number) : '');
+  const [text, setText] = useState(value ? pollaUserCode(value) : '');
   // `dirty`: lo escrito es una búsqueda y no el número del elegido.
   const [dirty, setDirty] = useState(false);
   const [open, setOpen] = useState(false);
@@ -92,7 +105,8 @@ export const UserSearchPicker = ({
   const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } = useUserSearch(
     query,
     typeFilter ? [typeFilter.value] : userTypes,
-    open || (dirty && typed !== '')
+    open || (dirty && typed !== ''),
+    scope
   );
   // Mientras llega una búsqueda nueva se sigue viendo la lista anterior
   // (`keepPrevious`); `ready` dice cuándo la lista es la de lo escrito.
@@ -104,7 +118,7 @@ export const UserSearchPicker = ({
   // Si el elegido cambia desde afuera (p. ej. al recargar la página con un
   // filtro en la URL), el input muestra su número.
   useEffect(() => {
-    if (!dirty) setText(value ? String(value.number) : '');
+    if (!dirty) setText(value ? pollaUserCode(value) : '');
   }, [value?.polla_user_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -122,7 +136,7 @@ export const UserSearchPicker = ({
 
   const pick = useCallback(
     (user: IPollaUserOption) => {
-      setText(String(user.number));
+      setText(pollaUserCode(user));
       setDirty(false);
       setOpen(false);
       setNavigated(false);
@@ -148,7 +162,7 @@ export const UserSearchPicker = ({
   const dismiss = () => {
     setOpen(false);
     if (dirty && value) {
-      setText(String(value.number));
+      setText(pollaUserCode(value));
       setDirty(false);
     }
   };
@@ -341,7 +355,7 @@ export const UserSearchPicker = ({
                   onClick={() => pick(user)}
                 >
                   <div className="font-medium">
-                    {user.number} · {pollaUserFullName(user)}
+                    {pollaUserCode(user)} · {pollaUserFullName(user)}
                   </div>
                   <div
                     className={cn(

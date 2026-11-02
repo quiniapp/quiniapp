@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { groupLabel } from '@/lib/pollaGroups';
 import { ALL_GROUPS, ReportMode, fmtMoney } from '../format';
 
 /** Día o rango de fechas, como el radio de los modales de QuiniApp. */
@@ -84,7 +85,7 @@ export const GroupSelect = ({
           <SelectItem value={ALL_GROUPS}>Todos los grupos</SelectItem>
           {groups.map((group) => (
             <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
-              {group.name}
+              {groupLabel(group)}
             </SelectItem>
           ))}
         </SelectContent>

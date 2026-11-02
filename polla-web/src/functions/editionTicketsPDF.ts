@@ -4,6 +4,7 @@ import {
   IPollaEditionEntityFront,
   POLLA_NUMBERS_REQUIRED,
 } from '@helper/polla/types/game.type';
+import { cashierLabel, clientLabel } from '@/features/bets/format';
 import {
   PdfDoc,
   addFooterPageNumbers,
@@ -68,7 +69,11 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
     [
       `Juega del ${fmtDate(edition.start_date)} al ${fmtDate(edition.end_date)} · Pozo ${money(
         edition.pool_amount
-      )} · Valor del ticket ${money(edition.ticket_price)}`,
+      )}${
+        Number(edition.surprise_pool_amount ?? 0) > 0
+          ? ` + sorpresa ${money(edition.surprise_pool_amount)}`
+          : ''
+      } · Valor del ticket ${money(edition.ticket_price)}`,
       `${rows.length} tickets${filtersLabel ? ` · ${filtersLabel}` : ''} · Generado el ${dayjs().format(
         'DD/MM/YYYY HH:mm'
       )}`,
@@ -133,8 +138,8 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
     ],
     body: rows.map((row) => [
       row.ticket_number,
-      `${row.cashier_number ? `${row.cashier_number} · ` : ''}${row.cashier_name}`,
-      row.client_name ?? '',
+      cashierLabel(row),
+      clientLabel(row),
       ...NUMBER_COLUMNS.map((slot) => row.numbers[slot] ?? ''),
       String(row.hits),
       row.winner ? 'SÍ' : '',
