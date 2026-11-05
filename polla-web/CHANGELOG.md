@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`): el botón pasa a "Cerrar ticket" y abre `PaymentDialog` con **Efectivo** y **Debe**. Efectivo tiene el foco, así que Enter lo cierra pagado, como antes. El jugador no ve el diálogo: su ticket queda en Debe.
+- **Repetir ticket** (`RepeatBetDialog`): el pasador y el staff eligen Efectivo o Debe para lo que repiten (`choosePayment`).
+- **Ticket impreso** (`functions/makePollaTicket.ts`): `paymentStatus` imprime PAGADO o DEBE debajo del valor. No aparece en lo sin cargo ni en el ticket del jugador. La reimpresión de Administrar jugadas también lo lleva.
+- **El jugador no imprime**: su ticket se descarga o se comparte como PDF (`sharePdf`), sin el diálogo de impresión.
+
 ### Added - 2026-11-05 (R23: elegir qué pasadores exportar; R01: nombre del archivo)
 
 - **Exportar liquidación** (`features/current-account/index.tsx`): antes de descargar se abre `ExportLiquidationsDialog` (`dialogs/ExportLiquidationsDialog.tsx`), con la lista de pasadores, una casilla por cada uno, "Seleccionar todos (N de M)" y el total de cada uno. Se descarga un PDF por pasador elegido (descargas separadas, como hasta ahora).

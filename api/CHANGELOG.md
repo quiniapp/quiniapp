@@ -4,6 +4,23 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+#### Migración `20261105130000_polla_bet_payment_status.sql`
+- Enums `polla_payment_status_enum` (`PAID`, `OWED`) y `polla_payment_method_enum` (`CASH`). QR o transferencia se suman después con `ALTER TYPE ... ADD VALUE`.
+- `polla_bets` suma `payment_status` (por defecto `PAID`), `payment_method`, `paid_at` y `paid_by`, con `polla_bets_payment_check`: una en Debe no tiene medio ni cobro. Índice `idx_polla_bets_edition_owed` para los impagos de una edición.
+- Backfill: las jugadas existentes quedan pagadas en efectivo, cobradas al cargarse (`paid_at = created_at`) por quien las cargó (`paid_by = created_by`). Las repetidas sin cargo, sin medio.
+- **`polla_create_bet`** recibe `p_payment_status`. El jugador carga siempre en Debe, sin elegir; lo repetido sin cargo queda pagado; el resto elige, y si no manda nada queda en Efectivo. Si queda pagada, guarda medio, hora y quién cobró.
+- **`polla_repeat_bets`** recibe `p_payment_status` para todo el lote.
+- Una jugada en Debe entra al sorteo y al pase como cualquier otra: la cuenta corriente no cambia.
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`POST /polla/private/bet`** y **`POST /bet/repeat`**: `payment_status` opcional (`PAID` | `OWED`).
+
+#### Tests
+- **`040_polla_bet_payment.test.sql`** (17): Efectivo, sin elegir, Debe (sin cobro y en el pase), el jugador forzado a Debe, el lote repetido con su pago y lo repetido sin cargo pagado.
+
 ### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
 
 #### Migración `20261105090000_polla_edition_draws_min_hits.sql`

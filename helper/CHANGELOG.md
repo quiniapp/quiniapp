@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+- **`polla/types/game.type.ts`**: `POLLA_PAYMENT_STATUS` (`PAID`, `OWED`) y `POLLA_PAYMENT_METHOD` (`CASH`), con sus etiquetas ("Pagado", "Debe", "Efectivo"). `IPollaBetEntityBack` suma `payment_status`, `payment_method`, `paid_at` y `paid_by`.
+- **`polla/schemas/game.schema.ts`**: `payment_status` opcional en `newPollaBetSchema` y `repeatPollaBetsSchema`.
+
 ### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
 
 - **`polla/types/game.type.ts`**:

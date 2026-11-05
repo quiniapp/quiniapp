@@ -3,6 +3,7 @@ import {
   IPollaGroupAccountEntityFront,
   IPollaProcessResult,
   IPollaRepeatResult,
+  POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
@@ -180,6 +181,8 @@ export const useCreateBet = () =>
       polla_user_id?: string;
       date?: string;
       identifier?: string;
+      /** Efectivo o Debe (el jugador no manda: queda en Debe). */
+      payment_status?: POLLA_PAYMENT_STATUS;
     }
   >('post', BACKEND_ROUTES.bet.base, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
@@ -199,7 +202,12 @@ export const useDeleteBet = () =>
     successMessage: 'Jugada eliminada',
   });
 
-type RepeatVariables = { polla_edition_id: string; polla_bet_ids: string[] };
+type RepeatVariables = {
+  polla_edition_id: string;
+  polla_bet_ids: string[];
+  /** Pago de todo el lote (solo al repetir con cargo). */
+  payment_status?: POLLA_PAYMENT_STATUS;
+};
 
 /** Repetir tickets (pagos) a nombre de su dueño original. Avisa la pantalla. */
 export const useRepeatBets = () =>

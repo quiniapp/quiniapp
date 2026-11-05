@@ -7,6 +7,7 @@ import {
   IPollaEditionEntityFront,
   POLLA_BET_IDENTIFIER_MAX,
   POLLA_EDITION_STATUS,
+  POLLA_PAYMENT_STATUS,
   isPollaSpecialEdition,
   pollaEditionDrawLabels,
   pollaEditionTitle,
@@ -38,8 +39,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PollaTicketData, makePollaTicketsPdf } from '@/functions/makePollaTicket';
-import { deliverPdf } from '@/functions/printPdf';
+import { deliverPdf, sharePdf } from '@/functions/printPdf';
 import { RepeatBetDialog } from './RepeatBetDialog';
+import { PaymentDialog } from './PaymentDialog';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 /** `HH:mm:ss` de la base → `HH:mm`. */
@@ -58,6 +60,7 @@ type TicketBet = Pick<
   | 'load_date'
   | 'amount'
   | 'is_free'
+  | 'payment_status'
 >;
 
 const fmtCutoff = (value: string) => `${fmtDate(value.slice(0, 10))} ${value.slice(11, 16)}`;
@@ -80,6 +83,8 @@ export const MakeBetPage = () => {
   const [identifier, setIdentifier] = useState('');
   const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
   const [repeatOpen, setRepeatOpen] = useState(false);
+  // Números listos para cerrar: mientras hay, se elige Efectivo o Debe.
+  const [closing, setClosing] = useState<string[] | null>(null);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
 
@@ -127,17 +132,25 @@ export const MakeBetPage = () => {
     poolAmount: Number(of.pool_amount),
     surprisePoolAmount: Number(of.surprise_pool_amount ?? 0),
     isFree: Boolean(bet.is_free),
+    // El ticket del jugador no dice si está pagado.
+    paymentStatus: isPlayer ? undefined : bet.payment_status,
   });
 
-  /** Tickets recién cargados: un PDF (con uno o varios) para imprimir o compartir. */
+  /**
+   * Tickets recién cargados: un PDF (con uno o varios). El pasador y el staff
+   * lo imprimen (o lo comparten en mobile); el jugador no imprime: lo guarda o
+   * lo comparte.
+   */
   const printTickets = async (bets: TicketBet[], of: IPollaEditionEntityFront) => {
     if (bets.length === 0) return;
     const { blob, fileName } = await makePollaTicketsPdf(bets.map((bet) => ticketDataOf(bet, of)));
-    await deliverPdf(
-      blob,
-      fileName,
-      bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`
-    );
+    const text =
+      bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`;
+    if (isPlayer) {
+      await sharePdf(blob, fileName, text);
+      return;
+    }
+    await deliverPdf(blob, fileName, text);
   };
 
   // Con todos sus sorteos: en la especial se ve que juega con las 5 quinielas.
@@ -176,15 +189,30 @@ export const MakeBetPage = () => {
       return;
     }
 
+    // El jugador no elige: su ticket queda en Debe (lo cobra su pasador).
+    if (isPlayer) {
+      closeTicket(values);
+      return;
+    }
+    setClosing(values);
+  };
+
+  /** Carga el ticket con el pago elegido (sin pago: el jugador, en Debe). */
+  const closeTicket = (values: string[], paymentStatus?: POLLA_PAYMENT_STATUS) => {
+    if (!edition) return;
+    const cleanIdentifier = identifier.trim();
+
     createBet(
       {
         polla_edition_id: edition.polla_edition_id,
         numbers: values,
         ...(target ? { polla_user_id: target.polla_user_id } : {}),
         ...(cleanIdentifier ? { identifier: cleanIdentifier } : {}),
+        ...(paymentStatus ? { payment_status: paymentStatus } : {}),
       },
       {
         onSuccess: async (bet) => {
+          setClosing(null);
           setNumbers(createEmptyPollaNumbers());
           // Listo para cargar el próximo ticket sin tocar el mouse.
           boxesRef.current?.focusFirst();
@@ -329,15 +357,27 @@ export const MakeBetPage = () => {
           />
 
           <Button type="button" onClick={() => handleSubmit()} disabled={isPending}>
-            {isPending ? 'Cargando…' : 'Cargar jugada'}
+            {isPending ? 'Cargando…' : 'Cerrar ticket'}
           </Button>
         </div>
+      )}
+
+      {closing && (
+        <PaymentDialog
+          pending={isPending}
+          onChoose={(status) => closeTicket(closing, status)}
+          onClose={() => {
+            setClosing(null);
+            boxesRef.current?.focusFirst();
+          }}
+        />
       )}
 
       {repeatOpen && (
         <RepeatBetDialog
           open={repeatOpen}
           mode={isPlayer ? 'mine' : 'ticket'}
+          choosePayment={!isPlayer}
           onClose={() => setRepeatOpen(false)}
           editions={loadable}
           editionLabel={editionLabel}

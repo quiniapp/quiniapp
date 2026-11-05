@@ -553,6 +553,7 @@ export class PollaBetRouter {
       editionId: payload.polla_edition_id,
       betIds: payload.polla_bet_ids,
       free: false,
+      paymentStatus: payload.payment_status,
     });
 
     res.status(201).json({ data: { result } });
@@ -675,6 +676,8 @@ export class PollaBetRouter {
       // corte de cada rol lo controla la RPC.
       date: isPollaSuperRole(user.user_type) ? payload.date : undefined,
       identifier: payload.identifier,
+      // Efectivo o Debe (R04). El jugador no elige: la RPC lo deja en Debe.
+      paymentStatus: payload.payment_status,
     });
 
     res.status(201).json({ data: { bet } });

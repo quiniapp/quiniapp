@@ -272,6 +272,29 @@ export interface IPollaProcessResult {
 
 // ----------------------------------------------------------------- jugadas
 
+/* eslint-disable no-unused-vars */
+/** Estado de pago del ticket (R04): pagado o fiado. Los dos entran al sorteo. */
+export enum POLLA_PAYMENT_STATUS {
+  PAID = 'PAID',
+  /** "Debe": fiado. */
+  OWED = 'OWED',
+}
+
+/** Medio de pago. Por ahora solo efectivo; QR o transferencia se suman acá y en la base. */
+export enum POLLA_PAYMENT_METHOD {
+  CASH = 'CASH',
+}
+/* eslint-enable no-unused-vars */
+
+export const POLLA_PAYMENT_STATUS_LABEL: Record<POLLA_PAYMENT_STATUS, string> = {
+  [POLLA_PAYMENT_STATUS.PAID]: 'Pagado',
+  [POLLA_PAYMENT_STATUS.OWED]: 'Debe',
+};
+
+export const POLLA_PAYMENT_METHOD_LABEL: Record<POLLA_PAYMENT_METHOD, string> = {
+  [POLLA_PAYMENT_METHOD.CASH]: 'Efectivo',
+};
+
 export interface IPollaBetEntityBack {
   polla_bet_id: string;
   ticket_number: string;
@@ -320,6 +343,14 @@ export interface IPollaBetEntityBack {
    * opcional a nombre de un jugador. `null` en tickets viejos.
    */
   identifier: string | null;
+  /** Pagado o Debe. Lo que carga el jugador queda siempre en Debe. */
+  payment_status: POLLA_PAYMENT_STATUS;
+  /** Medio con que se pagó; `null` en Debe y en las repetidas sin cargo. */
+  payment_method: POLLA_PAYMENT_METHOD | null;
+  /** Cuándo se cobró (al cargarla o al marcarla como pagada). */
+  paid_at: string | null;
+  /** Quién la cobró. */
+  paid_by: string | null;
 }
 
 /** Campos que la API agrega a cada jugada que lista. */

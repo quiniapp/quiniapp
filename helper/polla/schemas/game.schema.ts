@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { dateRegex } from '../../functions/dateRegex';
-import { POLLA_BET_IDENTIFIER_MAX, POLLA_NUMBERS_REQUIRED } from '../types/game.type';
+import {
+  POLLA_BET_IDENTIFIER_MAX,
+  POLLA_NUMBERS_REQUIRED,
+  POLLA_PAYMENT_STATUS,
+} from '../types/game.type';
 
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Hora inválida (HH:mm)');
@@ -163,6 +167,11 @@ export const newPollaBetSchema = z.object({
     )
     .nullable()
     .optional(),
+  /**
+   * Efectivo (`PAID`, si no viene) o Debe (`OWED`). Lo que carga el jugador
+   * queda siempre en Debe: la base ignora lo que mande.
+   */
+  payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
 
 export const updatePollaBetSchema = z.object({
@@ -183,6 +192,8 @@ export const repeatPollaBetsSchema = z.object({
     .array(z.string().uuid())
     .min(1, 'Elegí al menos un ticket')
     .max(POLLA_REPEAT_MAX_BETS, `Se repiten hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`),
+  /** Pago de todo el lote (ver `newPollaBetSchema`). Lo sin cargo queda pagado. */
+  payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
 
 // -------------------------------------------------------- cuenta corriente

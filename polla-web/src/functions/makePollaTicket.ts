@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import type { jsPDF } from 'jspdf';
+import { POLLA_PAYMENT_STATUS } from '@helper/polla/types/game.type';
 
 // Mismas convenciones que makeTicket.ts: impresora térmica de 58mm, texto
 // monoespaciado (Courier) para que las columnas no se desalineen en el
@@ -36,7 +37,20 @@ export interface PollaTicketData {
   surprisePoolAmount?: number;
   /** Repetido sin cargo: en lugar del precio dice SIN CARGO. */
   isFree?: boolean;
+  /**
+   * PAGADO o DEBE (R04). Solo en el ticket que imprime el pasador o el staff:
+   * el del jugador no lo dice.
+   */
+  paymentStatus?: POLLA_PAYMENT_STATUS;
 }
+
+const PAYMENT_LINE: Record<POLLA_PAYMENT_STATUS, string> = {
+  [POLLA_PAYMENT_STATUS.PAID]: 'PAGADO',
+  [POLLA_PAYMENT_STATUS.OWED]: 'DEBE',
+};
+
+/** Lo sin cargo no tiene nada que cobrar: ya dice SIN CARGO. */
+const showsPayment = (data: PollaTicketData) => Boolean(data.paymentStatus && !data.isFree);
 
 /** Líneas de la edición: el nombre (si tiene) y un sorteo por línea. */
 const editionLines = (data: PollaTicketData) =>
@@ -56,6 +70,7 @@ const ticketHeight = (data: PollaTicketData) =>
   5 * 5 + // 5 filas de números
   3 + // divider
   9 + // precio ticket
+  (showsPayment(data) ? 5 : 0) + // PAGADO / DEBE
   9 + // pozo
   (data.surprisePoolAmount ? 4 : 0) + // sorpresa
   (data.identifier ? 4 : 0) + // identificador
@@ -163,6 +178,12 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
     y
   );
   y += 5;
+  if (data.paymentStatus && showsPayment(data)) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(PAYMENT_LINE[data.paymentStatus], PAGE_W / 2, y, { align: 'center' });
+    y += 5;
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.text(`Pozo: $${fmtAmount(data.poolAmount)}`, MARGIN, y);

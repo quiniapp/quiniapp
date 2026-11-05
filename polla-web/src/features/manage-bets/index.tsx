@@ -265,6 +265,7 @@ export const ManageBetsPage = () => {
       poolAmount: Number(edition.pool_amount),
       surprisePoolAmount: Number(edition.surprise_pool_amount ?? 0),
       isFree: row.is_free,
+      paymentStatus: isPublicPollaBet(row) ? undefined : row.payment_status,
     });
 
     await deliverPdf(blob, fileName, `Ticket Polla ${row.ticket_number}`);

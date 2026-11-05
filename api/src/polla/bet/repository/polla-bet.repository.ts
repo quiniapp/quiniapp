@@ -8,6 +8,7 @@ import {
   IPollaBetToRepeat,
   IPollaDailySalesGroup,
   IPollaRepeatResult,
+  POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
@@ -404,7 +405,8 @@ export class PollaBetRepository {
   /**
    * Alta de una jugada. El corte y a nombre de quién puede cargar salen del rol
    * del actor (la RPC), que exige el identificador a nombre de un pasador;
-   * `date` solo lo respeta para superadmin+.
+   * `date` solo lo respeta para superadmin+. `paymentStatus`: Efectivo si no
+   * viene; lo que carga el jugador queda siempre en Debe (lo fuerza la RPC).
    */
   async create(params: {
     editionId: string;
@@ -413,6 +415,7 @@ export class PollaBetRepository {
     numbers: string[];
     date?: string;
     identifier?: string | null;
+    paymentStatus?: POLLA_PAYMENT_STATUS;
   }) {
     const { data, error } = await supabase.rpc('polla_create_bet', {
       p_edition_id: params.editionId,
@@ -421,6 +424,7 @@ export class PollaBetRepository {
       p_numbers: params.numbers,
       p_date: params.date ?? pollaToday(),
       p_identifier: params.identifier || null,
+      p_payment_status: params.paymentStatus ?? null,
     });
 
     throwIfPollaError(error);
@@ -452,19 +456,22 @@ export class PollaBetRepository {
   /**
    * Repite tickets en una edición, a nombre de su dueño original. Los que no
    * se pueden (fuera de alcance, usuario dado de baja, etc.) vuelven en
-   * `skipped` con el código de la base.
+   * `skipped` con el código de la base. `paymentStatus` vale para todo el lote
+   * (lo sin cargo queda pagado y el jugador, en Debe).
    */
   async repeat(params: {
     actorId: string;
     editionId: string;
     betIds: string[];
     free: boolean;
+    paymentStatus?: POLLA_PAYMENT_STATUS;
   }): Promise<IPollaRepeatResult> {
     const { data, error } = await supabase.rpc('polla_repeat_bets', {
       p_actor_id: params.actorId,
       p_edition_id: params.editionId,
       p_bet_ids: params.betIds,
       p_free: params.free,
+      p_payment_status: params.paymentStatus ?? null,
     });
 
     throwIfPollaError(error);
