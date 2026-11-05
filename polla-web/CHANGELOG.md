@@ -4,6 +4,18 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R26: polla especial con varios sorteos)
+
+- **Ediciones** (`features/editions/index.tsx`):
+  - Los selects de quiniela y turno se reemplazan por una grilla quiniela × turno (`DrawsGrid`): la regular marca un sorteo, la especial los que quiera (por ejemplo, las 5 de las 21 h).
+  - Interruptor "Edición especial" con "Mínimo de aciertos" (8 por defecto). Apagado, la edición premia solo 10.
+  - En el listado, la columna "Sorteos" muestra el nombre y todos los sorteos, con el badge "Especial" y la regla de premio.
+- **Nombres de edición en toda la app** con `pollaEditionTitle` / `pollaEditionDrawLabels`: Cargar jugada (selector y, para la especial, "Juega con" + regla), Jugadas y Administrar (`useBetsEdition` devuelve `labelFor`, `titleFor` y `drawLabelsFor`), Ventas, Revisar ticket (título, regla y "Ganó el" en vez de "Completó") y Resultados.
+- **Ticket impreso** (`functions/makePollaTicket.ts`): el nombre de la edición y un sorteo por línea (`editionName` y `drawLines` en lugar de `lotteryName`/`scheduleName`). La especial de un día dice "Juega: DD/MM".
+- **PDF de tickets de la edición** (`functions/editionTicketsPDF.ts`, `ShareTicketsPdfButton`): reciben `title`. El título se parte en varias líneas si no entra y, en la especial, se agrega la regla de premio. El nombre del archivo se corta a 60 caracteres.
+- **Resultados** (`features/results/index.tsx`): después de "Generar ganadores", aviso por edición con los sorteos que faltan y si los ganadores esperan, con el botón "Definir con lo cargado" (pide confirmación; es para un sorteo que no se hizo). Hooks `useDrawCatalogs` y `useDefineEditionDay`, ruta `result.define`.
+- **Tests** (`src/__tests__/helper/edition.test.ts`): nombres y orden de los sorteos, título, especial y regla, y los schemas de alta y cambio.
+
 ### Changed - 2026-11-05 (R27: dos ediciones en la misma semana)
 
 - **Ventas** (`features/sales/index.tsx`): "Del día" también pide la edición y muestra lo vendido ese día en esa edición. Las ediciones no se mezclan.

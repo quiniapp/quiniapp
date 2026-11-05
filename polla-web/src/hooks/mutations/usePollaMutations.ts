@@ -243,6 +243,17 @@ export const useProcessResults = () =>
     successMessage: 'Ganadores generados y cuenta corriente actualizada',
   });
 
+/** "Definir con lo cargado": el día de la edición define con los sorteos que tiene. */
+export const useDefineEditionDay = () =>
+  useApiMutation<IPollaProcessResult, { polla_edition_id: string; date: string }>(
+    'post',
+    BACKEND_ROUTES.result.define,
+    {
+      invalidate: ['polla-bets', 'polla-editions', 'polla-winners', 'polla-current-accounts'],
+      successMessage: 'Día definido con los sorteos cargados',
+    }
+  );
+
 // --------------------------------------------------------- cuenta corriente
 
 /** `range_from`: liquidación por rango (si no, cada pasador desde su última liquidación). */

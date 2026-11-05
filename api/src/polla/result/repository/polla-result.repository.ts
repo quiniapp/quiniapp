@@ -87,12 +87,31 @@ export class PollaResultRepository {
     return data;
   }
 
-  /** Procesa aciertos de todas las ediciones del turno+fecha y liquida el día. */
+  /**
+   * Procesa los aciertos del día en todas las ediciones con algún sorteo de
+   * ese turno (cada una con todos sus sorteos) y recalcula la cuenta corriente.
+   */
   async processDay(organizationId: string, scheduleId: string, date: string) {
     const { data, error } = await supabase.rpc('polla_process_results_and_accounts', {
       p_organization_id: organizationId,
       p_schedule_id: scheduleId,
       p_date: date,
+    });
+
+    throwIfPollaError(error);
+    return data;
+  }
+
+  /**
+   * "Definir con lo cargado": el día de la edición cuenta como completo aunque
+   * le falte un sorteo (uno que no se hizo), se reprocesa y se recalcula la
+   * cuenta corriente. Queda guardado quién lo definió.
+   */
+  async defineEditionDay(editionId: string, date: string, actorId: string) {
+    const { data, error } = await supabase.rpc('polla_define_edition_day', {
+      p_edition_id: editionId,
+      p_date: date,
+      p_actor_id: actorId,
     });
 
     throwIfPollaError(error);

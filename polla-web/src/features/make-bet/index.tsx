@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Repeat2 } from 'lucide-react';
@@ -7,6 +7,10 @@ import {
   IPollaEditionEntityFront,
   POLLA_BET_IDENTIFIER_MAX,
   POLLA_EDITION_STATUS,
+  isPollaSpecialEdition,
+  pollaEditionDrawLabels,
+  pollaEditionTitle,
+  pollaPrizeRuleLabel,
   pollaTicketCashierCode,
 } from '@helper/polla/types/game.type';
 import {
@@ -17,7 +21,7 @@ import {
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
-import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
+import { useDrawCatalogs } from '@/hooks/fetchs/useCatalogs';
 import { useCreateBet } from '@/hooks/mutations/usePollaMutations';
 import { PollaNumberBoxes, PollaNumberBoxesHandle } from '@/components/PollaNumberBoxes';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
@@ -94,19 +98,9 @@ export const MakeBetPage = () => {
     loadable: true,
     polla_organization_id: organizationId ?? undefined,
   });
-  const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
-  const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
+  const catalogs = useDrawCatalogs(organizationId);
 
   const { mutate: createBet, isPending } = useCreateBet();
-
-  const lotteryById = useMemo(
-    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
-    [lotteries]
-  );
-  const scheduleById = useMemo(
-    () => new Map(schedules?.data.map((s) => [s.polla_schedule_id, s.name])),
-    [schedules]
-  );
 
   const loadable = editions?.data ?? [];
   // Con una sola edición abierta queda elegida; con varias (la regular y la
@@ -124,8 +118,8 @@ export const MakeBetPage = () => {
     identifier: bet.identifier,
     cashier_code: pollaTicketCashierCode(bet.ticket_number, bet.cashier_number) || undefined,
     numbers: bet.numbers,
-    lotteryName: lotteryById.get(of.polla_lottery_id) ?? '',
-    scheduleName: scheduleById.get(of.polla_schedule_id) ?? '',
+    editionName: of.name,
+    drawLines: pollaEditionDrawLabels(of, catalogs),
     startDate: of.start_date,
     endDate: of.end_date,
     loadDate: bet.load_date,
@@ -146,10 +140,11 @@ export const MakeBetPage = () => {
     );
   };
 
+  // Con todos sus sorteos: en la especial se ve que juega con las 5 quinielas.
   const editionLabel = (item: IPollaEditionEntityFront) =>
-    `${lotteryById.get(item.polla_lottery_id) ?? ''} · ${
-      scheduleById.get(item.polla_schedule_id) ?? ''
-    } (${fmtDate(item.start_date)} al ${fmtDate(item.end_date)}) · $${fmtMoney(item.ticket_price)}`;
+    `${pollaEditionTitle(item, catalogs)} (${fmtDate(item.start_date)} al ${fmtDate(
+      item.end_date
+    )}) · $${fmtMoney(item.ticket_price)}`;
 
   const handleSubmit = (values: string[] = numbers) => {
     if (isPending) return;
@@ -241,6 +236,14 @@ export const MakeBetPage = () => {
                 {role === POLLA_USER_TYPE.ADMIN &&
                   edition.my_load_cutoff &&
                   ` · vos podés cargar hasta el ${fmtCutoff(edition.my_load_cutoff)}`}
+              </p>
+            )}
+            {/* En el selector el nombre se corta: los sorteos de la especial van completos acá. */}
+            {edition && isPollaSpecialEdition(edition) && (
+              <p className="text-xs">
+                <span className="font-semibold">Juega con:</span>{' '}
+                {pollaEditionDrawLabels(edition, catalogs).join(', ')}.{' '}
+                {pollaPrizeRuleLabel(edition)}.
               </p>
             )}
             {isSuper && isPlaying && (

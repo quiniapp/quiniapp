@@ -207,16 +207,15 @@ const LoadDateDialog = ({
  */
 export const ShareTicketsPdfButton = ({
   edition,
-  lotteryName,
-  scheduleName,
+  title,
   filters = {},
   filtersLabel,
   pickLoadDate = false,
   className,
 }: {
   edition: IPollaEditionEntityFront;
-  lotteryName: string;
-  scheduleName: string;
+  /** Nombre y sorteos de la edición (`pollaEditionTitle`). */
+  title: string;
   filters?: TicketsPdfFilters;
   filtersLabel?: string;
   pickLoadDate?: boolean;
@@ -244,13 +243,12 @@ export const ShareTicketsPdfButton = ({
       const { blob, fileName } = await makeEditionTicketsPdf({
         rows,
         edition,
-        lotteryName,
-        scheduleName,
+        title,
         orgName,
         filtersLabel: pdfFiltersLabel,
       });
 
-      await sharePdf(blob, fileName, `Tickets de la Polla ${lotteryName} · ${scheduleName}`);
+      await sharePdf(blob, fileName, `Tickets de la Polla ${title}`);
     } catch {
       toast.error('No se pudo generar el PDF de tickets');
     } finally {

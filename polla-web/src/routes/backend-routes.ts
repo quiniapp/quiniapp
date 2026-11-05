@@ -62,6 +62,7 @@ export const BACKEND_ROUTES = {
     base: `${PRIVATE}/result`,
     id: (id: string) => `${PRIVATE}/result/${id}`,
     process: `${PRIVATE}/result/process`,
+    define: `${PRIVATE}/result/define`,
   },
   currentAccount: {
     base: `${PRIVATE}/current_account`,

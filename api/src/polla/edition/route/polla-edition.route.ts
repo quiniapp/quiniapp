@@ -130,18 +130,20 @@ export class PollaEditionRouter {
 
   private createHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-    const payload = newPollaEditionSchema.parse(req.body);
+    const { draws, polla_organization_id, ...payload } = newPollaEditionSchema.parse(req.body);
 
-    const created = await this.repository.create({
-      ...payload,
-      polla_organization_id: resolveOrganizationId(user, payload.polla_organization_id),
-    });
+    const created = await this.repository.create(
+      resolveOrganizationId(user, polla_organization_id),
+      payload,
+      draws
+    );
 
     res.status(201).json({ data: { edition: created } });
   });
 
   /**
-   * Superadmin+ cambia precio, fechas, horas, pozo y pozo sorpresa. Cada
+   * Superadmin+ cambia precio, fechas, horas, pozo, pozo sorpresa, sorteos y
+   * mínimo de aciertos (estos dos, mientras no haya resultados). Cada
    * jugada guarda el precio con el que se cargó: un precio nuevo vale para las
    * que se carguen después. Extender una edición que terminó sin ganador la
    * vuelve a poner en juego (la carga no se reabre). Las reglas las controla

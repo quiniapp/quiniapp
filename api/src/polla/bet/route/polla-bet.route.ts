@@ -496,6 +496,8 @@ export class PollaBetRouter {
         polla_edition_id: edition.polla_edition_id,
         polla_lottery_id: edition.polla_lottery_id,
         polla_schedule_id: edition.polla_schedule_id,
+        draws: edition.draws,
+        min_winning_hits: edition.min_winning_hits,
         name: edition.name,
         start_date: edition.start_date,
         end_date: edition.end_date,

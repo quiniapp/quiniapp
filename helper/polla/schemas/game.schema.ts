@@ -22,10 +22,34 @@ const editionDates = (data: { load_limit_date?: string; start_date?: string; end
  */
 const LOAD_LIMIT_MESSAGE = 'El cierre de carga no puede ser después de la fecha de inicio';
 
+/** Sorteos de la edición (quiniela × turno): al menos uno y sin repetir. */
+const editionDraws = z
+  .array(
+    z.object({
+      polla_lottery_id: z.string().uuid(),
+      polla_schedule_id: z.string().uuid(),
+    })
+  )
+  .min(1, 'Elegí al menos un sorteo (quiniela y turno)')
+  .max(100)
+  .refine(
+    (draws) =>
+      new Set(draws.map((d) => `${d.polla_lottery_id}/${d.polla_schedule_id}`)).size ===
+      draws.length,
+    'Hay sorteos repetidos'
+  );
+
+/** 10 = regular. La especial premia desde este mínimo si nadie completa 10. */
+const minWinningHits = z
+  .number()
+  .int()
+  .min(1, 'El mínimo de aciertos va de 1 a 10')
+  .max(POLLA_NUMBERS_REQUIRED, 'El mínimo de aciertos va de 1 a 10');
+
 export const newPollaEditionSchema = z
   .object({
-    polla_lottery_id: z.string().uuid(),
-    polla_schedule_id: z.string().uuid(),
+    draws: editionDraws,
+    min_winning_hits: minWinningHits.optional(),
     polla_organization_id: z.string().uuid().optional(),
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate,
@@ -55,8 +79,9 @@ export const newPollaEditionSchema = z
 
 export const updatePollaEditionSchema = z
   .object({
-    polla_lottery_id: z.string().uuid().optional(),
-    polla_schedule_id: z.string().uuid().optional(),
+    /** Con sorteos cargados o con ganador no se cambian (lo controla la base). */
+    draws: editionDraws.optional(),
+    min_winning_hits: minWinningHits.optional(),
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate.optional(),
     end_date: isoDate.optional(),
@@ -109,6 +134,12 @@ export const processPollaResultsSchema = z.object({
   polla_schedule_id: z.string().uuid(),
   date: isoDate,
   polla_organization_id: z.string().uuid().optional(),
+});
+
+/** "Definir con lo cargado": el día de la edición define con los sorteos que tiene. */
+export const definePollaEditionDaySchema = z.object({
+  polla_edition_id: z.string().uuid(),
+  date: isoDate,
 });
 
 // ----------------------------------------------------------------- jugadas

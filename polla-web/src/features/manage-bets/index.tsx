@@ -65,7 +65,7 @@ type BetsFeedPage = PollaPage<IPollaBetListItem> & { free_repeats?: Record<strin
 export const ManageBetsPage = () => {
   const { user, role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { editionId, editionList, selectedEdition, lotteryById, scheduleById, labelFor } =
+  const { editionId, editionList, selectedEdition, labelFor, titleFor, drawLabelsFor } =
     useBetsEdition();
 
   const canManage = Boolean(role && isPollaAdminRole(role));
@@ -255,8 +255,8 @@ export const ManageBetsPage = () => {
       identifier: row.identifier,
       cashier_code: pollaTicketCashierCode(row.ticket_number, row.cashier_number) || undefined,
       numbers: row.numbers,
-      lotteryName: lotteryById.get(edition.polla_lottery_id) ?? '',
-      scheduleName: scheduleById.get(edition.polla_schedule_id) ?? '',
+      editionName: edition.name,
+      drawLines: drawLabelsFor(edition),
       startDate: edition.start_date,
       endDate: edition.end_date,
       loadDate: row.load_date,
@@ -463,8 +463,7 @@ export const ManageBetsPage = () => {
         {selectedEdition && !searching && (
           <ShareTicketsPdfButton
             edition={selectedEdition}
-            lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
-            scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
+            title={titleFor(selectedEdition)}
             filters={{
               ...userFilter,
               search: nameSearch,
