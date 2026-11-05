@@ -14,16 +14,11 @@ export interface SlipWinner {
 const amount = (n?: number | null) =>
   Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-/**
- * Liquidación de cada pasador en una hoja, como `printLiquidationCashier` de
- * QuiniApp: lo acumulado en su período (desde el día siguiente a la última
- * liquidación) y las jugadas que ganaron en ese período. Sin deje. Varias
- * cuentas salen en un solo PDF, una por página.
- */
-export async function downloadLiquidationSlipsPDF(params: {
-  accounts: AccountPeriodView[];
-  winnersByCashier: Map<string, SlipWinner[]>;
-}) {
+/** Pausa entre descargas: el navegador puede descartar las que salen juntas. */
+const DOWNLOAD_GAP_MS = 300;
+
+/** Hoja de liquidación de un pasador. */
+async function buildLiquidationSlipPDF(account: AccountPeriodView, winners: SlipWinner[]) {
   const { jsPDF, autoTable } = await getPDFDeps();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }) as PdfDoc;
 
@@ -36,104 +31,117 @@ export async function downloadLiquidationSlipsPDF(params: {
     2: { cellWidth: col3 },
   };
 
-  params.accounts.forEach((account, index) => {
-    if (index > 0) doc.addPage();
+  const dateStr = periodLabel(account.period_from, account.date, 'D/M/YYYY');
 
-    const dateStr = periodLabel(account.period_from, account.date, 'D/M/YYYY');
+  doc.setFontSize(11);
+  doc.text(`Nro: ${account.user_number ?? ''}`, margin.left, 14);
+  doc.text(`Nombre: ${account.user_name ?? ''}`, margin.left + usableW / 2, 14, {
+    align: 'center',
+  });
+  doc.text(
+    `${account.period_from === account.date ? 'Fecha' : 'Período'} ${dateStr}`,
+    margin.left + usableW,
+    14,
+    { align: 'right' }
+  );
+  doc.line(margin.left, 18, margin.left + usableW, 18);
 
-    doc.setFontSize(11);
-    doc.text(`Nro: ${account.user_number ?? ''}`, margin.left, 14);
-    doc.text(`Nombre: ${account.user_name ?? ''}`, margin.left + usableW / 2, 14, {
-      align: 'center',
-    });
-    doc.text(
-      `${account.period_from === account.date ? 'Fecha' : 'Período'} ${dateStr}`,
-      margin.left + usableW,
-      14,
-      { align: 'right' }
-    );
-    doc.line(margin.left, 18, margin.left + usableW, 18);
-
-    autoTable(doc, {
-      startY: 22,
-      body: [
-        // Pase jugadas − Borradas = Pase (más los reclamos positivos).
-        [
-          `Pase jugadas: ${amount(account.bets_pass)}`,
-          `Borradas: ${amount(account.deleted_pass)}`,
-          `Pase: ${amount(account.pass)}`,
-        ],
-        [
-          `Aciertos: ${amount(account.successes)}`,
-          `Reclamos: ${amount(account.claims)}`,
-          `Subtotal: ${amount(account.subtotal)}`,
-        ],
-        [
-          `Saldo: ${amount(account.previous_balance)}`,
-          `Cobré: ${amount(account.collections)}`,
-          `Pagué: ${amount(account.paid)}`,
-        ],
-        [`Comisión: ${amount(account.cashier_commission)}`, `Gastos: ${amount(account.bills)}`, ''],
+  autoTable(doc, {
+    startY: 22,
+    body: [
+      // Pase jugadas − Borradas = Pase (más los reclamos positivos).
+      [
+        `Pase jugadas: ${amount(account.bets_pass)}`,
+        `Borradas: ${amount(account.deleted_pass)}`,
+        `Pase: ${amount(account.pass)}`,
       ],
-      theme: 'grid',
-      margin,
-      styles: { fontSize: 11, cellPadding: 3, halign: 'left' },
-      columnStyles: threeColumns,
-      tableWidth: usableW,
-    });
-
-    let y = lastTableY(doc, 22);
-    doc.line(margin.left, y + 4, margin.left + usableW, y + 4);
-
-    const total = Number(account.total);
-    autoTable(doc, {
-      startY: y + 8,
-      body: [
-        [
-          `Deja: ${amount(account.revenue)}`,
-          `Subtotal: ${amount(account.subtotal)}`,
-          `${total > 0 ? 'Debe' : 'Cobra'}: ${amount(Math.abs(total))}`,
-        ],
+      [
+        `Aciertos: ${amount(account.successes)}`,
+        `Reclamos: ${amount(account.claims)}`,
+        `Subtotal: ${amount(account.subtotal)}`,
       ],
-      theme: 'grid',
-      margin,
-      styles: { fontSize: 11, cellPadding: 3, halign: 'left' },
-      columnStyles: threeColumns,
-      tableWidth: usableW,
-    });
+      [
+        `Saldo: ${amount(account.previous_balance)}`,
+        `Cobré: ${amount(account.collections)}`,
+        `Pagué: ${amount(account.paid)}`,
+      ],
+      [`Comisión: ${amount(account.cashier_commission)}`, `Gastos: ${amount(account.bills)}`, ''],
+    ],
+    theme: 'grid',
+    margin,
+    styles: { fontSize: 11, cellPadding: 3, halign: 'left' },
+    columnStyles: threeColumns,
+    tableWidth: usableW,
+  });
 
-    y = lastTableY(doc, y);
-    doc.line(margin.left, y + 4, margin.left + usableW, y + 4);
-    doc.setFontSize(11);
-    doc.text('Jugadas ganadoras', margin.left, y + 10);
+  let y = lastTableY(doc, 22);
+  doc.line(margin.left, y + 4, margin.left + usableW, y + 4);
 
-    const winners = params.winnersByCashier.get(account.polla_user_id) ?? [];
-    const widths = [0.35, 0.35, 0.12, 0.18].map((w) => w * usableW);
+  const total = Number(account.total);
+  autoTable(doc, {
+    startY: y + 8,
+    body: [
+      [
+        `Deja: ${amount(account.revenue)}`,
+        `Subtotal: ${amount(account.subtotal)}`,
+        `${total > 0 ? 'Debe' : 'Cobra'}: ${amount(Math.abs(total))}`,
+      ],
+    ],
+    theme: 'grid',
+    margin,
+    styles: { fontSize: 11, cellPadding: 3, halign: 'left' },
+    columnStyles: threeColumns,
+    tableWidth: usableW,
+  });
 
-    autoTable(doc, {
-      startY: y + 14,
-      head: [['Ticket', 'Jugador', 'Aciertos', 'Premio']],
-      body: winners.length
-        ? winners.map((w) => [w.ticket_number, w.player, String(w.hits), amount(w.prize)])
-        : [['Sin jugadas ganadoras', '', '', '']],
-      theme: 'grid',
-      margin,
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { halign: 'center', fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-      columnStyles: {
-        0: { cellWidth: widths[0], halign: 'left' },
-        1: { cellWidth: widths[1], halign: 'left' },
-        2: { cellWidth: widths[2], halign: 'right' },
-        3: { cellWidth: widths[3], halign: 'right' },
-      },
-      tableWidth: usableW,
-    });
+  y = lastTableY(doc, y);
+  doc.line(margin.left, y + 4, margin.left + usableW, y + 4);
+  doc.setFontSize(11);
+  doc.text('Jugadas ganadoras', margin.left, y + 10);
+
+  const widths = [0.35, 0.35, 0.12, 0.18].map((w) => w * usableW);
+
+  autoTable(doc, {
+    startY: y + 14,
+    head: [['Ticket', 'Jugador', 'Aciertos', 'Premio']],
+    body: winners.length
+      ? winners.map((w) => [w.ticket_number, w.player, String(w.hits), amount(w.prize)])
+      : [['Sin jugadas ganadoras', '', '', '']],
+    theme: 'grid',
+    margin,
+    styles: { fontSize: 10, cellPadding: 3 },
+    headStyles: { halign: 'center', fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    columnStyles: {
+      0: { cellWidth: widths[0], halign: 'left' },
+      1: { cellWidth: widths[1], halign: 'left' },
+      2: { cellWidth: widths[2], halign: 'right' },
+      3: { cellWidth: widths[3], halign: 'right' },
+    },
+    tableWidth: usableW,
   });
 
   addFooterPageNumbers(doc);
+  return doc;
+}
 
-  const first = params.accounts[0];
-  const dateFile = dayjs(first?.date).format('DD-MM-YYYY');
-  const who = params.accounts.length === 1 ? `_${first.user_name}-${first.user_number ?? ''}` : '';
-  doc.save(`Exportar_Liquidacion_${dateFile}${who}.pdf`);
+/**
+ * Liquidación de cada pasador, como `printLiquidationCashier` de QuiniApp: lo
+ * acumulado en su período (desde el día siguiente a la última liquidación) y
+ * las jugadas que ganaron en ese período. Sin deje. Se descarga un PDF por
+ * pasador, igual que "Exportar liquidación" de QuiniApp.
+ */
+export async function downloadLiquidationSlipsPDF(params: {
+  accounts: AccountPeriodView[];
+  winnersByCashier: Map<string, SlipWinner[]>;
+}) {
+  for (const [index, account] of params.accounts.entries()) {
+    if (index > 0) await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_GAP_MS));
+
+    const winners = params.winnersByCashier.get(account.polla_user_id) ?? [];
+    const doc = await buildLiquidationSlipPDF(account, winners);
+    const dateFile = dayjs(account.date).format('DD-MM-YYYY');
+    doc.save(
+      `polla_Exportar_Liquidacion_${dateFile}_${account.user_name}-${account.user_number ?? ''}.pdf`
+    );
+  }
 }

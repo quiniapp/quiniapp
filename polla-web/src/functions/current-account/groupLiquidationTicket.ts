@@ -71,7 +71,7 @@ export async function printGroupLiquidationTicket(params: {
 
   const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
-  const title = `Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${dayjs(account.date).format('DD-MM-YYYY')}`;
+  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${dayjs(account.date).format('DD-MM-YYYY')}`;
 
   doc.setProperties({ title });
   doc.setFont('courier', 'normal');

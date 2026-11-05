@@ -189,7 +189,7 @@ export async function makePollaTicketsPdf(list: PollaTicketData[]) {
 
   const blob = doc.output('blob');
   const fileName =
-    list.length === 1 ? `polla-${first.ticket_number}.pdf` : `polla-${list.length}-tickets.pdf`;
+    list.length === 1 ? `polla_${first.ticket_number}.pdf` : `polla_${list.length}_tickets.pdf`;
   return { blob, fileName };
 }
 
