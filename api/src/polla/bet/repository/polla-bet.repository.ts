@@ -70,6 +70,8 @@ export interface PollaBetFilters {
   winner?: boolean | null;
   /** Aciertos exactos (cualquiera de la lista). */
   hits?: number[] | null;
+  /** Solo pagadas o solo en Debe ("Impagos"). */
+  paymentStatus?: POLLA_PAYMENT_STATUS | null;
 }
 
 export interface PollaBetQueryOptions {
@@ -228,6 +230,7 @@ export class PollaBetRepository {
       query = query.eq('winner', filters.winner);
     }
     if (filters.hits?.length) query = query.in('hits', filters.hits);
+    if (filters.paymentStatus) query = query.eq('payment_status', filters.paymentStatus);
 
     if (useKeyset) {
       query = query.or(afterCursor(decodeCursor(options.cursor!, options.sort), options.sort));
@@ -476,6 +479,28 @@ export class PollaBetRepository {
 
     throwIfPollaError(error);
     return data as IPollaRepeatResult;
+  }
+
+  /**
+   * Marca como pagados (R13) esos tickets o todos los impagos de un jugador en
+   * una edición. Solo Debe → Pagado; el alcance lo controla la RPC.
+   */
+  async markPaid(params: {
+    actorId: string;
+    betIds?: string[];
+    editionId?: string;
+    userId?: string;
+  }): Promise<{ updated: number; amount: number }> {
+    const { data, error } = await supabase.rpc('polla_mark_bets_paid', {
+      p_actor_id: params.actorId,
+      p_bet_ids: params.betIds ?? null,
+      p_edition_id: params.editionId ?? null,
+      p_user_id: params.userId ?? null,
+    });
+
+    throwIfPollaError(error);
+    const result = data as { updated: number; amount: number };
+    return { updated: Number(result.updated), amount: Number(result.amount) };
   }
 
   /** Cuántas veces se repitió sin cargo cada ticket (vigentes). */

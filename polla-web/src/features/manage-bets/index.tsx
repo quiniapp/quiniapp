@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { BadgeDollarSign, Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import {
   IPollaBetListItem,
   POLLA_EDITION_STATUS,
   POLLA_HITS_FILTER,
+  POLLA_PAYMENT_STATUS,
   POLLA_TICKET_SEARCH,
   isPublicPollaBet,
   pollaTicketCashierCode,
@@ -20,13 +22,14 @@ import {
 import { useAuth } from '@/providers/AuthContext';
 import { useBets, useRefreshBets, useUser } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
-import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
+import { useDeleteBet, useMarkBetsPaid } from '@/hooks/mutations/usePollaMutations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PollaPage, flattenPages } from '@/hooks/useApi';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { pollaUserCode, pollaUserOption } from '@/lib/pollaUsers';
 import { groupLabel } from '@/lib/pollaGroups';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -90,6 +93,8 @@ export const ManageBetsPage = () => {
   const winnerParam = searchParams.get('winner');
   const winner: WinnerFilter = winnerParam === 'true' || winnerParam === 'false' ? winnerParam : '';
   const hits = parseHits(searchParams.get('hits'));
+  // "Impagos": solo los tickets en Debe (R13).
+  const onlyOwed = searchParams.get('payment_status') === POLLA_PAYMENT_STATUS.OWED;
   const [loadRange, changeLoadRange] = useLoadRangeParam();
 
   const { data: groups } = useGroups(
@@ -142,6 +147,7 @@ export const ManageBetsPage = () => {
   const resultFilter = {
     winner: winner || undefined,
     hits: hits.length ? hits.join(',') : undefined,
+    payment_status: onlyOwed ? POLLA_PAYMENT_STATUS.OWED : undefined,
   };
   const loadFilter = { load_from: loadRange?.from, load_to: loadRange?.to };
 
@@ -244,6 +250,46 @@ export const ManageBetsPage = () => {
     sort === 'recent' ? 'más recientes primero' : 'por aciertos'
   }`;
   const { mutate: deleteBet } = useDeleteBet();
+  const { mutate: markPaid, isPending: isMarkingPaid } = useMarkBetsPaid();
+
+  const paidToast = ({ updated }: { updated: number }) =>
+    toast.success(
+      updated === 0
+        ? 'No había tickets en Debe para marcar'
+        : updated === 1
+          ? 'Ticket marcado como pago'
+          : `${updated} tickets marcados como pagos`
+    );
+
+  /** Debe → Pagado, en efectivo. No se puede volver atrás. */
+  const handleMarkPaid = (row: IPollaBetListItem) => {
+    if (
+      !window.confirm(`¿Marcar como pago el ticket ${row.ticket_number}? No se puede deshacer.`)
+    ) {
+      return;
+    }
+    markPaid({ polla_bet_ids: [row.polla_bet_id] }, { onSuccess: paidToast });
+  };
+
+  // Todos los impagos del jugador filtrado en la edición.
+  const playerToCollect =
+    !searching && editionId && filterType === POLLA_USER_TYPE.PLAYER && selectedUser
+      ? selectedUser
+      : null;
+  const handleMarkAllPaid = () => {
+    if (!playerToCollect) return;
+    if (
+      !window.confirm(
+        `¿Marcar como pagos todos los tickets en Debe de ${playerToCollect.name} en esta edición? No se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+    markPaid(
+      { polla_edition_id: editionId, polla_user_id: playerToCollect.polla_user_id },
+      { onSuccess: paidToast }
+    );
+  };
 
   const handlePrint = async (row: IPollaBetListItem) => {
     const edition = editionList.find((e) => e.polla_edition_id === row.polla_edition_id);
@@ -292,11 +338,25 @@ export const ManageBetsPage = () => {
     const canPrint = canLoad || (isCashier && isPublic && row.is_mine);
     const canEdit = Boolean(row.can_edit);
     const canDelete = Boolean(row.can_delete);
+    const canPay = Boolean(row.can_mark_paid);
 
-    if (!canPrint && !canEdit && !canDelete) return null;
+    if (!canPrint && !canEdit && !canDelete && !canPay) return null;
 
     return (
       <>
+        {canPay && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Marcar como pago"
+            aria-label={`Marcar como pago el ticket ${row.ticket_number}`}
+            disabled={isMarkingPaid}
+            onClick={() => handleMarkPaid(row)}
+          >
+            <BadgeDollarSign />
+          </Button>
+        )}
         {canPrint && (
           <Button
             type="button"
@@ -434,6 +494,19 @@ export const ManageBetsPage = () => {
           onHitsChange={(value) => updateParam('hits', value.join(','))}
         />
 
+        <div className="flex items-center gap-2 sm:pb-2">
+          <Checkbox
+            id="manage-bets-owed"
+            checked={onlyOwed}
+            onCheckedChange={(checked) =>
+              updateParam('payment_status', checked === true ? POLLA_PAYMENT_STATUS.OWED : '')
+            }
+          />
+          <Label htmlFor="manage-bets-owed" className="cursor-pointer py-1">
+            Impagos
+          </Label>
+        </div>
+
         <div className="flex min-w-0 flex-col gap-1">
           <Label>Ordenar por</Label>
           <Select
@@ -478,6 +551,24 @@ export const ManageBetsPage = () => {
           />
         )}
       </div>
+
+      {playerToCollect && (
+        <div className="mb-3 flex flex-col gap-2 rounded-md border bg-card p-3 text-sm text-card-foreground sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1 text-muted-foreground">
+            Cobrale a {playerToCollect.name} todo lo que debe en esta edición de una vez.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isMarkingPaid}
+            onClick={handleMarkAllPaid}
+          >
+            <BadgeDollarSign />
+            Marcar todos sus impagos como pagos
+          </Button>
+        </div>
+      )}
 
       {canFreeRepeat && (
         <div className="mb-3 flex flex-col gap-2 rounded-md border bg-card p-3 text-sm text-card-foreground sm:flex-row sm:items-center">

@@ -196,6 +196,25 @@ export const repeatPollaBetsSchema = z.object({
   payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
 
+/**
+ * Marcar como pagados (R13): esos tickets (`polla_bet_ids`) o todos los
+ * impagos de un jugador en una edición (`polla_edition_id` + `polla_user_id`).
+ */
+export const markPollaBetsPaidSchema = z
+  .object({
+    polla_bet_ids: z
+      .array(z.string().uuid())
+      .min(1, 'Elegí al menos un ticket')
+      .max(POLLA_REPEAT_MAX_BETS, `Se marcan hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`)
+      .optional(),
+    polla_edition_id: z.string().uuid().optional(),
+    polla_user_id: z.string().uuid().optional(),
+  })
+  .refine(
+    (data) => Boolean(data.polla_bet_ids) || Boolean(data.polla_edition_id && data.polla_user_id),
+    'Elegí los tickets, o la edición y el jugador'
+  );
+
 // -------------------------------------------------------- cuenta corriente
 
 export const pollaCurrentAccountUpdateSchema = z.object({

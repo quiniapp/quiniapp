@@ -4,6 +4,23 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+#### Migración `20261105140000_polla_mark_bets_paid.sql`
+- **`polla_mark_bets_paid(actor, bet_ids?, edition?, user?)`** (nueva): pasa a Pagado, en efectivo, esos tickets o todos los impagos de un jugador en una edición. Guarda quién cobró y cuándo. Solo Debe → Pagado: las que ya estaban pagadas no se tocan y no hay vuelta atrás.
+- **`polla_bet_in_payment_scope(actor, bet)`** (nueva): el alcance de quien cobra. El pasador cobra lo imputado a él; el admin, su grupo; el Súper y superadmin+, la organización; el jugador, nada. Si un ticket pedido está fuera del alcance, no se marca ninguno (`POLLA_BET_OUT_OF_SCOPE`).
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`PATCH /polla/private/bet/payment`** (nuevo, staff y pasador): `{polla_bet_ids}` o `{polla_edition_id, polla_user_id}`. Devuelve `{updated, amount}`.
+- **`GET /polla/private/bet`**: filtro `payment_status` (`OWED` = impagos).
+- Cada jugada trae `can_mark_paid`: está en Debe y el usuario la cobra.
+- La proyección pública (pasador y Súper) trae `payment_status` de lo que cobra quien mira. El jugador y los demás pasadores reciben `null`.
+- Errores nuevos: `POLLA_PAYMENT_FORBIDDEN` y `POLLA_PAYMENT_TARGET_REQUIRED`.
+
+#### Tests
+- **`050_polla_mark_bets_paid.test.sql`** (15): el jugador no marca; el pasador y el admin no salen de su alcance, y si falla uno no se marca ninguno; queda pagado en efectivo con quién lo cobró; no se vuelve a marcar; todos los impagos de un jugador, con su monto; el Súper en toda la organización.
+
 ### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
 
 #### Migración `20261105130000_polla_bet_payment_status.sql`

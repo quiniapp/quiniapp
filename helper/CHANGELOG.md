@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+- **`polla/types/game.type.ts`**: `IPollaBetActions.can_mark_paid`. `IPollaBetPublic.payment_status`, que llega solo a quien cobra la jugada.
+- **`polla/schemas/game.schema.ts`**: `markPollaBetsPaidSchema` (tickets, o edición + jugador).
+
 ### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
 
 - **`polla/types/game.type.ts`**: `POLLA_PAYMENT_STATUS` (`PAID`, `OWED`) y `POLLA_PAYMENT_METHOD` (`CASH`), con sus etiquetas ("Pagado", "Debe", "Efectivo"). `IPollaBetEntityBack` suma `payment_status`, `payment_method`, `paid_at` y `paid_by`.

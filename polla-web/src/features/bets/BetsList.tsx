@@ -4,6 +4,7 @@ import { Copy, Gift } from 'lucide-react';
 import {
   IPollaBetListItem,
   POLLA_NUMBERS_REQUIRED,
+  POLLA_PAYMENT_STATUS,
   isPublicPollaBet,
 } from '@helper/polla/types/game.type';
 import { BetNumbers } from '@/components/BetNumbers';
@@ -87,6 +88,10 @@ const BetStatus = ({ row, freeRepeats }: { row: IPollaBetListItem; freeRepeats: 
   return (
     <span className="flex flex-wrap items-center gap-1">
       {main}
+      {/* Solo llega a quien lo cobra (pasador y staff); el jugador no lo ve. */}
+      {row.payment_status === POLLA_PAYMENT_STATUS.OWED && (
+        <Badge variant="destructive">Debe</Badge>
+      )}
       {row.is_free && <Badge variant="outline">Sin cargo</Badge>}
       {freeRepeats > 0 && (
         <Badge variant="secondary" title="Veces que se repitió sin cargo">

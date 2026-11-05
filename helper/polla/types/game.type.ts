@@ -370,6 +370,11 @@ export interface IPollaBetDerivedFields {
 export interface IPollaBetActions {
   can_edit: boolean;
   can_delete: boolean;
+  /**
+   * Está en Debe y el usuario la cobra (R13): el pasador lo imputado a él, el
+   * admin su grupo, el Súper y superadmin+ la organización.
+   */
+  can_mark_paid: boolean;
 }
 
 export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'> &
@@ -404,6 +409,11 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields, IPollaBetAction
   /** Repetida sin cargo. */
   is_free: boolean;
   identifier: string | null;
+  /**
+   * Pagado o Debe: solo para el pasador (lo imputado a él) y el Súper. El
+   * jugador y los demás pasadores reciben `null`.
+   */
+  payment_status: POLLA_PAYMENT_STATUS | null;
 }
 
 export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;

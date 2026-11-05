@@ -196,6 +196,16 @@ export const useUpdateBet = () =>
     { invalidate: ['polla-bets'], successMessage: 'Jugada actualizada' }
   );
 
+/**
+ * Marcar como pagados (R13): esos tickets o todos los impagos de un jugador en
+ * la edición. Solo Debe → Pagado. El aviso lo da la pantalla (dice cuántos).
+ */
+export const useMarkBetsPaid = () =>
+  useApiMutation<
+    { updated: number; amount: number },
+    { polla_bet_ids?: string[]; polla_edition_id?: string; polla_user_id?: string }
+  >('patch', BACKEND_ROUTES.bet.payment, { invalidate: ['polla-bets'] });
+
 export const useDeleteBet = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.bet.id(id), {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],

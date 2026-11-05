@@ -61,6 +61,9 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new BadRequestError(
       'La edición ya tiene sorteos cargados: no se cambian los sorteos, el mínimo de aciertos ni la fecha de inicio'
     ),
+  POLLA_PAYMENT_FORBIDDEN: () => new ForbiddenError('Los jugadores no marcan pagos'),
+  POLLA_PAYMENT_TARGET_REQUIRED: () =>
+    new BadRequestError('Elegí los tickets, o la edición y el jugador'),
   POLLA_EDITION_DRAWS_REQUIRED: () =>
     new BadRequestError('Elegí al menos un sorteo (quiniela y turno)'),
   POLLA_EDITION_DRAW_INVALID: () =>

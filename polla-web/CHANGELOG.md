@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`):
+  - Filtro **Impagos** (`payment_status=OWED` en la URL).
+  - Botón **Marcar como pago** en cada ticket en Debe que cobra el usuario (`can_mark_paid`), con confirmación porque no se puede deshacer.
+  - Con un jugador filtrado: **Marcar todos sus impagos como pagos** en la edición.
+- **Listado de jugadas** (`BetsList`): badge **Debe** en los tickets fiados. Solo lo ven el pasador y el staff, porque al jugador no le llega el estado.
+- `useMarkBetsPaid` y la ruta `bet.payment`. `useApiMutation` acepta `patch`.
+
 ### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
 
 - **Cargar jugada** (`features/make-bet/index.tsx`): el botón pasa a "Cerrar ticket" y abre `PaymentDialog` con **Efectivo** y **Debe**. Efectivo tiene el foco, así que Enter lo cierra pagado, como antes. El jugador no ve el diálogo: su ticket queda en Debe.
