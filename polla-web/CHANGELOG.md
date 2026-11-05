@@ -4,6 +4,12 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R27: dos ediciones en la misma semana)
+
+- **Ventas** (`features/sales/index.tsx`): "Del día" también pide la edición y muestra lo vendido ese día en esa edición. Las ediciones no se mezclan.
+- **Cargar jugada** (`features/make-bet/index.tsx`): con una sola edición abierta queda elegida. Con varias se elige a mano, como antes. Repetir ticket arranca con la misma.
+- **Ediciones**: el texto de la pantalla ya no dice "una edición por quiniela, turno y semana".
+
 ### Added - 2026-11-05 (Tests y typecheck)
 
 - **Vitest 5.0.5** (`vitest.config.ts`, devDependency con versión fija): tests de la lógica en TypeScript en `src/**/*.test.ts`. Los de `@helper/polla` también viven acá (`src/__tests__/helper/`), porque si estuvieran en `helper/` los compilaría el `tsc` de la API. Reusa `vite.config.ts` (alias `@` y `@helper`).

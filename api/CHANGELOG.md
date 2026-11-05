@@ -4,6 +4,21 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R27: dos ediciones en la misma semana)
+
+#### Migración `20261105080000_polla_overlapping_editions.sql`
+- Se borra el constraint `no_overlapping_polla_editions`: dos ediciones de la misma quiniela y turno pueden cubrir los mismos días (por ejemplo, la regular y la especial del sábado). Cada ticket ya estaba atado a su edición.
+- **`polla_process_edition_hits(p_edition_id, p_date)`** reemplaza a `polla_process_edition_hits(org, quiniela, turno, fecha)`, que buscaba "la" edición del sorteo y con dos solapadas procesaba una sola. La regla de premio no cambia.
+- **`polla_process_results_and_accounts`** procesa todas las ediciones del turno que cubren el día, cada una con sus tickets y su pozo. Si una edición se saltea, la respuesta trae igual su `polla_edition_id`.
+- Rollback comentado al final del archivo. Volver a crear el constraint falla si ya hay ediciones solapadas.
+
+#### Endpoints
+- **`GET /polla/private/bet/sales`**: acepta `date` y `polla_edition_id` juntos (las ventas de ese día en esa edición). Con `polla_edition_id` solo sigue trayendo el total de la edición, y con `date` solo (o nada), el día en todas.
+- Se saca el mensaje de `no_overlapping_polla_editions` de `polla-errors.ts`.
+
+#### Tests
+- **`supabase/tests/database/010_polla_overlapping_editions.test.sql`**: dos ediciones solapadas de la misma quiniela y turno; un mismo sorteo procesa las dos y cada una reparte su pozo entre sus tickets.
+
 ### Added - 2026-11-05 (Polla: tests de base de datos con pgTAP)
 
 - **`supabase/tests/database/`**: tests pgTAP de las reglas de Polla en SQL. Se corren con `npx supabase test db` contra el Supabase local (ver `supabase/tests/README.md`). Cada archivo corre en una transacción que termina en `ROLLBACK` y crea sus propios datos.

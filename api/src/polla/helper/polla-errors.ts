@@ -77,8 +77,6 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_GROUP_PERCENTAGE_INVALID: () =>
     new BadRequestError('El porcentaje del admin tiene que estar entre 0 y 100'),
   unique_polla_group_admin_active: () => new ConflictError('Ese grupo ya tiene un admin'),
-  no_overlapping_polla_editions: () =>
-    new ConflictError('Ya hay una edición para esa quiniela y turno en ese rango de fechas'),
   unique_polla_username_active: () => new ConflictError('Ese nombre de usuario ya está en uso'),
   unique_polla_cashier_number_active: () =>
     new ConflictError('Ese número de pasador ya está en uso en el grupo'),

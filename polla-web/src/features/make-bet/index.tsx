@@ -109,7 +109,11 @@ export const MakeBetPage = () => {
   );
 
   const loadable = editions?.data ?? [];
-  const edition = loadable.find((e) => e.polla_edition_id === editionId);
+  // Con una sola edición abierta queda elegida; con varias (la regular y la
+  // especial de la misma semana) se elige a mano.
+  const selectedEditionId =
+    editionId || (loadable.length === 1 ? loadable[0].polla_edition_id : '');
+  const edition = loadable.find((e) => e.polla_edition_id === selectedEditionId);
   // Con la polla en juego (solo superadmin+ llega acá), la jugada no suma los
   // aciertos de los sorteos ya procesados hasta que se regeneran a mano.
   const isPlaying = Boolean(edition && edition.start_date <= dayjs().format('YYYY-MM-DD'));
@@ -212,7 +216,7 @@ export const MakeBetPage = () => {
                 {isPlayer ? 'Repetir mis tickets' : 'Repetir ticket'}
               </Button>
             </div>
-            <Select value={editionId} onValueChange={setEditionId}>
+            <Select value={selectedEditionId} onValueChange={setEditionId}>
               <SelectTrigger>
                 <SelectValue placeholder="Elegí una edición" />
               </SelectTrigger>
@@ -334,7 +338,7 @@ export const MakeBetPage = () => {
           onClose={() => setRepeatOpen(false)}
           editions={loadable}
           editionLabel={editionLabel}
-          defaultEditionId={editionId}
+          defaultEditionId={selectedEditionId}
           onCreated={printTickets}
         />
       )}

@@ -433,7 +433,7 @@ export const EditionsPage = () => {
   return (
     <div>
       <PageHeader
-        description="Una edición por quiniela, turno y semana. El pozo lo definís vos y le podés sumar un pozo sorpresa mientras no haya ganador."
+        description="Puede haber más de una edición en la misma semana, por ejemplo la regular y la especial del sábado: cada ticket juega en la suya. El pozo lo definís vos y le podés sumar un pozo sorpresa mientras no haya ganador."
         actions={
           <Button type="button" onClick={() => setDialog({ edition: null })}>
             Nueva edición

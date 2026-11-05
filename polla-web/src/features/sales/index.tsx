@@ -34,8 +34,9 @@ const SALES_VIEWS: [SalesView, string][] = [
 ];
 
 /**
- * Boletas vendidas (sin las repetidas sin cargo) en el día o, con "Total de la
- * edición", en todos los días de una edición. Superadmin+ ve el total del
+ * Boletas vendidas (sin las repetidas sin cargo) de una edición: las del día o,
+ * con "Total de la edición", las de todos sus días. Las ediciones no se
+ * mezclan (puede haber dos en la misma semana). Superadmin+ ve el total del
  * capitalista y el desglose por grupo, con filtro por grupo o todos; el admin,
  * solo su grupo; el pasador, lo suyo y lo de sus jugadores.
  */
@@ -54,8 +55,8 @@ export const SalesPage = () => {
   const { data: sales, isFetching } = useDailySales(
     byEdition
       ? { polla_edition_id: editionId, polla_organization_id: organizationId }
-      : { date, polla_organization_id: organizationId },
-    !byEdition || Boolean(editionId)
+      : { date, polla_edition_id: editionId, polla_organization_id: organizationId },
+    Boolean(editionId)
   );
   const { data: groups } = useGroups();
 
@@ -79,7 +80,7 @@ export const SalesPage = () => {
           { bets_count: 0, amount: 0 }
         );
 
-  const period = byEdition ? 'en la edición' : 'en el día';
+  const period = byEdition ? 'en la edición' : 'en el día, en la edición elegida';
 
   return (
     <div>
@@ -121,14 +122,14 @@ export const SalesPage = () => {
           </div>
         </div>
 
-        {byEdition ? (
-          <EditionPicker
-            editions={editionList}
-            value={editionId}
-            onChange={updateEdition}
-            labelFor={labelFor}
-          />
-        ) : (
+        <EditionPicker
+          editions={editionList}
+          value={editionId}
+          onChange={updateEdition}
+          labelFor={labelFor}
+        />
+
+        {!byEdition && (
           <div className="flex flex-col gap-1 sm:w-[200px]">
             <Label htmlFor="sales-date">Fecha</Label>
             <DateInput id="sales-date" value={date} max={todayIso()} onValueChange={setDate} />
@@ -161,7 +162,7 @@ export const SalesPage = () => {
                 ? 'Cargando…'
                 : byEdition
                   ? 'No hubo ventas en la edición'
-                  : 'No hubo ventas ese día'
+                  : 'No hubo ventas ese día en la edición'
             }
           />
         ) : (

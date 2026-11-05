@@ -576,10 +576,12 @@ export class PollaBetRouter {
   });
 
   /**
-   * Boletas vendidas (sin las repetidas sin cargo) en el día o, con
-   * `polla_edition_id`, en toda la edición. Superadmin+ ve el total de la
-   * organización y el desglose por grupo; el admin, su grupo; el pasador, solo
-   * lo imputado a él. El jugador y el Super no las ven.
+   * Boletas vendidas (sin las repetidas sin cargo). Con `polla_edition_id` y
+   * `date`, las de ese día en esa edición; con `polla_edition_id` solo, toda la
+   * edición; con `date` solo (o nada, hoy), el día en todas las ediciones.
+   * Superadmin+ ve el total de la organización y el desglose por grupo; el
+   * admin, su grupo; el pasador, solo lo imputado a él. El jugador y el Super
+   * no las ven.
    */
   private getDailySalesHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
@@ -593,11 +595,11 @@ export class PollaBetRouter {
 
     const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
 
-    // Total de la edición (todos los días de carga) o lo de un día.
+    // Un día de una edición, toda la edición (todos los días de carga) o un día.
     const editionId = queryString(req.query.polla_edition_id);
     if (editionId) await this.assertEditionScope(user, editionId);
 
-    const date = editionId ? null : (queryString(req.query.date) ?? pollaToday());
+    const date = queryString(req.query.date) ?? (editionId ? null : pollaToday());
     if (date && !ISO_DATE.test(date)) throw new BadRequestError('Fecha inválida (YYYY-MM-DD)');
 
     const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
