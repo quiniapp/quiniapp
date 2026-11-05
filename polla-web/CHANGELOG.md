@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-05 (R02: opciones de los desplegables legibles)
+
+- **`SelectItem`** (`components/ui/select.tsx`): la opción resaltada de los desplegables pasa de azul primario con el texto del popover (casi negro en el tema claro, 2.4:1; blanco sobre celeste en el oscuro, 2.2:1) a `accent` con `accent-foreground`: gris claro con texto oscuro (14:1) en el claro y gris azulado con texto blanco (7.4:1) en el oscuro. Lo había marcado el cliente en Ediciones (Quiniela y Turno), pero aplica a los 24 desplegables de la app. No había otro azul con texto oscuro: botones, badges, casillas y el menú activo ya usan su `*-foreground` (≥ 7.5:1).
+
 ### Changed - 2026-11-04 (PDFs: prefijo `polla_` y un PDF por pasador)
 
 - **Exportar liquidación** (`functions/current-account/liquidationSlipPDF.ts`): se descarga un PDF por pasador (`polla_Exportar_Liquidacion_DD-MM-YYYY_<nombre>-<número>.pdf`) en vez de uno solo con todos, igual que en QuiniApp. Las descargas salen con 300 ms de diferencia para que el navegador no descarte ninguna (puede pedir permiso para descargar varios archivos). La hoja de cada pasador no cambia; la del pasador ("Imprimir liquidación") sigue siendo un solo PDF.
