@@ -114,13 +114,10 @@ export const RoutesContent: RouteObject[] = [
         handle: { title: 'Usuarios' } satisfies RouteHandle,
       },
       {
-        // Dueño, capitalista y superadmin; el admin ve la de su grupo y el
-        // pasador, la suya.
+        // Dueño, capitalista y superadmin; el pasador ve la suya. El admin no
+        // tiene acceso (la API tampoco se lo da).
         path: ROUTES.CURRENT_ACCOUNT,
-        element: guarded(
-          [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
-          <CurrentAccountPage />
-        ),
+        element: guarded([...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER], <CurrentAccountPage />),
         handle: { title: 'Cuenta corriente' } satisfies RouteHandle,
       },
       {
