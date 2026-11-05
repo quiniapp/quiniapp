@@ -61,11 +61,11 @@ const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
   { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
   {
-    // El admin ve solo la cuenta de su grupo; el pasador, la suya.
+    // El pasador ve solo la suya. El admin no tiene cuenta corriente.
     to: ROUTES.CURRENT_ACCOUNT,
     label: 'Cuenta corriente',
     icon: CreditCard,
-    roles: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
+    roles: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
   },
   {
     to: ROUTES.CATALOGS,

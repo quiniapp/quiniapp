@@ -10,7 +10,7 @@ import { useAuth } from '@/providers/AuthContext';
 import { useGroupAccountPreviews, useGroupAccounts } from '@/hooks/fetchs/usePollaData';
 import { useLiquidateGroup } from '@/hooks/mutations/usePollaMutations';
 import { flattenPages } from '@/hooks/useApi';
-import { EmptyState, PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -204,12 +204,10 @@ const LiquidateGroupDialog = ({
   );
 };
 
-/** Historial de liquidaciones de grupos (el admin ve solo las del suyo). */
-const GroupAccountHistory = ({ groupId }: { groupId?: string }) => {
+/** Historial de liquidaciones de grupos. */
+const GroupAccountHistory = () => {
   const { organizationId } = useAuth();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching } = useGroupAccounts({
-    polla_group_id: groupId,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching } = useGroupAccounts();
   const { rows, totalCount } = flattenPages(data?.pages);
 
   const reprint = async (account: IPollaGroupAccountEntityFront) => {
@@ -307,7 +305,7 @@ const GroupAccountHistory = ({ groupId }: { groupId?: string }) => {
  * Lo que se liquidaría a cada grupo a la fecha. Se liquida cuando todos sus
  * pasadores están liquidados hasta ese día.
  */
-const GroupPreviews = ({ date, canLiquidate }: { date: string; canLiquidate: boolean }) => {
+const GroupPreviews = ({ date }: { date: string }) => {
   const { data: previews = [], isFetching } = useGroupAccountPreviews(date);
   const [liquidating, setLiquidating] = useState<IPollaGroupAccountPreview | null>(null);
 
@@ -346,17 +344,15 @@ const GroupPreviews = ({ date, canLiquidate }: { date: string; canLiquidate: boo
                     </Badge>
                   )}
                 </div>
-                {canLiquidate && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={blocked}
-                    onClick={() => setLiquidating(preview)}
-                  >
-                    <Wallet />
-                    {preview.liquidated_on_date ? 'Rehacer' : 'Liquidar'}
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={blocked}
+                  onClick={() => setLiquidating(preview)}
+                >
+                  <Wallet />
+                  {preview.liquidated_on_date ? 'Rehacer' : 'Liquidar'}
+                </Button>
               </div>
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -421,28 +417,12 @@ export const GroupAccountsPanel = () => {
             onValueChange={setDate}
           />
         </div>
-        <GroupPreviews date={date} canLiquidate />
+        <GroupPreviews date={date} />
       </div>
 
       <div className="flex flex-col gap-2">
         <h2 className="font-medium">Liquidaciones</h2>
         <GroupAccountHistory />
-      </div>
-    </div>
-  );
-};
-
-/** La cuenta del grupo para su admin: lo que va acumulando y sus liquidaciones. */
-export const GroupAccountView = () => {
-  const { user } = useAuth();
-
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader description="La cuenta de tu grupo: lo que dejan tus pasadores, tu comisión y lo que se te pagó. La liquida el superadministrador." />
-      <GroupPreviews date={todayIso()} canLiquidate={false} />
-      <div className="flex flex-col gap-2">
-        <h2 className="font-medium">Liquidaciones</h2>
-        <GroupAccountHistory groupId={user?.polla_group_id ?? undefined} />
       </div>
     </div>
   );

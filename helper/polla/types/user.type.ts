@@ -71,8 +71,8 @@ export const isPollaStaffRole = (role: POLLA_USER_TYPE): boolean =>
 
 /**
  * Roles que ven la cuenta corriente de los pasadores, sus reportes y gastos, y
- * liquidan (pasadores y grupos). El ADMIN ve solo la cuenta de su grupo; el
- * pasador, solo la suya.
+ * liquidan (pasadores y grupos). El pasador ve solo la suya. El ADMIN y el
+ * jugador no tienen acceso a la cuenta corriente.
  */
 export const POLLA_ACCOUNT_ROLES: POLLA_USER_TYPE[] = POLLA_SUPER_ROLES;
 

@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError } from '@helper/errors';
-import { POLLA_SUPER_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_ACCOUNT_ROLES } from '@helper/polla/types/user.type';
 import { IPollaGroupEntityBack } from '@helper/polla/types/catalog.type';
 import { liquidatePollaGroupSchema } from '@helper/polla/schemas/game.schema';
 import { IPollaGroupAccountPreview } from '@helper/polla/types/game.type';
@@ -8,7 +8,6 @@ import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaCatalogRepository } from '../../catalog/repository/polla-catalog.repository';
 import { PollaGroupAccountRepository } from '../repository/polla-group-account.repository';
 import { parsePagination } from '../../helper/pagination';
-import { assertInWritableGroup, writableGroupId } from '../../helper/scope';
 import { pollaToday } from '../../helper/date';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
@@ -24,8 +23,9 @@ const queryDate = (value: unknown, fallback?: string): string | null => {
 };
 
 /**
- * Cuenta corriente de los grupos. Superadmin+ ve y liquida todos; el admin ve
- * solo la de su grupo (lectura). Pasador y jugador no tienen acceso.
+ * Cuenta corriente de los grupos. Solo dueño, capitalista y superadmin
+ * (`POLLA_ACCOUNT_ROLES`) la ven y la liquidan. El admin, el pasador y el
+ * jugador no tienen acceso, ni siquiera a la de su grupo.
  */
 export class PollaGroupAccountRouter {
   public router: Router;
@@ -45,12 +45,10 @@ export class PollaGroupAccountRouter {
   }
 
   private setupRoutes() {
-    const readGuard = requirePollaRole(...POLLA_SUPER_ROLES, POLLA_USER_TYPE.ADMIN);
-    const writeGuard = requirePollaRole(...POLLA_SUPER_ROLES);
-
-    this.router.get('/', readGuard, this.getAllHandler);
-    this.router.get('/previews', readGuard, this.getPreviewsHandler);
-    this.router.post('/liquidate', writeGuard, this.liquidateHandler);
+    this.router.use(requirePollaRole(...POLLA_ACCOUNT_ROLES));
+    this.router.get('/', this.getAllHandler);
+    this.router.get('/previews', this.getPreviewsHandler);
+    this.router.post('/liquidate', this.liquidateHandler);
   }
 
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -60,7 +58,7 @@ export class PollaGroupAccountRouter {
     const result = await this.repository.getAll(
       {
         organizationId: user.polla_organization_id,
-        groupId: writableGroupId(user) ?? queryString(req.query.polla_group_id),
+        groupId: queryString(req.query.polla_group_id),
         from: queryDate(req.query.from),
         to: queryDate(req.query.to),
       },
@@ -72,24 +70,18 @@ export class PollaGroupAccountRouter {
 
   /**
    * Lo que se liquidaría a cada grupo a la fecha, con los pasadores que faltan
-   * liquidar. El admin recibe solo el de su grupo.
+   * liquidar.
    */
   private getPreviewsHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const date = queryDate(req.query.date, pollaToday())!;
     const organizationId = user.polla_organization_id;
 
-    const ownGroup = writableGroupId(user);
-    const groupIds = ownGroup
-      ? [ownGroup]
-      : (
-          (
-            await this.groupRepository.getAll(
-              { organizationId },
-              parsePagination({ page: 1, limit: 100 })
-            )
-          ).data as IPollaGroupEntityBack[]
-        ).map((group) => group.polla_group_id);
+    const groups = await this.groupRepository.getAll(
+      { organizationId },
+      parsePagination({ page: 1, limit: 100 })
+    );
+    const groupIds = (groups.data as IPollaGroupEntityBack[]).map((group) => group.polla_group_id);
 
     const [previews, sameDay] = await Promise.all([
       Promise.all(
@@ -97,7 +89,7 @@ export class PollaGroupAccountRouter {
       ),
       // Liquidaciones de esa misma fecha: liquidar de nuevo las rehace.
       this.repository.getAll(
-        { organizationId, groupId: ownGroup, from: date, to: date },
+        { organizationId, groupId: null, from: date, to: date },
         parsePagination({ page: 1, limit: 100 })
       ),
     ]);
@@ -114,7 +106,6 @@ export class PollaGroupAccountRouter {
   private liquidateHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const payload = liquidatePollaGroupSchema.parse(req.body);
-    assertInWritableGroup(user, payload.polla_group_id);
 
     const account = await this.repository.liquidate({
       organizationId: user.polla_organization_id,
