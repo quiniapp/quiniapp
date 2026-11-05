@@ -46,7 +46,7 @@ export async function downloadDailyAccountsPDF(params: {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
   const title = params.title ?? 'Liquidación';
   const dateStr = dayjs(params.date).format('DD/MM/YYYY');
-  const fileName = `${title.replace(/\s+/g, '_')}${slug(params.groupName)}_${dayjs(params.date).format('DD-MM-YYYY')}`;
+  const fileName = `polla_${title.replace(/\s+/g, '_')}${slug(params.groupName)}_${dayjs(params.date).format('DD-MM-YYYY')}`;
 
   doc.setProperties({ title: fileName });
   doc.setFontSize(14);
@@ -109,7 +109,7 @@ export async function downloadDailySummaryPDF(params: {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
   const fromFile = dayjs(params.from).format('DD-MM-YYYY');
   const toFile = dayjs(params.to).format('DD-MM-YYYY');
-  const fileName = `Resumen_Cuenta_Corriente${slug(params.groupName)}_${fromFile}_${toFile}`;
+  const fileName = `polla_Resumen_Cuenta_Corriente${slug(params.groupName)}_${fromFile}_${toFile}`;
 
   doc.setProperties({ title: fileName });
   doc.setFontSize(14);

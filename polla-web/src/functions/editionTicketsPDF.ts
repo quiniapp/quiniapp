@@ -171,7 +171,7 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
 
   return {
     blob: doc.output('blob'),
-    fileName: `Polla_${slug(lotteryName)}_${slug(scheduleName)}_${dayjs(edition.start_date).format(
+    fileName: `polla_${slug(lotteryName)}_${slug(scheduleName)}_${dayjs(edition.start_date).format(
       'DD-MM-YYYY'
     )}.pdf`,
   };

@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-04 (PDFs: prefijo `polla_` y un PDF por pasador)
+
+- **Exportar liquidación** (`functions/current-account/liquidationSlipPDF.ts`): se descarga un PDF por pasador (`polla_Exportar_Liquidacion_DD-MM-YYYY_<nombre>-<número>.pdf`) en vez de uno solo con todos, igual que en QuiniApp. Las descargas salen con 300 ms de diferencia para que el navegador no descarte ninguna (puede pedir permiso para descargar varios archivos). La hoja de cada pasador no cambia; la del pasador ("Imprimir liquidación") sigue siendo un solo PDF.
+- **Nombres de archivo**: todos los PDFs de Polla empiezan con `polla_`: diario / resumen de la cuenta corriente (`accountTablePDF.ts`), cobros y pagos y subtotales (`totalsTicket.ts`), liquidación del grupo (`groupLiquidationTicket.ts`), tickets de la edición (`editionTicketsPDF.ts`, antes `Polla_`) y tickets (`makePollaTicket.ts`, antes `polla-<ticket>.pdf` / `polla-<n>-tickets.pdf`, ahora `polla_<ticket>.pdf` / `polla_<n>_tickets.pdf`).
+
 ### Removed - 2026-11-04 (Cuenta corriente: sin acceso para el admin)
 
 - **Cuenta corriente** (`components/layout/AppLayout.tsx`, `routes/route.tsx`): el admin ya no la ve en el menú y si entra por URL vuelve a Jugadas. Quedan dueño, capitalista, superadmin y el pasador (solo la suya). La API tampoco le da acceso.
