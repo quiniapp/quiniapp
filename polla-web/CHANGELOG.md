@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-04 (Ver contraseña)
+
+- **`PasswordInput`** (`components/ui/password-input.tsx`): input de contraseña con un ojito para ver lo que se escribió y volver a ocultarlo. Arranca oculta, cada campo se muestra por separado y al tocar el ojito el foco (y el teclado en mobile) sigue en el input.
+- Lo usan todos los campos de contraseña de Polla: login, cambiar contraseña (actual, nueva y repetir), blanquear contraseña (`ResetPasswordDialog`), alta y edición de usuario (`EditUserDialog`), alta de organización (capitalista) y alta de grupo (admin).
+
 ### Changed - 2026-10-29 (Identificador opcional con jugador, ventas de la edición y fecha del PDF de Administrar)
 
 - **Cargar jugada** (`features/make-bet/index.tsx`): el pasador que elige uno de sus jugadores ya no tiene que poner identificador ("opcional"); a su nombre sigue siendo obligatorio ("Poné el identificador o elegí uno de tus jugadores").

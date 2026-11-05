@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 
 interface ResetPasswordDialogProps {
@@ -63,9 +63,8 @@ export const ResetPasswordDialog = ({
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <Label htmlFor="reset-password">Contraseña nueva</Label>
-            <Input
+            <PasswordInput
               id="reset-password"
-              type="password"
               autoComplete="new-password"
               autoFocus
               value={password}
@@ -74,9 +73,8 @@ export const ResetPasswordDialog = ({
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="reset-password-confirm">Repetir contraseña</Label>
-            <Input
+            <PasswordInput
               id="reset-password-confirm"
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

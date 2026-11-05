@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -94,7 +95,7 @@ const AdminFields = ({
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor={`${idPrefix}-password`}>Contraseña (mínimo 6 caracteres)</Label>
-        <Input {...field('password')} type="password" autoComplete="new-password" />
+        <PasswordInput {...field('password')} autoComplete="new-password" />
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor={`${idPrefix}-email`}>Email</Label>

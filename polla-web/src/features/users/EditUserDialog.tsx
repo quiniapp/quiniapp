@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { groupLabel } from '@/lib/pollaGroups';
@@ -145,9 +146,8 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
             {toApp && (
               <div className="flex flex-col gap-1">
                 <Label htmlFor="edit-user-password">Contraseña</Label>
-                <Input
+                <PasswordInput
                   id="edit-user-password"
-                  type="password"
                   autoComplete="new-password"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}

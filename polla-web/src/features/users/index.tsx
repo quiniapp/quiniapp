@@ -29,6 +29,7 @@ import { flattenPages } from '@/hooks/useApi';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -410,9 +411,8 @@ export const UsersPage = () => {
 
                       <div className="flex flex-col gap-1">
                         <Label htmlFor="new-user-password">Contraseña</Label>
-                        <Input
+                        <PasswordInput
                           id="new-user-password"
-                          type="password"
                           autoComplete="new-password"
                           value={form.password}
                           onChange={(e) => setForm({ ...form, password: e.target.value })}
