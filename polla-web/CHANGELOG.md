@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (Tests y typecheck)
+
+- **Vitest 5.0.5** (`vitest.config.ts`, devDependency con versión fija): tests de la lógica en TypeScript en `src/**/*.test.ts`. Los de `@helper/polla` también viven acá (`src/__tests__/helper/`), porque si estuvieran en `helper/` los compilaría el `tsc` de la API. Reusa `vite.config.ts` (alias `@` y `@helper`).
+- **Scripts**: `test` (`vitest run`), `test:watch` y `typecheck` (`tsc -b && tsc -p tsconfig.node.json`). `vite build` no chequea tipos.
+- **Primer test** (`src/__tests__/helper/game.type.test.ts`): `pollaTotalPool` y `pollaTicketCashierCode`.
+- Se instaló con `--legacy-peer-deps` porque npm 10.9 falla al resolver los peers de Vitest (`Cannot read properties of null (reading 'edgesOut')`). El lock solo cambia los paquetes de Vitest y el hoisting de `fdir` y `picomatch`.
+
 ### Fixed - 2026-11-05 (R02: opciones de los desplegables legibles)
 
 - **`SelectItem`** (`components/ui/select.tsx`): la opción resaltada de los desplegables pasa de azul primario con el texto del popover (casi negro en el tema claro, 2.4:1; blanco sobre celeste en el oscuro, 2.2:1) a `accent` con `accent-foreground`: gris claro con texto oscuro (14:1) en el claro y gris azulado con texto blanco (7.4:1) en el oscuro. Lo había marcado el cliente en Ediciones (Quiniela y Turno), pero aplica a los 24 desplegables de la app. No había otro azul con texto oscuro: botones, badges, casillas y el menú activo ya usan su `*-foreground` (≥ 7.5:1).
