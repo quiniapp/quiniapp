@@ -4,6 +4,12 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-04 (Polla: el admin no ve la cuenta corriente)
+
+- **`/polla/private/group_account`** (`polla/group-account/route/polla-group-account.route.ts`): todo el router queda para `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin). El admin ya no lee la cuenta de su grupo: `GET /`, `GET /previews` y `POST /liquidate` le dan 403. Se sacan `writableGroupId`/`assertInWritableGroup`, que solo filtraban para el admin.
+- `current_account` y `expense` ya le daban 403 al admin; no cambian. El pasador sigue viendo solo su cuenta.
+- Sin migración.
+
 ### Changed - 2026-10-29 (Polla: identificador opcional con jugador y ventas de la edición)
 
 #### Migración `20261029064157_polla_identifier_rule_edition_sales.sql`

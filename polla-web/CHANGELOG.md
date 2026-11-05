@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Removed - 2026-11-04 (Cuenta corriente: sin acceso para el admin)
+
+- **Cuenta corriente** (`components/layout/AppLayout.tsx`, `routes/route.tsx`): el admin ya no la ve en el menú y si entra por URL vuelve a Jugadas. Quedan dueño, capitalista, superadmin y el pasador (solo la suya). La API tampoco le da acceso.
+- **`GroupAccountView`** (`features/current-account/GroupAccounts.tsx`): se borra la vista de la cuenta del grupo para su admin. Con ella se van `canLiquidate` de `GroupPreviews` y `groupId` de `GroupAccountHistory`, que solo usaba esa vista.
+
 ### Added - 2026-11-04 (Ver contraseña)
 
 - **`PasswordInput`** (`components/ui/password-input.tsx`): input de contraseña con un ojito para ver lo que se escribió y volver a ocultarlo. Arranca oculta, cada campo se muestra por separado y al tocar el ojito el foco (y el teclado en mobile) sigue en el input.
