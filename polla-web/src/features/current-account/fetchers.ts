@@ -47,9 +47,12 @@ export const fetchOrganizationName = async (organizationId: string | null) => {
   }
 };
 
+/** Página del listado de jugadas (el máximo que acepta la API). */
+const WINNERS_PAGE_SIZE = 200;
+
 /**
  * Jugadas que ganaron en el período de cada cuenta, agrupadas por pasador (para
- * las liquidaciones).
+ * las liquidaciones). Recorre todas las páginas.
  */
 export const fetchWinnersByCashier = async (params: {
   accounts: AccountPeriodView[];
@@ -69,21 +72,30 @@ export const fetchWinnersByCashier = async (params: {
     params.accounts.map((account) => [account.polla_user_id, account.period_from])
   );
 
-  const page = await apiClient.get<PollaPage<IPollaBetListItem>>(BACKEND_ROUTES.bet.base, {
-    params: cleanParams({
-      hit_from: betsRangeFrom(oldest, params.date),
-      hit_to: params.date,
-      winners: true,
-      sort: 'recent',
-      limit: 200,
-      cashier_polla_user_id: params.cashierId,
-      mine: params.ownAsCashier ? true : undefined,
-      polla_organization_id: params.organizationId,
-    }),
-  });
+  // Todas las páginas: con más de 200 ganadores en el período, la hoja de
+  // algún pasador quedaba sin sus jugadas ganadoras.
+  const winners: IPollaBetListItem[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await apiClient.get<PollaPage<IPollaBetListItem>>(BACKEND_ROUTES.bet.base, {
+      params: cleanParams({
+        hit_from: betsRangeFrom(oldest, params.date),
+        hit_to: params.date,
+        winners: true,
+        sort: 'recent',
+        limit: WINNERS_PAGE_SIZE,
+        cursor,
+        cashier_polla_user_id: params.cashierId,
+        mine: params.ownAsCashier ? true : undefined,
+        polla_organization_id: params.organizationId,
+      }),
+    });
+    winners.push(...page.data);
+    cursor = page.next_cursor ?? undefined;
+  } while (cursor);
 
   const byCashier = new Map<string, SlipWinner[]>();
-  page.data.forEach((bet) => {
+  winners.forEach((bet) => {
     // La proyección del pasador no trae ids: todas son de él.
     const cashierId =
       'cashier_polla_user_id' in bet ? bet.cashier_polla_user_id : params.ownAsCashier?.cashierId;

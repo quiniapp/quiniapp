@@ -4,6 +4,53 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
+
+#### Migración `20261105090000_polla_edition_draws_min_hits.sql`
+- **`polla_edition_draws`** (nueva): los sorteos (quiniela × turno) de cada edición, de 1 a N. Las ediciones que ya existían quedan con su par. `polla_editions.polla_lottery_id` / `polla_schedule_id` pasan a ser el **sorteo principal**, el de horario más temprano: con él se siguen calculando el corte de carga (`polla_load_cutoff`) y el control del cierre (`validate_polla_edition_load_limit`), sin cambios. Un trigger (`trg_polla_edition_principal_draw`) agrega el principal a los sorteos en cada alta, también si llega por un insert directo de la API anterior durante el despliegue.
+- **`polla_editions.min_winning_hits`** (1 a 10, por defecto 10 = regular).
+- **`polla_edition_forced_days`** (nueva): días que el admin definió "con lo cargado". Backfill: las ediciones que ya cerraron sin ganador procesando un último día sin resultado quedan con ese día definido, para que reprocesar un día anterior no las vuelva a poner en juego.
+- **Regla de premio** (`polla_process_edition_hits(edición, fecha)`):
+  - Los aciertos del día suman todos los sorteos de la edición, contando repetidos (si el 32 sale en dos quinielas y está jugado dos veces, son dos aciertos).
+  - Si alguien completa 10, ganan los que completaron 10 el primer día en que pasó y la edición termina ahí (como antes).
+  - Si se llega al último día sin nadie en 10, ganan los que tienen más aciertos (9, si no 8, ...) siempre que lleguen al mínimo. Si nadie llega, queda desierta.
+  - Un día define ganadores solo con todos sus sorteos cargados, o si se definió con lo cargado. La respuesta suma `winner_hits`, `min_winning_hits`, `pending_date`, `missing_date` y `missing_draws`.
+  - El pozo (más el sorpresa) se reparte en partes iguales.
+  - **Cambio en la regular**: procesar el último día sin su resultado ya no la cierra sin ganador. Queda en juego y avisa que falta el sorteo (se puede definir con lo cargado).
+- **`polla_process_results_and_accounts`** procesa las ediciones que tienen algún sorteo del turno. El recálculo de cuentas pasa a `polla_recalculate_accounts_on(org, fechas)`.
+- **`polla_define_edition_day(edición, fecha, actor)`** (nueva): "Definir con lo cargado". Guarda quién lo definió, reprocesa el día y recalcula la cuenta corriente.
+- **`polla_create_edition(org, payload, draws)`** (nueva): alta atómica con sus sorteos. Valida que sean de la organización y no estén borrados.
+- **`polla_update_edition`** acepta `draws` y `min_winning_hits`. Con resultados cargados no se cambian sorteos, mínimo ni inicio (`POLLA_EDITION_DRAWS_LOCKED`); con ganador, solo el nombre. Si llegan `polla_lottery_id`/`polla_schedule_id` sueltos (la API anterior), valen como el único sorteo de una edición que tiene uno solo.
+- **`polla_loadable_editions`** devuelve cada edición con `draws`. Auxiliares nuevas: `polla_edition_with_draws`, `polla_edition_missing_draws`, `polla_edition_day_complete`, `polla_is_edition_winner` y `polla_parse_edition_draws`.
+- Rollback comentado al final del archivo. Antes de volver atrás hay que borrar las especiales.
+
+#### Endpoints
+- **`POST /polla/private/edition`**: recibe `draws` (`[{polla_lottery_id, polla_schedule_id}]`, al menos uno y sin repetir) y `min_winning_hits` (opcional) en lugar de `polla_lottery_id`/`polla_schedule_id`. Llama a `polla_create_edition`.
+- **`PUT /polla/private/edition/:id`**: `draws` y `min_winning_hits` opcionales.
+- **`GET /polla/private/edition`** y **`GET /:id`**: cada edición trae `draws` (embed de `polla_edition_draws`).
+- **`POST /polla/private/result/define`** (nuevo, superadmin+): `{polla_edition_id, date}`. "Definir con lo cargado"; responde igual que `/process`.
+- **`GET /polla/private/bet/check/:ticket`**: la edición trae `draws` y `min_winning_hits`.
+- Errores nuevos: `POLLA_EDITION_DRAWS_REQUIRED`, `POLLA_EDITION_DRAW_INVALID`, `POLLA_EDITION_DATE_OUT_OF_RANGE` y `polla_editions_min_winning_hits_check`. `POLLA_EDITION_DRAWS_LOCKED` habla de sorteos y mínimo.
+
+#### Tests
+- **`020_polla_prize_rule.test.sql`** (57): alta con sorteos y principal; ganadores de 10, solo de 9, solo de 8 (con sorpresa) y nadie con 8 (desierta); corte por 10 el primer día; multiconjunto entre quinielas; día incompleto que no define; "Definir con lo cargado"; un 10 con el día incompleto que espera al resto; la regular sin escalera; bloqueos de cambios.
+- **`030_polla_create_bet_regression.test.sql`** (16): regresión de la carga (R05, R07, R08) y la numeración (R09) con una especial de varios sorteos. El admin carga hasta el sorteo más temprano.
+
+### Changed - 2026-11-05 (R27: dos ediciones en la misma semana)
+
+#### Migración `20261105080000_polla_overlapping_editions.sql`
+- Se borra el constraint `no_overlapping_polla_editions`: dos ediciones de la misma quiniela y turno pueden cubrir los mismos días (por ejemplo, la regular y la especial del sábado). Cada ticket ya estaba atado a su edición.
+- **`polla_process_edition_hits(p_edition_id, p_date)`** reemplaza a `polla_process_edition_hits(org, quiniela, turno, fecha)`, que buscaba "la" edición del sorteo y con dos solapadas procesaba una sola. La regla de premio no cambia.
+- **`polla_process_results_and_accounts`** procesa todas las ediciones del turno que cubren el día, cada una con sus tickets y su pozo. Si una edición se saltea, la respuesta trae igual su `polla_edition_id`.
+- Rollback comentado al final del archivo. Volver a crear el constraint falla si ya hay ediciones solapadas.
+
+#### Endpoints
+- **`GET /polla/private/bet/sales`**: acepta `date` y `polla_edition_id` juntos (las ventas de ese día en esa edición). Con `polla_edition_id` solo sigue trayendo el total de la edición, y con `date` solo (o nada), el día en todas.
+- Se saca el mensaje de `no_overlapping_polla_editions` de `polla-errors.ts`.
+
+#### Tests
+- **`supabase/tests/database/010_polla_overlapping_editions.test.sql`**: dos ediciones solapadas de la misma quiniela y turno; un mismo sorteo procesa las dos y cada una reparte su pozo entre sus tickets.
+
 ### Added - 2026-11-05 (Polla: tests de base de datos con pgTAP)
 
 - **`supabase/tests/database/`**: tests pgTAP de las reglas de Polla en SQL. Se corren con `npx supabase test db` contra el Supabase local (ver `supabase/tests/README.md`). Cada archivo corre en una transacción que termina en `ROLLBACK` y crea sus propios datos.

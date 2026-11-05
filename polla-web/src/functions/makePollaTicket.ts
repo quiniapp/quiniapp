@@ -23,8 +23,10 @@ export interface PollaTicketData {
   /** Pasador como `{grupo}-{número}` (ver `pollaTicketCashierCode`). */
   cashier_code?: string;
   numbers: string[]; // 10 números de 2 cifras
-  lotteryName: string;
-  scheduleName: string;
+  /** Nombre de la edición, si tiene ("Especial del sábado"). */
+  editionName?: string | null;
+  /** Sorteos de la edición, uno por línea: "Nacional · Nocturna". */
+  drawLines: string[];
   startDate: string;
   endDate: string;
   loadDate: string;
@@ -36,6 +38,10 @@ export interface PollaTicketData {
   isFree?: boolean;
 }
 
+/** Líneas de la edición: el nombre (si tiene) y un sorteo por línea. */
+const editionLines = (data: PollaTicketData) =>
+  [data.editionName, ...data.drawLines].filter((line): line is string => Boolean(line));
+
 /** Alto exacto del ticket (mm): cada página del PDF mide lo que su ticket. */
 const ticketHeight = (data: PollaTicketData) =>
   MARGIN +
@@ -43,7 +49,8 @@ const ticketHeight = (data: PollaTicketData) =>
   (data.cashier_code ? 7 : 0) +
   6 + // Ticket
   3 + // divider
-  8 + // edición (2 líneas)
+  8 + // edición (POLLA y la primera línea)
+  4 * Math.max(0, editionLines(data).length - 1) + // nombre y más sorteos
   5 + // fecha/hora
   3 + // divider
   5 * 5 + // 5 filas de números
@@ -100,11 +107,17 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
   doc.text('POLLA', cx, y, { align: 'center' });
   y += 5;
   doc.setFont('helvetica', 'normal');
+  for (const line of editionLines(data)) {
+    doc.setFontSize(fitFontSize(doc, line, 7));
+    doc.text(line, cx, y, { align: 'center' });
+    y += 4;
+  }
   doc.setFontSize(7);
-  doc.text(`${data.lotteryName} - ${data.scheduleName}`, cx, y, { align: 'center' });
-  y += 4;
+  // La especial de un día dice el día; la regular, la semana.
   doc.text(
-    `Semana: ${dayjs(data.startDate).format('DD/MM')} al ${dayjs(data.endDate).format('DD/MM')}`,
+    data.startDate === data.endDate
+      ? `Juega: ${dayjs(data.startDate).format('DD/MM')}`
+      : `Semana: ${dayjs(data.startDate).format('DD/MM')} al ${dayjs(data.endDate).format('DD/MM')}`,
     cx,
     y,
     { align: 'center' }

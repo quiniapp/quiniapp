@@ -31,8 +31,7 @@ import { useLoadRangeParam } from './useLoadRangeParam';
 export const BetsPage = () => {
   const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { editionId, editionList, selectedEdition, lotteryById, scheduleById, labelFor } =
-    useBetsEdition();
+  const { editionId, editionList, selectedEdition, labelFor, titleFor } = useBetsEdition();
 
   // El jugador ve lo cargado al entrar; el resto, además, "Actualizar", la
   // fecha de carga y el PDF.
@@ -188,8 +187,7 @@ export const BetsPage = () => {
         {isStaff && selectedEdition && !searching && (
           <ShareTicketsPdfButton
             edition={selectedEdition}
-            lotteryName={lotteryById.get(selectedEdition.polla_lottery_id) ?? 'Quiniela'}
-            scheduleName={scheduleById.get(selectedEdition.polla_schedule_id) ?? 'Turno'}
+            title={titleFor(selectedEdition)}
             filters={{
               view: 'public',
               search: nameSearch,

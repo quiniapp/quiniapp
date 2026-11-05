@@ -4,6 +4,15 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
+
+- **`polla/types/game.type.ts`**:
+  - `IPollaEditionDraw` y, en `IPollaEditionEntityBack`, `draws` (los sorteos, ordenados por hora del turno) y `min_winning_hits`. `polla_lottery_id`/`polla_schedule_id` quedan como el sorteo principal.
+  - `POLLA_SPECIAL_MIN_HITS_DEFAULT` (8).
+  - Para nombrar ediciones: `pollaEditionDraws` (con respaldo al principal), `pollaDrawLabels` / `pollaEditionDrawLabels` ("Nacional · Nocturna" por sorteo), `pollaEditionTitle` (nombre + sorteos separados por coma), `isPollaSpecialEdition` y `pollaPrizeRuleLabel`.
+  - `IPollaProcessedEdition` suma `winner_hits`, `min_winning_hits`, `pending_date`, `missing_date` y `missing_draws`. `IPollaTicketCheck.edition` suma `draws` y `min_winning_hits`.
+- **`polla/schemas/game.schema.ts`**: `newPollaEditionSchema` pide `draws` (al menos uno, sin repetir) y acepta `min_winning_hits` (entero de 1 a 10); ya no lleva `polla_lottery_id`/`polla_schedule_id`. `updatePollaEditionSchema` acepta los dos opcionales. `definePollaEditionDaySchema` (nuevo).
+
 ### Changed - 2026-10-29 (Polla: identificador opcional con jugador y ventas de la edición)
 
 - **`polla/types/game.type.ts`**: `IPollaDailySales.date` puede ser `null` y suma `polla_edition_id` (ventas de toda la edición); `IPollaDailySalesGroup.group_number`. El comentario de `identifier` dice la regla nueva: obligatorio a nombre de un pasador, opcional a nombre de un jugador.

@@ -4,6 +4,33 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R23: elegir qué pasadores exportar; R01: nombre del archivo)
+
+- **Exportar liquidación** (`features/current-account/index.tsx`): antes de descargar se abre `ExportLiquidationsDialog` (`dialogs/ExportLiquidationsDialog.tsx`), con la lista de pasadores, una casilla por cada uno, "Seleccionar todos (N de M)" y el total de cada uno. Se descarga un PDF por pasador elegido (descargas separadas, como hasta ahora).
+- **Sin movimiento** (`hasAccountMovement` en `functions/current-account/liquidationSlipPDF.ts`): vienen sin tildar los que tienen en 0 el pase jugadas, las borradas, el pase, el saldo anterior, los cobros, los pagos y el total. Un premio, un reclamo o un gasto sin pase dejan el total distinto de 0, así que ese pasador viene tildado.
+- **Nombre del archivo** (`liquidationFileName`): `polla_Exportar_Liquidacion_DD-MM-YYYY_<nombre>-<grupo>-<número>.pdf`. El número de pasador se repite entre grupos, por eso lleva el grupo. Se sacan los caracteres que no admite un nombre de archivo. También aplica a "Imprimir liquidación" del pasador.
+- **Jugadas ganadoras de las hojas** (`fetchWinnersByCashier`, `features/current-account/fetchers.ts`): recorre todas las páginas del listado. Antes cortaba en 200 ganadores del período y alguna hoja podía quedar sin sus jugadas ganadoras. Las cuentas del día ya venían completas: con `date`, la API devuelve todas las filas.
+- **`liquidationSlipAmounts`**: los montos que imprime la hoja salen de una función pura, la misma que usa el test.
+- **Tests** (`src/__tests__/current-account/liquidation.test.ts`): qué cuenta como movimiento, el nombre del archivo, que las hojas por pasador sumen lo mismo que la liquidación general (`computeAccountTotals`) y que dejar afuera a los sin movimiento no cambie los totales.
+
+### Added - 2026-11-05 (R26: polla especial con varios sorteos)
+
+- **Ediciones** (`features/editions/index.tsx`):
+  - Los selects de quiniela y turno se reemplazan por una grilla quiniela × turno (`DrawsGrid`): la regular marca un sorteo, la especial los que quiera (por ejemplo, las 5 de las 21 h).
+  - Interruptor "Edición especial" con "Mínimo de aciertos" (8 por defecto). Apagado, la edición premia solo 10.
+  - En el listado, la columna "Sorteos" muestra el nombre y todos los sorteos, con el badge "Especial" y la regla de premio.
+- **Nombres de edición en toda la app** con `pollaEditionTitle` / `pollaEditionDrawLabels`: Cargar jugada (selector y, para la especial, "Juega con" + regla), Jugadas y Administrar (`useBetsEdition` devuelve `labelFor`, `titleFor` y `drawLabelsFor`), Ventas, Revisar ticket (título, regla y "Ganó el" en vez de "Completó") y Resultados.
+- **Ticket impreso** (`functions/makePollaTicket.ts`): el nombre de la edición y un sorteo por línea (`editionName` y `drawLines` en lugar de `lotteryName`/`scheduleName`). La especial de un día dice "Juega: DD/MM".
+- **PDF de tickets de la edición** (`functions/editionTicketsPDF.ts`, `ShareTicketsPdfButton`): reciben `title`. El título se parte en varias líneas si no entra y, en la especial, se agrega la regla de premio. El nombre del archivo se corta a 60 caracteres.
+- **Resultados** (`features/results/index.tsx`): después de "Generar ganadores", aviso por edición con los sorteos que faltan y si los ganadores esperan, con el botón "Definir con lo cargado" (pide confirmación; es para un sorteo que no se hizo). Hooks `useDrawCatalogs` y `useDefineEditionDay`, ruta `result.define`.
+- **Tests** (`src/__tests__/helper/edition.test.ts`): nombres y orden de los sorteos, título, especial y regla, y los schemas de alta y cambio.
+
+### Changed - 2026-11-05 (R27: dos ediciones en la misma semana)
+
+- **Ventas** (`features/sales/index.tsx`): "Del día" también pide la edición y muestra lo vendido ese día en esa edición. Las ediciones no se mezclan.
+- **Cargar jugada** (`features/make-bet/index.tsx`): con una sola edición abierta queda elegida. Con varias se elige a mano, como antes. Repetir ticket arranca con la misma.
+- **Ediciones**: el texto de la pantalla ya no dice "una edición por quiniela, turno y semana".
+
 ### Added - 2026-11-05 (Tests y typecheck)
 
 - **Vitest 5.0.5** (`vitest.config.ts`, devDependency con versión fija): tests de la lógica en TypeScript en `src/**/*.test.ts`. Los de `@helper/polla` también viven acá (`src/__tests__/helper/`), porque si estuvieran en `helper/` los compilaría el `tsc` de la API. Reusa `vite.config.ts` (alias `@` y `@helper`).

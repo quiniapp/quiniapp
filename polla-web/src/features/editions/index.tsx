@@ -4,12 +4,23 @@ import { toast } from 'react-hot-toast';
 import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
 import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/schemas/game.schema';
 import {
+  IPollaEditionDraw,
   IPollaEditionEntityFront,
   POLLA_EDITION_PERIOD,
   POLLA_EDITION_PERIOD_LABEL,
   POLLA_EDITION_STATUS,
+  POLLA_NUMBERS_REQUIRED,
+  POLLA_SPECIAL_MIN_HITS_DEFAULT,
+  isPollaSpecialEdition,
+  pollaEditionDraws,
   pollaEditionPeriod,
+  pollaEditionTitle,
+  pollaPrizeRuleLabel,
 } from '@helper/polla/types/game.type';
+import {
+  IPollaLotteryEntityFront,
+  IPollaScheduleEntityFront,
+} from '@helper/polla/types/catalog.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditionList } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
@@ -28,6 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -36,13 +48,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -58,25 +63,52 @@ const fmtTime = (value?: string | null) => (value ? value.slice(0, 5) : '');
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
-const emptyForm = {
-  polla_lottery_id: '',
-  polla_schedule_id: '',
+/** Clave de un sorteo en el formulario: `quiniela/turno`. */
+const drawKey = (draw: IPollaEditionDraw) => `${draw.polla_lottery_id}/${draw.polla_schedule_id}`;
+const drawOfKey = (key: string): IPollaEditionDraw => {
+  const [polla_lottery_id, polla_schedule_id] = key.split('/');
+  return { polla_lottery_id, polla_schedule_id };
+};
+
+interface EditionForm {
+  /** Sorteos elegidos (`drawKey`). */
+  draws: string[];
+  /** Especial: si nadie completa 10, premia desde `min_winning_hits`. */
+  special: boolean;
+  min_winning_hits: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  load_limit_date: string;
+  /** Pasada esta hora del día de cierre, pasadores y jugadores ya no cargan. */
+  load_limit_time: string;
+  pool_amount: string;
+  surprise_pool_amount: string;
+  ticket_price: string;
+}
+
+const emptyForm: EditionForm = {
+  draws: [],
+  special: false,
+  min_winning_hits: String(POLLA_SPECIAL_MIN_HITS_DEFAULT),
   name: '',
   start_date: '',
   end_date: '',
   load_limit_date: '',
-  /** Pasada esta hora del día de cierre, pasadores y jugadores ya no cargan. */
   load_limit_time: '21:00',
   pool_amount: '',
   surprise_pool_amount: '',
   ticket_price: '',
 };
 
-type EditionForm = typeof emptyForm;
-
 const formOf = (edition: IPollaEditionEntityFront): EditionForm => ({
-  polla_lottery_id: edition.polla_lottery_id,
-  polla_schedule_id: edition.polla_schedule_id,
+  draws: pollaEditionDraws(edition).map(drawKey),
+  special: edition.min_winning_hits < POLLA_NUMBERS_REQUIRED,
+  min_winning_hits: String(
+    edition.min_winning_hits < POLLA_NUMBERS_REQUIRED
+      ? edition.min_winning_hits
+      : POLLA_SPECIAL_MIN_HITS_DEFAULT
+  ),
   name: edition.name ?? '',
   start_date: edition.start_date,
   end_date: edition.end_date,
@@ -90,24 +122,100 @@ const formOf = (edition: IPollaEditionEntityFront): EditionForm => ({
 /** Acepta coma decimal; vacío es 0. */
 const parseMoney = (raw: string) => Number(raw.replace(',', '.') || 0);
 
+/**
+ * Grilla quiniela × turno: cada casilla es un sorteo de la edición. La regular
+ * marca uno; la especial, los que quiera (por ejemplo, las 5 de las 21 h). Se
+ * muestran las quinielas y los turnos activos, más los que ya tiene la edición.
+ */
+const DrawsGrid = ({
+  lotteries,
+  schedules,
+  value,
+  onChange,
+  disabled,
+}: {
+  lotteries: IPollaLotteryEntityFront[];
+  schedules: IPollaScheduleEntityFront[];
+  value: string[];
+  onChange: (draws: string[]) => void;
+  disabled?: boolean;
+}) => {
+  const selected = new Set(value);
+  const usedLotteries = new Set(value.map((key) => drawOfKey(key).polla_lottery_id));
+  const usedSchedules = new Set(value.map((key) => drawOfKey(key).polla_schedule_id));
+  const rows = lotteries
+    .filter((l) => l.active || usedLotteries.has(l.polla_lottery_id))
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  const columns = schedules
+    .filter((s) => s.active || usedSchedules.has(s.polla_schedule_id))
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const toggle = (key: string, checked: boolean) =>
+    onChange(checked ? [...value, key] : value.filter((item) => item !== key));
+
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b">
+            <th className="px-2 py-1.5 text-left font-medium">Quiniela</th>
+            {columns.map((s) => (
+              <th key={s.polla_schedule_id} className="px-2 py-1.5 text-center font-medium">
+                <span className="block leading-tight">{s.name}</span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {fmtTime(s.time)}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((l) => (
+            <tr key={l.polla_lottery_id} className="border-b last:border-0">
+              <td className="px-2 py-1">{l.name}</td>
+              {columns.map((s) => {
+                const key = drawKey({
+                  polla_lottery_id: l.polla_lottery_id,
+                  polla_schedule_id: s.polla_schedule_id,
+                });
+                return (
+                  <td key={key} className="px-2 py-1 text-center">
+                    <Checkbox
+                      aria-label={`${l.name} · ${s.name}`}
+                      checked={selected.has(key)}
+                      onCheckedChange={(checked) => toggle(key, checked === true)}
+                      disabled={disabled}
+                      className="h-5 w-5"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 interface EditionDialogProps {
   /** `null` = edición nueva. */
   edition: IPollaEditionEntityFront | null;
   /** Abre para extender una edición que terminó sin ganador. */
   extending?: boolean;
-  lotteries: { polla_lottery_id: string; name: string }[];
-  schedules: { polla_schedule_id: string; name: string; time: string }[];
+  lotteries: IPollaLotteryEntityFront[];
+  schedules: IPollaScheduleEntityFront[];
   organizationId: string | null;
   onClose: () => void;
 }
 
 /**
- * Alta y edición de una edición (superadmin+): precio (vale para las jugadas
- * nuevas, cada una guarda el suyo), fechas, horas, pozo y pozo sorpresa.
- * Extender el fin de una edición que terminó sin ganador la vuelve a poner en
- * juego (la carga no se reabre). Con ganador solo se renombra; con sorteos
- * cargados no se cambian quiniela, turno ni inicio (lo controla la base y
- * avisa).
+ * Alta y edición de una edición (superadmin+): sorteos, mínimo de aciertos
+ * (especial), precio (vale para las jugadas nuevas, cada una guarda el suyo),
+ * fechas, horas, pozo y pozo sorpresa. Extender el fin de una edición que
+ * terminó sin ganador la vuelve a poner en juego (la carga no se reabre). Con
+ * ganador solo se renombra; con sorteos cargados no se cambian los sorteos, el
+ * mínimo ni el inicio (lo controla la base y avisa).
  */
 const EditionDialog = ({
   edition,
@@ -124,8 +232,12 @@ const EditionDialog = ({
   const hasWinner = Boolean(edition?.winner_date);
 
   const handleSubmit = () => {
+    const { special, draws, min_winning_hits, ...rest } = form;
     const values = {
-      ...form,
+      ...rest,
+      draws: draws.map(drawOfKey),
+      // La regular es "mínimo 10": sin escalera.
+      min_winning_hits: special ? Number(min_winning_hits) : POLLA_NUMBERS_REQUIRED,
       name: form.name || null,
       pool_amount: parseMoney(form.pool_amount),
       surprise_pool_amount: parseMoney(form.surprise_pool_amount),
@@ -174,44 +286,59 @@ const EditionDialog = ({
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <Label>Quiniela</Label>
-            <Select
-              value={form.polla_lottery_id}
-              onValueChange={(v) => setForm({ ...form, polla_lottery_id: v })}
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <Label>Sorteos (quiniela y turno)</Label>
+            <DrawsGrid
+              lotteries={lotteries}
+              schedules={schedules}
+              value={form.draws}
+              onChange={(draws) => setForm({ ...form, draws })}
               disabled={hasWinner}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Elegí" />
-              </SelectTrigger>
-              <SelectContent>
-                {lotteries.map((l) => (
-                  <SelectItem key={l.polla_lottery_id} value={l.polla_lottery_id}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
+            <p className="text-xs text-muted-foreground">
+              {form.draws.length > 1
+                ? `${form.draws.length} sorteos: los aciertos de cada día suman todos.`
+                : 'La regular juega con un sorteo. Marcá varios para una especial.'}
+            </p>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <Label>Turno (hora del sorteo)</Label>
-            <Select
-              value={form.polla_schedule_id}
-              onValueChange={(v) => setForm({ ...form, polla_schedule_id: v })}
-              disabled={hasWinner}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Elegí" />
-              </SelectTrigger>
-              <SelectContent>
-                {schedules.map((s) => (
-                  <SelectItem key={s.polla_schedule_id} value={s.polla_schedule_id}>
-                    {s.name} · {fmtTime(s.time)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col gap-2 rounded-md border p-3 sm:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="edition-special" className="cursor-pointer">
+                Edición especial
+              </Label>
+              <Switch
+                id="edition-special"
+                checked={form.special}
+                onCheckedChange={(special) => setForm({ ...form, special })}
+                disabled={hasWinner}
+              />
+            </div>
+            {form.special ? (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="edition-min-hits">Mínimo de aciertos</Label>
+                <Input
+                  id="edition-min-hits"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={POLLA_NUMBERS_REQUIRED}
+                  className="w-24"
+                  value={form.min_winning_hits}
+                  onChange={(e) => setForm({ ...form, min_winning_hits: e.target.value })}
+                  disabled={hasWinner}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ganan los que completan 10. Si al final nadie llegó, ganan los de más aciertos (9,
+                  si no 8, ...) siempre que tengan al menos {form.min_winning_hits || '…'}. Si nadie
+                  llega, queda desierta.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Ganan solo los que completan 10, como en la regular.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1 sm:col-span-2">
@@ -349,13 +476,9 @@ export const EditionsPage = () => {
 
   const { mutate: deleteEdition } = useDeleteEdition();
 
-  const lotteryById = useMemo(
-    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
-    [lotteries]
-  );
-  const scheduleById = useMemo(
-    () => new Map(schedules?.data.map((s) => [s.polla_schedule_id, s.name])),
-    [schedules]
+  const catalogs = useMemo(
+    () => ({ lotteries: lotteries?.data, schedules: schedules?.data }),
+    [lotteries, schedules]
   );
 
   /** El orden de la lista queda fijo (el de `ALL_PERIODS`) para no duplicar la query. */
@@ -364,10 +487,20 @@ export const EditionsPage = () => {
 
   const today = todayIso();
 
-  const editionTitle = (edition: IPollaEditionEntityFront) =>
-    `${lotteryById.get(edition.polla_lottery_id) ?? '-'} · ${
-      scheduleById.get(edition.polla_schedule_id) ?? '-'
-    }${edition.name ? ` · ${edition.name}` : ''}`;
+  const editionTitle = (edition: IPollaEditionEntityFront) => pollaEditionTitle(edition, catalogs);
+
+  /** Título con el badge de la especial y su regla de premio. */
+  const renderTitle = (edition: IPollaEditionEntityFront) => (
+    <>
+      <span className="break-words">{editionTitle(edition)}</span>
+      {isPollaSpecialEdition(edition) && (
+        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Badge variant="secondary">Especial</Badge>
+          <span className="text-xs text-muted-foreground">{pollaPrizeRuleLabel(edition)}</span>
+        </span>
+      )}
+    </>
+  );
 
   const renderStatus = (edition: IPollaEditionEntityFront) => {
     const period = pollaEditionPeriod(edition, today);
@@ -433,7 +566,7 @@ export const EditionsPage = () => {
   return (
     <div>
       <PageHeader
-        description="Una edición por quiniela, turno y semana. El pozo lo definís vos y le podés sumar un pozo sorpresa mientras no haya ganador."
+        description="Puede haber más de una edición en la misma semana, por ejemplo la regular y la especial del sábado: cada ticket juega en la suya. El pozo lo definís vos y le podés sumar un pozo sorpresa mientras no haya ganador."
         actions={
           <Button type="button" onClick={() => setDialog({ edition: null })}>
             Nueva edición
@@ -487,7 +620,7 @@ export const EditionsPage = () => {
                 className="rounded-md border bg-card p-3 text-card-foreground"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 break-words font-medium">{editionTitle(edition)}</p>
+                  <div className="min-w-0 font-medium">{renderTitle(edition)}</div>
                   <div className="-mr-2 -mt-2 shrink-0">{renderActions(edition)}</div>
                 </div>
                 {/* El badge va con la semana: al lado del título le comía el
@@ -522,7 +655,7 @@ export const EditionsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Quiniela / Turno</TableHead>
+                  <TableHead>Sorteos</TableHead>
                   <TableHead>Semana</TableHead>
                   <TableHead>Cierre</TableHead>
                   <TableHead className="text-right">Pozo</TableHead>
@@ -535,7 +668,9 @@ export const EditionsPage = () => {
               <TableBody>
                 {rows.map((edition) => (
                   <TableRow key={edition.polla_edition_id}>
-                    <TableCell>{editionTitle(edition)}</TableCell>
+                    <TableCell className="max-w-[320px] whitespace-normal">
+                      {renderTitle(edition)}
+                    </TableCell>
                     <TableCell>
                       {fmtDate(edition.start_date)} al {fmtDate(edition.end_date)}
                     </TableCell>

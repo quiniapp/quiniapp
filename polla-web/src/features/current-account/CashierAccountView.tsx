@@ -2,8 +2,10 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Printer } from 'lucide-react';
+import { pollaCashierCode } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
+import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +52,11 @@ export const CashierAccountView = () => {
   const { data, isFetching } = useCurrentAccountsOfDay({ date, range_from: rangeFrom });
   const row = data?.data[0];
   const account = row ? periodView(row) : undefined;
+  // Para el nombre del archivo: `{grupo}-{número}`.
+  const { data: groups } = useGroups();
+  const groupNumber = groups?.data.find(
+    (group) => group.polla_group_id === user?.polla_group_id
+  )?.number;
 
   const handlePrint = async () => {
     if (!account || !user) return;
@@ -60,7 +67,11 @@ export const CashierAccountView = () => {
         date,
         ownAsCashier: { cashierId: user.polla_user_id },
       });
-      await downloadLiquidationSlipsPDF({ accounts: [account], winnersByCashier });
+      await downloadLiquidationSlipsPDF({
+        accounts: [account],
+        winnersByCashier,
+        cashierCodeOf: (of) => pollaCashierCode(groupNumber, of.user_number),
+      });
     } catch {
       toast.error('No se pudo generar la liquidación');
     } finally {

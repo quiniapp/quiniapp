@@ -48,11 +48,33 @@ export const POLLA_BET_IDENTIFIER_MAX = 60;
 
 // ---------------------------------------------------------------- ediciones
 
+/** Un sorteo con el que juega una edición: quiniela × turno. */
+export interface IPollaEditionDraw {
+  polla_lottery_id: string;
+  polla_schedule_id: string;
+}
+
+/** Mínimo de aciertos que propone la pantalla para una edición especial. */
+export const POLLA_SPECIAL_MIN_HITS_DEFAULT = 8;
+
 export interface IPollaEditionEntityBack {
   polla_edition_id: string;
   polla_organization_id: string;
+  /** Quiniela del sorteo principal (el más temprano de `draws`). */
   polla_lottery_id: string;
+  /** Turno del sorteo principal: con su hora se calcula el corte de carga. */
   polla_schedule_id: string;
+  /**
+   * Sorteos con los que juega: uno la regular, varios la especial. Los
+   * aciertos de un día suman todos, contando repetidos. Vienen ordenados por
+   * hora del turno y orden de la quiniela.
+   */
+  draws: IPollaEditionDraw[];
+  /**
+   * Si nadie completa 10, al final ganan los que tienen más aciertos siempre
+   * que lleguen a este mínimo (si no, desierta). 10 = regular, sin escalera.
+   */
+  min_winning_hits: number;
   name: string | null;
   start_date: string;
   end_date: string;
@@ -88,6 +110,102 @@ export type IPollaEditionEntityFront = Omit<
      */
     my_load_cutoff?: string | null;
   };
+
+/**
+ * Sorteos de la edición. Si no vinieran (datos viejos en caché), el sorteo
+ * principal.
+ */
+export const pollaEditionDraws = (
+  edition: Pick<IPollaEditionEntityBack, 'polla_lottery_id' | 'polla_schedule_id'> & {
+    draws?: IPollaEditionDraw[];
+  }
+): IPollaEditionDraw[] =>
+  edition.draws?.length
+    ? edition.draws
+    : [
+        {
+          polla_lottery_id: edition.polla_lottery_id,
+          polla_schedule_id: edition.polla_schedule_id,
+        },
+      ];
+
+/** Lo que hace falta de los catálogos para nombrar un sorteo. */
+export interface IPollaDrawCatalogs {
+  lotteries?: { polla_lottery_id: string; name: string; order?: number }[];
+  schedules?: { polla_schedule_id: string; name: string; time?: string }[];
+}
+
+/**
+ * "Nacional · Nocturna" por sorteo, ordenados por hora del turno y orden de la
+ * quiniela. Sin catálogo cargado dice "Quiniela" / "Turno".
+ */
+export const pollaDrawLabels = (
+  draws: IPollaEditionDraw[],
+  { lotteries = [], schedules = [] }: IPollaDrawCatalogs
+): string[] => {
+  const lotteryById = new Map(lotteries.map((l) => [l.polla_lottery_id, l]));
+  const scheduleById = new Map(schedules.map((s) => [s.polla_schedule_id, s]));
+
+  return [...draws]
+    .sort((a, b) => {
+      const sa = scheduleById.get(a.polla_schedule_id);
+      const sb = scheduleById.get(b.polla_schedule_id);
+      const la = lotteryById.get(a.polla_lottery_id);
+      const lb = lotteryById.get(b.polla_lottery_id);
+      return (
+        (sa?.time ?? '').localeCompare(sb?.time ?? '') ||
+        (la?.order ?? 0) - (lb?.order ?? 0) ||
+        (la?.name ?? '').localeCompare(lb?.name ?? '')
+      );
+    })
+    .map(
+      (draw) =>
+        `${lotteryById.get(draw.polla_lottery_id)?.name ?? 'Quiniela'} · ${
+          scheduleById.get(draw.polla_schedule_id)?.name ?? 'Turno'
+        }`
+    );
+};
+
+type IPollaEditionNaming = Pick<
+  IPollaEditionEntityBack,
+  'name' | 'polla_lottery_id' | 'polla_schedule_id'
+> & { draws?: IPollaEditionDraw[] };
+
+/** Los sorteos de la edición, uno por línea en el ticket o separados por coma. */
+export const pollaEditionDrawLabels = (
+  edition: IPollaEditionNaming,
+  catalogs: IPollaDrawCatalogs
+) => pollaDrawLabels(pollaEditionDraws(edition), catalogs);
+
+/**
+ * Nombre de la edición (si tiene) y sus sorteos separados por coma:
+ * "Especial · Nacional · Nocturna, Provincia · Nocturna".
+ */
+export const pollaEditionTitle = (edition: IPollaEditionNaming, catalogs: IPollaDrawCatalogs) => {
+  const draws = pollaEditionDrawLabels(edition, catalogs).join(', ');
+  return edition.name ? `${edition.name} · ${draws}` : draws;
+};
+
+/** Especial: juega con más de un sorteo o premia desde menos de 10 aciertos. */
+export const isPollaSpecialEdition = (
+  edition: Pick<IPollaEditionEntityBack, 'polla_lottery_id' | 'polla_schedule_id'> & {
+    draws?: IPollaEditionDraw[];
+    min_winning_hits?: number;
+  }
+) =>
+  pollaEditionDraws(edition).length > 1 ||
+  (edition.min_winning_hits ?? POLLA_NUMBERS_REQUIRED) < POLLA_NUMBERS_REQUIRED;
+
+/**
+ * La regla de premio en una línea: "Ganan los que aciertan 10" o, con mínimo,
+ * "Ganan los de 10; si nadie, los de más aciertos desde 8".
+ */
+export const pollaPrizeRuleLabel = (edition: { min_winning_hits?: number }) => {
+  const min = edition.min_winning_hits ?? POLLA_NUMBERS_REQUIRED;
+  return min >= POLLA_NUMBERS_REQUIRED
+    ? `Ganan los que aciertan ${POLLA_NUMBERS_REQUIRED}`
+    : `Ganan los de ${POLLA_NUMBERS_REQUIRED}; si nadie, los de más aciertos desde ${min}`;
+};
 
 /** Pozo que se reparte entre los ganadores: el de la edición más el sorpresa. */
 export const pollaTotalPool = (
@@ -131,8 +249,17 @@ export interface IPollaProcessedEdition {
   skipped?: boolean;
   bets_updated?: number;
   winners?: number;
+  /** Aciertos de los ganadores (10, o menos si bajó la escalera). */
+  winner_hits?: number | null;
+  min_winning_hits?: number;
   winner_date?: string | null;
   previous_winner_date?: string | null;
+  /** Día que espera los sorteos que faltan para definir ganadores. */
+  pending_date?: string | null;
+  /** Día al que le faltan los sorteos de `missing_draws` (el pendiente o el procesado). */
+  missing_date?: string | null;
+  /** Sorteos sin resultado ese día. Se puede definir igual ("Definir con lo cargado"). */
+  missing_draws?: IPollaEditionDraw[];
   /** Un reproceso revirtió al ganador: hay que procesar los días siguientes. */
   reopened?: boolean;
 }
@@ -328,6 +455,8 @@ export interface IPollaTicketCheck {
     | 'polla_edition_id'
     | 'polla_lottery_id'
     | 'polla_schedule_id'
+    | 'draws'
+    | 'min_winning_hits'
     | 'name'
     | 'start_date'
     | 'end_date'

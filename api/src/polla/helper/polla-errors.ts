@@ -59,8 +59,15 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new ForbiddenError('La edición ya tiene ganadores: solo se puede cambiar el nombre'),
   POLLA_EDITION_DRAWS_LOCKED: () =>
     new BadRequestError(
-      'La edición ya tiene sorteos cargados: no se cambian quiniela, turno ni fecha de inicio'
+      'La edición ya tiene sorteos cargados: no se cambian los sorteos, el mínimo de aciertos ni la fecha de inicio'
     ),
+  POLLA_EDITION_DRAWS_REQUIRED: () =>
+    new BadRequestError('Elegí al menos un sorteo (quiniela y turno)'),
+  POLLA_EDITION_DRAW_INVALID: () =>
+    new BadRequestError('Hay una quiniela o un turno que no es de la organización o se borró'),
+  POLLA_EDITION_DATE_OUT_OF_RANGE: () => new BadRequestError('Ese día no es de la edición'),
+  polla_editions_min_winning_hits_check: () =>
+    new BadRequestError('El mínimo de aciertos va de 1 a 10'),
   POLLA_EDITION_END_BEFORE_DRAW: () =>
     new BadRequestError('La fecha de fin no puede ser anterior al último sorteo cargado'),
   POLLA_EDITION_EXTEND_AFTER_FREE_REPEAT: () =>
@@ -77,8 +84,6 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_GROUP_PERCENTAGE_INVALID: () =>
     new BadRequestError('El porcentaje del admin tiene que estar entre 0 y 100'),
   unique_polla_group_admin_active: () => new ConflictError('Ese grupo ya tiene un admin'),
-  no_overlapping_polla_editions: () =>
-    new ConflictError('Ya hay una edición para esa quiniela y turno en ese rango de fechas'),
   unique_polla_username_active: () => new ConflictError('Ese nombre de usuario ya está en uso'),
   unique_polla_cashier_number_active: () =>
     new ConflictError('Ese número de pasador ya está en uso en el grupo'),
