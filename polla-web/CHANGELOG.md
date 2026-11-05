@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): botón **Eliminar impagos**, solo para el pasador. Borra sus tickets en Debe de la edición elegida o, si filtró un jugador, solo los de ese jugador.
+  - Antes de borrar pide el resumen y confirma con la cantidad y el monto, y avisa si hay ganadoras en Debe, que no se borran.
+  - Si cerró la carga o no hay impagos, lo dice y no borra nada.
+- `useDeleteUnpaidBets`, `unpaidQuery` y las rutas `bet.unpaidSummary` y `bet.unpaid`.
+
 ### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
 
 - **Administrar jugadas** (`features/manage-bets/index.tsx`):

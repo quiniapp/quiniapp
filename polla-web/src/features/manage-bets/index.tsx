@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { BadgeDollarSign, Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import {
   IPollaBetListItem,
+  IPollaUnpaidSummary,
   POLLA_EDITION_STATUS,
   POLLA_HITS_FILTER,
   POLLA_PAYMENT_STATUS,
@@ -22,7 +23,14 @@ import {
 import { useAuth } from '@/providers/AuthContext';
 import { useBets, useRefreshBets, useUser } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
-import { useDeleteBet, useMarkBetsPaid } from '@/hooks/mutations/usePollaMutations';
+import {
+  unpaidQuery,
+  useDeleteBet,
+  useDeleteUnpaidBets,
+  useMarkBetsPaid,
+} from '@/hooks/mutations/usePollaMutations';
+import { apiClient } from '@/lib/apiClient';
+import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PollaPage, flattenPages } from '@/hooks/useApi';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
@@ -51,6 +59,9 @@ import { ShareTicketsPdfButton } from '@/features/bets/ShareTicketsPdfButton';
 import { WinnersBanner } from '@/features/bets/WinnersBanner';
 import { useBetsEdition } from '@/features/bets/useBetsEdition';
 import { useLoadRangeParam } from '@/features/bets/useLoadRangeParam';
+
+const fmtMoney = (value: number) =>
+  new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 
 /** `hits=10,9` de la URL → aciertos válidos, en el orden de los checkboxes. */
 const parseHits = (raw: string | null): number[] =>
@@ -269,6 +280,59 @@ export const ManageBetsPage = () => {
       return;
     }
     markPaid({ polla_bet_ids: [row.polla_bet_id] }, { onSuccess: paidToast });
+  };
+
+  // "Eliminar impagos" (R14): solo el pasador, en la edición elegida y, si
+  // filtró un jugador, solo de ese jugador.
+  const { mutate: deleteUnpaid, isPending: isDeletingUnpaid } = useDeleteUnpaidBets();
+  const [checkingUnpaid, setCheckingUnpaid] = useState(false);
+  const handleDeleteUnpaid = async () => {
+    if (!editionId) return;
+    const target = {
+      polla_edition_id: editionId,
+      ...(playerId ? { polla_user_id: playerId } : {}),
+    };
+    setCheckingUnpaid(true);
+    let summary: IPollaUnpaidSummary;
+    try {
+      summary = await apiClient.get<IPollaUnpaidSummary>(
+        `${BACKEND_ROUTES.bet.unpaidSummary}?${unpaidQuery(target)}`
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudieron contar los impagos');
+      return;
+    } finally {
+      setCheckingUnpaid(false);
+    }
+
+    if (!summary.can_delete) {
+      toast.error('Cerró la carga de esta edición: ya no se borran tickets');
+      return;
+    }
+    if (summary.count === 0) {
+      toast('No hay tickets impagos para eliminar');
+      return;
+    }
+
+    const whose = selectedUser && playerId ? ` de ${selectedUser.name}` : '';
+    const winners =
+      summary.winners_skipped > 0
+        ? `\n${summary.winners_skipped} en Debe ganaron y no se borran.`
+        : '';
+    if (
+      !window.confirm(
+        `¿Eliminar ${summary.count} ${summary.count === 1 ? 'ticket impago' : 'tickets impagos'}${whose} por $${fmtMoney(summary.amount)}? Se descuentan del pase de hoy (Borradas).${winners}`
+      )
+    ) {
+      return;
+    }
+
+    deleteUnpaid(target, {
+      onSuccess: ({ deleted, amount }) =>
+        toast.success(
+          `${deleted} ${deleted === 1 ? 'ticket eliminado' : 'tickets eliminados'} ($${fmtMoney(amount)})`
+        ),
+    });
   };
 
   // Todos los impagos del jugador filtrado en la edición.
@@ -533,6 +597,24 @@ export const ManageBetsPage = () => {
           <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
           {refreshing ? 'Actualizando…' : 'Actualizar'}
         </Button>
+
+        {isCashier && selectedEdition && !searching && (
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={handleDeleteUnpaid}
+            disabled={checkingUnpaid || isDeletingUnpaid}
+            title={
+              playerId
+                ? 'Borra los tickets en Debe de este jugador en la edición'
+                : 'Borra todos tus tickets en Debe de la edición'
+            }
+          >
+            <Trash2 />
+            {checkingUnpaid || isDeletingUnpaid ? 'Revisando…' : 'Eliminar impagos'}
+          </Button>
+        )}
 
         {selectedEdition && !searching && (
           <ShareTicketsPdfButton

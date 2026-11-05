@@ -281,6 +281,16 @@ export class PollaBetRouter {
       this.checkTicketHandler
     );
     this.router.patch('/payment', requirePollaRole(...POLLA_STAFF_ROLES), this.markPaidHandler);
+    this.router.get(
+      '/unpaid-summary',
+      requirePollaRole(POLLA_USER_TYPE.CASHIER),
+      this.unpaidSummaryHandler
+    );
+    this.router.delete(
+      '/unpaid',
+      requirePollaRole(POLLA_USER_TYPE.CASHIER),
+      this.deleteUnpaidHandler
+    );
     this.router.post('/repeat', this.repeatHandler);
     this.router.post(
       '/free-repeat',
@@ -796,6 +806,38 @@ export class PollaBetRouter {
       userId: payload.polla_bet_ids ? undefined : payload.polla_user_id,
     });
 
+    res.status(200).json({ data: { result } });
+  });
+
+  /** Edición (obligatoria) y jugador (opcional) de "Eliminar impagos". */
+  private unpaidTarget = async (req: Request) => {
+    const { user } = getPollaSession(req);
+    const editionId = queryString(req.query.polla_edition_id);
+    if (!editionId) throw new BadRequestError('Elegí la edición');
+    await this.assertEditionScope(user, editionId);
+    return {
+      actorId: user.polla_user_id,
+      editionId,
+      userId: queryString(req.query.polla_user_id),
+    };
+  };
+
+  /**
+   * "Eliminar impagos" (R14), antes de confirmar: cuántos y cuánto. Solo el
+   * pasador, sobre lo imputado a él (la RPC lo vuelve a controlar).
+   */
+  private unpaidSummaryHandler = asyncHandler(async (req: Request, res: Response) => {
+    const summary = await this.repository.unpaidSummary(await this.unpaidTarget(req));
+    res.status(200).json({ data: { summary } });
+  });
+
+  /**
+   * Borra los tickets en Debe del pasador en la edición (de un jugador, si se
+   * pide), salvo las ganadoras, hasta el cierre de carga. Entran en Borradas
+   * como el borrado de a uno.
+   */
+  private deleteUnpaidHandler = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.repository.deleteUnpaid(await this.unpaidTarget(req));
     res.status(200).json({ data: { result } });
   });
 

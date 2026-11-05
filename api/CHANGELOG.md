@@ -4,6 +4,23 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+#### Migración `20261105150000_polla_delete_unpaid_bets.sql`
+- **`polla_delete_unpaid_bets(actor, edición, jugador?)`** (nueva): el pasador borra de una vez sus tickets en Debe de la edición, o los de un jugador suyo. Toca solo lo imputado a él y nunca borra ganadoras.
+  - Corte: el mismo que el borrado de a uno, hasta el cierre de carga de la edición para el pasador (`POLLA_LOAD_LIMIT_EXCEEDED`).
+  - La baja se descuenta del pase hoy, o al día siguiente si su cuenta ya se liquidó hoy (Borradas, como `polla_delete_bet`).
+  - Descuenta los tickets y lo recaudado de la edición y refresca la fila de la cuenta corriente.
+- **`polla_unpaid_bets_summary(actor, edición, jugador?)`** (nueva): cuántos y cuánto se borrarían, cuántas ganadoras en Debe quedan afuera y si la carga sigue abierta.
+- Solo el pasador (`POLLA_UNPAID_DELETE_ONLY_CASHIER`).
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`GET /polla/private/bet/unpaid-summary?polla_edition_id&polla_user_id?`** y **`DELETE /polla/private/bet/unpaid?polla_edition_id&polla_user_id?`** (nuevos, solo pasador). Van antes de `/:id`.
+
+#### Tests
+- **`060_polla_delete_unpaid_bets.test.sql`** (16): solo el pasador; el resumen (cantidad, monto y ganadoras que no se borran); borrar los de un jugador y después el resto; lo pagado, las ganadoras y lo de otro pasador no se tocan; Borradas con fecha de hoy; la edición descuenta; pasado el cierre no se borra.
+
 ### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
 
 #### Migración `20261105140000_polla_mark_bets_paid.sql`

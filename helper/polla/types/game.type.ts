@@ -416,6 +416,20 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields, IPollaBetAction
   payment_status: POLLA_PAYMENT_STATUS | null;
 }
 
+/**
+ * "Eliminar impagos" (R14), antes de confirmar: los tickets en Debe del pasador
+ * que se borrarían en la edición y hasta cuándo puede borrar.
+ */
+export interface IPollaUnpaidSummary {
+  count: number;
+  amount: number;
+  /** Ganadoras en Debe: no se borran. */
+  winners_skipped: number;
+  /** Cierre de carga del pasador (`YYYY-MM-DDTHH:mm:ss`, Argentina). */
+  cutoff: string | null;
+  can_delete: boolean;
+}
+
 export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
 
 export const isPublicPollaBet = (bet: IPollaBetListItem): bet is IPollaBetPublic =>

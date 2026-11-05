@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+- **`polla/types/game.type.ts`**: `IPollaUnpaidSummary` (`count`, `amount`, `winners_skipped`, `cutoff`, `can_delete`).
+
 ### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
 
 - **`polla/types/game.type.ts`**: `IPollaBetActions.can_mark_paid`. `IPollaBetPublic.payment_status`, que llega solo a quien cobra la jugada.

@@ -8,6 +8,7 @@ import {
   IPollaBetToRepeat,
   IPollaDailySalesGroup,
   IPollaRepeatResult,
+  IPollaUnpaidSummary,
   POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
@@ -501,6 +502,49 @@ export class PollaBetRepository {
     throwIfPollaError(error);
     const result = data as { updated: number; amount: number };
     return { updated: Number(result.updated), amount: Number(result.amount) };
+  }
+
+  /**
+   * "Eliminar impagos" (R14), antes de confirmar: cuántos tickets en Debe del
+   * pasador se borrarían en la edición (de un jugador, si se pide) y cuánto
+   * suman. Las ganadoras no cuentan: no se borran.
+   */
+  async unpaidSummary(params: {
+    actorId: string;
+    editionId: string;
+    userId?: string | null;
+  }): Promise<IPollaUnpaidSummary> {
+    const { data, error } = await supabase.rpc('polla_unpaid_bets_summary', {
+      p_actor_id: params.actorId,
+      p_edition_id: params.editionId,
+      p_user_id: params.userId ?? null,
+    });
+
+    throwIfPollaError(error);
+    const summary = data as IPollaUnpaidSummary;
+    return {
+      ...summary,
+      count: Number(summary.count),
+      amount: Number(summary.amount),
+      winners_skipped: Number(summary.winners_skipped),
+    };
+  }
+
+  /** Borra los impagos del pasador en la edición (ver `unpaidSummary`). */
+  async deleteUnpaid(params: {
+    actorId: string;
+    editionId: string;
+    userId?: string | null;
+  }): Promise<{ deleted: number; amount: number; deducted_on: string }> {
+    const { data, error } = await supabase.rpc('polla_delete_unpaid_bets', {
+      p_actor_id: params.actorId,
+      p_edition_id: params.editionId,
+      p_user_id: params.userId ?? null,
+    });
+
+    throwIfPollaError(error);
+    const result = data as { deleted: number; amount: number; deducted_on: string };
+    return { ...result, deleted: Number(result.deleted), amount: Number(result.amount) };
   }
 
   /** Cuántas veces se repitió sin cargo cada ticket (vigentes). */

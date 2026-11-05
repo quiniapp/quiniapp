@@ -206,6 +206,25 @@ export const useMarkBetsPaid = () =>
     { polla_bet_ids?: string[]; polla_edition_id?: string; polla_user_id?: string }
   >('patch', BACKEND_ROUTES.bet.payment, { invalidate: ['polla-bets'] });
 
+/** Edición y, si se pide, jugador de "Eliminar impagos". */
+type UnpaidTarget = { polla_edition_id: string; polla_user_id?: string };
+
+export const unpaidQuery = ({ polla_edition_id, polla_user_id }: UnpaidTarget) =>
+  new URLSearchParams({
+    polla_edition_id,
+    ...(polla_user_id ? { polla_user_id } : {}),
+  }).toString();
+
+/** "Eliminar impagos" (R14, solo el pasador). El aviso lo da la pantalla. */
+export const useDeleteUnpaidBets = () =>
+  useApiMutation<{ deleted: number; amount: number; deducted_on: string }, UnpaidTarget>(
+    'delete',
+    (target) => `${BACKEND_ROUTES.bet.unpaid}?${unpaidQuery(target)}`,
+    {
+      invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
+    }
+  );
+
 export const useDeleteBet = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.bet.id(id), {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],

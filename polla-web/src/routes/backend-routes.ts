@@ -55,6 +55,8 @@ export const BACKEND_ROUTES = {
     repeat: `${PRIVATE}/bet/repeat`,
     freeRepeat: `${PRIVATE}/bet/free-repeat`,
     payment: `${PRIVATE}/bet/payment`,
+    unpaidSummary: `${PRIVATE}/bet/unpaid-summary`,
+    unpaid: `${PRIVATE}/bet/unpaid`,
     sales: `${PRIVATE}/bet/sales`,
     ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
     check: (ticketNumber: string) => `${PRIVATE}/bet/check/${encodeURIComponent(ticketNumber)}`,
