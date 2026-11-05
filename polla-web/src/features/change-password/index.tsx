@@ -7,7 +7,7 @@ import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useAuth } from '@/providers/AuthContext';
 import { ROUTES } from '@/types/routes.type';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/PageHeader';
 
@@ -61,27 +61,24 @@ export const ChangePasswordPage = () => {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl bg-card p-4 sm:p-6">
         <div className="flex flex-col gap-2">
           <Label htmlFor="current">Contraseña actual</Label>
-          <Input
+          <PasswordInput
             id="current"
-            type="password"
             value={form.current_password}
             onChange={(e) => setForm({ ...form, current_password: e.target.value })}
           />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="new">Contraseña nueva</Label>
-          <Input
+          <PasswordInput
             id="new"
-            type="password"
             value={form.new_password}
             onChange={(e) => setForm({ ...form, new_password: e.target.value })}
           />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="confirm">Repetir contraseña nueva</Label>
-          <Input
+          <PasswordInput
             id="confirm"
-            type="password"
             value={form.confirm_password}
             onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
           />
