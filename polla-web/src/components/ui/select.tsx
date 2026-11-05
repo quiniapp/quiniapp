@@ -108,7 +108,9 @@ function SelectItem({
         // El texto largo envuelve en vez de estirar el panel; pr-7 deja lugar
         // para el tilde de la opción seleccionada.
         'relative flex cursor-default hover:cursor-pointer select-none items-center whitespace-normal break-words rounded-sm py-3 pl-2 pr-7 text-sm font-normal outline-none transition-colors',
-        'focus:bg-primary',
+        // Resaltado claro con su propio texto: el azul primario con el texto del
+        // popover quedaba en 2.4:1 (claro) y 2.2:1 (oscuro); accent da 14:1 y 7.4:1.
+        'focus:bg-accent focus:text-accent-foreground',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         'focus-visible:outline-none',
         className

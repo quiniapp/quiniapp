@@ -4,6 +4,12 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (Polla: tests de base de datos con pgTAP)
+
+- **`supabase/tests/database/`**: tests pgTAP de las reglas de Polla en SQL. Se corren con `npx supabase test db` contra el Supabase local (ver `supabase/tests/README.md`). Cada archivo corre en una transacción que termina en `ROLLBACK` y crea sus propios datos.
+- **`000_polla_smoke.test.sql`**: humo que verifica que estén las tablas y funciones que usan los demás tests.
+- Sin migración. La CI todavía no corre estos tests: necesitan Docker con el Supabase local.
+
 ### Changed - 2026-11-04 (Polla: el admin no ve la cuenta corriente)
 
 - **`/polla/private/group_account`** (`polla/group-account/route/polla-group-account.route.ts`): todo el router queda para `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin). El admin ya no lee la cuenta de su grupo: `GET /`, `GET /previews` y `POST /liquidate` le dan 403. Se sacan `writableGroupId`/`assertInWritableGroup`, que solo filtraban para el admin.
