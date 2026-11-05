@@ -130,7 +130,7 @@ export async function printDailyTotalsTicket(params: {
     format: [PAPER_W, docHeight],
   });
 
-  doc.setProperties({ title: `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}` });
+  doc.setProperties({ title: `polla_Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}` });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -140,7 +140,7 @@ export async function printDailyTotalsTicket(params: {
     y += LINE_H;
   }
 
-  openPDFPrintDialog(doc, `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}`);
+  openPDFPrintDialog(doc, `polla_Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${dateFile}`);
 }
 
 export async function printRangeTotalsTicket(params: {
@@ -206,7 +206,7 @@ export async function printRangeTotalsTicket(params: {
   });
 
   doc.setProperties({
-    title: `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}`,
+    title: `polla_Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}`,
   });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
@@ -217,7 +217,10 @@ export async function printRangeTotalsTicket(params: {
     y += LINE_H;
   }
 
-  openPDFPrintDialog(doc, `Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}`);
+  openPDFPrintDialog(
+    doc,
+    `polla_Exportar_Cobros_y_Pagos${fileSlug(groupName)}_${fromFile}_${toFile}`
+  );
 }
 
 export async function printSubtotalsDayTicket(params: {
@@ -274,7 +277,7 @@ export async function printSubtotalsDayTicket(params: {
 
   const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
-  doc.setProperties({ title: `Exportar_Subtotales${fileSlug(groupName)}_${dateFile}` });
+  doc.setProperties({ title: `polla_Exportar_Subtotales${fileSlug(groupName)}_${dateFile}` });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -284,7 +287,7 @@ export async function printSubtotalsDayTicket(params: {
     y += LINE_H;
   }
 
-  openPDFPrintDialog(doc, `Exportar_Subtotales${fileSlug(groupName)}_${dateFile}`);
+  openPDFPrintDialog(doc, `polla_Exportar_Subtotales${fileSlug(groupName)}_${dateFile}`);
 }
 
 export async function printSubtotalsRangeTicket(params: {
@@ -330,7 +333,9 @@ export async function printSubtotalsRangeTicket(params: {
 
   const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
-  doc.setProperties({ title: `Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}` });
+  doc.setProperties({
+    title: `polla_Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}`,
+  });
   doc.setFont('courier', 'normal');
   doc.setFontSize(FONT_SIZE);
 
@@ -340,5 +345,5 @@ export async function printSubtotalsRangeTicket(params: {
     y += LINE_H;
   }
 
-  openPDFPrintDialog(doc, `Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}`);
+  openPDFPrintDialog(doc, `polla_Exportar_Subtotales${fileSlug(groupName)}_${fromFile}_${toFile}`);
 }
