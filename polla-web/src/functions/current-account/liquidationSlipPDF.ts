@@ -17,6 +17,58 @@ const amount = (n?: number | null) =>
 /** Pausa entre descargas: el navegador puede descartar las que salen juntas. */
 const DOWNLOAD_GAP_MS = 300;
 
+/** Los montos que imprime la hoja de un pasador (los acumulados de su período). */
+export const liquidationSlipAmounts = (account: AccountPeriodView) => ({
+  bets_pass: Number(account.bets_pass ?? 0),
+  deleted_pass: Number(account.deleted_pass ?? 0),
+  pass: Number(account.pass ?? 0),
+  successes: Number(account.successes ?? 0),
+  claims: Number(account.claims ?? 0),
+  subtotal: Number(account.subtotal ?? 0),
+  previous_balance: Number(account.previous_balance ?? 0),
+  collections: Number(account.collections ?? 0),
+  paid: Number(account.paid ?? 0),
+  cashier_commission: Number(account.cashier_commission ?? 0),
+  bills: Number(account.bills ?? 0),
+  revenue: Number(account.revenue ?? 0),
+  total: Number(account.total ?? 0),
+});
+
+/** Lo que se mira para decidir si un pasador tuvo movimiento en el período. */
+const MOVEMENT_KEYS = [
+  'bets_pass',
+  'deleted_pass',
+  'pass',
+  'previous_balance',
+  'collections',
+  'paid',
+  // Un premio, un reclamo o un gasto sin pase dejan el total distinto de 0:
+  // hay plata que liquidar.
+  'total',
+] as const;
+
+/**
+ * Con movimiento: algo en el pase, las borradas, el saldo anterior, los cobros,
+ * los pagos o el total. Los que no tienen nada vienen sin tildar al exportar.
+ */
+export const hasAccountMovement = (account: AccountPeriodView) => {
+  const amounts = liquidationSlipAmounts(account);
+  return MOVEMENT_KEYS.some((key) => amounts[key] !== 0);
+};
+
+/**
+ * `polla_Exportar_Liquidacion_05-11-2026_Pedro-2-5.pdf`: fecha, nombre y el
+ * pasador como `{grupo}-{número}` (el número se repite entre grupos). Sin los
+ * caracteres que no admite un nombre de archivo.
+ */
+export const liquidationFileName = (account: AccountPeriodView, cashierCode: string) => {
+  const dateFile = dayjs(account.date).format('DD-MM-YYYY');
+  const name = `${account.user_name ?? ''}${cashierCode ? `-${cashierCode}` : ''}`
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .trim();
+  return `polla_Exportar_Liquidacion_${dateFile}_${name}.pdf`;
+};
+
 /** Hoja de liquidación de un pasador. */
 async function buildLiquidationSlipPDF(account: AccountPeriodView, winners: SlipWinner[]) {
   const { jsPDF, autoTable } = await getPDFDeps();
@@ -46,26 +98,28 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView, winners: Slip
   );
   doc.line(margin.left, 18, margin.left + usableW, 18);
 
+  const a = liquidationSlipAmounts(account);
+
   autoTable(doc, {
     startY: 22,
     body: [
       // Pase jugadas − Borradas = Pase (más los reclamos positivos).
       [
-        `Pase jugadas: ${amount(account.bets_pass)}`,
-        `Borradas: ${amount(account.deleted_pass)}`,
-        `Pase: ${amount(account.pass)}`,
+        `Pase jugadas: ${amount(a.bets_pass)}`,
+        `Borradas: ${amount(a.deleted_pass)}`,
+        `Pase: ${amount(a.pass)}`,
       ],
       [
-        `Aciertos: ${amount(account.successes)}`,
-        `Reclamos: ${amount(account.claims)}`,
-        `Subtotal: ${amount(account.subtotal)}`,
+        `Aciertos: ${amount(a.successes)}`,
+        `Reclamos: ${amount(a.claims)}`,
+        `Subtotal: ${amount(a.subtotal)}`,
       ],
       [
-        `Saldo: ${amount(account.previous_balance)}`,
-        `Cobré: ${amount(account.collections)}`,
-        `Pagué: ${amount(account.paid)}`,
+        `Saldo: ${amount(a.previous_balance)}`,
+        `Cobré: ${amount(a.collections)}`,
+        `Pagué: ${amount(a.paid)}`,
       ],
-      [`Comisión: ${amount(account.cashier_commission)}`, `Gastos: ${amount(account.bills)}`, ''],
+      [`Comisión: ${amount(a.cashier_commission)}`, `Gastos: ${amount(a.bills)}`, ''],
     ],
     theme: 'grid',
     margin,
@@ -77,13 +131,13 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView, winners: Slip
   let y = lastTableY(doc, 22);
   doc.line(margin.left, y + 4, margin.left + usableW, y + 4);
 
-  const total = Number(account.total);
+  const total = a.total;
   autoTable(doc, {
     startY: y + 8,
     body: [
       [
-        `Deja: ${amount(account.revenue)}`,
-        `Subtotal: ${amount(account.subtotal)}`,
+        `Deja: ${amount(a.revenue)}`,
+        `Subtotal: ${amount(a.subtotal)}`,
         `${total > 0 ? 'Debe' : 'Cobra'}: ${amount(Math.abs(total))}`,
       ],
     ],
@@ -128,20 +182,20 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView, winners: Slip
  * Liquidación de cada pasador, como `printLiquidationCashier` de QuiniApp: lo
  * acumulado en su período (desde el día siguiente a la última liquidación) y
  * las jugadas que ganaron en ese período. Sin deje. Se descarga un PDF por
- * pasador, igual que "Exportar liquidación" de QuiniApp.
+ * pasador (descargas separadas, igual que "Exportar liquidación" de QuiniApp),
+ * solo de los que se eligieron. `cashierCodeOf` da el `{grupo}-{número}` del
+ * nombre de archivo.
  */
 export async function downloadLiquidationSlipsPDF(params: {
   accounts: AccountPeriodView[];
   winnersByCashier: Map<string, SlipWinner[]>;
+  cashierCodeOf: (account: AccountPeriodView) => string;
 }) {
   for (const [index, account] of params.accounts.entries()) {
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_GAP_MS));
 
     const winners = params.winnersByCashier.get(account.polla_user_id) ?? [];
     const doc = await buildLiquidationSlipPDF(account, winners);
-    const dateFile = dayjs(account.date).format('DD-MM-YYYY');
-    doc.save(
-      `polla_Exportar_Liquidacion_${dateFile}_${account.user_name}-${account.user_number ?? ''}.pdf`
-    );
+    doc.save(liquidationFileName(account, params.cashierCodeOf(account)));
   }
 }

@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R23: elegir qué pasadores exportar; R01: nombre del archivo)
+
+- **Exportar liquidación** (`features/current-account/index.tsx`): antes de descargar se abre `ExportLiquidationsDialog` (`dialogs/ExportLiquidationsDialog.tsx`), con la lista de pasadores, una casilla por cada uno, "Seleccionar todos (N de M)" y el total de cada uno. Se descarga un PDF por pasador elegido (descargas separadas, como hasta ahora).
+- **Sin movimiento** (`hasAccountMovement` en `functions/current-account/liquidationSlipPDF.ts`): vienen sin tildar los que tienen en 0 el pase jugadas, las borradas, el pase, el saldo anterior, los cobros, los pagos y el total. Un premio, un reclamo o un gasto sin pase dejan el total distinto de 0, así que ese pasador viene tildado.
+- **Nombre del archivo** (`liquidationFileName`): `polla_Exportar_Liquidacion_DD-MM-YYYY_<nombre>-<grupo>-<número>.pdf`. El número de pasador se repite entre grupos, por eso lleva el grupo. Se sacan los caracteres que no admite un nombre de archivo. También aplica a "Imprimir liquidación" del pasador.
+- **Jugadas ganadoras de las hojas** (`fetchWinnersByCashier`, `features/current-account/fetchers.ts`): recorre todas las páginas del listado. Antes cortaba en 200 ganadores del período y alguna hoja podía quedar sin sus jugadas ganadoras. Las cuentas del día ya venían completas: con `date`, la API devuelve todas las filas.
+- **`liquidationSlipAmounts`**: los montos que imprime la hoja salen de una función pura, la misma que usa el test.
+- **Tests** (`src/__tests__/current-account/liquidation.test.ts`): qué cuenta como movimiento, el nombre del archivo, que las hojas por pasador sumen lo mismo que la liquidación general (`computeAccountTotals`) y que dejar afuera a los sin movimiento no cambie los totales.
+
 ### Added - 2026-11-05 (R26: polla especial con varios sorteos)
 
 - **Ediciones** (`features/editions/index.tsx`):
