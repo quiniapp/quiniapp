@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R12: sin impresión para el Súper)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`): cuando el Súper cierra un ticket (o repite), no se abre el diálogo de impresión ni el de compartir. Aparece un aviso con el número de ticket y el ticket queda en "Último ticket cargado". Lo puede reimprimir desde Administrar jugadas. Los demás roles no cambian.
+- **Repetir ticket** (`RepeatBetDialog`, `prints`): para el Súper el botón dice "Cargar" en lugar de "Cargar e imprimir".
+
 ### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
 
 - **Rutas** (`routes/route.tsx`) y **menú** (`components/layout/AppLayout.tsx`): quién ve cada pantalla sale de `POLLA_PAGE_ROLES`, la misma matriz que usa la API. `routes/pages.ts` mapea cada pantalla a su ruta (`PAGE_PATH`, `homePath`).

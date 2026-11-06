@@ -82,6 +82,7 @@ export const MakeBetPage = () => {
   const isSuper = Boolean(role && isPollaSuperRole(role));
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
+  const isAssistant = role === POLLA_USER_TYPE.ASSISTANT;
 
   const [editionId, setEditionId] = useState('');
   const [target, setTarget] = useState<IPollaUserOption | null>(null);
@@ -154,6 +155,17 @@ export const MakeBetPage = () => {
   const printTickets = async (bets: TicketBet[], of: IPollaEditionEntityFront) => {
     if (bets.length === 0) return;
     setLastTickets(bets);
+    // R12: el Súper carga planillas en serie. No se abre la impresión: un
+    // aviso con el número de ticket (lo puede reimprimir desde Administrar).
+    if (isAssistant) {
+      toast.success(
+        bets.length === 1
+          ? `Ticket ${bets[0].ticket_number} cargado`
+          : `${bets.length} tickets cargados: ${bets.map((bet) => bet.ticket_number).join(', ')}`,
+        { duration: 6000 }
+      );
+      return;
+    }
     const { blob, fileName } = await makePollaTicketsPdf(bets.map((bet) => ticketDataOf(bet, of)));
     const text =
       bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`;
@@ -427,6 +439,7 @@ export const MakeBetPage = () => {
           open={repeatOpen}
           mode={isPlayer ? 'mine' : 'ticket'}
           choosePayment={!isPlayer}
+          prints={!isAssistant}
           onClose={() => setRepeatOpen(false)}
           editions={loadable}
           editionLabel={editionLabel}

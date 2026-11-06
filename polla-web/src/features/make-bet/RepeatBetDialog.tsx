@@ -45,6 +45,8 @@ interface RepeatBetDialogProps {
    * lo suyo queda en Debe.
    */
   choosePayment: boolean;
+  /** Si lo cargado se imprime al confirmar (el Súper no imprime, R12). */
+  prints?: boolean;
   onClose: () => void;
   /** Ediciones donde el usuario carga ahora. */
   editions: IPollaEditionEntityFront[];
@@ -66,6 +68,7 @@ export const RepeatBetDialog = ({
   open,
   mode,
   choosePayment,
+  prints = true,
   onClose,
   editions,
   editionLabel,
@@ -299,7 +302,7 @@ export const RepeatBetDialog = ({
               onClick={handleRepeatTicket}
               disabled={!bet || !editionId || byTicket.isFetching || isPending}
             >
-              {isPending ? 'Cargando…' : 'Cargar e imprimir'}
+              {isPending ? 'Cargando…' : prints ? 'Cargar e imprimir' : 'Cargar'}
             </Button>
           ) : (
             <Button
