@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import { IPollaPrize, PollaPrizePaidFilter } from '@helper/polla/types/game.type';
-import { isPollaSuperRole, pollaCashierCode } from '@helper/polla/types/user.type';
+import { POLLA_USER_TYPE, isPollaSuperRole, pollaCashierCode } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { usePrizes } from '@/hooks/fetchs/usePollaData';
 import { useMarkPrizePaid } from '@/hooks/mutations/usePollaMutations';
@@ -63,11 +63,23 @@ export const PrizesPage = () => {
   const { editionId, editionList, labelFor, updateEdition } = useBetsEdition();
   const [paidView, setPaidView] = useState<PaidView>('');
   const canMarkPaid = Boolean(role && isPollaSuperRole(role));
+  // R21: el jugador ve sus premios, no si se pagaron (eso es entre el
+  // capitalista y el pasador). La API tampoco se lo manda.
+  const seesPaid = role !== POLLA_USER_TYPE.PLAYER;
+
+  const description =
+    role === POLLA_USER_TYPE.PLAYER
+      ? 'Tus tickets que ganaron en cada edición y cuánto se lleva cada uno.'
+      : role === POLLA_USER_TYPE.CASHIER
+        ? 'Tus tickets y los de tus jugadores que ganaron en cada edición, cuánto se lleva cada uno y si ya se pagó.'
+        : role === POLLA_USER_TYPE.ADMIN
+          ? 'Los tickets ganadores de tu grupo en cada edición, cuánto se lleva cada uno y si ya se pagó.'
+          : 'Los tickets ganadores de cada edición, cuánto se lleva cada uno y si ya se pagó. Los premios no van en la cuenta corriente.';
 
   const { data, isFetching } = usePrizes(
     {
       polla_edition_id: editionId,
-      paid: paidView || undefined,
+      paid: (seesPaid && paidView) || undefined,
       polla_organization_id: organizationId,
     },
     Boolean(editionId)
@@ -119,7 +131,7 @@ export const PrizesPage = () => {
 
   return (
     <div>
-      <PageHeader description="Los tickets ganadores de cada edición, cuánto se lleva cada uno y si ya se pagó. Los premios no van en la cuenta corriente." />
+      <PageHeader description={description} />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <EditionPicker
@@ -129,35 +141,42 @@ export const PrizesPage = () => {
           labelFor={labelFor}
         />
 
-        <div className="flex min-w-0 flex-col gap-1">
-          <Label id="prizes-paid-label">Ver</Label>
-          <div
-            role="radiogroup"
-            aria-labelledby="prizes-paid-label"
-            className="inline-flex rounded-md border bg-card p-1"
-          >
-            {PAID_VIEWS.map(([value, label]) => (
-              <button
-                key={label}
-                type="button"
-                role="radio"
-                aria-checked={paidView === value}
-                onClick={() => setPaidView(value)}
-                className={cn(
-                  'flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
-                  paidView === value
-                    ? 'bg-nav-active text-nav-active-foreground'
-                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-              >
-                {label}
-              </button>
-            ))}
+        {seesPaid && (
+          <div className="flex min-w-0 flex-col gap-1">
+            <Label id="prizes-paid-label">Ver</Label>
+            <div
+              role="radiogroup"
+              aria-labelledby="prizes-paid-label"
+              className="inline-flex rounded-md border bg-card p-1"
+            >
+              {PAID_VIEWS.map(([value, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  role="radio"
+                  aria-checked={paidView === value}
+                  onClick={() => setPaidView(value)}
+                  className={cn(
+                    'flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
+                    paidView === value
+                      ? 'bg-nav-active text-nav-active-foreground'
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:max-w-3xl lg:grid-cols-4">
+      <div
+        className={cn(
+          'mb-4 grid grid-cols-2 gap-3',
+          seesPaid ? 'lg:max-w-3xl lg:grid-cols-4' : 'lg:max-w-xl'
+        )}
+      >
         <div className="rounded-xl border bg-card p-4 text-card-foreground">
           <p className="text-sm text-muted-foreground">Ganadores</p>
           <p className="text-3xl font-bold tabular-nums">{data?.count ?? 0}</p>
@@ -166,14 +185,20 @@ export const PrizesPage = () => {
           <p className="text-sm text-muted-foreground">En premios</p>
           <p className="text-2xl font-bold tabular-nums">${fmtMoney(data?.amount ?? 0)}</p>
         </div>
-        <div className="rounded-xl border bg-card p-4 text-card-foreground">
-          <p className="text-sm text-muted-foreground">Pagado</p>
-          <p className="text-2xl font-bold tabular-nums">${fmtMoney(data?.paid_amount ?? 0)}</p>
-        </div>
-        <div className="rounded-xl border bg-card p-4 text-card-foreground">
-          <p className="text-sm text-muted-foreground">Falta pagar</p>
-          <p className="text-2xl font-bold tabular-nums">${fmtMoney(data?.pending_amount ?? 0)}</p>
-        </div>
+        {seesPaid && (
+          <>
+            <div className="rounded-xl border bg-card p-4 text-card-foreground">
+              <p className="text-sm text-muted-foreground">Pagado</p>
+              <p className="text-2xl font-bold tabular-nums">${fmtMoney(data?.paid_amount ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border bg-card p-4 text-card-foreground">
+              <p className="text-sm text-muted-foreground">Falta pagar</p>
+              <p className="text-2xl font-bold tabular-nums">
+                ${fmtMoney(data?.pending_amount ?? 0)}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {prizes.length === 0 ? (
@@ -221,7 +246,7 @@ export const PrizesPage = () => {
                   <span className="text-xs text-muted-foreground">
                     Ganó el {fmtDate(prize.hit_date)}
                   </span>
-                  {renderPaid(prize)}
+                  {seesPaid && renderPaid(prize)}
                 </div>
               </li>
             ))}
@@ -238,7 +263,7 @@ export const PrizesPage = () => {
                   <TableHead className="text-center">Aciertos</TableHead>
                   <TableHead>Ganó el</TableHead>
                   <TableHead className="text-right">Premio</TableHead>
-                  <TableHead>Pagado</TableHead>
+                  {seesPaid && <TableHead>Pagado</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -253,7 +278,7 @@ export const PrizesPage = () => {
                     <TableCell className="text-right font-semibold tabular-nums">
                       ${fmtMoney(prize.prize)}
                     </TableCell>
-                    <TableCell>{renderPaid(prize)}</TableCell>
+                    {seesPaid && <TableCell>{renderPaid(prize)}</TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -264,7 +289,7 @@ export const PrizesPage = () => {
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(data?.amount ?? 0)}
                     </TableCell>
-                    <TableCell />
+                    {seesPaid && <TableCell />}
                   </TableRow>
                 </TableFooter>
               )}

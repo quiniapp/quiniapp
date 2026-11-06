@@ -4,6 +4,17 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **`GET /polla/private/prize`**: cada rol ve su alcance, validado en el backend (`pollaPrizeScope` del helper).
+  - Superadmin+ ve toda la organización.
+  - El admin ve su grupo, sin tildar.
+  - El pasador ve lo imputado a él (lo suyo y lo de sus jugadores) y si está pagado.
+  - El jugador ve sus tickets sin lo pagado (`prize_paid_*` y los totales de pagado en `null`).
+  - El Súper no entra (403).
+- Los totales son del alcance de quien mira. El cartel público de ganadores no cambia.
+- Sin migración.
+
 ### Added - 2026-11-06 (R20: premio pagado / no pagado)
 
 #### Migración `20261106100000_polla_prize_paid.sql`

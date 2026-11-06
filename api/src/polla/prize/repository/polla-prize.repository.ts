@@ -48,6 +48,10 @@ const toPrize = (row: RawPrize): IPollaPrize => ({
 export interface PollaPrizeFilters {
   organizationId: string;
   editionId: string;
+  /** Alcance del rol (R21): lo imputado a un pasador, un grupo o un jugador. */
+  cashierId?: string;
+  groupId?: string;
+  userId?: string;
 }
 
 export class PollaPrizeRepository {
@@ -70,13 +74,19 @@ export class PollaPrizeRepository {
    * vigentes, ordenados por grupo y pasador.
    */
   async getAll(filters: PollaPrizeFilters): Promise<IPollaPrize[]> {
-    const { data, error } = await supabase
+    let query = supabase
       .from('polla_bets')
       .select(PRIZE_COLUMNS)
       .eq('polla_organization_id', filters.organizationId)
       .eq('polla_edition_id', filters.editionId)
       .eq('winner', true)
-      .is('deleted_at', null)
+      .is('deleted_at', null);
+
+    if (filters.cashierId) query = query.eq('cashier_polla_user_id', filters.cashierId);
+    if (filters.groupId) query = query.eq('polla_group_id', filters.groupId);
+    if (filters.userId) query = query.eq('polla_user_id', filters.userId);
+
+    const { data, error } = await query
       .order('cashier_number', { ascending: true, nullsFirst: false })
       .order('ticket_number', { ascending: true })
       .limit(MAX_PRIZES);

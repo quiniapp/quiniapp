@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
-import { POLLA_API_ROLES } from '@helper/polla/config/access.config';
+import { POLLA_API_ROLES, pollaPrizeScope } from '@helper/polla/config/access.config';
 import { IPollaPrizeList } from '@helper/polla/types/game.type';
 import { POLLA_SUPER_ROLES } from '@helper/polla/types/user.type';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
@@ -14,7 +14,9 @@ const queryString = (value: unknown): string | null =>
 /**
  * Premios (R19): los tickets ganadores de cada edición, con grupo, pasador,
  * jugador o cliente, número de ticket y monto. Salen de la generación de
- * ganadores que ya existe; no pasan por la cuenta corriente (R18).
+ * ganadores que ya existe; no pasan por la cuenta corriente (R18). Cada rol ve
+ * su alcance (R21, `pollaPrizeScope`): superadmin+ la organización, el admin
+ * su grupo, el pasador lo imputado a él y el jugador lo suyo, sin lo pagado.
  */
 export class PollaPrizeRouter {
   public router: Router;
@@ -50,22 +52,33 @@ export class PollaPrizeRouter {
       throw new BadRequestError('Filtro de pagados inválido');
     }
 
-    const all = await this.repository.getAll({
+    const scope = pollaPrizeScope(user);
+    if (!scope) throw new ForbiddenError('No ves premios');
+
+    const scoped = await this.repository.getAll({
       organizationId: user.polla_organization_id,
       editionId,
+      cashierId: scope.cashierId,
+      groupId: scope.groupId,
+      userId: scope.userId,
     });
+    // Lo pagado es entre el capitalista y el pasador: al jugador no le llega.
+    const all = scope.seesPaid
+      ? scoped
+      : scoped.map((prize) => ({ ...prize, prize_paid_at: null, prize_paid_by_name: null }));
     const isPaid = (prize: { prize_paid_at: string | null }) => prize.prize_paid_at !== null;
     const sum = (list: typeof all) => list.reduce((acc, prize) => acc + prize.prize, 0);
     const paidOnes = all.filter(isPaid);
 
     const list: IPollaPrizeList = {
       polla_edition_id: editionId,
-      prizes: paid ? all.filter((prize) => isPaid(prize) === (paid === 'true')) : all,
+      prizes:
+        paid && scope.seesPaid ? all.filter((prize) => isPaid(prize) === (paid === 'true')) : all,
       count: all.length,
       amount: sum(all),
-      paid_count: paidOnes.length,
-      paid_amount: sum(paidOnes),
-      pending_amount: sum(all) - sum(paidOnes),
+      paid_count: scope.seesPaid ? paidOnes.length : null,
+      paid_amount: scope.seesPaid ? sum(paidOnes) : null,
+      pending_amount: scope.seesPaid ? sum(all) - sum(paidOnes) : null,
     };
 
     res.status(200).json({ data: { prizes: list } });

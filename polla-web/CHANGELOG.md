@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **Premios** también para el admin de grupo, el pasador y el jugador: el ítem del menú aparece para ellos y la API les da solo su alcance.
+  - El texto de la pantalla cambia según el rol.
+  - Solo superadmin+ tilda pagado.
+  - El jugador no ve el filtro de pagados, la columna Pagado ni los totales de pagado.
+- **Tests** (`access.test.ts`): la matriz con Premios para cada rol y `pollaPrizeScope`.
+
 ### Added - 2026-11-06 (R20: premio pagado / no pagado)
 
 - **Premios** (`features/prizes/index.tsx`):

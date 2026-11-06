@@ -581,18 +581,18 @@ export interface IPollaPrize {
 export type PollaPrizePaidFilter = 'true' | 'false';
 
 /**
- * Los premios de una edición (con el filtro de pagados, si se pidió) y los
- * totales de toda la edición: cuánto hay en premios, cuánto se pagó y cuánto
- * falta.
+ * Los premios de una edición que ve el usuario (con el filtro de pagados, si se
+ * pidió) y sus totales: cuánto hay en premios, cuánto se pagó y cuánto falta.
+ * Al jugador no le llega lo pagado (`null`, y `prize_paid_*` en `null`).
  */
 export interface IPollaPrizeList {
   polla_edition_id: string;
   prizes: IPollaPrize[];
   count: number;
   amount: number;
-  paid_count: number;
-  paid_amount: number;
-  pending_amount: number;
+  paid_count: number | null;
+  paid_amount: number | null;
+  pending_amount: number | null;
 }
 
 // ----------------------------------------------------------- ventas
