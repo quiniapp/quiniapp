@@ -272,6 +272,29 @@ export interface IPollaProcessResult {
 
 // ----------------------------------------------------------------- jugadas
 
+/* eslint-disable no-unused-vars */
+/** Estado de pago del ticket (R04): pagado o fiado. Los dos entran al sorteo. */
+export enum POLLA_PAYMENT_STATUS {
+  PAID = 'PAID',
+  /** "Debe": fiado. */
+  OWED = 'OWED',
+}
+
+/** Medio de pago. Por ahora solo efectivo; QR o transferencia se suman acá y en la base. */
+export enum POLLA_PAYMENT_METHOD {
+  CASH = 'CASH',
+}
+/* eslint-enable no-unused-vars */
+
+export const POLLA_PAYMENT_STATUS_LABEL: Record<POLLA_PAYMENT_STATUS, string> = {
+  [POLLA_PAYMENT_STATUS.PAID]: 'Pagado',
+  [POLLA_PAYMENT_STATUS.OWED]: 'Debe',
+};
+
+export const POLLA_PAYMENT_METHOD_LABEL: Record<POLLA_PAYMENT_METHOD, string> = {
+  [POLLA_PAYMENT_METHOD.CASH]: 'Efectivo',
+};
+
 export interface IPollaBetEntityBack {
   polla_bet_id: string;
   ticket_number: string;
@@ -320,6 +343,14 @@ export interface IPollaBetEntityBack {
    * opcional a nombre de un jugador. `null` en tickets viejos.
    */
   identifier: string | null;
+  /** Pagado o Debe. Lo que carga el jugador queda siempre en Debe. */
+  payment_status: POLLA_PAYMENT_STATUS;
+  /** Medio con que se pagó; `null` en Debe y en las repetidas sin cargo. */
+  payment_method: POLLA_PAYMENT_METHOD | null;
+  /** Cuándo se cobró (al cargarla o al marcarla como pagada). */
+  paid_at: string | null;
+  /** Quién la cobró. */
+  paid_by: string | null;
 }
 
 /** Campos que la API agrega a cada jugada que lista. */
@@ -339,6 +370,11 @@ export interface IPollaBetDerivedFields {
 export interface IPollaBetActions {
   can_edit: boolean;
   can_delete: boolean;
+  /**
+   * Está en Debe y el usuario la cobra (R13): el pasador lo imputado a él, el
+   * admin su grupo, el Súper y superadmin+ la organización.
+   */
+  can_mark_paid: boolean;
 }
 
 export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'> &
@@ -373,6 +409,48 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields, IPollaBetAction
   /** Repetida sin cargo. */
   is_free: boolean;
   identifier: string | null;
+  /**
+   * Pagado o Debe: solo para el pasador (lo imputado a él) y el Súper. El
+   * jugador y los demás pasadores reciben `null`.
+   */
+  payment_status: POLLA_PAYMENT_STATUS | null;
+  /** Fecha y hora reales de carga (R10). */
+  created_at: string;
+}
+
+/** Estado de juego de un ticket (R10): sigue jugando, ganó o no ganó. */
+export type PollaBetGameStatus = 'PLAYING' | 'WON' | 'LOST';
+
+export const POLLA_BET_GAME_STATUS_LABEL: Record<PollaBetGameStatus, string> = {
+  PLAYING: 'Jugando',
+  WON: 'Ganadora',
+  LOST: 'No ganó',
+};
+
+/**
+ * Ganadora si ganó; "No ganó" cuando su edición terminó sin que ganara; si
+ * no, sigue jugando.
+ */
+export const pollaBetGameStatus = (
+  bet: Pick<IPollaBetEntityBack, 'winner'>,
+  editionStatus?: POLLA_EDITION_STATUS | null
+): PollaBetGameStatus => {
+  if (bet.winner) return 'WON';
+  return editionStatus === POLLA_EDITION_STATUS.FINISHED ? 'LOST' : 'PLAYING';
+};
+
+/**
+ * "Eliminar impagos" (R14), antes de confirmar: los tickets en Debe del pasador
+ * que se borrarían en la edición y hasta cuándo puede borrar.
+ */
+export interface IPollaUnpaidSummary {
+  count: number;
+  amount: number;
+  /** Ganadoras en Debe: no se borran. */
+  winners_skipped: number;
+  /** Cierre de carga del pasador (`YYYY-MM-DDTHH:mm:ss`, Argentina). */
+  cutoff: string | null;
+  can_delete: boolean;
 }
 
 export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;

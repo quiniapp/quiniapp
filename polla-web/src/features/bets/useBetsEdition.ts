@@ -51,6 +51,12 @@ export const useBetsEdition = () => {
     (edition: IPollaEditionEntityFront) => pollaEditionTitle(edition, catalogs),
     [catalogs]
   );
+  /** Estado de la edición de una jugada (para "No ganó"). */
+  const statusById = useMemo(
+    () => new Map(editionList.map((edition) => [edition.polla_edition_id, edition.status])),
+    [editionList]
+  );
+  const editionStatusOf = useCallback((id: string) => statusById.get(id), [statusById]);
   /** Un sorteo por línea (ticket impreso). */
   const drawLabelsFor = useCallback(
     (edition: IPollaEditionEntityFront) => pollaEditionDrawLabels(edition, catalogs),
@@ -74,6 +80,7 @@ export const useBetsEdition = () => {
     labelFor,
     titleFor,
     drawLabelsFor,
+    editionStatusOf,
     updateEdition,
   };
 };

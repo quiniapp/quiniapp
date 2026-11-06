@@ -4,6 +4,34 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
+
+- **`polla/config/access.config.ts`** (nuevo): la matriz de acceso de Polla.
+  - `PollaPage` y `POLLA_PAGE_ROLES`: qué rol ve cada pantalla.
+  - `canSeePollaPage`.
+  - `pollaHomePage`: Jugadas, o Cargar jugada para el Súper.
+  - `POLLA_API_ROLES`: los roles de los endpoints que sirven a una sola pantalla.
+  - El Súper ve solo Cargar jugada, Administrar jugadas y Configuración. El resto de los roles no cambia.
+- **`polla/types/user.type.ts`**: la etiqueta de ASSISTANT pasa de "Super" a **"Súper"**.
+
+### Added - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **`polla/types/game.type.ts`**: `IPollaBetPublic.created_at`. `PollaBetGameStatus` (`PLAYING` | `WON` | `LOST`), `POLLA_BET_GAME_STATUS_LABEL` ("Jugando", "Ganadora", "No ganó") y `pollaBetGameStatus(bet, editionStatus)`: no ganó cuando su edición terminó sin que ganara.
+
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+- **`polla/types/game.type.ts`**: `IPollaUnpaidSummary` (`count`, `amount`, `winners_skipped`, `cutoff`, `can_delete`).
+
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+- **`polla/types/game.type.ts`**: `IPollaBetActions.can_mark_paid`. `IPollaBetPublic.payment_status`, que llega solo a quien cobra la jugada.
+- **`polla/schemas/game.schema.ts`**: `markPollaBetsPaidSchema` (tickets, o edición + jugador).
+
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+- **`polla/types/game.type.ts`**: `POLLA_PAYMENT_STATUS` (`PAID`, `OWED`) y `POLLA_PAYMENT_METHOD` (`CASH`), con sus etiquetas ("Pagado", "Debe", "Efectivo"). `IPollaBetEntityBack` suma `payment_status`, `payment_method`, `paid_at` y `paid_by`.
+- **`polla/schemas/game.schema.ts`**: `payment_status` opcional en `newPollaBetSchema` y `repeatPollaBetsSchema`.
+
 ### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
 
 - **`polla/types/game.type.ts`**:

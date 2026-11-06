@@ -6,8 +6,12 @@ import {
   IPollaBetEntityBack,
   IPollaEditionEntityFront,
   POLLA_BET_IDENTIFIER_MAX,
+  POLLA_BET_GAME_STATUS_LABEL,
   POLLA_EDITION_STATUS,
+  POLLA_PAYMENT_STATUS,
+  POLLA_PAYMENT_STATUS_LABEL,
   isPollaSpecialEdition,
+  pollaBetGameStatus,
   pollaEditionDrawLabels,
   pollaEditionTitle,
   pollaPrizeRuleLabel,
@@ -38,8 +42,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PollaTicketData, makePollaTicketsPdf } from '@/functions/makePollaTicket';
-import { deliverPdf } from '@/functions/printPdf';
+import { deliverPdf, sharePdf } from '@/functions/printPdf';
 import { RepeatBetDialog } from './RepeatBetDialog';
+import { PaymentDialog } from './PaymentDialog';
+import { Badge } from '@/components/ui/badge';
+import { fmtDateTime } from '@/features/bets/format';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 /** `HH:mm:ss` de la base → `HH:mm`. */
@@ -58,6 +65,9 @@ type TicketBet = Pick<
   | 'load_date'
   | 'amount'
   | 'is_free'
+  | 'payment_status'
+  | 'created_at'
+  | 'winner'
 >;
 
 const fmtCutoff = (value: string) => `${fmtDate(value.slice(0, 10))} ${value.slice(11, 16)}`;
@@ -72,6 +82,7 @@ export const MakeBetPage = () => {
   const isSuper = Boolean(role && isPollaSuperRole(role));
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
+  const isAssistant = role === POLLA_USER_TYPE.ASSISTANT;
 
   const [editionId, setEditionId] = useState('');
   const [target, setTarget] = useState<IPollaUserOption | null>(null);
@@ -80,6 +91,10 @@ export const MakeBetPage = () => {
   const [identifier, setIdentifier] = useState('');
   const [numbers, setNumbers] = useState<string[]>(createEmptyPollaNumbers());
   const [repeatOpen, setRepeatOpen] = useState(false);
+  // Números listos para cerrar: mientras hay, se elige Efectivo o Debe.
+  const [closing, setClosing] = useState<string[] | null>(null);
+  // Lo último que se cargó: número, fecha y hora, y estado (R10).
+  const [lastTickets, setLastTickets] = useState<TicketBet[]>([]);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
 
@@ -123,21 +138,42 @@ export const MakeBetPage = () => {
     startDate: of.start_date,
     endDate: of.end_date,
     loadDate: bet.load_date,
+    loadedAt: bet.created_at,
     ticketPrice: Number(bet.amount),
     poolAmount: Number(of.pool_amount),
     surprisePoolAmount: Number(of.surprise_pool_amount ?? 0),
     isFree: Boolean(bet.is_free),
+    // El ticket del jugador no dice si está pagado.
+    paymentStatus: isPlayer ? undefined : bet.payment_status,
   });
 
-  /** Tickets recién cargados: un PDF (con uno o varios) para imprimir o compartir. */
+  /**
+   * Tickets recién cargados: un PDF (con uno o varios). El pasador y el staff
+   * lo imprimen (o lo comparten en mobile); el jugador no imprime: lo guarda o
+   * lo comparte.
+   */
   const printTickets = async (bets: TicketBet[], of: IPollaEditionEntityFront) => {
     if (bets.length === 0) return;
+    setLastTickets(bets);
+    // R12: el Súper carga planillas en serie. No se abre la impresión: un
+    // aviso con el número de ticket (lo puede reimprimir desde Administrar).
+    if (isAssistant) {
+      toast.success(
+        bets.length === 1
+          ? `Ticket ${bets[0].ticket_number} cargado`
+          : `${bets.length} tickets cargados: ${bets.map((bet) => bet.ticket_number).join(', ')}`,
+        { duration: 6000 }
+      );
+      return;
+    }
     const { blob, fileName } = await makePollaTicketsPdf(bets.map((bet) => ticketDataOf(bet, of)));
-    await deliverPdf(
-      blob,
-      fileName,
-      bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`
-    );
+    const text =
+      bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`;
+    if (isPlayer) {
+      await sharePdf(blob, fileName, text);
+      return;
+    }
+    await deliverPdf(blob, fileName, text);
   };
 
   // Con todos sus sorteos: en la especial se ve que juega con las 5 quinielas.
@@ -176,15 +212,30 @@ export const MakeBetPage = () => {
       return;
     }
 
+    // El jugador no elige: su ticket queda en Debe (lo cobra su pasador).
+    if (isPlayer) {
+      closeTicket(values);
+      return;
+    }
+    setClosing(values);
+  };
+
+  /** Carga el ticket con el pago elegido (sin pago: el jugador, en Debe). */
+  const closeTicket = (values: string[], paymentStatus?: POLLA_PAYMENT_STATUS) => {
+    if (!edition) return;
+    const cleanIdentifier = identifier.trim();
+
     createBet(
       {
         polla_edition_id: edition.polla_edition_id,
         numbers: values,
         ...(target ? { polla_user_id: target.polla_user_id } : {}),
         ...(cleanIdentifier ? { identifier: cleanIdentifier } : {}),
+        ...(paymentStatus ? { payment_status: paymentStatus } : {}),
       },
       {
         onSuccess: async (bet) => {
+          setClosing(null);
           setNumbers(createEmptyPollaNumbers());
           // Listo para cargar el próximo ticket sin tocar el mouse.
           boxesRef.current?.focusFirst();
@@ -329,15 +380,66 @@ export const MakeBetPage = () => {
           />
 
           <Button type="button" onClick={() => handleSubmit()} disabled={isPending}>
-            {isPending ? 'Cargando…' : 'Cargar jugada'}
+            {isPending ? 'Cargando…' : 'Cerrar ticket'}
           </Button>
+
+          {lastTickets.length > 0 && (
+            <div role="status" className="rounded-md border p-3 text-sm">
+              <p className="mb-1 font-medium">
+                {lastTickets.length === 1
+                  ? 'Último ticket cargado'
+                  : `Últimos ${lastTickets.length} tickets cargados`}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {lastTickets.map((bet) => (
+                  <li
+                    key={bet.ticket_number}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                  >
+                    <span className="font-mono text-xs">{bet.ticket_number}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {fmtDateTime(bet.created_at)}
+                    </span>
+                    <Badge variant="secondary">
+                      {POLLA_BET_GAME_STATUS_LABEL[pollaBetGameStatus(bet)]}
+                    </Badge>
+                    {/* El jugador no ve el estado de pago. */}
+                    {!isPlayer && !bet.is_free && (
+                      <Badge
+                        variant={
+                          bet.payment_status === POLLA_PAYMENT_STATUS.OWED
+                            ? 'destructive'
+                            : 'success'
+                        }
+                      >
+                        {POLLA_PAYMENT_STATUS_LABEL[bet.payment_status]}
+                      </Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
+      )}
+
+      {closing && (
+        <PaymentDialog
+          pending={isPending}
+          onChoose={(status) => closeTicket(closing, status)}
+          onClose={() => {
+            setClosing(null);
+            boxesRef.current?.focusFirst();
+          }}
+        />
       )}
 
       {repeatOpen && (
         <RepeatBetDialog
           open={repeatOpen}
           mode={isPlayer ? 'mine' : 'ticket'}
+          choosePayment={!isPlayer}
+          prints={!isAssistant}
           onClose={() => setRepeatOpen(false)}
           editions={loadable}
           editionLabel={editionLabel}

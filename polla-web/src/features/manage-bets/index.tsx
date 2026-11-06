@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { BadgeDollarSign, Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import {
   IPollaBetListItem,
+  IPollaUnpaidSummary,
   POLLA_EDITION_STATUS,
   POLLA_HITS_FILTER,
+  POLLA_PAYMENT_STATUS,
   POLLA_TICKET_SEARCH,
   isPublicPollaBet,
   pollaTicketCashierCode,
@@ -20,13 +23,21 @@ import {
 import { useAuth } from '@/providers/AuthContext';
 import { useBets, useRefreshBets, useUser } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
-import { useDeleteBet } from '@/hooks/mutations/usePollaMutations';
+import {
+  unpaidQuery,
+  useDeleteBet,
+  useDeleteUnpaidBets,
+  useMarkBetsPaid,
+} from '@/hooks/mutations/usePollaMutations';
+import { apiClient } from '@/lib/apiClient';
+import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PollaPage, flattenPages } from '@/hooks/useApi';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { pollaUserCode, pollaUserOption } from '@/lib/pollaUsers';
 import { groupLabel } from '@/lib/pollaGroups';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -49,6 +60,9 @@ import { WinnersBanner } from '@/features/bets/WinnersBanner';
 import { useBetsEdition } from '@/features/bets/useBetsEdition';
 import { useLoadRangeParam } from '@/features/bets/useLoadRangeParam';
 
+const fmtMoney = (value: number) =>
+  new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
+
 /** `hits=10,9` de la URL → aciertos válidos, en el orden de los checkboxes. */
 const parseHits = (raw: string | null): number[] =>
   raw ? POLLA_HITS_FILTER.filter((hit) => raw.split(',').map(Number).includes(hit)) : [];
@@ -65,8 +79,15 @@ type BetsFeedPage = PollaPage<IPollaBetListItem> & { free_repeats?: Record<strin
 export const ManageBetsPage = () => {
   const { user, role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { editionId, editionList, selectedEdition, labelFor, titleFor, drawLabelsFor } =
-    useBetsEdition();
+  const {
+    editionId,
+    editionList,
+    selectedEdition,
+    labelFor,
+    titleFor,
+    drawLabelsFor,
+    editionStatusOf,
+  } = useBetsEdition();
 
   const canManage = Boolean(role && isPollaAdminRole(role));
   const isSuper = Boolean(role && isPollaSuperRole(role));
@@ -90,6 +111,8 @@ export const ManageBetsPage = () => {
   const winnerParam = searchParams.get('winner');
   const winner: WinnerFilter = winnerParam === 'true' || winnerParam === 'false' ? winnerParam : '';
   const hits = parseHits(searchParams.get('hits'));
+  // "Impagos": solo los tickets en Debe (R13).
+  const onlyOwed = searchParams.get('payment_status') === POLLA_PAYMENT_STATUS.OWED;
   const [loadRange, changeLoadRange] = useLoadRangeParam();
 
   const { data: groups } = useGroups(
@@ -142,6 +165,7 @@ export const ManageBetsPage = () => {
   const resultFilter = {
     winner: winner || undefined,
     hits: hits.length ? hits.join(',') : undefined,
+    payment_status: onlyOwed ? POLLA_PAYMENT_STATUS.OWED : undefined,
   };
   const loadFilter = { load_from: loadRange?.from, load_to: loadRange?.to };
 
@@ -244,6 +268,99 @@ export const ManageBetsPage = () => {
     sort === 'recent' ? 'más recientes primero' : 'por aciertos'
   }`;
   const { mutate: deleteBet } = useDeleteBet();
+  const { mutate: markPaid, isPending: isMarkingPaid } = useMarkBetsPaid();
+
+  const paidToast = ({ updated }: { updated: number }) =>
+    toast.success(
+      updated === 0
+        ? 'No había tickets en Debe para marcar'
+        : updated === 1
+          ? 'Ticket marcado como pago'
+          : `${updated} tickets marcados como pagos`
+    );
+
+  /** Debe → Pagado, en efectivo. No se puede volver atrás. */
+  const handleMarkPaid = (row: IPollaBetListItem) => {
+    if (
+      !window.confirm(`¿Marcar como pago el ticket ${row.ticket_number}? No se puede deshacer.`)
+    ) {
+      return;
+    }
+    markPaid({ polla_bet_ids: [row.polla_bet_id] }, { onSuccess: paidToast });
+  };
+
+  // "Eliminar impagos" (R14): solo el pasador, en la edición elegida y, si
+  // filtró un jugador, solo de ese jugador.
+  const { mutate: deleteUnpaid, isPending: isDeletingUnpaid } = useDeleteUnpaidBets();
+  const [checkingUnpaid, setCheckingUnpaid] = useState(false);
+  const handleDeleteUnpaid = async () => {
+    if (!editionId) return;
+    const target = {
+      polla_edition_id: editionId,
+      ...(playerId ? { polla_user_id: playerId } : {}),
+    };
+    setCheckingUnpaid(true);
+    let summary: IPollaUnpaidSummary;
+    try {
+      summary = await apiClient.get<IPollaUnpaidSummary>(
+        `${BACKEND_ROUTES.bet.unpaidSummary}?${unpaidQuery(target)}`
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudieron contar los impagos');
+      return;
+    } finally {
+      setCheckingUnpaid(false);
+    }
+
+    if (!summary.can_delete) {
+      toast.error('Cerró la carga de esta edición: ya no se borran tickets');
+      return;
+    }
+    if (summary.count === 0) {
+      toast('No hay tickets impagos para eliminar');
+      return;
+    }
+
+    const whose = selectedUser && playerId ? ` de ${selectedUser.name}` : '';
+    const winners =
+      summary.winners_skipped > 0
+        ? `\n${summary.winners_skipped} en Debe ganaron y no se borran.`
+        : '';
+    if (
+      !window.confirm(
+        `¿Eliminar ${summary.count} ${summary.count === 1 ? 'ticket impago' : 'tickets impagos'}${whose} por $${fmtMoney(summary.amount)}? Se descuentan del pase de hoy (Borradas).${winners}`
+      )
+    ) {
+      return;
+    }
+
+    deleteUnpaid(target, {
+      onSuccess: ({ deleted, amount }) =>
+        toast.success(
+          `${deleted} ${deleted === 1 ? 'ticket eliminado' : 'tickets eliminados'} ($${fmtMoney(amount)})`
+        ),
+    });
+  };
+
+  // Todos los impagos del jugador filtrado en la edición.
+  const playerToCollect =
+    !searching && editionId && filterType === POLLA_USER_TYPE.PLAYER && selectedUser
+      ? selectedUser
+      : null;
+  const handleMarkAllPaid = () => {
+    if (!playerToCollect) return;
+    if (
+      !window.confirm(
+        `¿Marcar como pagos todos los tickets en Debe de ${playerToCollect.name} en esta edición? No se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+    markPaid(
+      { polla_edition_id: editionId, polla_user_id: playerToCollect.polla_user_id },
+      { onSuccess: paidToast }
+    );
+  };
 
   const handlePrint = async (row: IPollaBetListItem) => {
     const edition = editionList.find((e) => e.polla_edition_id === row.polla_edition_id);
@@ -260,11 +377,14 @@ export const ManageBetsPage = () => {
       startDate: edition.start_date,
       endDate: edition.end_date,
       loadDate: row.load_date,
+      loadedAt: row.created_at,
       // Cada jugada guarda su precio: el de la edición puede haber cambiado.
       ticketPrice: Number(row.amount ?? edition.ticket_price),
       poolAmount: Number(edition.pool_amount),
       surprisePoolAmount: Number(edition.surprise_pool_amount ?? 0),
       isFree: row.is_free,
+      // El pasador y el Súper reciben el estado de lo que cobran (R13).
+      paymentStatus: row.payment_status ?? undefined,
     });
 
     await deliverPdf(blob, fileName, `Ticket Polla ${row.ticket_number}`);
@@ -291,11 +411,25 @@ export const ManageBetsPage = () => {
     const canPrint = canLoad || (isCashier && isPublic && row.is_mine);
     const canEdit = Boolean(row.can_edit);
     const canDelete = Boolean(row.can_delete);
+    const canPay = Boolean(row.can_mark_paid);
 
-    if (!canPrint && !canEdit && !canDelete) return null;
+    if (!canPrint && !canEdit && !canDelete && !canPay) return null;
 
     return (
       <>
+        {canPay && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            title="Marcar como pago"
+            aria-label={`Marcar como pago el ticket ${row.ticket_number}`}
+            disabled={isMarkingPaid}
+            onClick={() => handleMarkPaid(row)}
+          >
+            <BadgeDollarSign />
+          </Button>
+        )}
         {canPrint && (
           <Button
             type="button"
@@ -433,6 +567,19 @@ export const ManageBetsPage = () => {
           onHitsChange={(value) => updateParam('hits', value.join(','))}
         />
 
+        <div className="flex items-center gap-2 sm:pb-2">
+          <Checkbox
+            id="manage-bets-owed"
+            checked={onlyOwed}
+            onCheckedChange={(checked) =>
+              updateParam('payment_status', checked === true ? POLLA_PAYMENT_STATUS.OWED : '')
+            }
+          />
+          <Label htmlFor="manage-bets-owed" className="cursor-pointer py-1">
+            Impagos
+          </Label>
+        </div>
+
         <div className="flex min-w-0 flex-col gap-1">
           <Label>Ordenar por</Label>
           <Select
@@ -460,6 +607,24 @@ export const ManageBetsPage = () => {
           {refreshing ? 'Actualizando…' : 'Actualizar'}
         </Button>
 
+        {isCashier && selectedEdition && !searching && (
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={handleDeleteUnpaid}
+            disabled={checkingUnpaid || isDeletingUnpaid}
+            title={
+              playerId
+                ? 'Borra los tickets en Debe de este jugador en la edición'
+                : 'Borra todos tus tickets en Debe de la edición'
+            }
+          >
+            <Trash2 />
+            {checkingUnpaid || isDeletingUnpaid ? 'Revisando…' : 'Eliminar impagos'}
+          </Button>
+        )}
+
         {selectedEdition && !searching && (
           <ShareTicketsPdfButton
             edition={selectedEdition}
@@ -477,6 +642,24 @@ export const ManageBetsPage = () => {
           />
         )}
       </div>
+
+      {playerToCollect && (
+        <div className="mb-3 flex flex-col gap-2 rounded-md border bg-card p-3 text-sm text-card-foreground sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1 text-muted-foreground">
+            Cobrale a {playerToCollect.name} todo lo que debe en esta edición de una vez.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isMarkingPaid}
+            onClick={handleMarkAllPaid}
+          >
+            <BadgeDollarSign />
+            Marcar todos sus impagos como pagos
+          </Button>
+        </div>
+      )}
 
       {canFreeRepeat && (
         <div className="mb-3 flex flex-col gap-2 rounded-md border bg-card p-3 text-sm text-card-foreground sm:flex-row sm:items-center">
@@ -528,6 +711,7 @@ export const ManageBetsPage = () => {
         freeRepeats={freeRepeats}
         renderActions={renderActions}
         canCopyTicket
+        editionStatusOf={editionStatusOf}
         selection={canFreeRepeat ? { canSelect, selected, onToggle: toggleSelected } : undefined}
       />
 

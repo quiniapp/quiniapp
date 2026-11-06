@@ -4,6 +4,49 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R12: sin impresión para el Súper)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`): cuando el Súper cierra un ticket (o repite), no se abre el diálogo de impresión ni el de compartir. Aparece un aviso con el número de ticket y el ticket queda en "Último ticket cargado". Lo puede reimprimir desde Administrar jugadas. Los demás roles no cambian.
+- **Repetir ticket** (`RepeatBetDialog`, `prints`): para el Súper el botón dice "Cargar" en lugar de "Cargar e imprimir".
+
+### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
+
+- **Rutas** (`routes/route.tsx`) y **menú** (`components/layout/AppLayout.tsx`): quién ve cada pantalla sale de `POLLA_PAGE_ROLES`, la misma matriz que usa la API. `routes/pages.ts` mapea cada pantalla a su ruta (`PAGE_PATH`, `homePath`).
+- **El Súper** ve en el menú solo Cargar jugada, Administrar jugadas y Configuración. Jugadas, Mis jugadas, Resultados y Revisar ticket lo devuelven a Cargar jugada. Su etiqueta es "Súper".
+- **Inicio por rol**: `/`, el login, el cambio de contraseña y las pantallas que no le tocan a un rol llevan a su inicio (`HomeRedirect`, `RoleRoute`): Jugadas, o Cargar jugada para el Súper. Antes iban siempre a Jugadas.
+- **Tests** (`src/__tests__/helper/access.test.ts`): la matriz de permisos de cada rol, el inicio y que la API le niegue al Súper los endpoints de las pantallas que no ve.
+
+### Changed - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **Listados** (`BetsList`, en Jugadas, Mis jugadas y Administrar jugadas): cada ticket muestra, para todos los roles, la fecha y hora reales de carga y el estado (**Jugando**, **Ganadora** con su fecha o **No ganó**). El pasador y el staff ven además **Debe**; el jugador no ve el pago. `useBetsEdition` devuelve `editionStatusOf` para saber si la edición terminó.
+- **Cargar jugada**: debajo de "Cerrar ticket" aparece el último ticket cargado (o los repetidos), con número, fecha y hora, estado y, salvo para el jugador, Pagado o Debe.
+- **Ticket impreso** (`makePollaTicket.ts`, `loadedAt`): imprime la hora de carga y no la de impresión, así una reimpresión dice la misma hora.
+- `fmtDateTime` en `features/bets/format.ts`.
+- **Tests** (`src/__tests__/helper/bet-status.test.ts`): estado de juego, etiquetas y los schemas de pago.
+
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): botón **Eliminar impagos**, solo para el pasador. Borra sus tickets en Debe de la edición elegida o, si filtró un jugador, solo los de ese jugador.
+  - Antes de borrar pide el resumen y confirma con la cantidad y el monto, y avisa si hay ganadoras en Debe, que no se borran.
+  - Si cerró la carga o no hay impagos, lo dice y no borra nada.
+- `useDeleteUnpaidBets`, `unpaidQuery` y las rutas `bet.unpaidSummary` y `bet.unpaid`.
+
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`):
+  - Filtro **Impagos** (`payment_status=OWED` en la URL).
+  - Botón **Marcar como pago** en cada ticket en Debe que cobra el usuario (`can_mark_paid`), con confirmación porque no se puede deshacer.
+  - Con un jugador filtrado: **Marcar todos sus impagos como pagos** en la edición.
+- **Listado de jugadas** (`BetsList`): badge **Debe** en los tickets fiados. Solo lo ven el pasador y el staff, porque al jugador no le llega el estado.
+- `useMarkBetsPaid` y la ruta `bet.payment`. `useApiMutation` acepta `patch`.
+
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`): el botón pasa a "Cerrar ticket" y abre `PaymentDialog` con **Efectivo** y **Debe**. Efectivo tiene el foco, así que Enter lo cierra pagado, como antes. El jugador no ve el diálogo: su ticket queda en Debe.
+- **Repetir ticket** (`RepeatBetDialog`): el pasador y el staff eligen Efectivo o Debe para lo que repiten (`choosePayment`).
+- **Ticket impreso** (`functions/makePollaTicket.ts`): `paymentStatus` imprime PAGADO o DEBE debajo del valor. No aparece en lo sin cargo ni en el ticket del jugador. La reimpresión de Administrar jugadas también lo lleva.
+- **El jugador no imprime**: su ticket se descarga o se comparte como PDF (`sharePdf`), sin el diálogo de impresión.
+
 ### Added - 2026-11-05 (R23: elegir qué pasadores exportar; R01: nombre del archivo)
 
 - **Exportar liquidación** (`features/current-account/index.tsx`): antes de descargar se abre `ExportLiquidationsDialog` (`dialogs/ExportLiquidationsDialog.tsx`), con la lista de pasadores, una casilla por cada uno, "Seleccionar todos (N de M)" y el total de cada uno. Se descarga un PDF por pasador elegido (descargas separadas, como hasta ahora).

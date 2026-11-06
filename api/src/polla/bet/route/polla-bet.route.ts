@@ -16,9 +16,11 @@ import {
   IPollaTicketCheck,
   IPollaTicketHolder,
   POLLA_HITS_FILTER,
+  POLLA_PAYMENT_STATUS,
   POLLA_TICKET_SEARCH,
 } from '@helper/polla/types/game.type';
 import {
+  markPollaBetsPaidSchema,
   newPollaBetSchema,
   repeatPollaBetsSchema,
   updatePollaBetSchema,
@@ -27,6 +29,7 @@ import {
   POLLA_ACCOUNT_RECALC_MAX_DAYS,
   POLLA_EXPORT_PAGE_SIZE,
 } from '@helper/polla/config/session.config';
+import { POLLA_API_ROLES } from '@helper/polla/config/access.config';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import {
   PollaBetRepository,
@@ -87,6 +90,16 @@ const queryHits = (value: unknown): number[] | null => {
   return hits;
 };
 
+/** `payment_status=OWED`: "Impagos" (o solo pagadas). */
+const queryPaymentStatus = (value: unknown): POLLA_PAYMENT_STATUS | null => {
+  const raw = queryString(value);
+  if (!raw) return null;
+  if (!Object.values(POLLA_PAYMENT_STATUS).includes(raw as POLLA_PAYMENT_STATUS)) {
+    throw new BadRequestError('Estado de pago inválido');
+  }
+  return raw as POLLA_PAYMENT_STATUS;
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Rango `desde`/`hasta` (los dos o ninguno), de hasta un período de liquidación. */
@@ -116,7 +129,31 @@ interface ActionContext {
   openEditions: Set<string>;
 }
 
-const NO_ACTIONS: IPollaBetActions = { can_edit: false, can_delete: false };
+const NO_ACTIONS: IPollaBetActions = { can_edit: false, can_delete: false, can_mark_paid: false };
+
+/**
+ * Quién cobra la jugada (R13, el mismo alcance que `polla_mark_bets_paid`):
+ * superadmin+ y el Súper, toda la organización; el admin, su grupo; el
+ * pasador, lo imputado a él. El jugador nunca.
+ */
+const collectsPayment = (bet: PollaBetRow, viewer: IPollaSessionUser) => {
+  if (isPollaSuperRole(viewer.user_type) || viewer.user_type === POLLA_USER_TYPE.ASSISTANT) {
+    return true;
+  }
+  if (viewer.user_type === POLLA_USER_TYPE.ADMIN) {
+    return Boolean(viewer.polla_group_id) && bet.polla_group_id === viewer.polla_group_id;
+  }
+  if (viewer.user_type === POLLA_USER_TYPE.CASHIER) {
+    return bet.cashier_polla_user_id === viewer.polla_user_id;
+  }
+  return false;
+};
+
+/** En Debe, vigente y la cobra el usuario. Las ganadoras también se cobran. */
+const canMarkPaid = (bet: PollaBetRow, viewer: IPollaSessionUser) =>
+  !bet.deleted_at &&
+  bet.payment_status === POLLA_PAYMENT_STATUS.OWED &&
+  collectsPayment(bet, viewer);
 
 /**
  * Lo que administra cada rol ("Administrar jugadas" y su PDF de tickets): el
@@ -142,27 +179,30 @@ const actionsFor = (
   viewer: IPollaSessionUser,
   ctx: ActionContext
 ): IPollaBetActions => {
+  const can_mark_paid = canMarkPaid(bet, viewer);
   const alive = !bet.winner && !bet.deleted_at;
-  if (!alive) return NO_ACTIONS;
+  if (!alive) return { ...NO_ACTIONS, can_mark_paid };
 
-  if (isPollaSuperRole(viewer.user_type)) return { can_edit: true, can_delete: true };
+  if (isPollaSuperRole(viewer.user_type)) {
+    return { can_edit: true, can_delete: true, can_mark_paid };
+  }
 
   const open = ctx.openEditions.has(bet.polla_edition_id);
 
   if (viewer.user_type === POLLA_USER_TYPE.ADMIN) {
     const inGroup = bet.polla_group_id === viewer.polla_group_id;
-    return { can_edit: inGroup && open, can_delete: inGroup && open };
+    return { can_edit: inGroup && open, can_delete: inGroup && open, can_mark_paid };
   }
 
   if (viewer.user_type === POLLA_USER_TYPE.ASSISTANT) {
-    return { can_edit: open, can_delete: open };
+    return { can_edit: open, can_delete: open, can_mark_paid };
   }
 
   if (viewer.user_type === POLLA_USER_TYPE.CASHIER) {
-    return { can_edit: false, can_delete: isOwnOrImputed(bet, viewer) && open };
+    return { can_edit: false, can_delete: isOwnOrImputed(bet, viewer) && open, can_mark_paid };
   }
 
-  return { can_edit: false, can_delete: false };
+  return NO_ACTIONS;
 };
 
 /** Si la jugó un jugador, el pasador al que se imputa es otro usuario: el suyo. */
@@ -203,6 +243,13 @@ const toPublicBet = (
   identifier: bet.identifier,
   // El monto de lo propio se ve (lo cobra el pasador); el de lo ajeno es un total.
   amount: isOwnOrImputed(bet, viewer) ? Number(bet.amount) : null,
+  // Fecha y hora reales de carga (R10), para todos.
+  created_at: bet.created_at,
+  // Pagado o Debe: el pasador (lo imputado a él) y el Súper. El jugador, nunca.
+  payment_status:
+    viewer.user_type !== POLLA_USER_TYPE.PLAYER && collectsPayment(bet, viewer)
+      ? bet.payment_status
+      : null,
   ...actions,
 });
 
@@ -227,14 +274,31 @@ export class PollaBetRouter {
 
   private setupRoutes() {
     this.router.get('/winners', this.getWinnersHandler);
-    this.router.get('/sales', this.getDailySalesHandler);
+    // Ventas y Revisar ticket: los mismos roles que ven esas pantallas (el
+    // Súper y el jugador, no).
+    this.router.get(
+      '/sales',
+      requirePollaRole(...POLLA_API_ROLES.sales),
+      this.getDailySalesHandler
+    );
     this.router.get('/last', this.getLastHandler);
     this.router.get('/mine/last-edition', this.getLastEditionHandler);
     this.router.get('/ticket/:ticketNumber', this.getByTicketHandler);
     this.router.get(
       '/check/:ticketNumber',
-      requirePollaRole(...POLLA_STAFF_ROLES),
+      requirePollaRole(...POLLA_API_ROLES.checkTicket),
       this.checkTicketHandler
+    );
+    this.router.patch('/payment', requirePollaRole(...POLLA_STAFF_ROLES), this.markPaidHandler);
+    this.router.get(
+      '/unpaid-summary',
+      requirePollaRole(POLLA_USER_TYPE.CASHIER),
+      this.unpaidSummaryHandler
+    );
+    this.router.delete(
+      '/unpaid',
+      requirePollaRole(POLLA_USER_TYPE.CASHIER),
+      this.deleteUnpaidHandler
     );
     this.router.post('/repeat', this.repeatHandler);
     this.router.post(
@@ -318,6 +382,12 @@ export class PollaBetRouter {
       throw new ForbiddenError('Los jugadores no administran jugadas');
     }
 
+    // R11: el Súper solo administra jugadas (Administrar y su PDF); no ve
+    // Jugadas ni la cuenta corriente.
+    if (!managing && !POLLA_API_ROLES.readAllBets.includes(user.user_type)) {
+      throw new ForbiddenError('El Súper solo carga y administra jugadas');
+    }
+
     if (editionId) await this.assertEditionScope(user, editionId);
 
     const ticketNumber = queryString(req.query.ticket_number);
@@ -371,6 +441,7 @@ export class PollaBetRouter {
       onlyWinners: req.query.winners === 'true',
       winner: queryWinner(req.query.winner),
       hits: queryHits(req.query.hits),
+      paymentStatus: queryPaymentStatus(req.query.payment_status),
     };
 
     // Las borradas son de la liquidación: cada uno ve solo lo suyo.
@@ -553,6 +624,7 @@ export class PollaBetRouter {
       editionId: payload.polla_edition_id,
       betIds: payload.polla_bet_ids,
       free: false,
+      paymentStatus: payload.payment_status,
     });
 
     res.status(201).json({ data: { result } });
@@ -582,18 +654,11 @@ export class PollaBetRouter {
    * `date`, las de ese día en esa edición; con `polla_edition_id` solo, toda la
    * edición; con `date` solo (o nada, hoy), el día en todas las ediciones.
    * Superadmin+ ve el total de la organización y el desglose por grupo; el
-   * admin, su grupo; el pasador, solo lo imputado a él. El jugador y el Super
-   * no las ven.
+   * admin, su grupo; el pasador, solo lo imputado a él. El jugador y el Súper
+   * no las ven (lo frena el guard de la ruta).
    */
   private getDailySalesHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-
-    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
-      throw new ForbiddenError('Los jugadores no ven las ventas');
-    }
-    if (user.user_type === POLLA_USER_TYPE.ASSISTANT) {
-      throw new ForbiddenError('El Super no ve las ventas');
-    }
 
     const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
 
@@ -675,6 +740,8 @@ export class PollaBetRouter {
       // corte de cada rol lo controla la RPC.
       date: isPollaSuperRole(user.user_type) ? payload.date : undefined,
       identifier: payload.identifier,
+      // Efectivo o Debe (R04). El jugador no elige: la RPC lo deja en Debe.
+      paymentStatus: payload.payment_status,
     });
 
     res.status(201).json({ data: { bet } });
@@ -726,6 +793,60 @@ export class PollaBetRouter {
     const bet = await this.repository.updateNumbers(req.params.id, numbers, user.polla_user_id);
 
     res.status(200).json({ data: { bet } });
+  });
+
+  /**
+   * Marcar como pagados (R13): esos tickets o todos los impagos de un jugador
+   * en una edición. Solo Debe → Pagado, en efectivo, con quién y cuándo. El
+   * pasador marca lo imputado a él; el admin, su grupo; el Súper y
+   * superadmin+, la organización (lo vuelve a controlar la RPC).
+   */
+  private markPaidHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const payload = markPollaBetsPaidSchema.parse(req.body);
+
+    if (payload.polla_edition_id) await this.assertEditionScope(user, payload.polla_edition_id);
+
+    const result = await this.repository.markPaid({
+      actorId: user.polla_user_id,
+      betIds: payload.polla_bet_ids,
+      editionId: payload.polla_bet_ids ? undefined : payload.polla_edition_id,
+      userId: payload.polla_bet_ids ? undefined : payload.polla_user_id,
+    });
+
+    res.status(200).json({ data: { result } });
+  });
+
+  /** Edición (obligatoria) y jugador (opcional) de "Eliminar impagos". */
+  private unpaidTarget = async (req: Request) => {
+    const { user } = getPollaSession(req);
+    const editionId = queryString(req.query.polla_edition_id);
+    if (!editionId) throw new BadRequestError('Elegí la edición');
+    await this.assertEditionScope(user, editionId);
+    return {
+      actorId: user.polla_user_id,
+      editionId,
+      userId: queryString(req.query.polla_user_id),
+    };
+  };
+
+  /**
+   * "Eliminar impagos" (R14), antes de confirmar: cuántos y cuánto. Solo el
+   * pasador, sobre lo imputado a él (la RPC lo vuelve a controlar).
+   */
+  private unpaidSummaryHandler = asyncHandler(async (req: Request, res: Response) => {
+    const summary = await this.repository.unpaidSummary(await this.unpaidTarget(req));
+    res.status(200).json({ data: { summary } });
+  });
+
+  /**
+   * Borra los tickets en Debe del pasador en la edición (de un jugador, si se
+   * pide), salvo las ganadoras, hasta el cierre de carga. Entran en Borradas
+   * como el borrado de a uno.
+   */
+  private deleteUnpaidHandler = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.repository.deleteUnpaid(await this.unpaidTarget(req));
+    res.status(200).json({ data: { result } });
   });
 
   private deleteHandler = asyncHandler(async (req: Request, res: Response) => {

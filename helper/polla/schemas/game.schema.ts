@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { dateRegex } from '../../functions/dateRegex';
-import { POLLA_BET_IDENTIFIER_MAX, POLLA_NUMBERS_REQUIRED } from '../types/game.type';
+import {
+  POLLA_BET_IDENTIFIER_MAX,
+  POLLA_NUMBERS_REQUIRED,
+  POLLA_PAYMENT_STATUS,
+} from '../types/game.type';
 
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Hora inválida (HH:mm)');
@@ -163,6 +167,11 @@ export const newPollaBetSchema = z.object({
     )
     .nullable()
     .optional(),
+  /**
+   * Efectivo (`PAID`, si no viene) o Debe (`OWED`). Lo que carga el jugador
+   * queda siempre en Debe: la base ignora lo que mande.
+   */
+  payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
 
 export const updatePollaBetSchema = z.object({
@@ -183,7 +192,28 @@ export const repeatPollaBetsSchema = z.object({
     .array(z.string().uuid())
     .min(1, 'Elegí al menos un ticket')
     .max(POLLA_REPEAT_MAX_BETS, `Se repiten hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`),
+  /** Pago de todo el lote (ver `newPollaBetSchema`). Lo sin cargo queda pagado. */
+  payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
+
+/**
+ * Marcar como pagados (R13): esos tickets (`polla_bet_ids`) o todos los
+ * impagos de un jugador en una edición (`polla_edition_id` + `polla_user_id`).
+ */
+export const markPollaBetsPaidSchema = z
+  .object({
+    polla_bet_ids: z
+      .array(z.string().uuid())
+      .min(1, 'Elegí al menos un ticket')
+      .max(POLLA_REPEAT_MAX_BETS, `Se marcan hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`)
+      .optional(),
+    polla_edition_id: z.string().uuid().optional(),
+    polla_user_id: z.string().uuid().optional(),
+  })
+  .refine(
+    (data) => Boolean(data.polla_bet_ids) || Boolean(data.polla_edition_id && data.polla_user_id),
+    'Elegí los tickets, o la edición y el jugador'
+  );
 
 // -------------------------------------------------------- cuenta corriente
 

@@ -4,6 +4,72 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
+
+- Los guards salen de la matriz de acceso de `helper/polla/config/access.config.ts` (`POLLA_API_ROLES`), la misma que usan el menú y las rutas de polla-web.
+- El Súper (ASSISTANT) recibe 403 en:
+  - **`GET /polla/private/bet`** sin `view=manage` ni `export` (Jugadas, su PDF y lo que lee la cuenta corriente). Administrar jugadas y su PDF siguen igual.
+  - **`GET /polla/private/bet/check/:ticket`** (Revisar ticket).
+  - **`GET /polla/private/bet/sales`**: el guard de la ruta reemplaza los dos chequeos dentro del handler (jugador y Súper).
+  - **`GET /polla/private/result`** y **`GET /result/:id`** (Resultados).
+- Sin migración.
+
+### Changed - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **`GET /polla/private/bet`** (proyección pública del pasador, el jugador y el Súper): suma `created_at`, la fecha y hora reales de carga. El estado de pago sigue las reglas de R13: solo lo ve quien cobra la jugada.
+- Sin migración.
+
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+#### Migración `20261105150000_polla_delete_unpaid_bets.sql`
+- **`polla_delete_unpaid_bets(actor, edición, jugador?)`** (nueva): el pasador borra de una vez sus tickets en Debe de la edición, o los de un jugador suyo. Toca solo lo imputado a él y nunca borra ganadoras.
+  - Corte: el mismo que el borrado de a uno, hasta el cierre de carga de la edición para el pasador (`POLLA_LOAD_LIMIT_EXCEEDED`).
+  - La baja se descuenta del pase hoy, o al día siguiente si su cuenta ya se liquidó hoy (Borradas, como `polla_delete_bet`).
+  - Descuenta los tickets y lo recaudado de la edición y refresca la fila de la cuenta corriente.
+- **`polla_unpaid_bets_summary(actor, edición, jugador?)`** (nueva): cuántos y cuánto se borrarían, cuántas ganadoras en Debe quedan afuera y si la carga sigue abierta.
+- Solo el pasador (`POLLA_UNPAID_DELETE_ONLY_CASHIER`).
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`GET /polla/private/bet/unpaid-summary?polla_edition_id&polla_user_id?`** y **`DELETE /polla/private/bet/unpaid?polla_edition_id&polla_user_id?`** (nuevos, solo pasador). Van antes de `/:id`.
+
+#### Tests
+- **`060_polla_delete_unpaid_bets.test.sql`** (16): solo el pasador; el resumen (cantidad, monto y ganadoras que no se borran); borrar los de un jugador y después el resto; lo pagado, las ganadoras y lo de otro pasador no se tocan; Borradas con fecha de hoy; la edición descuenta; pasado el cierre no se borra.
+
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+#### Migración `20261105140000_polla_mark_bets_paid.sql`
+- **`polla_mark_bets_paid(actor, bet_ids?, edition?, user?)`** (nueva): pasa a Pagado, en efectivo, esos tickets o todos los impagos de un jugador en una edición. Guarda quién cobró y cuándo. Solo Debe → Pagado: las que ya estaban pagadas no se tocan y no hay vuelta atrás.
+- **`polla_bet_in_payment_scope(actor, bet)`** (nueva): el alcance de quien cobra. El pasador cobra lo imputado a él; el admin, su grupo; el Súper y superadmin+, la organización; el jugador, nada. Si un ticket pedido está fuera del alcance, no se marca ninguno (`POLLA_BET_OUT_OF_SCOPE`).
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`PATCH /polla/private/bet/payment`** (nuevo, staff y pasador): `{polla_bet_ids}` o `{polla_edition_id, polla_user_id}`. Devuelve `{updated, amount}`.
+- **`GET /polla/private/bet`**: filtro `payment_status` (`OWED` = impagos).
+- Cada jugada trae `can_mark_paid`: está en Debe y el usuario la cobra.
+- La proyección pública (pasador y Súper) trae `payment_status` de lo que cobra quien mira. El jugador y los demás pasadores reciben `null`.
+- Errores nuevos: `POLLA_PAYMENT_FORBIDDEN` y `POLLA_PAYMENT_TARGET_REQUIRED`.
+
+#### Tests
+- **`050_polla_mark_bets_paid.test.sql`** (15): el jugador no marca; el pasador y el admin no salen de su alcance, y si falla uno no se marca ninguno; queda pagado en efectivo con quién lo cobró; no se vuelve a marcar; todos los impagos de un jugador, con su monto; el Súper en toda la organización.
+
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+#### Migración `20261105130000_polla_bet_payment_status.sql`
+- Enums `polla_payment_status_enum` (`PAID`, `OWED`) y `polla_payment_method_enum` (`CASH`). QR o transferencia se suman después con `ALTER TYPE ... ADD VALUE`.
+- `polla_bets` suma `payment_status` (por defecto `PAID`), `payment_method`, `paid_at` y `paid_by`, con `polla_bets_payment_check`: una en Debe no tiene medio ni cobro. Índice `idx_polla_bets_edition_owed` para los impagos de una edición.
+- Backfill: las jugadas existentes quedan pagadas en efectivo, cobradas al cargarse (`paid_at = created_at`) por quien las cargó (`paid_by = created_by`). Las repetidas sin cargo, sin medio.
+- **`polla_create_bet`** recibe `p_payment_status`. El jugador carga siempre en Debe, sin elegir; lo repetido sin cargo queda pagado; el resto elige, y si no manda nada queda en Efectivo. Si queda pagada, guarda medio, hora y quién cobró.
+- **`polla_repeat_bets`** recibe `p_payment_status` para todo el lote.
+- Una jugada en Debe entra al sorteo y al pase como cualquier otra: la cuenta corriente no cambia.
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`POST /polla/private/bet`** y **`POST /bet/repeat`**: `payment_status` opcional (`PAID` | `OWED`).
+
+#### Tests
+- **`040_polla_bet_payment.test.sql`** (17): Efectivo, sin elegir, Debe (sin cobro y en el pase), el jugador forzado a Debe, el lote repetido con su pago y lo repetido sin cargo pagado.
+
 ### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
 
 #### Migración `20261105090000_polla_edition_draws_min_hits.sql`

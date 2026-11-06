@@ -5,6 +5,8 @@ import {
   IPollaBetEntityBack,
   IPollaEditionEntityFront,
   IPollaRepeatResult,
+  POLLA_PAYMENT_STATUS,
+  POLLA_PAYMENT_STATUS_LABEL,
 } from '@helper/polla/types/game.type';
 import { useBetToRepeat, useLastEditionBets } from '@/hooks/fetchs/usePollaData';
 import { useRepeatBets } from '@/hooks/mutations/usePollaMutations';
@@ -22,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -37,6 +40,13 @@ interface RepeatBetDialogProps {
    * `mine`: los tickets de la última edición en que jugó (jugador).
    */
   mode: 'ticket' | 'mine';
+  /**
+   * Se elige Efectivo o Debe para lo que se repite (R04). El jugador no elige:
+   * lo suyo queda en Debe.
+   */
+  choosePayment: boolean;
+  /** Si lo cargado se imprime al confirmar (el Súper no imprime, R12). */
+  prints?: boolean;
   onClose: () => void;
   /** Ediciones donde el usuario carga ahora. */
   editions: IPollaEditionEntityFront[];
@@ -57,6 +67,8 @@ const HOLDER_LABEL = { CASHIER: 'Pasador', PLAYER: 'Jugador' } as const;
 export const RepeatBetDialog = ({
   open,
   mode,
+  choosePayment,
+  prints = true,
   onClose,
   editions,
   editionLabel,
@@ -70,6 +82,7 @@ export const RepeatBetDialog = ({
     defaultEditionId || (editions.length === 1 ? editions[0].polla_edition_id : '')
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [payment, setPayment] = useState(POLLA_PAYMENT_STATUS.PAID);
 
   const byTicket = useBetToRepeat(mode === 'ticket' ? searched || null : null);
   const mine = useLastEditionBets(open && mode === 'mine');
@@ -108,7 +121,11 @@ export const RepeatBetDialog = ({
       return;
     }
     repeat(
-      { polla_edition_id: edition.polla_edition_id, polla_bet_ids: ids },
+      {
+        polla_edition_id: edition.polla_edition_id,
+        polla_bet_ids: ids,
+        ...(choosePayment ? { payment_status: payment } : {}),
+      },
       {
         onSuccess: async (result) => {
           await handleResult(result);
@@ -173,6 +190,37 @@ export const RepeatBetDialog = ({
             </SelectContent>
           </Select>
         </div>
+
+        {choosePayment && (
+          <div className="flex flex-col gap-1">
+            <Label id="repeat-payment-label">Pago</Label>
+            <div
+              role="radiogroup"
+              aria-labelledby="repeat-payment-label"
+              className="inline-flex w-fit rounded-md border bg-card p-1"
+            >
+              {[POLLA_PAYMENT_STATUS.PAID, POLLA_PAYMENT_STATUS.OWED].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={payment === value}
+                  onClick={() => setPayment(value)}
+                  className={cn(
+                    'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+                    payment === value
+                      ? 'bg-nav-active text-nav-active-foreground'
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  )}
+                >
+                  {value === POLLA_PAYMENT_STATUS.PAID
+                    ? 'Efectivo'
+                    : POLLA_PAYMENT_STATUS_LABEL[POLLA_PAYMENT_STATUS.OWED]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {mode === 'ticket' && (
           <>
@@ -254,7 +302,7 @@ export const RepeatBetDialog = ({
               onClick={handleRepeatTicket}
               disabled={!bet || !editionId || byTicket.isFetching || isPending}
             >
-              {isPending ? 'Cargando…' : 'Cargar e imprimir'}
+              {isPending ? 'Cargando…' : prints ? 'Cargar e imprimir' : 'Cargar'}
             </Button>
           ) : (
             <Button

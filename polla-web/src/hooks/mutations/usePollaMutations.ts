@@ -3,6 +3,7 @@ import {
   IPollaGroupAccountEntityFront,
   IPollaProcessResult,
   IPollaRepeatResult,
+  POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
@@ -180,6 +181,8 @@ export const useCreateBet = () =>
       polla_user_id?: string;
       date?: string;
       identifier?: string;
+      /** Efectivo o Debe (el jugador no manda: queda en Debe). */
+      payment_status?: POLLA_PAYMENT_STATUS;
     }
   >('post', BACKEND_ROUTES.bet.base, {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
@@ -193,13 +196,47 @@ export const useUpdateBet = () =>
     { invalidate: ['polla-bets'], successMessage: 'Jugada actualizada' }
   );
 
+/**
+ * Marcar como pagados (R13): esos tickets o todos los impagos de un jugador en
+ * la edición. Solo Debe → Pagado. El aviso lo da la pantalla (dice cuántos).
+ */
+export const useMarkBetsPaid = () =>
+  useApiMutation<
+    { updated: number; amount: number },
+    { polla_bet_ids?: string[]; polla_edition_id?: string; polla_user_id?: string }
+  >('patch', BACKEND_ROUTES.bet.payment, { invalidate: ['polla-bets'] });
+
+/** Edición y, si se pide, jugador de "Eliminar impagos". */
+type UnpaidTarget = { polla_edition_id: string; polla_user_id?: string };
+
+export const unpaidQuery = ({ polla_edition_id, polla_user_id }: UnpaidTarget) =>
+  new URLSearchParams({
+    polla_edition_id,
+    ...(polla_user_id ? { polla_user_id } : {}),
+  }).toString();
+
+/** "Eliminar impagos" (R14, solo el pasador). El aviso lo da la pantalla. */
+export const useDeleteUnpaidBets = () =>
+  useApiMutation<{ deleted: number; amount: number; deducted_on: string }, UnpaidTarget>(
+    'delete',
+    (target) => `${BACKEND_ROUTES.bet.unpaid}?${unpaidQuery(target)}`,
+    {
+      invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
+    }
+  );
+
 export const useDeleteBet = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.bet.id(id), {
     invalidate: ['polla-bets', 'polla-editions', 'polla-sales', 'polla-current-accounts'],
     successMessage: 'Jugada eliminada',
   });
 
-type RepeatVariables = { polla_edition_id: string; polla_bet_ids: string[] };
+type RepeatVariables = {
+  polla_edition_id: string;
+  polla_bet_ids: string[];
+  /** Pago de todo el lote (solo al repetir con cargo). */
+  payment_status?: POLLA_PAYMENT_STATUS;
+};
 
 /** Repetir tickets (pagos) a nombre de su dueño original. Avisa la pantalla. */
 export const useRepeatBets = () =>
