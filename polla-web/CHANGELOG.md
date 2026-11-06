@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Removed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+- **Cuenta corriente** (planilla, vista del pasador, liquidar y generar liquidación): se saca la columna **Aciertos**, y del detalle del período, la tabla **Jugadas ganadoras** (`DayBetsTables`). Los textos ya no nombran los aciertos y avisan que los premios están en Premios.
+- **PDFs**: la hoja de liquidación (`liquidationSlipPDF.ts`) ya no tiene Aciertos ni la tabla de jugadas ganadoras. El diario y el resumen (`pdf-shared.ts`, `accountTablePDF.ts`) tampoco tienen la columna. Subtotales y cobros y pagos no la tenían.
+- `fetchWinnersByCashier` se borra, porque solo armaba la tabla de ganadoras de la hoja. Con eso se va el `limit: 200` que tenía.
+- `computeAccountTotals` y `liquidationSlipAmounts` ya no suman premios. El test de las hojas contra la liquidación general sigue andando.
+
 ### Changed - 2026-11-05 (R12: sin impresión para el Súper)
 
 - **Cargar jugada** (`features/make-bet/index.tsx`): cuando el Súper cierra un ticket (o repite), no se abre el diálogo de impresión ni el de compartir. Aparece un aviso con el número de ticket y el ticket queda en "Último ticket cargado". Lo puede reimprimir desde Administrar jugadas. Los demás roles no cambian.

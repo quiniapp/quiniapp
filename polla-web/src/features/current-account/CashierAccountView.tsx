@@ -15,7 +15,6 @@ import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/li
 import { Label } from '@/components/ui/label';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
-import { fetchWinnersByCashier } from './fetchers';
 import { ReportMode, fmtMoney } from './format';
 import { ModeToggle } from './dialogs/shared';
 
@@ -25,7 +24,7 @@ const FIELDS = [
   ['deleted_pass', 'Borradas'],
   ['pass', 'Pase'],
   ['cashier_commission', 'Comisión'],
-  ['successes', 'Aciertos'],
+  // Los premios no van en la cuenta corriente (R18): están en Premios.
   ['claims', 'Reclamos'],
   ['bills', 'Gastos'],
   ['revenue', 'Deja'],
@@ -62,14 +61,8 @@ export const CashierAccountView = () => {
     if (!account || !user) return;
     setPrinting(true);
     try {
-      const winnersByCashier = await fetchWinnersByCashier({
-        accounts: [account],
-        date,
-        ownAsCashier: { cashierId: user.polla_user_id },
-      });
       await downloadLiquidationSlipsPDF({
         accounts: [account],
-        winnersByCashier,
         cashierCodeOf: (of) => pollaCashierCode(groupNumber, of.user_number),
       });
     } catch {
@@ -84,7 +77,7 @@ export const CashierAccountView = () => {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tus aciertos y comisión, y lo que cobraste o te pagaron."
+        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tu comisión y lo que cobraste o te pagaron. Los premios de tus jugadores están en Premios."
         actions={
           <Button type="button" onClick={handlePrint} disabled={!account || printing}>
             <Printer />

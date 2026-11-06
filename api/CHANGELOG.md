@@ -4,6 +4,18 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+#### Migración `20261106090000_polla_prizes_out_of_account.sql`
+- **`polla_calculate_current_account`** y **`polla_update_current_account_recompute`**: desde el período abierto (el día siguiente a la última liquidación de cada pasador), los premios ya no restan en el subtotal ni en el saldo, y `successes` queda en 0. La cuenta corriente queda con el pase de jugadas, las borradas, los reclamos, los cobros y los pagos. "Pagos" sigue igual: es lo que se le transfiere al pasador.
+- Los días ya liquidados no cambian: conservan sus premios aunque se recalculen, por ejemplo al corregir un resultado viejo.
+- Al aplicarse, recalcula el período abierto de cada organización (`polla_recalculate_open_period`), como "Actualizar".
+- No se borra nada: los premios siguen en `polla_bets` (ganadoras) y pasan a la sección Premios (R19).
+- Rollback comentado al final del archivo.
+
+#### Tests
+- **`070_polla_prizes_out_of_account.test.sql`** (9): en el período abierto el premio no figura ni resta en el subtotal ni en el saldo, tampoco al editar el día; un día ya liquidado conserva su premio al recalcularse y al editarse.
+
 ### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
 
 - Los guards salen de la matriz de acceso de `helper/polla/config/access.config.ts` (`POLLA_API_ROLES`), la misma que usan el menú y las rutas de polla-web.

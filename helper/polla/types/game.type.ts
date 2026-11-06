@@ -586,6 +586,10 @@ export interface IPollaCurrentAccountEntityBack {
   deleted_pass: number;
   /** Pase real: pase de jugadas − borradas + reclamos positivos. Base de la comisión. */
   pass: number;
+  /**
+   * Premios del día. Desde R18 no van en la cuenta corriente: es 0 desde el
+   * período abierto. Los días ya liquidados conservan los suyos.
+   */
   successes: number;
   cashier_commission: number;
   claims: number;

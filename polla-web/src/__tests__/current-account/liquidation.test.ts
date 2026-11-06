@@ -50,7 +50,7 @@ describe('hasAccountMovement', () => {
     ['el saldo anterior', { previous_balance: -2500 }],
     ['los cobros', { collections: 300 }],
     ['los pagos', { paid: 300 }],
-    ['el total (un premio sin pase)', { successes: 50000, total: -50000 }],
+    ['el total (un reclamo sin pase)', { claims: -500, subtotal: -500, total: -500 }],
   ])('tiene movimiento con %s', (_label, amounts) => {
     expect(hasAccountMovement(account(amounts))).toBe(true);
   });

@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+- **`polla/types/game.type.ts`**: comentario de `IPollaCurrentAccountEntityBack.successes`. Es 0 desde el período abierto; los días ya liquidados conservan los suyos.
+
 ### Added - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
 
 - **`polla/config/access.config.ts`** (nuevo): la matriz de acceso de Polla.
