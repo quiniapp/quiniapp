@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **`polla/types/game.type.ts`**: `IPollaBetPublic.created_at`. `PollaBetGameStatus` (`PLAYING` | `WON` | `LOST`), `POLLA_BET_GAME_STATUS_LABEL` ("Jugando", "Ganadora", "No ganó") y `pollaBetGameStatus(bet, editionStatus)`: no ganó cuando su edición terminó sin que ganara.
+
 ### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
 
 - **`polla/types/game.type.ts`**: `IPollaUnpaidSummary` (`count`, `amount`, `winners_skipped`, `cutoff`, `can_delete`).

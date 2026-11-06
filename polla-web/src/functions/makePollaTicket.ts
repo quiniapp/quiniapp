@@ -31,6 +31,8 @@ export interface PollaTicketData {
   startDate: string;
   endDate: string;
   loadDate: string;
+  /** Momento real de carga (`created_at`): el ticket imprime su hora (R10). */
+  loadedAt?: string;
   ticketPrice: number;
   poolAmount: number;
   /** Pozo sorpresa: se imprime aparte si hay. */
@@ -145,8 +147,12 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
     const spaces = Math.max(1, CHARS_PER_LINE - left.length - right.length);
     return left + ' '.repeat(spaces) + right;
   };
+  // La hora de carga, no la de impresión (una reimpresión dice la misma).
   doc.text(
-    padLine(dayjs(data.loadDate).format('DD/MM/YYYY'), dayjs().format('HH:mm:ss')),
+    padLine(
+      dayjs(data.loadDate).format('DD/MM/YYYY'),
+      dayjs(data.loadedAt ?? undefined).format('HH:mm:ss')
+    ),
     MARGIN,
     y
   );

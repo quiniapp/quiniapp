@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **Listados** (`BetsList`, en Jugadas, Mis jugadas y Administrar jugadas): cada ticket muestra, para todos los roles, la fecha y hora reales de carga y el estado (**Jugando**, **Ganadora** con su fecha o **No ganó**). El pasador y el staff ven además **Debe**; el jugador no ve el pago. `useBetsEdition` devuelve `editionStatusOf` para saber si la edición terminó.
+- **Cargar jugada**: debajo de "Cerrar ticket" aparece el último ticket cargado (o los repetidos), con número, fecha y hora, estado y, salvo para el jugador, Pagado o Debe.
+- **Ticket impreso** (`makePollaTicket.ts`, `loadedAt`): imprime la hora de carga y no la de impresión, así una reimpresión dice la misma hora.
+- `fmtDateTime` en `features/bets/format.ts`.
+- **Tests** (`src/__tests__/helper/bet-status.test.ts`): estado de juego, etiquetas y los schemas de pago.
+
 ### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
 
 - **Administrar jugadas** (`features/manage-bets/index.tsx`): botón **Eliminar impagos**, solo para el pasador. Borra sus tickets en Debe de la edición elegida o, si filtró un jugador, solo los de ese jugador.

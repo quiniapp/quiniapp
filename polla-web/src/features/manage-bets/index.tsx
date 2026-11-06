@@ -79,8 +79,15 @@ type BetsFeedPage = PollaPage<IPollaBetListItem> & { free_repeats?: Record<strin
 export const ManageBetsPage = () => {
   const { user, role, organizationId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { editionId, editionList, selectedEdition, labelFor, titleFor, drawLabelsFor } =
-    useBetsEdition();
+  const {
+    editionId,
+    editionList,
+    selectedEdition,
+    labelFor,
+    titleFor,
+    drawLabelsFor,
+    editionStatusOf,
+  } = useBetsEdition();
 
   const canManage = Boolean(role && isPollaAdminRole(role));
   const isSuper = Boolean(role && isPollaSuperRole(role));
@@ -370,12 +377,14 @@ export const ManageBetsPage = () => {
       startDate: edition.start_date,
       endDate: edition.end_date,
       loadDate: row.load_date,
+      loadedAt: row.created_at,
       // Cada jugada guarda su precio: el de la edición puede haber cambiado.
       ticketPrice: Number(row.amount ?? edition.ticket_price),
       poolAmount: Number(edition.pool_amount),
       surprisePoolAmount: Number(edition.surprise_pool_amount ?? 0),
       isFree: row.is_free,
-      paymentStatus: isPublicPollaBet(row) ? undefined : row.payment_status,
+      // El pasador y el Súper reciben el estado de lo que cobran (R13).
+      paymentStatus: row.payment_status ?? undefined,
     });
 
     await deliverPdf(blob, fileName, `Ticket Polla ${row.ticket_number}`);
@@ -702,6 +711,7 @@ export const ManageBetsPage = () => {
         freeRepeats={freeRepeats}
         renderActions={renderActions}
         canCopyTicket
+        editionStatusOf={editionStatusOf}
         selection={canFreeRepeat ? { canSelect, selected, onToggle: toggleSelected } : undefined}
       />
 

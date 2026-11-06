@@ -6,9 +6,12 @@ import {
   IPollaBetEntityBack,
   IPollaEditionEntityFront,
   POLLA_BET_IDENTIFIER_MAX,
+  POLLA_BET_GAME_STATUS_LABEL,
   POLLA_EDITION_STATUS,
   POLLA_PAYMENT_STATUS,
+  POLLA_PAYMENT_STATUS_LABEL,
   isPollaSpecialEdition,
+  pollaBetGameStatus,
   pollaEditionDrawLabels,
   pollaEditionTitle,
   pollaPrizeRuleLabel,
@@ -42,6 +45,8 @@ import { PollaTicketData, makePollaTicketsPdf } from '@/functions/makePollaTicke
 import { deliverPdf, sharePdf } from '@/functions/printPdf';
 import { RepeatBetDialog } from './RepeatBetDialog';
 import { PaymentDialog } from './PaymentDialog';
+import { Badge } from '@/components/ui/badge';
+import { fmtDateTime } from '@/features/bets/format';
 
 const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 /** `HH:mm:ss` de la base → `HH:mm`. */
@@ -61,6 +66,8 @@ type TicketBet = Pick<
   | 'amount'
   | 'is_free'
   | 'payment_status'
+  | 'created_at'
+  | 'winner'
 >;
 
 const fmtCutoff = (value: string) => `${fmtDate(value.slice(0, 10))} ${value.slice(11, 16)}`;
@@ -85,6 +92,8 @@ export const MakeBetPage = () => {
   const [repeatOpen, setRepeatOpen] = useState(false);
   // Números listos para cerrar: mientras hay, se elige Efectivo o Debe.
   const [closing, setClosing] = useState<string[] | null>(null);
+  // Lo último que se cargó: número, fecha y hora, y estado (R10).
+  const [lastTickets, setLastTickets] = useState<TicketBet[]>([]);
   const boxesRef = useRef<PollaNumberBoxesHandle>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
 
@@ -128,6 +137,7 @@ export const MakeBetPage = () => {
     startDate: of.start_date,
     endDate: of.end_date,
     loadDate: bet.load_date,
+    loadedAt: bet.created_at,
     ticketPrice: Number(bet.amount),
     poolAmount: Number(of.pool_amount),
     surprisePoolAmount: Number(of.surprise_pool_amount ?? 0),
@@ -143,6 +153,7 @@ export const MakeBetPage = () => {
    */
   const printTickets = async (bets: TicketBet[], of: IPollaEditionEntityFront) => {
     if (bets.length === 0) return;
+    setLastTickets(bets);
     const { blob, fileName } = await makePollaTicketsPdf(bets.map((bet) => ticketDataOf(bet, of)));
     const text =
       bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`;
@@ -359,6 +370,44 @@ export const MakeBetPage = () => {
           <Button type="button" onClick={() => handleSubmit()} disabled={isPending}>
             {isPending ? 'Cargando…' : 'Cerrar ticket'}
           </Button>
+
+          {lastTickets.length > 0 && (
+            <div role="status" className="rounded-md border p-3 text-sm">
+              <p className="mb-1 font-medium">
+                {lastTickets.length === 1
+                  ? 'Último ticket cargado'
+                  : `Últimos ${lastTickets.length} tickets cargados`}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {lastTickets.map((bet) => (
+                  <li
+                    key={bet.ticket_number}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                  >
+                    <span className="font-mono text-xs">{bet.ticket_number}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {fmtDateTime(bet.created_at)}
+                    </span>
+                    <Badge variant="secondary">
+                      {POLLA_BET_GAME_STATUS_LABEL[pollaBetGameStatus(bet)]}
+                    </Badge>
+                    {/* El jugador no ve el estado de pago. */}
+                    {!isPlayer && !bet.is_free && (
+                      <Badge
+                        variant={
+                          bet.payment_status === POLLA_PAYMENT_STATUS.OWED
+                            ? 'destructive'
+                            : 'success'
+                        }
+                      >
+                        {POLLA_PAYMENT_STATUS_LABEL[bet.payment_status]}
+                      </Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

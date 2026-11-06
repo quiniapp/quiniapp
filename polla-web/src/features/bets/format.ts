@@ -9,6 +9,10 @@ import { pollaCashierCode } from '@helper/polla/types/user.type';
 
 export const fmtDate = (value?: string | null) => (value ? dayjs(value).format('DD-MM-YYYY') : '-');
 
+/** Fecha y hora de carga: "05/11 08:22". */
+export const fmtDateTime = (value?: string | null) =>
+  value ? dayjs(value).format('DD/MM HH:mm') : '-';
+
 export const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
 

@@ -242,6 +242,8 @@ const toPublicBet = (
   identifier: bet.identifier,
   // El monto de lo propio se ve (lo cobra el pasador); el de lo ajeno es un total.
   amount: isOwnOrImputed(bet, viewer) ? Number(bet.amount) : null,
+  // Fecha y hora reales de carga (R10), para todos.
+  created_at: bet.created_at,
   // Pagado o Debe: el pasador (lo imputado a él) y el Súper. El jugador, nunca.
   payment_status:
     viewer.user_type !== POLLA_USER_TYPE.PLAYER && collectsPayment(bet, viewer)

@@ -414,7 +414,30 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields, IPollaBetAction
    * jugador y los demás pasadores reciben `null`.
    */
   payment_status: POLLA_PAYMENT_STATUS | null;
+  /** Fecha y hora reales de carga (R10). */
+  created_at: string;
 }
+
+/** Estado de juego de un ticket (R10): sigue jugando, ganó o no ganó. */
+export type PollaBetGameStatus = 'PLAYING' | 'WON' | 'LOST';
+
+export const POLLA_BET_GAME_STATUS_LABEL: Record<PollaBetGameStatus, string> = {
+  PLAYING: 'Jugando',
+  WON: 'Ganadora',
+  LOST: 'No ganó',
+};
+
+/**
+ * Ganadora si ganó; "No ganó" cuando su edición terminó sin que ganara; si
+ * no, sigue jugando.
+ */
+export const pollaBetGameStatus = (
+  bet: Pick<IPollaBetEntityBack, 'winner'>,
+  editionStatus?: POLLA_EDITION_STATUS | null
+): PollaBetGameStatus => {
+  if (bet.winner) return 'WON';
+  return editionStatus === POLLA_EDITION_STATUS.FINISHED ? 'LOST' : 'PLAYING';
+};
 
 /**
  * "Eliminar impagos" (R14), antes de confirmar: los tickets en Debe del pasador

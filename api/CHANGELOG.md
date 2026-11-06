@@ -4,6 +4,11 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **`GET /polla/private/bet`** (proyección pública del pasador, el jugador y el Súper): suma `created_at`, la fecha y hora reales de carga. El estado de pago sigue las reglas de R13: solo lo ve quien cobra la jugada.
+- Sin migración.
+
 ### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
 
 #### Migración `20261105150000_polla_delete_unpaid_bets.sql`
