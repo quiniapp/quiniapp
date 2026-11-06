@@ -5,8 +5,9 @@ import { throwIfPollaError } from '../../helper/polla-errors';
 /** Tope de ganadores por edición que se listan (una edición tiene pocos). */
 const MAX_PRIZES = 1000;
 
+// `paid_by` viene por la FK de `prize_paid_by` (polla_bets tiene varias a polla_users).
 const PRIZE_COLUMNS =
-  'polla_bet_id, polla_edition_id, ticket_number, polla_user_id, cashier_polla_user_id, user_name, cashier_name, cashier_number, identifier, hits, prize, hit_date, polla_groups(name, number)';
+  'polla_bet_id, polla_edition_id, ticket_number, polla_user_id, cashier_polla_user_id, user_name, cashier_name, cashier_number, identifier, hits, prize, hit_date, prize_paid_at, polla_groups(name, number), paid_by:polla_users!polla_bets_prize_paid_by_fkey(name)';
 
 type RawPrize = {
   polla_bet_id: string;
@@ -21,7 +22,9 @@ type RawPrize = {
   hits: number;
   prize: number;
   hit_date: string | null;
+  prize_paid_at: string | null;
   polla_groups: { name: string; number: number } | null;
+  paid_by: { name: string } | null;
 };
 
 const toPrize = (row: RawPrize): IPollaPrize => ({
@@ -38,6 +41,8 @@ const toPrize = (row: RawPrize): IPollaPrize => ({
   hits: row.hits,
   prize: Number(row.prize),
   hit_date: row.hit_date,
+  prize_paid_at: row.prize_paid_at,
+  prize_paid_by_name: row.paid_by?.name ?? null,
 });
 
 export interface PollaPrizeFilters {
@@ -46,6 +51,20 @@ export interface PollaPrizeFilters {
 }
 
 export class PollaPrizeRepository {
+  /**
+   * Marca el premio como pagado (R20): solo dueño, capitalista y superadmin,
+   * solo ganadoras y sin vuelta atrás. Lo controla la RPC.
+   */
+  async markPaid(actorId: string, betId: string) {
+    const { data, error } = await supabase.rpc('polla_mark_prize_paid', {
+      p_actor_id: actorId,
+      p_bet_id: betId,
+    });
+
+    throwIfPollaError(error);
+    return data as { polla_bet_id: string; prize_paid_at: string; prize_paid_by: string };
+  }
+
   /**
    * Los tickets ganadores de una edición (los de la generación de ganadores),
    * vigentes, ordenados por grupo y pasador.

@@ -63,6 +63,7 @@ export const BACKEND_ROUTES = {
   },
   prize: {
     base: `${PRIVATE}/prize`,
+    paid: (betId: string) => `${PRIVATE}/prize/${betId}/paid`,
   },
   result: {
     base: `${PRIVATE}/result`,

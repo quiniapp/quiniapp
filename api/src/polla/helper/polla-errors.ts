@@ -62,6 +62,10 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
       'La edición ya tiene sorteos cargados: no se cambian los sorteos, el mínimo de aciertos ni la fecha de inicio'
     ),
   POLLA_PAYMENT_FORBIDDEN: () => new ForbiddenError('Los jugadores no marcan pagos'),
+  POLLA_PRIZE_PAY_FORBIDDEN: () =>
+    new ForbiddenError('Solo el dueño, el capitalista o el superadmin marcan premios pagados'),
+  POLLA_PRIZE_NOT_WINNER: () => new BadRequestError('Ese ticket no ganó: no tiene premio'),
+  POLLA_PRIZE_ALREADY_PAID: () => new ConflictError('Ese premio ya está marcado como pagado'),
   POLLA_UNPAID_DELETE_ONLY_CASHIER: () =>
     new ForbiddenError('Solo el pasador borra sus tickets impagos'),
   POLLA_PAYMENT_TARGET_REQUIRED: () =>

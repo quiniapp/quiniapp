@@ -571,14 +571,28 @@ export interface IPollaPrize {
   prize: number;
   /** Día en que ganó. */
   hit_date: string | null;
+  /** Cuándo se marcó como pagado (R20); `null` si todavía no. No se desmarca. */
+  prize_paid_at: string | null;
+  /** Quién lo marcó como pagado. */
+  prize_paid_by_name: string | null;
 }
 
-/** Los premios de una edición y cuánto suman. */
+/** `paid=true|false` de `GET /prize`: solo pagados o solo pendientes. */
+export type PollaPrizePaidFilter = 'true' | 'false';
+
+/**
+ * Los premios de una edición (con el filtro de pagados, si se pidió) y los
+ * totales de toda la edición: cuánto hay en premios, cuánto se pagó y cuánto
+ * falta.
+ */
 export interface IPollaPrizeList {
   polla_edition_id: string;
   prizes: IPollaPrize[];
   count: number;
   amount: number;
+  paid_count: number;
+  paid_amount: number;
+  pending_amount: number;
 }
 
 // ----------------------------------------------------------- ventas

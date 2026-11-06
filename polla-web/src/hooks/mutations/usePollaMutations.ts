@@ -206,6 +206,17 @@ export const useMarkBetsPaid = () =>
     { polla_bet_ids?: string[]; polla_edition_id?: string; polla_user_id?: string }
   >('patch', BACKEND_ROUTES.bet.payment, { invalidate: ['polla-bets'] });
 
+/** Tildar un premio como pagado (R20, superadmin+). No se destilda. */
+export const useMarkPrizePaid = () =>
+  useApiMutation<unknown, { betId: string }>(
+    'post',
+    ({ betId }) => BACKEND_ROUTES.prize.paid(betId),
+    {
+      invalidate: ['polla-prizes'],
+      successMessage: 'Premio marcado como pagado',
+    }
+  );
+
 /** Edición y, si se pide, jugador de "Eliminar impagos". */
 type UnpaidTarget = { polla_edition_id: string; polla_user_id?: string };
 

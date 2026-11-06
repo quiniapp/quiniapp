@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import { POLLA_API_ROLES } from '@helper/polla/config/access.config';
 import { IPollaPrizeList } from '@helper/polla/types/game.type';
+import { POLLA_SUPER_ROLES } from '@helper/polla/types/user.type';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaPrizeRepository } from '../repository/polla-prize.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
@@ -25,9 +26,15 @@ export class PollaPrizeRouter {
   constructor() {
     this.router = Router();
     this.router.get('/', requirePollaRole(...POLLA_API_ROLES.readPrizes), this.getAllHandler);
+    // R20: tildan pagado el dueño, el capitalista y el superadmin.
+    this.router.post('/:betId/paid', requirePollaRole(...POLLA_SUPER_ROLES), this.markPaidHandler);
   }
 
-  /** `polla_edition_id` (obligatorio): los ganadores de esa edición y cuánto suman. */
+  /**
+   * `polla_edition_id` (obligatorio): los ganadores de esa edición. `paid`
+   * (`true` | `false`) lista solo los pagados o solo los pendientes; los
+   * totales son siempre de toda la edición.
+   */
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const editionId = queryString(req.query.polla_edition_id);
@@ -38,18 +45,36 @@ export class PollaPrizeRouter {
       throw new ForbiddenError('La edición pertenece a otra organización');
     }
 
-    const prizes = await this.repository.getAll({
+    const paid = queryString(req.query.paid);
+    if (paid && paid !== 'true' && paid !== 'false') {
+      throw new BadRequestError('Filtro de pagados inválido');
+    }
+
+    const all = await this.repository.getAll({
       organizationId: user.polla_organization_id,
       editionId,
     });
+    const isPaid = (prize: { prize_paid_at: string | null }) => prize.prize_paid_at !== null;
+    const sum = (list: typeof all) => list.reduce((acc, prize) => acc + prize.prize, 0);
+    const paidOnes = all.filter(isPaid);
 
     const list: IPollaPrizeList = {
       polla_edition_id: editionId,
-      prizes,
-      count: prizes.length,
-      amount: prizes.reduce((acc, prize) => acc + prize.prize, 0),
+      prizes: paid ? all.filter((prize) => isPaid(prize) === (paid === 'true')) : all,
+      count: all.length,
+      amount: sum(all),
+      paid_count: paidOnes.length,
+      paid_amount: sum(paidOnes),
+      pending_amount: sum(all) - sum(paidOnes),
     };
 
     res.status(200).json({ data: { prizes: list } });
+  });
+
+  /** Tilda el premio como pagado (R20). Guarda quién y cuándo; no se destilda. */
+  private markPaidHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const result = await this.repository.markPaid(user.polla_user_id, req.params.betId);
+    res.status(200).json({ data: { result } });
   });
 }

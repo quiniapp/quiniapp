@@ -4,6 +4,27 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+#### Migración `20261106100000_polla_prize_paid.sql`
+- `polla_bets` suma `prize_paid_at` y `prize_paid_by`.
+- **`polla_mark_prize_paid(actor, bet)`** (nueva): tilda el premio como pagado y guarda quién y cuándo.
+  - Solo el dueño, el capitalista y el superadmin de la organización (`POLLA_PRIZE_PAY_FORBIDDEN`).
+  - Solo ganadoras (`POLLA_PRIZE_NOT_WINNER`).
+  - Una vez tildado no se vuelve a marcar ni se destilda (`POLLA_PRIZE_ALREADY_PAID`).
+- Sin CHECK contra `winner`: si una corrección anula a un ganador ya pagado, el reproceso no falla por eso.
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`POST /polla/private/prize/:betId/paid`** (nuevo, superadmin+).
+- **`GET /polla/private/prize`**:
+  - `paid=true|false` filtra pagados o pendientes.
+  - Cada premio trae `prize_paid_at` y `prize_paid_by_name`.
+  - Los totales (`count`, `amount`, `paid_count`, `paid_amount`, `pending_amount`) son de toda la edición.
+
+#### Tests
+- **`080_polla_prize_paid.test.sql`** (9): no marcan el Súper, el pasador ni otra organización; solo ganadoras; queda quién y cuándo; no se vuelve a marcar.
+
 ### Added - 2026-11-06 (R19: sección Premios)
 
 - **`GET /polla/private/prize?polla_edition_id`** (nuevo, `polla/prize/`): los tickets ganadores vigentes de la edición, con grupo, pasador, jugador o cliente, identificador, número de ticket, aciertos, día y monto. Devuelve también la cantidad y el total. Lo leen el dueño, el capitalista y el superadmin (`POLLA_API_ROLES.readPrizes`). Salen de la generación de ganadores que ya existe.

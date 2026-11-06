@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+- **Premios** (`features/prizes/index.tsx`):
+  - Columna **Pagado**. El dueño, el capitalista y el superadmin tildan la casilla, con una confirmación porque no se destilda. Tildado, muestra cuándo y quién lo marcó.
+  - Filtro **Todos | No pagados | Pagados**.
+  - Totales de la edición: ganadores, en premios, pagado y falta pagar.
+- `useMarkPrizePaid` y la ruta `prize.paid`.
+
 ### Added - 2026-11-06 (R19: sección Premios)
 
 - **Premios** (`features/prizes/index.tsx`, ruta `/premios`, ítem del menú debajo de Cuenta corriente): con la edición elegida (en la URL, como Jugadas), la cantidad de ganadores, el total en premios y cada ticket ganador con grupo, pasador, jugador o cliente, número de ticket, aciertos, día en que ganó y monto. Tarjetas en mobile y planilla con total en desktop.

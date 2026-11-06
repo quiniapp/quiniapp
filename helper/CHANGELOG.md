@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+- **`polla/types/game.type.ts`**: `IPollaPrize.prize_paid_at` y `prize_paid_by_name`. `IPollaPrizeList` suma `paid_count`, `paid_amount` y `pending_amount`. Nuevo `PollaPrizePaidFilter`.
+
 ### Added - 2026-11-06 (R19: sección Premios)
 
 - **`polla/types/game.type.ts`**: `IPollaPrize` e `IPollaPrizeList`.
