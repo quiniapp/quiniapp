@@ -29,6 +29,7 @@ import {
   POLLA_ACCOUNT_RECALC_MAX_DAYS,
   POLLA_EXPORT_PAGE_SIZE,
 } from '@helper/polla/config/session.config';
+import { POLLA_API_ROLES } from '@helper/polla/config/access.config';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import {
   PollaBetRepository,
@@ -273,13 +274,19 @@ export class PollaBetRouter {
 
   private setupRoutes() {
     this.router.get('/winners', this.getWinnersHandler);
-    this.router.get('/sales', this.getDailySalesHandler);
+    // Ventas y Revisar ticket: los mismos roles que ven esas pantallas (el
+    // Súper y el jugador, no).
+    this.router.get(
+      '/sales',
+      requirePollaRole(...POLLA_API_ROLES.sales),
+      this.getDailySalesHandler
+    );
     this.router.get('/last', this.getLastHandler);
     this.router.get('/mine/last-edition', this.getLastEditionHandler);
     this.router.get('/ticket/:ticketNumber', this.getByTicketHandler);
     this.router.get(
       '/check/:ticketNumber',
-      requirePollaRole(...POLLA_STAFF_ROLES),
+      requirePollaRole(...POLLA_API_ROLES.checkTicket),
       this.checkTicketHandler
     );
     this.router.patch('/payment', requirePollaRole(...POLLA_STAFF_ROLES), this.markPaidHandler);
@@ -373,6 +380,12 @@ export class PollaBetRouter {
 
     if (managing && user.user_type === POLLA_USER_TYPE.PLAYER) {
       throw new ForbiddenError('Los jugadores no administran jugadas');
+    }
+
+    // R11: el Súper solo administra jugadas (Administrar y su PDF); no ve
+    // Jugadas ni la cuenta corriente.
+    if (!managing && !POLLA_API_ROLES.readAllBets.includes(user.user_type)) {
+      throw new ForbiddenError('El Súper solo carga y administra jugadas');
     }
 
     if (editionId) await this.assertEditionScope(user, editionId);
@@ -641,18 +654,11 @@ export class PollaBetRouter {
    * `date`, las de ese día en esa edición; con `polla_edition_id` solo, toda la
    * edición; con `date` solo (o nada, hoy), el día en todas las ediciones.
    * Superadmin+ ve el total de la organización y el desglose por grupo; el
-   * admin, su grupo; el pasador, solo lo imputado a él. El jugador y el Super
-   * no las ven.
+   * admin, su grupo; el pasador, solo lo imputado a él. El jugador y el Súper
+   * no las ven (lo frena el guard de la ruta).
    */
   private getDailySalesHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
-
-    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
-      throw new ForbiddenError('Los jugadores no ven las ventas');
-    }
-    if (user.user_type === POLLA_USER_TYPE.ASSISTANT) {
-      throw new ForbiddenError('El Super no ve las ventas');
-    }
 
     const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
 

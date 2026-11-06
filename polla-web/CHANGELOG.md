@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
+
+- **Rutas** (`routes/route.tsx`) y **menú** (`components/layout/AppLayout.tsx`): quién ve cada pantalla sale de `POLLA_PAGE_ROLES`, la misma matriz que usa la API. `routes/pages.ts` mapea cada pantalla a su ruta (`PAGE_PATH`, `homePath`).
+- **El Súper** ve en el menú solo Cargar jugada, Administrar jugadas y Configuración. Jugadas, Mis jugadas, Resultados y Revisar ticket lo devuelven a Cargar jugada. Su etiqueta es "Súper".
+- **Inicio por rol**: `/`, el login, el cambio de contraseña y las pantallas que no le tocan a un rol llevan a su inicio (`HomeRedirect`, `RoleRoute`): Jugadas, o Cargar jugada para el Súper. Antes iban siempre a Jugadas.
+- **Tests** (`src/__tests__/helper/access.test.ts`): la matriz de permisos de cada rol, el inicio y que la API le niegue al Súper los endpoints de las pantallas que no ve.
+
 ### Changed - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
 
 - **Listados** (`BetsList`, en Jugadas, Mis jugadas y Administrar jugadas): cada ticket muestra, para todos los roles, la fecha y hora reales de carga y el estado (**Jugando**, **Ganadora** con su fecha o **No ganó**). El pasador y el staff ven además **Debe**; el jugador no ve el pago. `useBetsEdition` devuelve `editionStatusOf` para saber si la edición terminó.

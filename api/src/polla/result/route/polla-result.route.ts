@@ -7,6 +7,7 @@ import {
   updatePollaResultSchema,
   processPollaResultsSchema,
 } from '@helper/polla/schemas/game.schema';
+import { POLLA_API_ROLES } from '@helper/polla/config/access.config';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaResultRepository } from '../repository/polla-result.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
@@ -35,8 +36,10 @@ export class PollaResultRouter {
 
     this.router.post('/process', writeGuard, this.processHandler);
     this.router.post('/define', writeGuard, this.defineHandler);
-    this.router.get('/', this.getAllHandler);
-    this.router.get('/:id', this.getByIdHandler);
+    // Resultados: todos menos el Súper (R11).
+    const readGuard = requirePollaRole(...POLLA_API_ROLES.readResults);
+    this.router.get('/', readGuard, this.getAllHandler);
+    this.router.get('/:id', readGuard, this.getByIdHandler);
     this.router.post('/', writeGuard, this.createHandler);
     this.router.put('/:id', writeGuard, this.updateHandler);
     this.router.delete('/:id', writeGuard, this.deleteHandler);
