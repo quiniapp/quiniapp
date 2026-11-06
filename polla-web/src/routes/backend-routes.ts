@@ -61,6 +61,9 @@ export const BACKEND_ROUTES = {
     ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
     check: (ticketNumber: string) => `${PRIVATE}/bet/check/${encodeURIComponent(ticketNumber)}`,
   },
+  prize: {
+    base: `${PRIVATE}/prize`,
+  },
   result: {
     base: `${PRIVATE}/result`,
     id: (id: string) => `${PRIVATE}/result/${id}`,

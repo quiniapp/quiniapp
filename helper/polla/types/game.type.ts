@@ -549,6 +549,38 @@ export interface IPollaTicketCheck {
   winners: IPollaTicketWinner[];
 }
 
+// ----------------------------------------------------------- premios
+
+/**
+ * Un ticket ganador en la sección Premios (R19): de quién es y cuánto ganó.
+ * Los premios no van en la cuenta corriente (R18).
+ */
+export interface IPollaPrize {
+  polla_bet_id: string;
+  polla_edition_id: string;
+  ticket_number: string;
+  /** Grupo del pasador (`null` = sin grupo). */
+  group_name: string | null;
+  group_number: number | null;
+  cashier_name: string;
+  cashier_number: number | null;
+  /** Jugador dueño del ticket; `null` si lo jugó el propio pasador. */
+  client_name: string | null;
+  identifier: string | null;
+  hits: number;
+  prize: number;
+  /** Día en que ganó. */
+  hit_date: string | null;
+}
+
+/** Los premios de una edición y cuánto suman. */
+export interface IPollaPrizeList {
+  polla_edition_id: string;
+  prizes: IPollaPrize[];
+  count: number;
+  amount: number;
+}
+
 // ----------------------------------------------------------- ventas
 
 /** Boletas vendidas por un grupo (`polla_group_id` null = sin grupo). */

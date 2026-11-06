@@ -4,6 +4,11 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **`GET /polla/private/prize?polla_edition_id`** (nuevo, `polla/prize/`): los tickets ganadores vigentes de la edición, con grupo, pasador, jugador o cliente, identificador, número de ticket, aciertos, día y monto. Devuelve también la cantidad y el total. Lo leen el dueño, el capitalista y el superadmin (`POLLA_API_ROLES.readPrizes`). Salen de la generación de ganadores que ya existe.
+- Sin migración.
+
 ### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
 
 #### Migración `20261106090000_polla_prizes_out_of_account.sql`

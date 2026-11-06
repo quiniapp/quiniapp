@@ -9,6 +9,7 @@ import { PollaOrganizationRouter } from './organization/route/polla-organization
 import { PollaExpenseRouter } from './expense/route/polla-expense.route';
 import { PollaGroupRouter } from './group/route/polla-group.route';
 import { PollaGroupAccountRouter } from './group-account/route/polla-group-account.route';
+import { PollaPrizeRouter } from './prize/route/polla-prize.route';
 import { pollaLotteryRouter, pollaScheduleRouter } from './catalog/route/polla-catalog.route';
 
 const authRouter = new PollaAuthRouter();
@@ -32,3 +33,4 @@ pollaRouter.use('/result', new PollaResultRouter().router);
 pollaRouter.use('/current_account', new PollaCurrentAccountRouter().router);
 pollaRouter.use('/group_account', new PollaGroupAccountRouter().router);
 pollaRouter.use('/expense', new PollaExpenseRouter().router);
+pollaRouter.use('/prize', new PollaPrizeRouter().router);

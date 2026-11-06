@@ -16,6 +16,7 @@ export type PollaPage =
   | 'RESULTS'
   | 'USERS'
   | 'CURRENT_ACCOUNT'
+  | 'PRIZES'
   | 'CATALOGS'
   | 'ORGANIZATIONS'
   | 'GROUPS'
@@ -51,6 +52,8 @@ export const POLLA_PAGE_ROLES: Record<PollaPage, readonly POLLA_USER_TYPE[]> = {
   USERS: OPERATION,
   // Dueño, capitalista y superadmin; el pasador ve la suya.
   CURRENT_ACCOUNT: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
+  // Premios (R19): dueño, capitalista y superadmin.
+  PRIZES: POLLA_SUPER_ROLES,
   CATALOGS: POLLA_SUPER_ROLES,
   ORGANIZATIONS: [POLLA_USER_TYPE.OWNER],
   GROUPS: POLLA_SUPER_ROLES,
@@ -78,4 +81,6 @@ export const POLLA_API_ROLES = {
   sales: POLLA_PAGE_ROLES.SALES,
   /** `GET /result` (Resultados). */
   readResults: POLLA_PAGE_ROLES.RESULTS,
+  /** `GET /prize` (Premios). */
+  readPrizes: POLLA_PAGE_ROLES.PRIZES,
 } satisfies Record<string, readonly POLLA_USER_TYPE[]>;

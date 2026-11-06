@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **`polla/types/game.type.ts`**: `IPollaPrize` e `IPollaPrizeList`.
+- **`polla/config/access.config.ts`**: pantalla `PRIZES` (dueño, capitalista y superadmin) y `POLLA_API_ROLES.readPrizes`.
+
 ### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
 
 - **`polla/types/game.type.ts`**: comentario de `IPollaCurrentAccountEntityBack.successes`. Es 0 desde el período abierto; los días ya liquidados conservan los suyos.

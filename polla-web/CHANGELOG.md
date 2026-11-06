@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **Premios** (`features/prizes/index.tsx`, ruta `/premios`, ítem del menú debajo de Cuenta corriente): con la edición elegida (en la URL, como Jugadas), la cantidad de ganadores, el total en premios y cada ticket ganador con grupo, pasador, jugador o cliente, número de ticket, aciertos, día en que ganó y monto. Tarjetas en mobile y planilla con total en desktop.
+- `usePrizes` y la ruta `prize.base`.
+
 ### Removed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
 
 - **Cuenta corriente** (planilla, vista del pasador, liquidar y generar liquidación): se saca la columna **Aciertos**, y del detalle del período, la tabla **Jugadas ganadoras** (`DayBetsTables`). Los textos ya no nombran los aciertos y avisan que los premios están en Premios.

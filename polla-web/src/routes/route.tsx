@@ -20,6 +20,7 @@ const CurrentAccountPage = lazy(() => import('@/features/current-account'));
 const ChangePasswordPage = lazy(() => import('@/features/change-password'));
 const SettingsPage = lazy(() => import('@/features/settings'));
 const SalesPage = lazy(() => import('@/features/sales'));
+const PrizesPage = lazy(() => import('@/features/prizes'));
 
 const withSuspense = (node: ReactNode) => (
   <Suspense fallback={<div className="p-6 text-muted-foreground">Cargando…</div>}>{node}</Suspense>
@@ -109,6 +110,12 @@ export const RoutesContent: RouteObject[] = [
         path: ROUTES.CURRENT_ACCOUNT,
         element: guarded('CURRENT_ACCOUNT', <CurrentAccountPage />),
         handle: { title: 'Cuenta corriente' } satisfies RouteHandle,
+      },
+      {
+        // Los premios no van en la cuenta corriente (R18): tienen su sección.
+        path: ROUTES.PRIZES,
+        element: guarded('PRIZES', <PrizesPage />),
+        handle: { title: 'Premios' } satisfies RouteHandle,
       },
       {
         path: ROUTES.CATALOGS,
