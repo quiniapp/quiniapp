@@ -40,7 +40,7 @@ import {
 } from '../repository/polla-bet.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
 import { parsePagination } from '../../helper/pagination';
-import { pollaToday } from '../../helper/date';
+import { pollaNowTime, pollaToday } from '../../helper/date';
 import {
   assertInWritableGroup,
   resolveOptionalOrganizationId,
@@ -322,6 +322,20 @@ export class PollaBetRouter {
     }
 
     return edition;
+  };
+
+  /**
+   * R29: antes del inicio de carga nadie carga ni repite. La base lo vuelve a
+   * frenar (`polla_can_load`); acá se dice desde cuándo abre.
+   */
+  private assertLoadStarted = (edition: { load_start_date: string; load_start_time: string }) => {
+    const start = `${edition.load_start_date}T${edition.load_start_time}`;
+    if (`${pollaToday()}T${pollaNowTime()}` < start) {
+      const [, month, day] = edition.load_start_date.split('-');
+      throw new ForbiddenError(
+        `La carga de esta edición abre el ${day}/${month} a las ${edition.load_start_time.slice(0, 5)}`
+      );
+    }
   };
 
   /** Ediciones de esas jugadas donde el rol todavía carga (para sus acciones). */
@@ -618,7 +632,7 @@ export class PollaBetRouter {
   private repeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const payload = repeatPollaBetsSchema.parse(req.body);
-    await this.assertEditionScope(user, payload.polla_edition_id);
+    this.assertLoadStarted(await this.assertEditionScope(user, payload.polla_edition_id));
 
     const result = await this.repository.repeat({
       actorId: user.polla_user_id,
@@ -638,7 +652,7 @@ export class PollaBetRouter {
   private freeRepeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const payload = repeatPollaBetsSchema.parse(req.body);
-    await this.assertEditionScope(user, payload.polla_edition_id);
+    this.assertLoadStarted(await this.assertEditionScope(user, payload.polla_edition_id));
 
     const result = await this.repository.repeat({
       actorId: user.polla_user_id,
@@ -716,7 +730,7 @@ export class PollaBetRouter {
     const { user } = getPollaSession(req);
     const payload = newPollaBetSchema.parse(req.body);
 
-    await this.assertEditionScope(user, payload.polla_edition_id);
+    this.assertLoadStarted(await this.assertEditionScope(user, payload.polla_edition_id));
 
     const targetUserId = payload.polla_user_id ?? user.polla_user_id;
 

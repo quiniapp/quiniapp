@@ -14,6 +14,8 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_EDITION_HAS_WINNERS: () =>
     new ForbiddenError('La edición ya tiene ganadores: no se puede eliminar'),
   POLLA_LOAD_LIMIT_EXCEEDED: () => new ForbiddenError('Cerró la carga de esta edición'),
+  POLLA_LOAD_START_AFTER_LIMIT: () =>
+    new BadRequestError('El inicio de carga tiene que ser antes del cierre de carga'),
   POLLA_BET_NOT_FOUND: () => new NotFoundError('Jugada de Polla'),
   POLLA_BET_ALREADY_WINNER: () =>
     new ForbiddenError('La jugada ya es ganadora, no se puede modificar'),

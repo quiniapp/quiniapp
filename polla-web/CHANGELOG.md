@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- **Ediciones**:
+  - El formulario suma "Inicio de carga (fecha)" e "Inicio de carga (hora)". Una edición nueva propone la fecha y hora actuales, y se pueden cambiar para crearla el jueves y que abra el sábado.
+  - "Inicio" y "Fin" pasan a decir "Inicio de sorteo" y "Fin de sorteo".
+  - La lista muestra la columna "Carga" con "Abre…" y "Cierra…"; en mobile, "Abre la carga" y "Cierre".
+- **Cargar jugada**: si no hay ninguna edición abierta, avisa cuándo abre la carga de las próximas.
+- **Tests** (`load-start.test.ts`): validación del inicio de carga en los schemas.
+
 ### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
 
 - **Administrar jugadas**:

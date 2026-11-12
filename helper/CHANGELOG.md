@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- `IPollaEditionEntityBack.load_start_date` y `load_start_time`.
+- `newPollaEditionSchema` y `updatePollaEditionSchema` aceptan `load_start_date` y `load_start_time`, y validan que el inicio sea antes del cierre ("El inicio de carga tiene que ser antes del cierre de carga").
+
 ### Added - 2026-11-11 (R33: cortesía una sola vez por ticket)
 
 - `IPollaBetCourtesy` (ticket y edición de la cortesía de un ticket).

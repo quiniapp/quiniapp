@@ -4,6 +4,22 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- **Migración `20261111223001_polla_load_start`**:
+  - **Columnas nuevas:** `polla_editions.load_start_date` y `load_start_time` (Argentina). Las ediciones existentes toman su fecha de creación; si se crearon después de su propio cierre, un minuto antes del cierre. Sin dato, por defecto es ahora.
+  - **Trigger `validate_polla_edition_load_limit`:** valida además que el inicio sea anterior al cierre (`POLLA_LOAD_START_AFTER_LIMIT`).
+  - **Funciones de carga:**
+    - `polla_load_start(edition)` es nueva;
+    - `polla_can_load` da falso antes del inicio, así que nadie carga ni repite antes (también las ofrece así `polla_loadable_editions`);
+    - `polla_editions_load_state` suma `load_start` y `load_started`.
+  - **Alta y edición:** `polla_create_edition` (sin inicio, ahora) y `polla_update_edition` reciben los dos campos. Con ganador no se cambian.
+- **`POST /bet`, `/bet/repeat` y `/bet/free-repeat`**: antes del inicio responden 403 "La carga de esta edición abre el DD/MM a las HH:mm" (`assertLoadStarted`). La base lo vuelve a frenar.
+- **`polla-errors.ts`**: `POLLA_LOAD_START_AFTER_LIMIT`.
+- **Tests pgTAP**:
+  - `120_polla_load_start`, nuevo (12 casos);
+  - `060` y `065`, que mueven también el inicio al simular el cierre vencido.
+
 ### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
 
 - **Migración `20261111222341_polla_free_repeat_once`**:

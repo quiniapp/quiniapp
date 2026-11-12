@@ -76,8 +76,14 @@ export interface IPollaEditionEntityBack {
    */
   min_winning_hits: number;
   name: string | null;
+  /** Inicio de sorteo: primer día de juego. */
   start_date: string;
+  /** Fin de sorteo: último día de juego. */
   end_date: string;
+  /** Inicio de carga (R29): antes de `load_start_date` + `load_start_time` nadie carga. */
+  load_start_date: string;
+  /** Hora de inicio de carga (`HH:mm:ss`, Argentina). */
+  load_start_time: string;
   load_limit_date: string;
   /** Hora de cierre de carga (`HH:mm:ss`, Argentina) del día `load_limit_date`. */
   load_limit_time: string;

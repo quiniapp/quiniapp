@@ -113,6 +113,12 @@ export const MakeBetPage = () => {
     loadable: true,
     polla_organization_id: organizationId ?? undefined,
   });
+  // Las activas que todavía no abrieron la carga (R29): sin nada abierto se
+  // avisa cuándo abre la próxima.
+  const { data: activeEditions } = useEditions({
+    status: POLLA_EDITION_STATUS.ACTIVE,
+    polla_organization_id: organizationId ?? undefined,
+  });
   const catalogs = useDrawCatalogs(organizationId);
 
   const { mutate: createBet, isPending } = useCreateBet();
@@ -177,6 +183,15 @@ export const MakeBetPage = () => {
   };
 
   // Con todos sus sorteos: en la especial se ve que juega con las 5 quinielas.
+  const nowMoment = dayjs().format('YYYY-MM-DDTHH:mm:ss');
+  const upcoming = (activeEditions?.data ?? [])
+    .filter((item) => `${item.load_start_date}T${item.load_start_time}` > nowMoment)
+    .sort((a, b) =>
+      `${a.load_start_date}T${a.load_start_time}`.localeCompare(
+        `${b.load_start_date}T${b.load_start_time}`
+      )
+    );
+
   const editionLabel = (item: IPollaEditionEntityFront) =>
     `${pollaEditionTitle(item, catalogs)} (${fmtDate(item.start_date)} al ${fmtDate(
       item.end_date
@@ -251,7 +266,19 @@ export const MakeBetPage = () => {
     // falta scrollear para llegar al botón de cargar.
     <div className="mx-auto max-w-2xl">
       {loadable.length === 0 ? (
-        <EmptyState message="No hay ediciones abiertas para carga en este momento" />
+        <div className="flex flex-col gap-2">
+          <EmptyState message="No hay ediciones abiertas para carga en este momento" />
+          {upcoming.length > 0 && (
+            <ul className="flex flex-col gap-1 text-center text-sm text-muted-foreground">
+              {upcoming.map((item) => (
+                <li key={item.polla_edition_id}>
+                  La carga de {pollaEditionTitle(item, catalogs)} abre el{' '}
+                  {fmtDate(item.load_start_date)} a las {fmtTime(item.load_start_time)}.
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-4 rounded-xl bg-card p-4 text-card-foreground sm:gap-5 sm:p-6">
           <div className="flex flex-col gap-2">
