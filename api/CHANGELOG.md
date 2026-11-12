@@ -4,6 +4,19 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- **Migración `20261111222341_polla_free_repeat_once`**:
+  - **Trigger `trg_polla_free_repeat_once`** (BEFORE INSERT en `polla_bets`), con dos reglas:
+    - un ticket no puede tener dos cortesías (repeticiones sin cargo) vigentes: `POLLA_BET_ALREADY_COURTESY`;
+    - una cortesía no se repite de cortesía: `POLLA_FREE_REPEAT_OF_COURTESY`.
+  - El trigger bloquea la fila del ticket original, así dos repeticiones a la vez no generan dos cortesías.
+  - **`polla_bet_courtesy(bet_id)`:** devuelve la cortesía vigente de un ticket.
+  - **`polla_repeat_bets`:** controla lo mismo antes de crear, y en `skipped[]` devuelve `courtesy` (ticket y edición de la cortesía que ya existe).
+  - **Corregir una cortesía:** se borra y se vuelve a repetir. Las duplicadas de antes quedan como están, pero no suman otra.
+- **`GET /bet` (Administrar)**: `with_courtesies=true` devuelve `courtesies` (la cortesía vigente de cada ticket listado) en lugar de `free_repeats` (el conteo). `getFreeRepeatCounts` pasa a ser `getCourtesies`.
+- **Test pgTAP `110_polla_free_repeat_once`** (14 casos).
+
 ### Added - 2026-11-11 (R25: test del total de la edición)
 
 - **pgTAP `100_polla_daily_sales_edition_total`**: `polla_daily_sales` con la edición sola, que es el total de "Ventas del día", coincide con la suma de sus días de carga.

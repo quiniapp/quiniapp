@@ -4,6 +4,11 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- `IPollaBetCourtesy` (ticket y edición de la cortesía de un ticket).
+- `IPollaRepeatSkipped.courtesy`.
+
 ### Added - 2026-11-11 (R19: admin en Premios)
 
 - `IPollaPrize.admin_name`: el admin del grupo del pasador, o `null` si no hay.

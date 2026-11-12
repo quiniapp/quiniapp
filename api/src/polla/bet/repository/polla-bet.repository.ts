@@ -3,6 +3,7 @@ import { supabase } from '@database/db.connection';
 import { BadRequestError, NotFoundError } from '@helper/errors';
 import { IPaginatedResponse } from '@helper/request/pagination.request';
 import {
+  IPollaBetCourtesy,
   IPollaBetDerivedFields,
   IPollaBetEntityBack,
   IPollaBetToRepeat,
@@ -551,24 +552,32 @@ export class PollaBetRepository {
     return { ...result, deleted: Number(result.deleted), amount: Number(result.amount) };
   }
 
-  /** Cuántas veces se repitió sin cargo cada ticket (vigentes). */
-  async getFreeRepeatCounts(betIds: string[]): Promise<Record<string, number>> {
+  /**
+   * La cortesía vigente de cada ticket (R33: una sola por ticket; si quedaron
+   * varias de antes, la más nueva).
+   */
+  async getCourtesies(betIds: string[]): Promise<Record<string, IPollaBetCourtesy>> {
     if (betIds.length === 0) return {};
 
     const { data, error } = await supabase
       .from('polla_bets')
-      .select('repeated_from_bet_id')
+      .select('polla_bet_id, ticket_number, polla_edition_id, repeated_from_bet_id')
       .in('repeated_from_bet_id', betIds)
       .eq('is_free', true)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
     throwIfPollaError(error);
 
-    const counts: Record<string, number> = {};
-    for (const row of (data ?? []) as { repeated_from_bet_id: string }[]) {
-      counts[row.repeated_from_bet_id] = (counts[row.repeated_from_bet_id] ?? 0) + 1;
+    const courtesies: Record<string, IPollaBetCourtesy> = {};
+    for (const row of (data ?? []) as (IPollaBetCourtesy & { repeated_from_bet_id: string })[]) {
+      courtesies[row.repeated_from_bet_id] ??= {
+        polla_bet_id: row.polla_bet_id,
+        ticket_number: row.ticket_number,
+        polla_edition_id: row.polla_edition_id,
+      };
     }
-    return counts;
+    return courtesies;
   }
 
   /** Totales de una edición sin escanear jugadas fila por fila en el cliente. */

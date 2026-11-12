@@ -479,13 +479,13 @@ export class PollaBetRouter {
       ctx ? forViewer(bet, user, ctx) : toPublicBet(bet, user, NO_ACTIONS)
     );
 
-    // Cuántas veces se repitió sin cargo cada ticket (para quien puede hacerlo).
-    const freeRepeats =
-      isAdmin && managing && req.query.with_free_repeats === 'true'
-        ? await this.repository.getFreeRepeatCounts(result.data.map((bet) => bet.polla_bet_id))
+    // La cortesía vigente de cada ticket (R33), para quien puede repetir sin cargo.
+    const courtesies =
+      isAdmin && managing && req.query.with_courtesies === 'true'
+        ? await this.repository.getCourtesies(result.data.map((bet) => bet.polla_bet_id))
         : undefined;
 
-    res.status(200).json({ data: { bets: { ...result, data, free_repeats: freeRepeats } } });
+    res.status(200).json({ data: { bets: { ...result, data, courtesies } } });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {

@@ -478,12 +478,24 @@ export interface IPollaBetToRepeat {
   load_date: string;
 }
 
+/**
+ * La cortesía (repetición sin cargo) vigente de un ticket. R33: un ticket se
+ * repite de cortesía una sola vez; para corregirla se la borra y se repite.
+ */
+export interface IPollaBetCourtesy {
+  polla_bet_id: string;
+  ticket_number: string;
+  polla_edition_id: string;
+}
+
 /** Ticket que no se pudo repetir y por qué (código de la base). */
 export interface IPollaRepeatSkipped {
   polla_bet_id: string;
   ticket_number: string | null;
   user_name: string | null;
   reason: string;
+  /** Si ya tenía su cortesía (`POLLA_BET_ALREADY_COURTESY`): dónde está. */
+  courtesy?: IPollaBetCourtesy | null;
 }
 
 /** Resultado de repetir un lote de tickets (con o sin cargo). */

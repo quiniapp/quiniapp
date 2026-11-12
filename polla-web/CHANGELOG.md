@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- **Administrar jugadas**:
+  - En lugar del contador de repeticiones sin cargo, cada ticket con cortesía muestra "Cortesía en Edición X · ticket N".
+  - Los tickets que ya tienen su cortesía y las cortesías mismas no se pueden elegir para "Repetir sin cargo". "Elegir los N de la lista" los saltea.
+- **`FreeRepeatDialog`**: si un ticket ya tenía su cortesía, el resultado dice en qué edición y con qué ticket está, y que para cambiarla hay que borrarla y repetir.
+- **`repeatReasons`**: textos de `POLLA_BET_ALREADY_COURTESY` y `POLLA_FREE_REPEAT_OF_COURTESY`.
+
 ### Added - 2026-11-11 (R24: PDF de un día puntual)
 
 - **"Compartir PDF" → "Al cierre de un día de sorteo"**: una foto de la edición en un día elegido.

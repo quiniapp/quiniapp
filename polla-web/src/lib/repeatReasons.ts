@@ -12,6 +12,9 @@ const REPEAT_REASON_LABEL: Record<string, string> = {
   POLLA_BET_TARGET_FORBIDDEN: 'el jugador ya no es tuyo',
   POLLA_LOAD_LIMIT_EXCEEDED: 'cerró la carga de la edición',
   POLLA_EDITION_NOT_ACTIVE: 'la edición no está activa',
+  // R33: una cortesía por ticket; la cortesía no se repite de cortesía.
+  POLLA_BET_ALREADY_COURTESY: 'ya tiene su cortesía (para cambiarla, borrala y repetí de nuevo)',
+  POLLA_FREE_REPEAT_OF_COURTESY: 'es una cortesía: no se repite de cortesía',
 };
 
 export const repeatReasonLabel = (reason: string): string => {

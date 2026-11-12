@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { BadgeDollarSign, Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import {
+  IPollaBetCourtesy,
   IPollaBetListItem,
   IPollaUnpaidSummary,
   POLLA_EDITION_STATUS,
@@ -68,7 +69,9 @@ const parseHits = (raw: string | null): number[] =>
   raw ? POLLA_HITS_FILTER.filter((hit) => raw.split(',').map(Number).includes(hit)) : [];
 
 /** Página del feed de jugadas: con cuántas veces se repitió sin cargo cada ticket. */
-type BetsFeedPage = PollaPage<IPollaBetListItem> & { free_repeats?: Record<string, number> };
+type BetsFeedPage = PollaPage<IPollaBetListItem> & {
+  courtesies?: Record<string, IPollaBetCourtesy>;
+};
 
 /**
  * Administrar jugadas: lo que administra cada rol (la API lo acota con
@@ -207,7 +210,7 @@ export const ManageBetsPage = () => {
     ...(searching ? {} : userFilter),
     ...(searching ? {} : resultFilter),
     ...(searching ? {} : loadFilter),
-    with_free_repeats: canFreeRepeat ? 'true' : undefined,
+    with_courtesies: canFreeRepeat ? 'true' : undefined,
     sort,
   };
   const betsEnabled = Boolean(editionId) || searching;
@@ -236,9 +239,6 @@ export const ManageBetsPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [freeRepeatOpen, setFreeRepeatOpen] = useState(false);
   useEffect(() => setSelected(new Set()), [editionId]);
-  /** El admin repite solo los de su grupo; superadmin+, cualquiera. */
-  const canSelect = (row: IPollaBetListItem) =>
-    canFreeRepeat && !isPublicPollaBet(row) && (isSuper || row.polla_group_id === ownGroupId);
   const toggleSelected = (id: string, checked: boolean) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -395,14 +395,36 @@ export const ManageBetsPage = () => {
   };
 
   const { rows, totalCount } = flattenPages(bets?.pages);
-  const freeRepeats = useMemo(
+  // La cortesía vigente de cada ticket (R33: una sola por ticket).
+  const courtesies = useMemo(
     () =>
       Object.assign(
         {},
-        ...((bets?.pages ?? []) as BetsFeedPage[]).map((page) => page.free_repeats ?? {})
-      ) as Record<string, number>,
+        ...((bets?.pages ?? []) as BetsFeedPage[]).map((page) => page.courtesies ?? {})
+      ) as Record<string, IPollaBetCourtesy>,
     [bets]
   );
+  const courtesyEditionName = (id: string) => {
+    const edition = editionList.find((e) => e.polla_edition_id === id);
+    return edition ? titleFor(edition) : 'otra edición';
+  };
+  const courtesyLabels = Object.fromEntries(
+    Object.entries(courtesies).map(([betId, courtesy]) => [
+      betId,
+      `Cortesía en ${courtesyEditionName(courtesy.polla_edition_id)} · ticket ${courtesy.ticket_number}`,
+    ])
+  );
+  /**
+   * El admin repite solo los de su grupo; superadmin+, cualquiera. Una
+   * cortesía no se repite de cortesía y un ticket que ya tiene la suya no se
+   * vuelve a repetir (R33).
+   */
+  const canSelect = (row: IPollaBetListItem) =>
+    canFreeRepeat &&
+    !isPublicPollaBet(row) &&
+    (isSuper || row.polla_group_id === ownGroupId) &&
+    !row.is_free &&
+    !courtesies[row.polla_bet_id];
   const selectableRows = rows.filter(canSelect);
 
   // Editar y borrar lo decide la API para cada jugada (`can_edit`/`can_delete`):
@@ -716,7 +738,7 @@ export const ManageBetsPage = () => {
         hasNextPage={Boolean(hasNextPage)}
         isFetchingNextPage={isFetchingNextPage}
         fetchNextPage={fetchNextPage}
-        freeRepeats={freeRepeats}
+        courtesyLabels={courtesyLabels}
         renderActions={renderActions}
         canCopyTicket
         editionStatusOf={editionStatusOf}
@@ -729,6 +751,7 @@ export const ManageBetsPage = () => {
           betIds={[...selected]}
           organizationId={organizationId}
           editionLabel={labelFor}
+          courtesyEditionName={courtesyEditionName}
           onClose={() => setFreeRepeatOpen(false)}
           onDone={() => setSelected(new Set())}
         />
