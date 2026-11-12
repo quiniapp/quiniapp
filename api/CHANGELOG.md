@@ -4,6 +4,22 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R14: Eliminar impagos también para el staff)
+
+- **Migración `20261111214856_polla_delete_unpaid_bets_staff`**:
+  - `polla_unpaid_bets_summary` y `polla_delete_unpaid_bets` reciben `p_cashier_id` (cuarto parámetro, opcional).
+  - Los usan el pasador, el admin de grupo, el superadmin, el capitalista y el dueño. El Súper y el jugador reciben `POLLA_UNPAID_DELETE_FORBIDDEN`.
+  - El pasador borra lo imputado a él, como antes. El staff tiene que elegir pasador y/o jugador; si no elige, recibe `POLLA_UNPAID_DELETE_TARGET_REQUIRED`. El admin solo puede elegir dentro de su grupo; si no, recibe `POLLA_USER_OTHER_GROUP`.
+  - La función nueva `polla_unpaid_bets_scope` resuelve el alcance de cada rol.
+  - El corte es el cierre de carga para todos.
+  - Cada baja se descuenta según la última liquidación de su propio pasador, y se refresca la fila de Borradas de cada pasador tocado.
+  - Pedido del cliente en la revisión del 10/11.
+- **`GET /bet/unpaid-summary` y `DELETE /bet/unpaid`**: aceptan `cashier_polla_user_id`. El guard pasa a `CASHIER` + `POLLA_ADMIN_ROLES`.
+- **`polla-errors.ts`**: `POLLA_UNPAID_DELETE_FORBIDDEN` y `POLLA_UNPAID_DELETE_TARGET_REQUIRED` reemplazan a `POLLA_UNPAID_DELETE_ONLY_CASHIER`.
+- **Tests pgTAP**:
+  - `060` ajusta los dos casos de quién puede borrar.
+  - `065`, nuevo, cubre al staff: alcance por grupo, Súper, pasador ajeno, pasador o jugador obligatorio, liquidado hoy → mañana, Borradas, conteo de la edición y corte.
+
 ### Changed - 2026-11-11 (R19: admin en Premios)
 
 - **`GET /polla/private/prize`**: cada premio trae `admin_name`, el admin vigente del grupo del pasador (cada grupo tiene uno solo). `PollaPrizeRepository.getGroupAdmins` lo busca en una segunda consulta por los grupos de la página. Es `null` si el pasador no tiene grupo o el grupo no tiene admin.

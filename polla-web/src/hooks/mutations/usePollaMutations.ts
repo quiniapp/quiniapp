@@ -217,16 +217,28 @@ export const useMarkPrizePaid = () =>
     }
   );
 
-/** Edición y, si se pide, jugador de "Eliminar impagos". */
-type UnpaidTarget = { polla_edition_id: string; polla_user_id?: string };
+/**
+ * Edición, pasador y jugador de "Eliminar impagos". El pasador borra lo suyo;
+ * admin+ tiene que elegir pasador o jugador.
+ */
+type UnpaidTarget = {
+  polla_edition_id: string;
+  polla_user_id?: string;
+  cashier_polla_user_id?: string;
+};
 
-export const unpaidQuery = ({ polla_edition_id, polla_user_id }: UnpaidTarget) =>
+export const unpaidQuery = ({
+  polla_edition_id,
+  polla_user_id,
+  cashier_polla_user_id,
+}: UnpaidTarget) =>
   new URLSearchParams({
     polla_edition_id,
     ...(polla_user_id ? { polla_user_id } : {}),
+    ...(cashier_polla_user_id ? { cashier_polla_user_id } : {}),
   }).toString();
 
-/** "Eliminar impagos" (R14, solo el pasador). El aviso lo da la pantalla. */
+/** "Eliminar impagos" (R14: el pasador y admin+). El aviso lo da la pantalla. */
 export const useDeleteUnpaidBets = () =>
   useApiMutation<{ deleted: number; amount: number; deducted_on: string }, UnpaidTarget>(
     'delete',

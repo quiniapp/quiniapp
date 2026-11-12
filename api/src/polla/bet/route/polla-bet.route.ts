@@ -290,14 +290,15 @@ export class PollaBetRouter {
       this.checkTicketHandler
     );
     this.router.patch('/payment', requirePollaRole(...POLLA_STAFF_ROLES), this.markPaidHandler);
+    // "Eliminar impagos" (R14): el pasador y admin+ (el Súper no).
     this.router.get(
       '/unpaid-summary',
-      requirePollaRole(POLLA_USER_TYPE.CASHIER),
+      requirePollaRole(POLLA_USER_TYPE.CASHIER, ...POLLA_ADMIN_ROLES),
       this.unpaidSummaryHandler
     );
     this.router.delete(
       '/unpaid',
-      requirePollaRole(POLLA_USER_TYPE.CASHIER),
+      requirePollaRole(POLLA_USER_TYPE.CASHIER, ...POLLA_ADMIN_ROLES),
       this.deleteUnpaidHandler
     );
     this.router.post('/repeat', this.repeatHandler);
@@ -817,7 +818,11 @@ export class PollaBetRouter {
     res.status(200).json({ data: { result } });
   });
 
-  /** Edición (obligatoria) y jugador (opcional) de "Eliminar impagos". */
+  /**
+   * Edición (obligatoria), pasador y jugador de "Eliminar impagos". El pasador
+   * borra lo imputado a él; admin+ elige pasador y/o jugador (uno de los dos es
+   * obligatorio) y el admin, solo de su grupo. Lo controla la RPC.
+   */
   private unpaidTarget = async (req: Request) => {
     const { user } = getPollaSession(req);
     const editionId = queryString(req.query.polla_edition_id);
@@ -827,22 +832,20 @@ export class PollaBetRouter {
       actorId: user.polla_user_id,
       editionId,
       userId: queryString(req.query.polla_user_id),
+      cashierId: queryString(req.query.cashier_polla_user_id),
     };
   };
 
-  /**
-   * "Eliminar impagos" (R14), antes de confirmar: cuántos y cuánto. Solo el
-   * pasador, sobre lo imputado a él (la RPC lo vuelve a controlar).
-   */
+  /** "Eliminar impagos" (R14), antes de confirmar: cuántos y cuánto. */
   private unpaidSummaryHandler = asyncHandler(async (req: Request, res: Response) => {
     const summary = await this.repository.unpaidSummary(await this.unpaidTarget(req));
     res.status(200).json({ data: { summary } });
   });
 
   /**
-   * Borra los tickets en Debe del pasador en la edición (de un jugador, si se
-   * pide), salvo las ganadoras, hasta el cierre de carga. Entran en Borradas
-   * como el borrado de a uno.
+   * Borra los tickets en Debe de ese pasador y/o jugador en la edición, salvo
+   * las ganadoras, hasta el cierre de carga (para todos los roles). Entran en
+   * Borradas de cada pasador como el borrado de a uno.
    */
   private deleteUnpaidHandler = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.repository.deleteUnpaid(await this.unpaidTarget(req));

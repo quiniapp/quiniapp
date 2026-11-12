@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R14: Eliminar impagos también para el staff)
+
+- **Administrar jugadas**:
+  - "Eliminar impagos" aparece también para el admin de grupo, el superadmin, el capitalista y el dueño.
+  - Para habilitarse, el staff tiene que filtrar un pasador o un jugador, y borra solo lo de ese. El tooltip lo explica.
+  - La confirmación muestra a quién se le borran los impagos.
+  - El filtro "Impagos" pasa de casilla a switch.
+- **`usePollaMutations`**: `UnpaidTarget` / `unpaidQuery` suman `cashier_polla_user_id`.
+
 ### Changed - 2026-11-11 (R19: admin en Premios)
 
 - **Premios**: columna "Admin" entre Grupo y Pasador. En mobile, la tarjeta muestra "Grupo · Admin" en una línea y el pasador en la siguiente.
