@@ -148,8 +148,10 @@ export class PollaEditionRepository {
   /**
    * Cambios de una edición con sus reglas (`polla_update_edition`): el precio
    * vale para las jugadas nuevas, extender una sin ganador la vuelve a poner
-   * en juego, con ganador solo se renombra y con sorteos cargados no se mueven
-   * los sorteos, el mínimo de aciertos ni el inicio.
+   * en juego, con ganador solo se cambian el nombre y el mínimo de aciertos, y
+   * con sorteos cargados no se mueven los sorteos ni el inicio. Cambiar el
+   * mínimo de una edición terminada recalcula ganadores y premios, salvo que
+   * haya premios pagados (ajuste de R26).
    */
   async update(editionId: string, payload: Record<string, unknown>) {
     const { data, error } = await supabase.rpc('polla_update_edition', {

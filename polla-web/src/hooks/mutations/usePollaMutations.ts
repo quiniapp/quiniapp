@@ -168,7 +168,11 @@ export const useUpdateEdition = () =>
   useApiMutation<unknown, { id: string } & Record<string, unknown>>(
     'put',
     ({ id }) => BACKEND_ROUTES.edition.id(id),
-    { invalidate: ['polla-editions'], successMessage: 'Edición actualizada' }
+    // Cambiar el mínimo de aciertos puede recalcular ganadores y premios.
+    {
+      invalidate: ['polla-editions', 'polla-bets', 'polla-prizes'],
+      successMessage: 'Edición actualizada',
+    }
   );
 
 export const useDeleteEdition = () =>

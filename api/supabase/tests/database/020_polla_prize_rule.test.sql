@@ -380,14 +380,13 @@ SELECT throws_ok(
   'POLLA_EDITION_HAS_WINNERS_LOCKED',
   'con ganador no se cambian los sorteos'
 );
-SELECT throws_ok(
+-- Ajuste de R26: el mínimo sí se cambia con ganadores (ver 150).
+SELECT lives_ok(
   format(
     $$SELECT polla_update_edition(%L, '{"min_winning_hits": 9}')$$,
     pg_temp.ed('F10')
   ),
-  'P0001',
-  'POLLA_EDITION_HAS_WINNERS_LOCKED',
-  'ni el mínimo de aciertos'
+  'con ganador el mínimo de aciertos se puede cambiar (se recalculan los ganadores)'
 );
 
 SELECT pg_temp.edition('Sin sorteos', pg_temp.draws(1, 2, 3), '2030-06-06', '2030-06-06', 8);

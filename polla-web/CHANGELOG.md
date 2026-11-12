@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-12 (R26, ajuste: mínimo de aciertos editable)
+
+- **Ediciones → Editar**: "Edición especial" y "Mínimo de aciertos" se pueden cambiar con la edición empezada o con ganadores.
+  - Si la edición ya terminó, primero pide confirmación porque se recalculan los ganadores y los premios.
+  - Con ganadores, se mandan solo el nombre y el mínimo.
+- **`useUpdateEdition`**: también refresca las jugadas y los premios.
+
 ### Added - 2026-11-11 (R28: orden de las quinielas)
 
 - **Quinielas y turnos**: "Quinielas y su orden" arriba de todo, con el número de cada una y flechas para subir y bajar. El orden se guarda al tocar.

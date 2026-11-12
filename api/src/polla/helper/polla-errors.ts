@@ -62,10 +62,16 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_LOAD_LIMIT_AFTER_FIRST_DRAW: () =>
     new BadRequestError('El cierre de carga tiene que ser antes del primer sorteo'),
   POLLA_EDITION_HAS_WINNERS_LOCKED: () =>
-    new ForbiddenError('La edición ya tiene ganadores: solo se puede cambiar el nombre'),
+    new ForbiddenError(
+      'La edición ya tiene ganadores: solo se pueden cambiar el nombre y el mínimo de aciertos'
+    ),
   POLLA_EDITION_DRAWS_LOCKED: () =>
     new BadRequestError(
-      'La edición ya tiene sorteos cargados: no se cambian los sorteos, el mínimo de aciertos ni la fecha de inicio'
+      'La edición ya tiene sorteos cargados: no se cambian los sorteos ni la fecha de inicio'
+    ),
+  POLLA_EDITION_PRIZE_PAID_LOCKED: () =>
+    new ConflictError(
+      'Ya hay premios pagados en esta edición: el mínimo de aciertos no se puede cambiar'
     ),
   POLLA_PAYMENT_FORBIDDEN: () => new ForbiddenError('Los jugadores no marcan pagos'),
   POLLA_PRIZE_PAY_FORBIDDEN: () =>
