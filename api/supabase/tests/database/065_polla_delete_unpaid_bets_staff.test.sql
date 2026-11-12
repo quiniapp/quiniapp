@@ -180,7 +180,7 @@ SELECT is(
 -- ------------------------------------------------------------ corte
 
 UPDATE polla_editions
-SET load_limit_date = polla_today() - 1, start_date = polla_today()
+SET load_start_date = polla_today() - 2, load_limit_date = polla_today() - 1, start_date = polla_today()
 WHERE polla_edition_id = (SELECT id FROM ed);
 SELECT throws_ok(
   $$SELECT polla_delete_unpaid_bets('f1000000-0000-0000-0000-0000000014a4', (SELECT id FROM ed), NULL,

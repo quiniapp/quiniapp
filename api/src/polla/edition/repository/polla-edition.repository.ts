@@ -91,7 +91,16 @@ export class PollaEditionRepository {
   async getLoadStates(
     editionIds: string[],
     role: POLLA_USER_TYPE
-  ): Promise<{ polla_edition_id: string; load_cutoff: string | null; can_load: boolean }[]> {
+  ): Promise<
+    {
+      polla_edition_id: string;
+      /** Inicio de carga (R29). */
+      load_start: string;
+      load_cutoff: string | null;
+      load_started: boolean;
+      can_load: boolean;
+    }[]
+  > {
     if (editionIds.length === 0) return [];
 
     const { data, error } = await supabase.rpc('polla_editions_load_state', {

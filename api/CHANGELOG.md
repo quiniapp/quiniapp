@@ -4,6 +4,63 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Migración `20261111223835_polla_lottery_order`**:
+  - normaliza `polla_lotteries."order"` a 1..N por organización, conservando el orden que se veía;
+  - una quiniela nueva va al final (trigger);
+  - `polla_reorder_lotteries(org, ids[])` reordena de forma atómica;
+  - `polla_lottery_positions(org)` da la posición y la etiqueta "1 - Nacional";
+  - `polla_edition_with_draws` suma `lottery_position` y `lottery_label`, ordenados por turno y después por posición.
+  - Nada hardcodeado: el orden lo define cada organización.
+- **`GET /lottery`** suma `position` y `label`. **`PUT /lottery/order`** es nuevo (dueño, capitalista, superadmin). **`GET /result`** suma `lottery_position` y `lottery_label`. El helper nuevo es `lottery-positions.ts`.
+- **Test pgTAP `140_polla_lottery_order`** (14 casos).
+
+### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
+
+- **Migración `20261111223515_polla_load_cutoff_all_roles`**:
+  - **`polla_load_cutoff`:**
+    - dueño, capitalista, superadmin, Súper, pasador y jugador cortan en el cierre de carga;
+    - el admin de grupo corta a la hora del primer sorteo;
+    - para todos, el tope duro es el primer sorteo del día de inicio (`LEAST`), aunque el cierre esté mal configurado;
+    - ya no hay roles sin corte.
+
+    Antes, superadmin y superiores cargaban hasta el último día, con los sorteos en curso.
+  - **`polla_assert_bet_writable`:**
+    - superadmin y superiores editan números solo hasta el cierre, pero siguen borrando siempre (para corregir);
+    - el resto, hasta su corte.
+- **`GET /bet` (acciones)**: superadmin y superiores tienen `can_edit` solo con la carga abierta y `can_delete` siempre. `buildActionContext` mira los cortes también para ellos.
+- **Test pgTAP `130_polla_load_cutoff_all_roles`** (19 casos): carga, repetición, edición y borrado por rol, después del cierre y con el sorteo en curso.
+
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- **Migración `20261111223001_polla_load_start`**:
+  - **Columnas nuevas:** `polla_editions.load_start_date` y `load_start_time` (Argentina). Las ediciones existentes toman su fecha de creación; si se crearon después de su propio cierre, un minuto antes del cierre. Sin dato, por defecto es ahora.
+  - **Trigger `validate_polla_edition_load_limit`:** valida además que el inicio sea anterior al cierre (`POLLA_LOAD_START_AFTER_LIMIT`).
+  - **Funciones de carga:**
+    - `polla_load_start(edition)` es nueva;
+    - `polla_can_load` da falso antes del inicio, así que nadie carga ni repite antes (también las ofrece así `polla_loadable_editions`);
+    - `polla_editions_load_state` suma `load_start` y `load_started`.
+  - **Alta y edición:** `polla_create_edition` (sin inicio, ahora) y `polla_update_edition` reciben los dos campos. Con ganador no se cambian.
+- **`POST /bet`, `/bet/repeat` y `/bet/free-repeat`**: antes del inicio responden 403 "La carga de esta edición abre el DD/MM a las HH:mm" (`assertLoadStarted`). La base lo vuelve a frenar.
+- **`polla-errors.ts`**: `POLLA_LOAD_START_AFTER_LIMIT`.
+- **Tests pgTAP**:
+  - `120_polla_load_start`, nuevo (12 casos);
+  - `060` y `065`, que mueven también el inicio al simular el cierre vencido.
+
+### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- **Migración `20261111222341_polla_free_repeat_once`**:
+  - **Trigger `trg_polla_free_repeat_once`** (BEFORE INSERT en `polla_bets`), con dos reglas:
+    - un ticket no puede tener dos cortesías (repeticiones sin cargo) vigentes: `POLLA_BET_ALREADY_COURTESY`;
+    - una cortesía no se repite de cortesía: `POLLA_FREE_REPEAT_OF_COURTESY`.
+  - El trigger bloquea la fila del ticket original, así dos repeticiones a la vez no generan dos cortesías.
+  - **`polla_bet_courtesy(bet_id)`:** devuelve la cortesía vigente de un ticket.
+  - **`polla_repeat_bets`:** controla lo mismo antes de crear, y en `skipped[]` devuelve `courtesy` (ticket y edición de la cortesía que ya existe).
+  - **Corregir una cortesía:** se borra y se vuelve a repetir. Las duplicadas de antes quedan como están, pero no suman otra.
+- **`GET /bet` (Administrar)**: `with_courtesies=true` devuelve `courtesies` (la cortesía vigente de cada ticket listado) en lugar de `free_repeats` (el conteo). `getFreeRepeatCounts` pasa a ser `getCourtesies`.
+- **Test pgTAP `110_polla_free_repeat_once`** (14 casos).
+
 ### Added - 2026-11-11 (R25: test del total de la edición)
 
 - **pgTAP `100_polla_daily_sales_edition_total`**: `polla_daily_sales` con la edición sola, que es el total de "Ventas del día", coincide con la suma de sus días de carga.

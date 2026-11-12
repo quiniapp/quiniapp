@@ -44,8 +44,11 @@ interface BetsListProps {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
-  /** Veces que se repitió sin cargo cada ticket (Administrar). */
-  freeRepeats?: Record<string, number>;
+  /**
+   * Dónde está la cortesía de cada ticket que ya se repitió sin cargo (R33,
+   * Administrar): "Cortesía en Edición X · ticket N".
+   */
+  courtesyLabels?: Record<string, string>;
   /** Acciones de cada jugada (Administrar). Sin esto no hay columna de acciones. */
   renderActions?: (row: IPollaBetListItem) => ReactNode;
   selection?: BetsSelection;
@@ -82,11 +85,11 @@ const CopyTicketButton = ({ ticketNumber }: { ticketNumber: string }) => (
  */
 const BetStatus = ({
   row,
-  freeRepeats,
+  courtesyLabel,
   editionStatus,
 }: {
   row: IPollaBetListItem;
-  freeRepeats: number;
+  courtesyLabel?: string;
   editionStatus?: POLLA_EDITION_STATUS;
 }) => {
   const game = pollaBetGameStatus(row, editionStatus);
@@ -111,10 +114,14 @@ const BetStatus = ({
         <Badge variant="destructive">Debe</Badge>
       )}
       {row.is_free && <Badge variant="outline">Sin cargo</Badge>}
-      {freeRepeats > 0 && (
-        <Badge variant="secondary" title="Veces que se repitió sin cargo">
-          <Gift className="mr-1 h-3 w-3" />
-          {freeRepeats}
+      {courtesyLabel && (
+        <Badge
+          variant="secondary"
+          className="whitespace-normal text-left"
+          title="Ya se repitió sin cargo: una sola cortesía por ticket"
+        >
+          <Gift className="mr-1 h-3 w-3 shrink-0" />
+          {courtesyLabel}
         </Badge>
       )}
     </span>
@@ -133,7 +140,7 @@ export const BetsList = ({
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
-  freeRepeats = {},
+  courtesyLabels = {},
   renderActions,
   selection,
   canCopyTicket = false,
@@ -193,7 +200,7 @@ export const BetsList = ({
             <div className="mt-2 flex items-center justify-between gap-2">
               <BetStatus
                 row={row}
-                freeRepeats={freeRepeats[row.polla_bet_id] ?? 0}
+                courtesyLabel={courtesyLabels[row.polla_bet_id]}
                 editionStatus={editionStatusOf?.(row.polla_edition_id)}
               />
               {renderActions && <div className="flex gap-1">{renderActions(row)}</div>}
@@ -259,7 +266,7 @@ export const BetsList = ({
                 <TableCell>
                   <BetStatus
                     row={row}
-                    freeRepeats={freeRepeats[row.polla_bet_id] ?? 0}
+                    courtesyLabel={courtesyLabels[row.polla_bet_id]}
                     editionStatus={editionStatusOf?.(row.polla_edition_id)}
                   />
                 </TableCell>

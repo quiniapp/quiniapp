@@ -52,6 +52,10 @@ export const POLLA_BET_IDENTIFIER_MAX = 60;
 export interface IPollaEditionDraw {
   polla_lottery_id: string;
   polla_schedule_id: string;
+  /** R28: posición de la quiniela en su organización (la API la manda al listar). */
+  lottery_position?: number | null;
+  /** R28: "1 - Nacional". */
+  lottery_label?: string;
 }
 
 /** Mínimo de aciertos que propone la pantalla para una edición especial. */
@@ -76,8 +80,14 @@ export interface IPollaEditionEntityBack {
    */
   min_winning_hits: number;
   name: string | null;
+  /** Inicio de sorteo: primer día de juego. */
   start_date: string;
+  /** Fin de sorteo: último día de juego. */
   end_date: string;
+  /** Inicio de carga (R29): antes de `load_start_date` + `load_start_time` nadie carga. */
+  load_start_date: string;
+  /** Hora de inicio de carga (`HH:mm:ss`, Argentina). */
+  load_start_time: string;
   load_limit_date: string;
   /** Hora de cierre de carga (`HH:mm:ss`, Argentina) del día `load_limit_date`. */
   load_limit_time: string;
@@ -131,13 +141,22 @@ export const pollaEditionDraws = (
 
 /** Lo que hace falta de los catálogos para nombrar un sorteo. */
 export interface IPollaDrawCatalogs {
-  lotteries?: { polla_lottery_id: string; name: string; order?: number }[];
+  lotteries?: {
+    polla_lottery_id: string;
+    name: string;
+    order?: number;
+    /** R28: posición en la organización. */
+    position?: number;
+    /** R28: "1 - Nacional". */
+    label?: string;
+  }[];
   schedules?: { polla_schedule_id: string; name: string; time?: string }[];
 }
 
 /**
- * "Nacional · Nocturna" por sorteo, ordenados por hora del turno y orden de la
- * quiniela. Sin catálogo cargado dice "Quiniela" / "Turno".
+ * "1 - Nacional · Nocturna" por sorteo (R28): ordenados por horario del turno
+ * y después por la posición de la quiniela, la que define cada organización.
+ * Sin catálogo cargado dice "Quiniela" / "Turno".
  */
 export const pollaDrawLabels = (
   draws: IPollaEditionDraw[],
@@ -145,25 +164,28 @@ export const pollaDrawLabels = (
 ): string[] => {
   const lotteryById = new Map(lotteries.map((l) => [l.polla_lottery_id, l]));
   const scheduleById = new Map(schedules.map((s) => [s.polla_schedule_id, s]));
+  const positionOf = (draw: IPollaEditionDraw) => {
+    const lottery = lotteryById.get(draw.polla_lottery_id);
+    return lottery?.position ?? draw.lottery_position ?? lottery?.order ?? Number.MAX_SAFE_INTEGER;
+  };
 
   return [...draws]
     .sort((a, b) => {
       const sa = scheduleById.get(a.polla_schedule_id);
       const sb = scheduleById.get(b.polla_schedule_id);
-      const la = lotteryById.get(a.polla_lottery_id);
-      const lb = lotteryById.get(b.polla_lottery_id);
       return (
         (sa?.time ?? '').localeCompare(sb?.time ?? '') ||
-        (la?.order ?? 0) - (lb?.order ?? 0) ||
-        (la?.name ?? '').localeCompare(lb?.name ?? '')
+        positionOf(a) - positionOf(b) ||
+        (lotteryById.get(a.polla_lottery_id)?.name ?? '').localeCompare(
+          lotteryById.get(b.polla_lottery_id)?.name ?? ''
+        )
       );
     })
-    .map(
-      (draw) =>
-        `${lotteryById.get(draw.polla_lottery_id)?.name ?? 'Quiniela'} · ${
-          scheduleById.get(draw.polla_schedule_id)?.name ?? 'Turno'
-        }`
-    );
+    .map((draw) => {
+      const lottery = lotteryById.get(draw.polla_lottery_id);
+      const lotteryLabel = lottery?.label ?? draw.lottery_label ?? lottery?.name ?? 'Quiniela';
+      return `${lotteryLabel} · ${scheduleById.get(draw.polla_schedule_id)?.name ?? 'Turno'}`;
+    });
 };
 
 type IPollaEditionNaming = Pick<
@@ -239,6 +261,10 @@ export interface IPollaResultEntityBack {
   created_at: string;
   edited_at: string;
   deleted_at: string | null;
+  /** R28: posición de la quiniela (`null` si se borró). Solo al listar. */
+  lottery_position?: number | null;
+  /** R28: "1 - Nacional". Solo al listar. */
+  lottery_label?: string | null;
 }
 
 export type IPollaResultEntityFront = Omit<IPollaResultEntityBack, 'deleted_at'>;
@@ -478,12 +504,24 @@ export interface IPollaBetToRepeat {
   load_date: string;
 }
 
+/**
+ * La cortesía (repetición sin cargo) vigente de un ticket. R33: un ticket se
+ * repite de cortesía una sola vez; para corregirla se la borra y se repite.
+ */
+export interface IPollaBetCourtesy {
+  polla_bet_id: string;
+  ticket_number: string;
+  polla_edition_id: string;
+}
+
 /** Ticket que no se pudo repetir y por qué (código de la base). */
 export interface IPollaRepeatSkipped {
   polla_bet_id: string;
   ticket_number: string | null;
   user_name: string | null;
   reason: string;
+  /** Si ya tenía su cortesía (`POLLA_BET_ALREADY_COURTESY`): dónde está. */
+  courtesy?: IPollaBetCourtesy | null;
 }
 
 /** Resultado de repetir un lote de tickets (con o sin cargo). */

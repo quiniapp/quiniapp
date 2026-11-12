@@ -12,6 +12,7 @@ import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaResultRepository } from '../repository/polla-result.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
 import { parsePagination } from '../../helper/pagination';
+import { withLotteryPositions } from '../../helper/lottery-positions';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
@@ -72,7 +73,10 @@ export class PollaResultRouter {
       pagination
     );
 
-    res.status(200).json({ data: { results: result } });
+    // R28: cada resultado con la posición y la etiqueta de su quiniela.
+    res.status(200).json({
+      data: { results: { ...result, data: await withLotteryPositions(result.data) } },
+    });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {

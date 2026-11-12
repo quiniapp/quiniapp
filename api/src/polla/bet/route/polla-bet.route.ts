@@ -40,7 +40,7 @@ import {
 } from '../repository/polla-bet.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
 import { parsePagination } from '../../helper/pagination';
-import { pollaToday } from '../../helper/date';
+import { pollaNowTime, pollaToday } from '../../helper/date';
 import {
   assertInWritableGroup,
   resolveOptionalOrganizationId,
@@ -168,11 +168,12 @@ const manageScope = (user: IPollaSessionUser): Pick<PollaBetFilters, 'cashierId'
 
 /**
  * Qué puede hacer el usuario con cada jugada ahora. Todos leen todo; cada rol
- * escribe en su alcance y hasta su corte (la base vuelve a controlarlo):
- * superadmin+ siempre; el admin, en su grupo hasta su corte; el Super, en toda
- * la organización hasta el mismo corte; el pasador solo borra lo suyo y lo de
- * sus jugadores hasta el cierre de carga (da de baja lo que no le pagaron,
- * aunque ya se haya liquidado); el jugador nada.
+ * escribe en su alcance y hasta su corte (la base vuelve a controlarlo, R30):
+ * superadmin+ edita números hasta el cierre y borra siempre (para corregir);
+ * el admin, en su grupo hasta la hora del sorteo; el Super, en toda la
+ * organización hasta el cierre; el pasador solo borra lo suyo y lo de sus
+ * jugadores hasta el cierre (da de baja lo que no le pagaron, aunque ya se
+ * haya liquidado); el jugador nada.
  */
 const actionsFor = (
   bet: PollaBetRow,
@@ -183,11 +184,11 @@ const actionsFor = (
   const alive = !bet.winner && !bet.deleted_at;
   if (!alive) return { ...NO_ACTIONS, can_mark_paid };
 
-  if (isPollaSuperRole(viewer.user_type)) {
-    return { can_edit: true, can_delete: true, can_mark_paid };
-  }
-
   const open = ctx.openEditions.has(bet.polla_edition_id);
+
+  if (isPollaSuperRole(viewer.user_type)) {
+    return { can_edit: open, can_delete: true, can_mark_paid };
+  }
 
   if (viewer.user_type === POLLA_USER_TYPE.ADMIN) {
     const inGroup = bet.polla_group_id === viewer.polla_group_id;
@@ -324,13 +325,27 @@ export class PollaBetRouter {
     return edition;
   };
 
+  /**
+   * R29: antes del inicio de carga nadie carga ni repite. La base lo vuelve a
+   * frenar (`polla_can_load`); acá se dice desde cuándo abre.
+   */
+  private assertLoadStarted = (edition: { load_start_date: string; load_start_time: string }) => {
+    const start = `${edition.load_start_date}T${edition.load_start_time}`;
+    if (`${pollaToday()}T${pollaNowTime()}` < start) {
+      const [, month, day] = edition.load_start_date.split('-');
+      throw new ForbiddenError(
+        `La carga de esta edición abre el ${day}/${month} a las ${edition.load_start_time.slice(0, 5)}`
+      );
+    }
+  };
+
   /** Ediciones de esas jugadas donde el rol todavía carga (para sus acciones). */
   private buildActionContext = async (
     user: IPollaSessionUser,
     bets: PollaBetRow[]
   ): Promise<ActionContext> => {
-    // Superadmin+ escribe siempre y el jugador nunca: no hace falta mirar cortes.
-    if (isPollaSuperRole(user.user_type) || user.user_type === POLLA_USER_TYPE.PLAYER) {
+    // El jugador nunca escribe: no hace falta mirar cortes.
+    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
       return { openEditions: new Set() };
     }
 
@@ -479,13 +494,13 @@ export class PollaBetRouter {
       ctx ? forViewer(bet, user, ctx) : toPublicBet(bet, user, NO_ACTIONS)
     );
 
-    // Cuántas veces se repitió sin cargo cada ticket (para quien puede hacerlo).
-    const freeRepeats =
-      isAdmin && managing && req.query.with_free_repeats === 'true'
-        ? await this.repository.getFreeRepeatCounts(result.data.map((bet) => bet.polla_bet_id))
+    // La cortesía vigente de cada ticket (R33), para quien puede repetir sin cargo.
+    const courtesies =
+      isAdmin && managing && req.query.with_courtesies === 'true'
+        ? await this.repository.getCourtesies(result.data.map((bet) => bet.polla_bet_id))
         : undefined;
 
-    res.status(200).json({ data: { bets: { ...result, data, free_repeats: freeRepeats } } });
+    res.status(200).json({ data: { bets: { ...result, data, courtesies } } });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -618,7 +633,7 @@ export class PollaBetRouter {
   private repeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const payload = repeatPollaBetsSchema.parse(req.body);
-    await this.assertEditionScope(user, payload.polla_edition_id);
+    this.assertLoadStarted(await this.assertEditionScope(user, payload.polla_edition_id));
 
     const result = await this.repository.repeat({
       actorId: user.polla_user_id,
@@ -638,7 +653,7 @@ export class PollaBetRouter {
   private freeRepeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const payload = repeatPollaBetsSchema.parse(req.body);
-    await this.assertEditionScope(user, payload.polla_edition_id);
+    this.assertLoadStarted(await this.assertEditionScope(user, payload.polla_edition_id));
 
     const result = await this.repository.repeat({
       actorId: user.polla_user_id,
@@ -716,7 +731,7 @@ export class PollaBetRouter {
     const { user } = getPollaSession(req);
     const payload = newPollaBetSchema.parse(req.body);
 
-    await this.assertEditionScope(user, payload.polla_edition_id);
+    this.assertLoadStarted(await this.assertEditionScope(user, payload.polla_edition_id));
 
     const targetUserId = payload.polla_user_id ?? user.polla_user_id;
 

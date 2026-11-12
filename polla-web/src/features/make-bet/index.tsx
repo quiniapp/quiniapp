@@ -21,7 +21,6 @@ import {
   IPollaUserOption,
   POLLA_USER_TYPE,
   isPollaLoaderRole,
-  isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
@@ -79,7 +78,6 @@ export const MakeBetPage = () => {
   // siempre cargan para un pasador o un jugador (el admin, de su grupo). El
   // pasador carga a su nombre o al de sus jugadores; el jugador, al suyo.
   const isLoader = Boolean(role && isPollaLoaderRole(role));
-  const isSuper = Boolean(role && isPollaSuperRole(role));
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
   const isAssistant = role === POLLA_USER_TYPE.ASSISTANT;
@@ -105,12 +103,18 @@ export const MakeBetPage = () => {
   const identifierRequired =
     (isCashier && !target) || (isLoader && targetType === POLLA_USER_TYPE.CASHIER);
 
-  // Las que tienen la carga abierta ahora para el rol (hora de Argentina):
-  // pasador y jugador hasta el cierre; el admin hasta el turno más tarde del
-  // día de cierre; superadmin+ hasta el último día de juego.
+  // Las que tienen la carga abierta ahora para el rol (hora de Argentina, R30):
+  // todos desde el inicio hasta el cierre de carga, salvo el admin de grupo,
+  // que carga hasta la hora del sorteo.
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
     loadable: true,
+    polla_organization_id: organizationId ?? undefined,
+  });
+  // Las activas que todavía no abrieron la carga (R29): sin nada abierto se
+  // avisa cuándo abre la próxima.
+  const { data: activeEditions } = useEditions({
+    status: POLLA_EDITION_STATUS.ACTIVE,
     polla_organization_id: organizationId ?? undefined,
   });
   const catalogs = useDrawCatalogs(organizationId);
@@ -123,9 +127,6 @@ export const MakeBetPage = () => {
   const selectedEditionId =
     editionId || (loadable.length === 1 ? loadable[0].polla_edition_id : '');
   const edition = loadable.find((e) => e.polla_edition_id === selectedEditionId);
-  // Con la polla en juego (solo superadmin+ llega acá), la jugada no suma los
-  // aciertos de los sorteos ya procesados hasta que se regeneran a mano.
-  const isPlaying = Boolean(edition && edition.start_date <= dayjs().format('YYYY-MM-DD'));
 
   const ticketDataOf = (bet: TicketBet, of: IPollaEditionEntityFront): PollaTicketData => ({
     ticket_number: bet.ticket_number,
@@ -177,6 +178,15 @@ export const MakeBetPage = () => {
   };
 
   // Con todos sus sorteos: en la especial se ve que juega con las 5 quinielas.
+  const nowMoment = dayjs().format('YYYY-MM-DDTHH:mm:ss');
+  const upcoming = (activeEditions?.data ?? [])
+    .filter((item) => `${item.load_start_date}T${item.load_start_time}` > nowMoment)
+    .sort((a, b) =>
+      `${a.load_start_date}T${a.load_start_time}`.localeCompare(
+        `${b.load_start_date}T${b.load_start_time}`
+      )
+    );
+
   const editionLabel = (item: IPollaEditionEntityFront) =>
     `${pollaEditionTitle(item, catalogs)} (${fmtDate(item.start_date)} al ${fmtDate(
       item.end_date
@@ -251,7 +261,19 @@ export const MakeBetPage = () => {
     // falta scrollear para llegar al botón de cargar.
     <div className="mx-auto max-w-2xl">
       {loadable.length === 0 ? (
-        <EmptyState message="No hay ediciones abiertas para carga en este momento" />
+        <div className="flex flex-col gap-2">
+          <EmptyState message="No hay ediciones abiertas para carga en este momento" />
+          {upcoming.length > 0 && (
+            <ul className="flex flex-col gap-1 text-center text-sm text-muted-foreground">
+              {upcoming.map((item) => (
+                <li key={item.polla_edition_id}>
+                  La carga de {pollaEditionTitle(item, catalogs)} abre el{' '}
+                  {fmtDate(item.load_start_date)} a las {fmtTime(item.load_start_time)}.
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-4 rounded-xl bg-card p-4 text-card-foreground sm:gap-5 sm:p-6">
           <div className="flex flex-col gap-2">
@@ -283,7 +305,6 @@ export const MakeBetPage = () => {
                   </span>
                 )}
                 {` · cierre de carga ${fmtDate(edition.load_limit_date)} ${fmtTime(edition.load_limit_time)}`}
-                {isSuper && ` · vos podés cargar hasta el ${fmtDate(edition.end_date)}`}
                 {role === POLLA_USER_TYPE.ADMIN &&
                   edition.my_load_cutoff &&
                   ` · vos podés cargar hasta el ${fmtCutoff(edition.my_load_cutoff)}`}
@@ -295,12 +316,6 @@ export const MakeBetPage = () => {
                 <span className="font-semibold">Juega con:</span>{' '}
                 {pollaEditionDrawLabels(edition, catalogs).join(', ')}.{' '}
                 {pollaPrizeRuleLabel(edition)}.
-              </p>
-            )}
-            {isSuper && isPlaying && (
-              <p className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-xs">
-                La edición ya está en juego: para que esta jugada sume los aciertos de los sorteos
-                anteriores, volvé a generar los ganadores de esos días en Resultados.
               </p>
             )}
           </div>

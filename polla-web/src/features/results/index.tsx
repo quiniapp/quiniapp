@@ -128,7 +128,7 @@ export const ResultsPage = () => {
   const { mutate: defineEditionDay, isPending: isDefining } = useDefineEditionDay();
 
   const lotteryById = useMemo(
-    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
+    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.label ?? l.name])),
     [lotteries]
   );
   const scheduleById = useMemo(

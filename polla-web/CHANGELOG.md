@@ -4,6 +4,35 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Quinielas y turnos**: "Quinielas y su orden" arriba de todo, con el número de cada una y flechas para subir y bajar. El orden se guarda al tocar.
+- **Dónde se ve:** tickets, listados, PDF y Resultados muestran "1 - Nacional" con el orden de la organización.
+- **Tests** (`lottery-order.test.ts`).
+
+### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
+
+- **Cargar jugada**:
+  - Se saca el aviso "La edición ya está en juego…" y el "vos podés cargar hasta el (último día)" de superadmin y superiores: ya nadie carga con el sorteo en curso.
+  - El admin de grupo sigue viendo hasta cuándo carga, que es la hora del sorteo.
+
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- **Ediciones**:
+  - El formulario suma "Inicio de carga (fecha)" e "Inicio de carga (hora)". Una edición nueva propone la fecha y hora actuales, y se pueden cambiar para crearla el jueves y que abra el sábado.
+  - "Inicio" y "Fin" pasan a decir "Inicio de sorteo" y "Fin de sorteo".
+  - La lista muestra la columna "Carga" con "Abre…" y "Cierra…"; en mobile, "Abre la carga" y "Cierre".
+- **Cargar jugada**: si no hay ninguna edición abierta, avisa cuándo abre la carga de las próximas.
+- **Tests** (`load-start.test.ts`): validación del inicio de carga en los schemas.
+
+### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- **Administrar jugadas**:
+  - En lugar del contador de repeticiones sin cargo, cada ticket con cortesía muestra "Cortesía en Edición X · ticket N".
+  - Los tickets que ya tienen su cortesía y las cortesías mismas no se pueden elegir para "Repetir sin cargo". "Elegir los N de la lista" los saltea.
+- **`FreeRepeatDialog`**: si un ticket ya tenía su cortesía, el resultado dice en qué edición y con qué ticket está, y que para cambiarla hay que borrarla y repetir.
+- **`repeatReasons`**: textos de `POLLA_BET_ALREADY_COURTESY` y `POLLA_FREE_REPEAT_OF_COURTESY`.
+
 ### Added - 2026-11-11 (R24: PDF de un día puntual)
 
 - **"Compartir PDF" → "Al cierre de un día de sorteo"**: una foto de la edición en un día elegido.

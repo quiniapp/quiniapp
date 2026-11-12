@@ -79,8 +79,11 @@ interface EditionForm {
   name: string;
   start_date: string;
   end_date: string;
+  /** Inicio de carga (R29): antes nadie carga. Por defecto, ahora. */
+  load_start_date: string;
+  load_start_time: string;
   load_limit_date: string;
-  /** Pasada esta hora del día de cierre, pasadores y jugadores ya no cargan. */
+  /** Pasada esta hora del día de cierre nadie carga (el admin de grupo, hasta el sorteo). */
   load_limit_time: string;
   pool_amount: string;
   surprise_pool_amount: string;
@@ -94,6 +97,8 @@ const emptyForm: EditionForm = {
   name: '',
   start_date: '',
   end_date: '',
+  load_start_date: '',
+  load_start_time: '',
   load_limit_date: '',
   load_limit_time: '21:00',
   pool_amount: '',
@@ -112,6 +117,8 @@ const formOf = (edition: IPollaEditionEntityFront): EditionForm => ({
   name: edition.name ?? '',
   start_date: edition.start_date,
   end_date: edition.end_date,
+  load_start_date: edition.load_start_date,
+  load_start_time: fmtTime(edition.load_start_time),
   load_limit_date: edition.load_limit_date,
   load_limit_time: fmtTime(edition.load_limit_time),
   pool_amount: String(Number(edition.pool_amount)),
@@ -225,7 +232,12 @@ const EditionDialog = ({
   organizationId,
   onClose,
 }: EditionDialogProps) => {
-  const [form, setForm] = useState<EditionForm>(edition ? formOf(edition) : emptyForm);
+  // Una edición nueva abre la carga ahora, salvo que se elija otro momento (R29).
+  const [form, setForm] = useState<EditionForm>(() =>
+    edition
+      ? formOf(edition)
+      : { ...emptyForm, load_start_date: todayIso(), load_start_time: dayjs().format('HH:mm') }
+  );
   const { mutate: createEdition, isPending: isCreating } = useCreateEdition();
   const { mutate: updateEdition, isPending: isUpdating } = useUpdateEdition();
   const isPending = isCreating || isUpdating;
@@ -351,6 +363,25 @@ const EditionDialog = ({
           </div>
 
           <div className="flex flex-col gap-1">
+            <Label htmlFor="edition-load-start-date">Inicio de carga (fecha)</Label>
+            <DateInput
+              id="edition-load-start-date"
+              value={form.load_start_date}
+              onValueChange={(value) => setForm({ ...form, load_start_date: value })}
+              disabled={hasWinner}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="edition-load-start-time">Inicio de carga (hora)</Label>
+            <Input
+              id="edition-load-start-time"
+              type="time"
+              value={form.load_start_time}
+              onChange={(e) => setForm({ ...form, load_start_time: e.target.value })}
+              disabled={hasWinner}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
             <Label htmlFor="edition-load-limit-date">Cierre de carga (fecha)</Label>
             <DateInput
               id="edition-load-limit-date"
@@ -370,7 +401,7 @@ const EditionDialog = ({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="edition-start-date">Inicio</Label>
+            <Label htmlFor="edition-start-date">Inicio de sorteo</Label>
             <DateInput
               id="edition-start-date"
               value={form.start_date}
@@ -379,7 +410,7 @@ const EditionDialog = ({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="edition-end-date">Fin</Label>
+            <Label htmlFor="edition-end-date">Fin de sorteo</Label>
             <DateInput
               id="edition-end-date"
               value={form.end_date}
@@ -632,6 +663,10 @@ export const EditionsPage = () => {
                   </span>
                 </div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <dt className="text-muted-foreground">Abre la carga</dt>
+                  <dd className="text-right tabular-nums">
+                    {fmtDate(edition.load_start_date)} {fmtTime(edition.load_start_time)}
+                  </dd>
                   <dt className="text-muted-foreground">Cierre</dt>
                   <dd className="text-right tabular-nums">
                     {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
@@ -657,7 +692,7 @@ export const EditionsPage = () => {
                 <TableRow>
                   <TableHead>Sorteos</TableHead>
                   <TableHead>Semana</TableHead>
-                  <TableHead>Cierre</TableHead>
+                  <TableHead>Carga</TableHead>
                   <TableHead className="text-right">Pozo</TableHead>
                   <TableHead className="text-right">Ticket</TableHead>
                   <TableHead className="text-right">Jugadas</TableHead>
@@ -674,8 +709,13 @@ export const EditionsPage = () => {
                     <TableCell>
                       {fmtDate(edition.start_date)} al {fmtDate(edition.end_date)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
+                    <TableCell className="whitespace-nowrap text-sm">
+                      <span className="block">
+                        Abre {fmtDate(edition.load_start_date)} {fmtTime(edition.load_start_time)}
+                      </span>
+                      <span className="block">
+                        Cierra {fmtDate(edition.load_limit_date)} {fmtTime(edition.load_limit_time)}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       <PoolAmount edition={edition} />

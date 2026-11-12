@@ -30,6 +30,8 @@ interface FreeRepeatDialogProps {
   betIds: string[];
   organizationId: string | null;
   editionLabel: (edition: IPollaEditionEntityFront) => string;
+  /** Nombre de la edición donde está la cortesía de un ticket ya repetido (R33). */
+  courtesyEditionName: (editionId: string) => string;
   onClose: () => void;
   /** Se cargaron: la pantalla limpia la selección. */
   onDone: () => void;
@@ -38,13 +40,15 @@ interface FreeRepeatDialogProps {
 /**
  * Repetir sin cargo los tickets elegidos de una edición finalizada en una
  * edición abierta (con el corte del rol). Cada uno se carga a nombre de su
- * dueño, a $0: no suma al pase, la comisión ni lo recaudado. Al terminar se
+ * dueño, a $0: no suma al pase, la comisión ni lo recaudado. Un ticket tiene
+ * una sola cortesía (R33): si ya la tiene, se dice dónde está. Al terminar se
  * ve cuántos se cargaron y cuáles no (y por qué).
  */
 export const FreeRepeatDialog = ({
   betIds,
   organizationId,
   editionLabel,
+  courtesyEditionName,
   onClose,
   onDone,
 }: FreeRepeatDialogProps) => {
@@ -102,6 +106,8 @@ export const FreeRepeatDialog = ({
                       {skipped.ticket_number ?? skipped.polla_bet_id}
                       {skipped.user_name ? ` (${skipped.user_name})` : ''}:{' '}
                       {repeatReasonLabel(skipped.reason)}
+                      {skipped.courtesy &&
+                        ` · está en ${courtesyEditionName(skipped.courtesy.polla_edition_id)}, ticket ${skipped.courtesy.ticket_number}`}
                     </li>
                   ))}
                 </ul>

@@ -30,6 +30,12 @@ export const updatePollaLotterySchema = z.object({
   order: z.number().int().min(0).optional(),
 });
 
+/** R28: todas las quinielas de la organización, en el orden nuevo. */
+export const reorderPollaLotteriesSchema = z.object({
+  polla_lottery_ids: z.array(z.string().uuid()).min(1, 'No hay quinielas para ordenar').max(200),
+  polla_organization_id: z.string().uuid().optional(),
+});
+
 // ----------------------------------------------------------------- turnos
 
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;

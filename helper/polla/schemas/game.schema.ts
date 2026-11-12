@@ -26,6 +26,11 @@ const editionDates = (data: { load_limit_date?: string; start_date?: string; end
  */
 const LOAD_LIMIT_MESSAGE = 'El cierre de carga no puede ser después de la fecha de inicio';
 
+const LOAD_START_MESSAGE = 'El inicio de carga tiene que ser antes del cierre de carga';
+
+/** `YYYY-MM-DD` + `HH:mm[:ss]` comparables como texto. */
+const moment = (date: string, time: string) => `${date}T${time.length === 5 ? `${time}:00` : time}`;
+
 /** Sorteos de la edición (quiniela × turno): al menos uno y sin repetir. */
 const editionDraws = z
   .array(
@@ -58,6 +63,9 @@ export const newPollaEditionSchema = z
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate,
     end_date: isoDate,
+    /** R29: sin inicio de carga, la base toma la fecha y hora actuales. */
+    load_start_date: isoDate.optional(),
+    load_start_time: clockTime.optional(),
     load_limit_date: isoDate,
     load_limit_time: clockTime,
     pool_amount: z.number().min(0),
@@ -70,6 +78,18 @@ export const newPollaEditionSchema = z
         code: z.ZodIssueCode.custom,
         path: ['load_limit_date'],
         message: LOAD_LIMIT_MESSAGE,
+      });
+    }
+    if (
+      data.load_start_date &&
+      data.load_start_time &&
+      moment(data.load_start_date, data.load_start_time) >=
+        moment(data.load_limit_date, data.load_limit_time)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['load_start_date'],
+        message: LOAD_START_MESSAGE,
       });
     }
     if (data.start_date > data.end_date) {
@@ -89,6 +109,8 @@ export const updatePollaEditionSchema = z
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate.optional(),
     end_date: isoDate.optional(),
+    load_start_date: isoDate.optional(),
+    load_start_time: clockTime.optional(),
     load_limit_date: isoDate.optional(),
     load_limit_time: clockTime.optional(),
     pool_amount: z.number().min(0).optional(),
@@ -103,6 +125,21 @@ export const updatePollaEditionSchema = z
         code: z.ZodIssueCode.custom,
         path: ['load_limit_date'],
         message: LOAD_LIMIT_MESSAGE,
+      });
+    }
+    // Con las cuatro puntas se valida acá; si no, la base (que tiene el resto).
+    if (
+      data.load_start_date &&
+      data.load_start_time &&
+      data.load_limit_date &&
+      data.load_limit_time &&
+      moment(data.load_start_date, data.load_start_time) >=
+        moment(data.load_limit_date, data.load_limit_time)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['load_start_date'],
+        message: LOAD_START_MESSAGE,
       });
     }
     if (d.start_date && d.end_date && d.start_date > d.end_date) {
