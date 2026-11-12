@@ -37,9 +37,9 @@ import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { pollaUserCode, pollaUserOption } from '@/lib/pollaUsers';
 import { groupLabel } from '@/lib/pollaGroups';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -289,15 +289,19 @@ export const ManageBetsPage = () => {
     markPaid({ polla_bet_ids: [row.polla_bet_id] }, { onSuccess: paidToast });
   };
 
-  // "Eliminar impagos" (R14): solo el pasador, en la edición elegida y, si
-  // filtró un jugador, solo de ese jugador.
+  // "Eliminar impagos" (R14), en la edición elegida. El pasador borra lo suyo
+  // (o lo de un jugador, si lo filtró). Admin+ tiene que filtrar un pasador o
+  // un jugador: borra solo lo de ese (el admin, dentro de su grupo). El Súper no.
+  const canDeleteUnpaid = isCashier || canManage;
+  const unpaidTargetChosen = isCashier || Boolean(cashierId || playerId);
   const { mutate: deleteUnpaid, isPending: isDeletingUnpaid } = useDeleteUnpaidBets();
   const [checkingUnpaid, setCheckingUnpaid] = useState(false);
   const handleDeleteUnpaid = async () => {
-    if (!editionId) return;
+    if (!editionId || !unpaidTargetChosen) return;
     const target = {
       polla_edition_id: editionId,
       ...(playerId ? { polla_user_id: playerId } : {}),
+      ...(cashierId ? { cashier_polla_user_id: cashierId } : {}),
     };
     setCheckingUnpaid(true);
     let summary: IPollaUnpaidSummary;
@@ -321,7 +325,7 @@ export const ManageBetsPage = () => {
       return;
     }
 
-    const whose = selectedUser && playerId ? ` de ${selectedUser.name}` : '';
+    const whose = selectedUser && (playerId || cashierId) ? ` de ${selectedUser.name}` : '';
     const winners =
       summary.winners_skipped > 0
         ? `\n${summary.winners_skipped} en Debe ganaron y no se borran.`
@@ -568,11 +572,11 @@ export const ManageBetsPage = () => {
         />
 
         <div className="flex items-center gap-2 sm:pb-2">
-          <Checkbox
+          <Switch
             id="manage-bets-owed"
             checked={onlyOwed}
             onCheckedChange={(checked) =>
-              updateParam('payment_status', checked === true ? POLLA_PAYMENT_STATUS.OWED : '')
+              updateParam('payment_status', checked ? POLLA_PAYMENT_STATUS.OWED : '')
             }
           />
           <Label htmlFor="manage-bets-owed" className="cursor-pointer py-1">
@@ -607,17 +611,21 @@ export const ManageBetsPage = () => {
           {refreshing ? 'Actualizando…' : 'Actualizar'}
         </Button>
 
-        {isCashier && selectedEdition && !searching && (
+        {canDeleteUnpaid && selectedEdition && !searching && (
           <Button
             type="button"
             variant="outline"
             className="gap-2"
             onClick={handleDeleteUnpaid}
-            disabled={checkingUnpaid || isDeletingUnpaid}
+            disabled={!unpaidTargetChosen || checkingUnpaid || isDeletingUnpaid}
             title={
-              playerId
-                ? 'Borra los tickets en Debe de este jugador en la edición'
-                : 'Borra todos tus tickets en Debe de la edición'
+              !unpaidTargetChosen
+                ? 'Elegí un pasador o un jugador en el filtro'
+                : playerId
+                  ? 'Borra los tickets en Debe de este jugador en la edición'
+                  : cashierId
+                    ? 'Borra los tickets en Debe de este pasador en la edición'
+                    : 'Borra todos tus tickets en Debe de la edición'
             }
           >
             <Trash2 />

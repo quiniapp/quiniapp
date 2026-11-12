@@ -66,8 +66,12 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new ForbiddenError('Solo el dueño, el capitalista o el superadmin marcan premios pagados'),
   POLLA_PRIZE_NOT_WINNER: () => new BadRequestError('Ese ticket no ganó: no tiene premio'),
   POLLA_PRIZE_ALREADY_PAID: () => new ConflictError('Ese premio ya está marcado como pagado'),
-  POLLA_UNPAID_DELETE_ONLY_CASHIER: () =>
-    new ForbiddenError('Solo el pasador borra sus tickets impagos'),
+  POLLA_UNPAID_DELETE_FORBIDDEN: () =>
+    new ForbiddenError(
+      'Borran impagos el pasador, el admin de grupo, el superadmin, el capitalista y el dueño'
+    ),
+  POLLA_UNPAID_DELETE_TARGET_REQUIRED: () =>
+    new BadRequestError('Elegí el pasador o el jugador de los tickets impagos'),
   POLLA_PAYMENT_TARGET_REQUIRED: () =>
     new BadRequestError('Elegí los tickets, o la edición y el jugador'),
   POLLA_EDITION_DRAWS_REQUIRED: () =>

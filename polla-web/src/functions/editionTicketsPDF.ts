@@ -42,6 +42,11 @@ export interface EditionTicketsPdfParams {
   orgName?: string;
   /** Qué filtros se aplicaron (pasador, mis jugadas, orden). */
   filtersLabel?: string;
+  /**
+   * R24: la foto al cierre de ese día de sorteo (`YYYY-MM-DD`). Las filas ya
+   * vienen recortadas (`snapshotAtDay`); acá cambian los textos y el archivo.
+   */
+  snapshotDay?: string;
 }
 
 /**
@@ -50,7 +55,7 @@ export interface EditionTicketsPdfParams {
  * los aciertos, si ganó y cuánto. Una fila por ticket, aunque sean miles.
  */
 export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
-  const { rows, edition, orgName, filtersLabel } = params;
+  const { rows, edition, orgName, filtersLabel, snapshotDay } = params;
   const { jsPDF, autoTable } = await getPDFDeps();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }) as PdfDoc;
 
@@ -87,9 +92,13 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
       `${rows.length} tickets${filtersLabel ? ` · ${filtersLabel}` : ''} · Generado el ${dayjs().format(
         'DD/MM/YYYY HH:mm'
       )}`,
-      winners.length
-        ? `Ganadores: ${winners.length} · ${money(prizes)} en premios`
-        : 'Todavía no hay ganadores',
+      snapshotDay
+        ? winners.length
+          ? `Ganadores al ${fmtDate(snapshotDay)}: ${winners.length} · ${money(prizes)} en premios`
+          : `Al ${fmtDate(snapshotDay)} todavía no había ganadores`
+        : winners.length
+          ? `Ganadores: ${winners.length} · ${money(prizes)} en premios`
+          : 'Todavía no hay ganadores',
       ...(isLadder ? [`${pollaPrizeRuleLabel(edition)}.`] : []),
       'Números acertados en negrita y sombreados.',
     ],
@@ -185,6 +194,6 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
     // Una especial con 5 quinielas haría un nombre larguísimo: se corta.
     fileName: `polla_${slug(params.title).slice(0, 60)}_${dayjs(edition.start_date).format(
       'DD-MM-YYYY'
-    )}.pdf`,
+    )}${snapshotDay ? `_al_${dayjs(snapshotDay).format('DD-MM-YYYY')}` : ''}.pdf`,
   };
 }

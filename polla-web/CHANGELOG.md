@@ -4,6 +4,39 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R24: PDF de un día puntual)
+
+- **"Compartir PDF" → "Al cierre de un día de sorteo"**: una foto de la edición en un día elegido.
+  - **Qué muestra:**
+    - los tickets cargados hasta ese día;
+    - los aciertos de los sorteos hasta ese día;
+    - como ganadora, solo la que ganó ese día o antes; si no, sin premio.
+  - **Orden:** por aciertos y, a igual cantidad, lo último cargado primero.
+  - **Filtros:** los de Ganadoras y Aciertos se aplican sobre esa foto. Los demás filtros de la lista se respetan.
+  - **Días:** se elige entre los días de sorteo que ya pasaron ("Día 1 · 02/11"…), así que también sirve para la polla que se carga y se sortea el mismo sábado.
+  - **Dónde está:**
+    - en Administrar jugadas, junto a las opciones de siempre (hoy, otra fecha, todas);
+    - en Jugadas y en Resultados, que abren el diálogo apenas la edición empieza a sortearse ("Como están ahora" o "Al cierre de un día de sorteo"). Antes de eso, comparten como hasta ahora.
+- **`lib/betsSnapshot.ts`**: `snapshotAtDay`, `filterSnapshot` y `pastDrawDays`, que son funciones puras.
+- **`editionTicketsPDF.ts`**: con `snapshotDay`, dice "Ganadores al DD/MM/YYYY" o "Al DD/MM/YYYY todavía no había ganadores", y el archivo termina en `_al_DD-MM-YYYY`.
+- **`ShareTicketsPdfButton.tsx`**: el diálogo pasa a ser `PdfChoiceDialog` (lista, días de carga o foto de un día). Para la foto pide toda la edición sin rango de carga: la API exige las dos puntas y como mucho 62 días.
+- **Tests** (`__tests__/bets/snapshot.test.ts`, 13 casos):
+  - carga posterior y del mismo día;
+  - aciertos recortados al día;
+  - ganadora antes y después de ganar;
+  - orden por aciertos y "Más recientes";
+  - filtros;
+  - días de sorteo pasados.
+
+### Changed - 2026-11-11 (R14: Eliminar impagos también para el staff)
+
+- **Administrar jugadas**:
+  - "Eliminar impagos" aparece también para el admin de grupo, el superadmin, el capitalista y el dueño.
+  - Para habilitarse, el staff tiene que filtrar un pasador o un jugador, y borra solo lo de ese. El tooltip lo explica.
+  - La confirmación muestra a quién se le borran los impagos.
+  - El filtro "Impagos" pasa de casilla a switch.
+- **`usePollaMutations`**: `UnpaidTarget` / `unpaidQuery` suman `cashier_polla_user_id`.
+
 ### Changed - 2026-11-11 (R19: admin en Premios)
 
 - **Premios**: columna "Admin" entre Grupo y Pasador. En mobile, la tarjeta muestra "Grupo · Admin" en una línea y el pasador en la siguiente.

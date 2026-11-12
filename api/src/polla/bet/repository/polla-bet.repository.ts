@@ -505,19 +505,21 @@ export class PollaBetRepository {
   }
 
   /**
-   * "Eliminar impagos" (R14), antes de confirmar: cuántos tickets en Debe del
-   * pasador se borrarían en la edición (de un jugador, si se pide) y cuánto
-   * suman. Las ganadoras no cuentan: no se borran.
+   * "Eliminar impagos" (R14), antes de confirmar: cuántos tickets en Debe de
+   * ese pasador y/o jugador se borrarían en la edición y cuánto suman. Las
+   * ganadoras no cuentan: no se borran.
    */
   async unpaidSummary(params: {
     actorId: string;
     editionId: string;
     userId?: string | null;
+    cashierId?: string | null;
   }): Promise<IPollaUnpaidSummary> {
     const { data, error } = await supabase.rpc('polla_unpaid_bets_summary', {
       p_actor_id: params.actorId,
       p_edition_id: params.editionId,
       p_user_id: params.userId ?? null,
+      p_cashier_id: params.cashierId ?? null,
     });
 
     throwIfPollaError(error);
@@ -530,16 +532,18 @@ export class PollaBetRepository {
     };
   }
 
-  /** Borra los impagos del pasador en la edición (ver `unpaidSummary`). */
+  /** Borra los impagos de ese pasador y/o jugador en la edición (ver `unpaidSummary`). */
   async deleteUnpaid(params: {
     actorId: string;
     editionId: string;
     userId?: string | null;
+    cashierId?: string | null;
   }): Promise<{ deleted: number; amount: number; deducted_on: string }> {
     const { data, error } = await supabase.rpc('polla_delete_unpaid_bets', {
       p_actor_id: params.actorId,
       p_edition_id: params.editionId,
       p_user_id: params.userId ?? null,
+      p_cashier_id: params.cashierId ?? null,
     });
 
     throwIfPollaError(error);

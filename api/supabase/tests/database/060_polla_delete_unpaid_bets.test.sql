@@ -1,6 +1,6 @@
--- R14: "Eliminar impagos". Solo el pasador, solo lo imputado a él, en la
--- edición; nunca ganadoras; con el corte de carga; y la baja entra en
--- Borradas igual que el borrado de a uno.
+-- R14: "Eliminar impagos" del pasador: solo lo imputado a él, en la edición;
+-- nunca ganadoras; con el corte de carga; y la baja entra en Borradas igual
+-- que el borrado de a uno. El staff, en 065.
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
@@ -80,15 +80,16 @@ UPDATE polla_bets SET winner = TRUE, prize = 1000 WHERE polla_bet_id = (SELECT i
 
 -- -------------------------------------------------------------- quién
 
+-- El staff también borra (065), pero tiene que elegir pasador o jugador.
 SELECT throws_ok(
   $$SELECT polla_delete_unpaid_bets('f0000000-0000-0000-0000-0000000014a1', (SELECT id FROM ed))$$,
-  'P0001', 'POLLA_UNPAID_DELETE_ONLY_CASHIER',
-  'solo el pasador borra impagos'
+  'P0001', 'POLLA_UNPAID_DELETE_TARGET_REQUIRED',
+  'el admin sin elegir pasador ni jugador no borra'
 );
 SELECT throws_ok(
   $$SELECT polla_unpaid_bets_summary('f0000000-0000-0000-0000-0000000014f1', (SELECT id FROM ed))$$,
-  'P0001', 'POLLA_UNPAID_DELETE_ONLY_CASHIER',
-  'el jugador tampoco'
+  'P0001', 'POLLA_UNPAID_DELETE_FORBIDDEN',
+  'el jugador no borra impagos'
 );
 
 -- --------------------------------------------------------- resumen
