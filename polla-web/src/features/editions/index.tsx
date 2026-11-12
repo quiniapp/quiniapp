@@ -269,8 +269,24 @@ const EditionDialog = ({
       return;
     }
 
-    // Con ganador solo se renombra: mandar el resto haría que la base lo rechace.
-    const parsed = updatePollaEditionSchema.safeParse(hasWinner ? { name: values.name } : values);
+    // Ajuste de R26: cambiar el mínimo de una edición terminada recalcula los
+    // ganadores y los premios (la base lo frena si ya hay premios pagados).
+    const minChanged = values.min_winning_hits !== edition.min_winning_hits;
+    if (
+      minChanged &&
+      edition.status === POLLA_EDITION_STATUS.FINISHED &&
+      !window.confirm(
+        `La edición ya terminó: con el mínimo de ${values.min_winning_hits} aciertos se vuelven a calcular los ganadores y los premios. ¿Seguir?`
+      )
+    ) {
+      return;
+    }
+
+    // Con ganador solo se cambian el nombre y el mínimo: mandar el resto haría
+    // que la base lo rechace.
+    const parsed = updatePollaEditionSchema.safeParse(
+      hasWinner ? { name: values.name, min_winning_hits: values.min_winning_hits } : values
+    );
     if (!parsed.success) {
       toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
       return;
@@ -290,7 +306,7 @@ const EditionDialog = ({
           </DialogTitle>
           <DialogDescription>
             {hasWinner
-              ? 'La edición ya tiene ganadores: solo se puede cambiar el nombre.'
+              ? 'La edición ya tiene ganadores: solo se pueden cambiar el nombre y el mínimo de aciertos (si cambia, se recalculan los ganadores y los premios).'
               : extending
                 ? 'Mové la fecha de fin para sumar sorteos (por ejemplo, el sábado). Los tickets siguen jugando y la carga no se reabre.'
                 : 'El cierre de carga puede ser el mismo día del primer sorteo, antes de la hora del turno.'}
@@ -323,7 +339,6 @@ const EditionDialog = ({
                 id="edition-special"
                 checked={form.special}
                 onCheckedChange={(special) => setForm({ ...form, special })}
-                disabled={hasWinner}
               />
             </div>
             {form.special ? (
@@ -338,7 +353,6 @@ const EditionDialog = ({
                   className="w-24"
                   value={form.min_winning_hits}
                   onChange={(e) => setForm({ ...form, min_winning_hits: e.target.value })}
-                  disabled={hasWinner}
                 />
                 <p className="text-xs text-muted-foreground">
                   Ganan los que completan 10. Si al final nadie llegó, ganan los de más aciertos (9,

@@ -4,6 +4,19 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-12 (R26, ajuste: mínimo de aciertos editable)
+
+- **Migración `20261112051924_polla_min_hits_editable`**: `polla_update_edition` deja cambiar `min_winning_hits` con resultados cargados y también con ganadores, mientras no haya ningún premio pagado (`POLLA_EDITION_PRIZE_PAID_LOCKED`).
+  - **Edición terminada** por la escalera o desierta: se vuelve a procesar el último día (`polla_process_edition_hits`) y se recalculan ganadores, premios y estado.
+  - **Terminada por un 10:** no cambia nada.
+  - **En juego:** solo se guarda el número.
+  - **Con ganadores**, el resto sigue fijo.
+  - Para corregir un mínimo cargado mal al crear la especial.
+- **`polla-errors.ts`**: mensajes nuevos de `POLLA_EDITION_HAS_WINNERS_LOCKED` y `POLLA_EDITION_DRAWS_LOCKED`, y error nuevo `POLLA_EDITION_PRIZE_PAID_LOCKED`.
+- **Tests pgTAP**:
+  - `150_polla_min_hits_editable`, nuevo (17 casos);
+  - el `020` pasa a esperar que el mínimo se pueda cambiar con ganador.
+
 ### Added - 2026-11-11 (R28: orden de las quinielas)
 
 - **Migración `20261111223835_polla_lottery_order`**:
