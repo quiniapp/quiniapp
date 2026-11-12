@@ -7,6 +7,7 @@ import { IPollaBetListItem, IPollaEditionEntityFront } from '@helper/polla/types
 import { useAuth } from '@/providers/AuthContext';
 import { apiClient } from '@/lib/apiClient';
 import { periodLabel } from '@/lib/accountPeriod';
+import { filterSnapshot, pastDrawDays, snapshotAtDay } from '@/lib/betsSnapshot';
 import { todayIso } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
@@ -21,6 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { makeEditionTicketsPdf } from '@/functions/editionTicketsPDF';
 import { sharePdf } from '@/functions/printPdf';
 import { fetchOrganizationName } from '@/features/current-account/fetchers';
@@ -98,44 +106,76 @@ const fetchAllTickets = async (
   return rows;
 };
 
-type LoadChoice = 'list' | 'today' | 'day' | 'all';
+/**
+ * Qué entra al PDF:
+ * - `list`: lo que se ve en la lista (Jugadas);
+ * - `load`: los días de carga elegidos (Administrar jugadas);
+ * - `snapshot`: la foto al cierre de un día de sorteo (R24).
+ */
+type PdfChoice =
+  | { kind: 'list' }
+  | { kind: 'load'; range: LoadRange | null }
+  | { kind: 'snapshot'; day: string };
+
+type ChoiceValue = 'list' | 'list-range' | 'today' | 'day' | 'all' | 'snapshot';
+
+const drawDayLabel = (day: string, index: number) =>
+  `Día ${index + 1} · ${dayjs(day).format('DD/MM')}`;
 
 /**
- * Qué días de carga entran al PDF: hoy, otra fecha, todas o, si la lista tiene
- * el filtro "Cargadas desde / Hasta", ese rango (elegido de entrada).
+ * Elegir qué tickets van al PDF. Con `loadChoices` (Administrar jugadas): hoy,
+ * otra fecha de carga, todas o el rango de la lista. Sin eso (Jugadas): lo que
+ * se ve en la lista. Si la edición ya empezó a sortearse, además "Al cierre de
+ * un día de sorteo" (R24).
  */
-const LoadDateDialog = ({
+const PdfChoiceDialog = ({
+  loadChoices,
   listRange,
+  drawDays,
   onConfirm,
   onClose,
 }: {
+  loadChoices: boolean;
   listRange: LoadRange | null;
-  onConfirm: (range: LoadRange | null) => void;
+  drawDays: string[];
+  onConfirm: (choice: PdfChoice) => void;
   onClose: () => void;
 }) => {
   const today = todayIso();
-  const [choice, setChoice] = useState<LoadChoice>(listRange ? 'list' : 'today');
+  const [choice, setChoice] = useState<ChoiceValue>(() => {
+    if (!loadChoices) return 'list';
+    return listRange ? 'list-range' : 'today';
+  });
   const [day, setDay] = useState(today);
+  // La foto arranca en el último día sorteado.
+  const [snapshotDay, setSnapshotDay] = useState(drawDays[drawDays.length - 1] ?? '');
 
-  const options: { value: LoadChoice; label: string }[] = [
-    ...(listRange
-      ? [
-          {
-            value: 'list' as const,
-            label: `Las de la lista (cargadas ${periodLabel(listRange.from, listRange.to)})`,
-          },
-        ]
-      : []),
-    { value: 'today', label: `Las de hoy (${dayjs(today).format('DD/MM')})` },
-    { value: 'day', label: 'Las de otra fecha' },
-    { value: 'all', label: 'Todas las fechas' },
-  ];
+  const options: { value: ChoiceValue; label: string }[] = loadChoices
+    ? [
+        ...(listRange
+          ? [
+              {
+                value: 'list-range' as const,
+                label: `Las de la lista (cargadas ${periodLabel(listRange.from, listRange.to)})`,
+              },
+            ]
+          : []),
+        { value: 'today', label: `Las de hoy (${dayjs(today).format('DD/MM')})` },
+        { value: 'day', label: 'Las de otra fecha' },
+        { value: 'all', label: 'Todas las fechas' },
+      ]
+    : [{ value: 'list', label: 'Como están ahora' }];
+  if (drawDays.length > 0) {
+    options.push({ value: 'snapshot', label: 'Al cierre de un día de sorteo' });
+  }
 
   const handleConfirm = () => {
-    if (choice === 'list') onConfirm(listRange);
-    else if (choice === 'today') onConfirm({ from: today, to: today });
-    else if (choice === 'day') onConfirm({ from: day, to: day });
-    else onConfirm(null);
+    if (choice === 'list') onConfirm({ kind: 'list' });
+    else if (choice === 'list-range') onConfirm({ kind: 'load', range: listRange });
+    else if (choice === 'today') onConfirm({ kind: 'load', range: { from: today, to: today } });
+    else if (choice === 'day') onConfirm({ kind: 'load', range: { from: day, to: day } });
+    else if (choice === 'all') onConfirm({ kind: 'load', range: null });
+    else onConfirm({ kind: 'snapshot', day: snapshotDay });
   };
 
   return (
@@ -144,12 +184,13 @@ const LoadDateDialog = ({
         <DialogHeader>
           <DialogTitle>Compartir PDF</DialogTitle>
           <DialogDescription>
-            ¿De qué día son las jugadas que imprimís? Los demás filtros de la lista se aplican
-            igual.
+            {loadChoices
+              ? '¿De qué día son las jugadas que imprimís? Los demás filtros de la lista se aplican igual.'
+              : '¿Qué jugadas imprimís? Los filtros de la lista se aplican igual.'}
           </DialogDescription>
         </DialogHeader>
 
-        <div role="radiogroup" aria-label="Día de carga" className="flex flex-col gap-2">
+        <div role="radiogroup" aria-label="Qué jugadas" className="flex flex-col gap-2">
           {options.map((option) => {
             const selected = choice === option.value;
             return (
@@ -181,11 +222,35 @@ const LoadDateDialog = ({
           />
         )}
 
+        {choice === 'snapshot' && (
+          <div className="flex flex-col gap-1">
+            <Select value={snapshotDay} onValueChange={setSnapshotDay}>
+              <SelectTrigger aria-label="Día de sorteo" className="w-full">
+                <SelectValue placeholder="Elegí el día" />
+              </SelectTrigger>
+              <SelectContent>
+                {drawDays.map((drawDay, index) => (
+                  <SelectItem key={drawDay} value={drawDay}>
+                    {drawDayLabel(drawDay, index)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Los tickets cargados hasta ese día, con los aciertos de los sorteos hasta ese día.
+            </p>
+          </div>
+        )}
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={choice === 'day' && !day}>
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            disabled={(choice === 'day' && !day) || (choice === 'snapshot' && !snapshotDay)}
+          >
             <FileDown />
             Compartir PDF
           </Button>
@@ -203,7 +268,8 @@ const LoadDateDialog = ({
  * `view: 'public'` (Jugadas) trae lo mismo que la lista: toda la organización.
  * Con `pickLoadDate` (Administrar jugadas) antes se elige de qué día son las
  * jugadas: reemplaza `load_from`/`load_to` de `filters` y se suma al final de
- * `filtersLabel`.
+ * `filtersLabel`. Si la edición ya empezó a sortearse, también se puede pedir
+ * la foto al cierre de un día de sorteo (R24).
  */
 export const ShareTicketsPdfButton = ({
   edition,
@@ -225,12 +291,31 @@ export const ShareTicketsPdfButton = ({
   const [progress, setProgress] = useState<Progress>({ phase: 'idle' });
   const [picking, setPicking] = useState(false);
   const busy = progress.phase !== 'idle';
+  const drawDays = pastDrawDays(edition, todayIso());
 
-  const generate = async (pdfFilters: TicketsPdfFilters, pdfFiltersLabel?: string) => {
+  const generate = async (
+    pdfFilters: TicketsPdfFilters,
+    pdfFiltersLabel?: string,
+    snapshotDay?: string
+  ) => {
     setProgress({ phase: 'loading', loaded: 0, total: edition.bets_count ?? 0 });
     try {
-      const [rows, orgName] = await Promise.all([
-        fetchAllTickets(edition.polla_edition_id, pdfFilters, (loaded, total) =>
+      // La foto pide toda la edición, sin los filtros de resultado ni de carga:
+      // `snapshotAtDay` deja lo cargado hasta ese día, y ganadoras y aciertos
+      // se miran con lo que había al cierre de ese día. (La API pide las dos
+      // puntas del rango de carga, y como mucho 62 días.)
+      const fetchFilters = snapshotDay
+        ? {
+            ...pdfFilters,
+            winner: undefined,
+            hits: undefined,
+            load_from: undefined,
+            load_to: undefined,
+          }
+        : pdfFilters;
+
+      const [fetched, orgName] = await Promise.all([
+        fetchAllTickets(edition.polla_edition_id, fetchFilters, (loaded, total) =>
           setProgress({ phase: 'loading', loaded, total })
         ),
         fetchOrganizationName(organizationId),
@@ -240,12 +325,20 @@ export const ShareTicketsPdfButton = ({
       // Armar miles de filas bloquea el hilo: antes se deja pintar el spinner.
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      const rows = snapshotDay
+        ? filterSnapshot(snapshotAtDay(fetched, snapshotDay, pdfFilters.sort ?? 'hits'), {
+            winner: pdfFilters.winner,
+            hits: pdfFilters.hits,
+          })
+        : fetched;
+
       const { blob, fileName } = await makeEditionTicketsPdf({
         rows,
         edition,
         title,
         orgName,
         filtersLabel: pdfFiltersLabel,
+        snapshotDay,
       });
 
       await sharePdf(blob, fileName, `Tickets de la Polla ${title}`);
@@ -257,17 +350,27 @@ export const ShareTicketsPdfButton = ({
   };
 
   const handleClick = () => {
-    if (pickLoadDate) setPicking(true);
+    if (pickLoadDate || drawDays.length > 0) setPicking(true);
     else void generate(filters, filtersLabel);
   };
 
-  const handlePicked = (range: LoadRange | null) => {
+  const handlePicked = (choice: PdfChoice) => {
     setPicking(false);
-    const loadLabel = range ? `cargadas ${periodLabel(range.from, range.to)}` : 'todas las fechas';
-    void generate(
-      { ...filters, load_from: range?.from, load_to: range?.to },
-      [filtersLabel, loadLabel].filter(Boolean).join(' · ')
-    );
+    if (choice.kind === 'list') {
+      void generate(filters, filtersLabel);
+    } else if (choice.kind === 'load') {
+      const { range } = choice;
+      const loadLabel = range
+        ? `cargadas ${periodLabel(range.from, range.to)}`
+        : 'todas las fechas';
+      void generate(
+        { ...filters, load_from: range?.from, load_to: range?.to },
+        [filtersLabel, loadLabel].filter(Boolean).join(' · ')
+      );
+    } else {
+      const dayLabel = `al cierre del ${dayjs(choice.day).format('DD/MM/YYYY')}`;
+      void generate(filters, [filtersLabel, dayLabel].filter(Boolean).join(' · '), choice.day);
+    }
   };
 
   let label = 'Compartir PDF';
@@ -297,8 +400,10 @@ export const ShareTicketsPdfButton = ({
       </Button>
 
       {picking && (
-        <LoadDateDialog
+        <PdfChoiceDialog
+          loadChoices={pickLoadDate}
           listRange={listRange}
+          drawDays={drawDays}
           onConfirm={handlePicked}
           onClose={() => setPicking(false)}
         />
