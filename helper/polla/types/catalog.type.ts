@@ -49,7 +49,12 @@ export interface IPollaLotteryEntityBack {
   polla_organization_id: string;
   name: string;
   active: boolean;
+  /** Orden que define la organización (R28). */
   order: number;
+  /** R28: posición 1..N entre las quinielas de la organización (la manda la API). */
+  position?: number;
+  /** R28: "1 - Nacional". */
+  label?: string;
   created_at: string;
   edited_at: string;
   deleted_at: string | null;

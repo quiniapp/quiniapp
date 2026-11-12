@@ -4,6 +4,12 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Quinielas y turnos**: "Quinielas y su orden" arriba de todo, con el número de cada una y flechas para subir y bajar. El orden se guarda al tocar.
+- **Dónde se ve:** tickets, listados, PDF y Resultados muestran "1 - Nacional" con el orden de la organización.
+- **Tests** (`lottery-order.test.ts`).
+
 ### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
 
 - **Cargar jugada**:

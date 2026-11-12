@@ -105,6 +105,14 @@ export const useDeleteLottery = () =>
     successMessage: 'Quiniela eliminada',
   });
 
+/** R28: guarda el orden de las quinielas de la organización (todas, en el orden nuevo). */
+export const useReorderLotteries = () =>
+  useApiMutation<unknown, { polla_lottery_ids: string[]; polla_organization_id?: string }>(
+    'put',
+    BACKEND_ROUTES.lottery.order,
+    { invalidate: ['polla-lotteries', 'polla-editions'], successMessage: 'Orden guardado' }
+  );
+
 export const useCreateSchedule = () =>
   useApiMutation('post', BACKEND_ROUTES.schedule.base, {
     invalidate: ['polla-schedules'],

@@ -4,6 +4,14 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Tipos y schemas:**
+  - `position` y `label` en las quinielas;
+  - `lottery_position` y `lottery_label` en los sorteos y los resultados;
+  - `reorderPollaLotteriesSchema`.
+- **`pollaDrawLabels`:** arma "1 - Nacional · Nocturna" y ordena por horario del turno y después por posición.
+
 ### Added - 2026-11-11 (R29: inicio de carga)
 
 - `IPollaEditionEntityBack.load_start_date` y `load_start_time`.

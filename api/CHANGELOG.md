@@ -4,6 +4,18 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Migración `20261111223835_polla_lottery_order`**:
+  - normaliza `polla_lotteries."order"` a 1..N por organización, conservando el orden que se veía;
+  - una quiniela nueva va al final (trigger);
+  - `polla_reorder_lotteries(org, ids[])` reordena de forma atómica;
+  - `polla_lottery_positions(org)` da la posición y la etiqueta "1 - Nacional";
+  - `polla_edition_with_draws` suma `lottery_position` y `lottery_label`, ordenados por turno y después por posición.
+  - Nada hardcodeado: el orden lo define cada organización.
+- **`GET /lottery`** suma `position` y `label`. **`PUT /lottery/order`** es nuevo (dueño, capitalista, superadmin). **`GET /result`** suma `lottery_position` y `lottery_label`. El helper nuevo es `lottery-positions.ts`.
+- **Test pgTAP `140_polla_lottery_order`** (14 casos).
+
 ### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
 
 - **Migración `20261111223515_polla_load_cutoff_all_roles`**:

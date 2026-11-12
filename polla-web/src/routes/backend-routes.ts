@@ -30,6 +30,7 @@ export const BACKEND_ROUTES = {
   lottery: {
     base: `${PRIVATE}/lottery`,
     id: (id: string) => `${PRIVATE}/lottery/${id}`,
+    order: `${PRIVATE}/lottery/order`,
   },
   schedule: {
     base: `${PRIVATE}/schedule`,
