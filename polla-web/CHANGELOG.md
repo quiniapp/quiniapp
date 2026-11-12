@@ -4,6 +4,12 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
+
+- **Cargar jugada**:
+  - Se saca el aviso "La edición ya está en juego…" y el "vos podés cargar hasta el (último día)" de superadmin y superiores: ya nadie carga con el sorteo en curso.
+  - El admin de grupo sigue viendo hasta cuándo carga, que es la hora del sorteo.
+
 ### Added - 2026-11-11 (R29: inicio de carga)
 
 - **Ediciones**:

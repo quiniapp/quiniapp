@@ -168,11 +168,12 @@ const manageScope = (user: IPollaSessionUser): Pick<PollaBetFilters, 'cashierId'
 
 /**
  * Qué puede hacer el usuario con cada jugada ahora. Todos leen todo; cada rol
- * escribe en su alcance y hasta su corte (la base vuelve a controlarlo):
- * superadmin+ siempre; el admin, en su grupo hasta su corte; el Super, en toda
- * la organización hasta el mismo corte; el pasador solo borra lo suyo y lo de
- * sus jugadores hasta el cierre de carga (da de baja lo que no le pagaron,
- * aunque ya se haya liquidado); el jugador nada.
+ * escribe en su alcance y hasta su corte (la base vuelve a controlarlo, R30):
+ * superadmin+ edita números hasta el cierre y borra siempre (para corregir);
+ * el admin, en su grupo hasta la hora del sorteo; el Super, en toda la
+ * organización hasta el cierre; el pasador solo borra lo suyo y lo de sus
+ * jugadores hasta el cierre (da de baja lo que no le pagaron, aunque ya se
+ * haya liquidado); el jugador nada.
  */
 const actionsFor = (
   bet: PollaBetRow,
@@ -183,11 +184,11 @@ const actionsFor = (
   const alive = !bet.winner && !bet.deleted_at;
   if (!alive) return { ...NO_ACTIONS, can_mark_paid };
 
-  if (isPollaSuperRole(viewer.user_type)) {
-    return { can_edit: true, can_delete: true, can_mark_paid };
-  }
-
   const open = ctx.openEditions.has(bet.polla_edition_id);
+
+  if (isPollaSuperRole(viewer.user_type)) {
+    return { can_edit: open, can_delete: true, can_mark_paid };
+  }
 
   if (viewer.user_type === POLLA_USER_TYPE.ADMIN) {
     const inGroup = bet.polla_group_id === viewer.polla_group_id;
@@ -343,8 +344,8 @@ export class PollaBetRouter {
     user: IPollaSessionUser,
     bets: PollaBetRow[]
   ): Promise<ActionContext> => {
-    // Superadmin+ escribe siempre y el jugador nunca: no hace falta mirar cortes.
-    if (isPollaSuperRole(user.user_type) || user.user_type === POLLA_USER_TYPE.PLAYER) {
+    // El jugador nunca escribe: no hace falta mirar cortes.
+    if (user.user_type === POLLA_USER_TYPE.PLAYER) {
       return { openEditions: new Set() };
     }
 

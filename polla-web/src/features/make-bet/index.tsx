@@ -21,7 +21,6 @@ import {
   IPollaUserOption,
   POLLA_USER_TYPE,
   isPollaLoaderRole,
-  isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
@@ -79,7 +78,6 @@ export const MakeBetPage = () => {
   // siempre cargan para un pasador o un jugador (el admin, de su grupo). El
   // pasador carga a su nombre o al de sus jugadores; el jugador, al suyo.
   const isLoader = Boolean(role && isPollaLoaderRole(role));
-  const isSuper = Boolean(role && isPollaSuperRole(role));
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
   const isPlayer = role === POLLA_USER_TYPE.PLAYER;
   const isAssistant = role === POLLA_USER_TYPE.ASSISTANT;
@@ -105,9 +103,9 @@ export const MakeBetPage = () => {
   const identifierRequired =
     (isCashier && !target) || (isLoader && targetType === POLLA_USER_TYPE.CASHIER);
 
-  // Las que tienen la carga abierta ahora para el rol (hora de Argentina):
-  // pasador y jugador hasta el cierre; el admin hasta el turno más tarde del
-  // día de cierre; superadmin+ hasta el último día de juego.
+  // Las que tienen la carga abierta ahora para el rol (hora de Argentina, R30):
+  // todos desde el inicio hasta el cierre de carga, salvo el admin de grupo,
+  // que carga hasta la hora del sorteo.
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
     loadable: true,
@@ -129,9 +127,6 @@ export const MakeBetPage = () => {
   const selectedEditionId =
     editionId || (loadable.length === 1 ? loadable[0].polla_edition_id : '');
   const edition = loadable.find((e) => e.polla_edition_id === selectedEditionId);
-  // Con la polla en juego (solo superadmin+ llega acá), la jugada no suma los
-  // aciertos de los sorteos ya procesados hasta que se regeneran a mano.
-  const isPlaying = Boolean(edition && edition.start_date <= dayjs().format('YYYY-MM-DD'));
 
   const ticketDataOf = (bet: TicketBet, of: IPollaEditionEntityFront): PollaTicketData => ({
     ticket_number: bet.ticket_number,
@@ -310,7 +305,6 @@ export const MakeBetPage = () => {
                   </span>
                 )}
                 {` · cierre de carga ${fmtDate(edition.load_limit_date)} ${fmtTime(edition.load_limit_time)}`}
-                {isSuper && ` · vos podés cargar hasta el ${fmtDate(edition.end_date)}`}
                 {role === POLLA_USER_TYPE.ADMIN &&
                   edition.my_load_cutoff &&
                   ` · vos podés cargar hasta el ${fmtCutoff(edition.my_load_cutoff)}`}
@@ -322,12 +316,6 @@ export const MakeBetPage = () => {
                 <span className="font-semibold">Juega con:</span>{' '}
                 {pollaEditionDrawLabels(edition, catalogs).join(', ')}.{' '}
                 {pollaPrizeRuleLabel(edition)}.
-              </p>
-            )}
-            {isSuper && isPlaying && (
-              <p className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-xs">
-                La edición ya está en juego: para que esta jugada sume los aciertos de los sorteos
-                anteriores, volvé a generar los ganadores de esos días en Resultados.
               </p>
             )}
           </div>

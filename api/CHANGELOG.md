@@ -4,6 +4,22 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
+
+- **Migración `20261111223515_polla_load_cutoff_all_roles`**:
+  - **`polla_load_cutoff`:**
+    - dueño, capitalista, superadmin, Súper, pasador y jugador cortan en el cierre de carga;
+    - el admin de grupo corta a la hora del primer sorteo;
+    - para todos, el tope duro es el primer sorteo del día de inicio (`LEAST`), aunque el cierre esté mal configurado;
+    - ya no hay roles sin corte.
+
+    Antes, superadmin y superiores cargaban hasta el último día, con los sorteos en curso.
+  - **`polla_assert_bet_writable`:**
+    - superadmin y superiores editan números solo hasta el cierre, pero siguen borrando siempre (para corregir);
+    - el resto, hasta su corte.
+- **`GET /bet` (acciones)**: superadmin y superiores tienen `can_edit` solo con la carga abierta y `can_delete` siempre. `buildActionContext` mira los cortes también para ellos.
+- **Test pgTAP `130_polla_load_cutoff_all_roles`** (19 casos): carga, repetición, edición y borrado por rol, después del cierre y con el sorteo en curso.
+
 ### Added - 2026-11-11 (R29: inicio de carga)
 
 - **Migración `20261111223001_polla_load_start`**:
