@@ -4,6 +4,14 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-12 (R18: un día liquidado no vuelve a sumar premios)
+
+- **Migración `20261112054358_polla_liquidated_days_keep_prizes`**: `polla_calculate_current_account` y `polla_update_current_account_recompute` dejan de sacar los premios de las jugadas para los días ya liquidados. Ahora conservan el `successes` guardado de la fila: los liquidados antes de R18, con su premio; los de después, en 0.
+  - **Antes:** si se reprocesaba un resultado de un día liquidado después de R18 que tenía ganadores, el recálculo metía el premio en esa fila y le cambiaba el subtotal y el saldo.
+- **Test pgTAP `070`**:
+  - el caso de un día liquidado antes de R18 parte de la fila guardada;
+  - suma el caso de un día liquidado después de R18, que al recalcularse sigue sin premio. Con las funciones viejas, esos 3 casos fallan.
+
 ### Changed - 2026-11-12 (R26, ajuste: mínimo de aciertos editable)
 
 - **Migración `20261112051924_polla_min_hits_editable`**: `polla_update_edition` deja cambiar `min_winning_hits` con resultados cargados y también con ganadores, mientras no haya ningún premio pagado (`POLLA_EDITION_PRIZE_PAID_LOCKED`).
