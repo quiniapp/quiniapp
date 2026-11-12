@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R19: admin en Premios)
+
+- **Premios**: columna "Admin" entre Grupo y Pasador. En mobile, la tarjeta muestra "Grupo · Admin" en una línea y el pasador en la siguiente.
+
 ### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
 
 - **Premios** también para el admin de grupo, el pasador y el jugador: el ítem del menú aparece para ellos y la API les da solo su alcance.

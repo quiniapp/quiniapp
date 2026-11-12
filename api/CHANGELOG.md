@@ -4,6 +4,11 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R19: admin en Premios)
+
+- **`GET /polla/private/prize`**: cada premio trae `admin_name`, el admin vigente del grupo del pasador (cada grupo tiene uno solo). `PollaPrizeRepository.getGroupAdmins` lo busca en una segunda consulta por los grupos de la página. Es `null` si el pasador no tiene grupo o el grupo no tiene admin.
+  - El cliente pidió el 6/11 ver el administrador además del grupo, el pasador y el jugador.
+
 ### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
 
 - **`GET /polla/private/prize`**: cada rol ve su alcance, validado en el backend (`pollaPrizeScope` del helper).

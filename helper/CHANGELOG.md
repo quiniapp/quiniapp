@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R19: admin en Premios)
+
+- `IPollaPrize.admin_name`: el admin del grupo del pasador, o `null` si no hay.
+
 ### Added - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
 
 - **`polla/config/access.config.ts`**:

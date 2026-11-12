@@ -37,6 +37,9 @@ const clientOf = (prize: IPollaPrize) =>
 const groupOf = (prize: IPollaPrize) =>
   groupLabel(prize.group_name ? { name: prize.group_name, number: prize.group_number ?? 0 } : null);
 
+/** El admin del grupo del pasador (lo pidió el cliente el 6/11). */
+const adminOf = (prize: IPollaPrize) => prize.admin_name ?? '-';
+
 /** "Pagado 05/11 10:20 · Owner". */
 const paidLabel = (prize: IPollaPrize) =>
   `Pagado ${dayjs(prize.prize_paid_at).format('DD/MM HH:mm')}${
@@ -227,10 +230,11 @@ export const PrizesPage = () => {
                     <p className="truncate font-mono text-xs text-muted-foreground">
                       {prize.ticket_number}
                     </p>
-                    <p className="truncate text-sm">
-                      <span className="text-muted-foreground">{groupOf(prize)} · </span>
-                      {cashierOf(prize)}
+                    <p className="truncate text-sm text-muted-foreground">
+                      {groupOf(prize)}
+                      {prize.admin_name && ` · Admin ${prize.admin_name}`}
                     </p>
+                    <p className="truncate text-sm">{cashierOf(prize)}</p>
                     <p className="truncate text-sm font-semibold">{clientOf(prize)}</p>
                   </div>
                   <span className="shrink-0 text-right">
@@ -258,6 +262,7 @@ export const PrizesPage = () => {
                 <TableRow>
                   <TableHead>Ticket</TableHead>
                   <TableHead>Grupo</TableHead>
+                  <TableHead>Admin</TableHead>
                   <TableHead>Pasador</TableHead>
                   <TableHead>Jugador o cliente</TableHead>
                   <TableHead className="text-center">Aciertos</TableHead>
@@ -271,6 +276,7 @@ export const PrizesPage = () => {
                   <TableRow key={prize.polla_bet_id}>
                     <TableCell className="font-mono text-xs">{prize.ticket_number}</TableCell>
                     <TableCell>{groupOf(prize)}</TableCell>
+                    <TableCell>{adminOf(prize)}</TableCell>
                     <TableCell>{cashierOf(prize)}</TableCell>
                     <TableCell className="font-medium">{clientOf(prize)}</TableCell>
                     <TableCell className="text-center tabular-nums">{prize.hits}</TableCell>
@@ -285,7 +291,7 @@ export const PrizesPage = () => {
               {!paidView && (
                 <TableFooter>
                   <TableRow className="font-semibold">
-                    <TableCell colSpan={6}>Total</TableCell>
+                    <TableCell colSpan={7}>Total</TableCell>
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(data?.amount ?? 0)}
                     </TableCell>

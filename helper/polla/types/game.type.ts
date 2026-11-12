@@ -562,6 +562,8 @@ export interface IPollaPrize {
   /** Grupo del pasador (`null` = sin grupo). */
   group_name: string | null;
   group_number: number | null;
+  /** Admin del grupo (cada grupo tiene uno); `null` si el grupo no tiene o el pasador no tiene grupo. */
+  admin_name: string | null;
   cashier_name: string;
   cashier_number: number | null;
   /** Jugador dueño del ticket; `null` si lo jugó el propio pasador. */
