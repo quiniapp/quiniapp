@@ -4,6 +4,14 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R25: test del total de la edición)
+
+- **pgTAP `100_polla_daily_sales_edition_total`**: `polla_daily_sales` con la edición sola, que es el total de "Ventas del día", coincide con la suma de sus días de carga.
+  - Coincide en monto y en cantidad, grupo por grupo y para un pasador.
+  - No entran la repetida sin cargo, la borrada ni lo de otra edición superpuesta.
+  - El día sin edición suma todas las ediciones.
+  - R25 ya estaba hecho: solo faltaba este test.
+
 ### Changed - 2026-11-11 (R14: Eliminar impagos también para el staff)
 
 - **Migración `20261111214856_polla_delete_unpaid_bets_staff`**:
