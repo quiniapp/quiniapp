@@ -27,10 +27,10 @@ const player = (bet: IPollaBetListItem) => bet.client_name ?? bet.identifier ?? 
 const money = (bet: IPollaBetListItem) => (bet.amount !== null ? `$${fmtMoney(bet.amount)}` : '-');
 
 /**
- * Lo que se liquida de un pasador en el período, como en QuiniApp: los tickets
- * que cargó (el pase de jugadas, con los que se borraron después), las
- * borradas que se descuentan en el período y las jugadas que ganaron (los
- * premios). Tickets − borradas = pase.
+ * Lo que se liquida de un pasador en el período: los tickets que cargó (el
+ * pase de jugadas, con los que se borraron después) y las borradas que se
+ * descuentan en el período. Tickets − borradas = pase. Los premios no van en
+ * la cuenta corriente (R18): están en Premios.
  */
 export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTablesProps) => {
   const scope = cashierId ? { cashier_polla_user_id: cashierId } : { mine: true };
@@ -43,10 +43,6 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
   );
   const { data: deleted, isFetching: loadingDeleted } = useBetsOfDay(
     { ...scope, deducted_from: rangeFrom, deducted_to: to },
-    enabled
-  );
-  const { data: winners, isFetching: loadingWinners } = useBetsOfDay(
-    { ...scope, hit_from: rangeFrom, hit_to: to, winners: true },
     enabled
   );
 
@@ -94,36 +90,6 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
       </section>
 
       <section className="flex min-w-0 flex-col gap-1">
-        <h3 className="text-sm font-semibold">Jugadas ganadoras {span}</h3>
-        <div className="max-h-60 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ticket</TableHead>
-                <TableHead>Jugador</TableHead>
-                <TableHead className="text-right">Aciertos</TableHead>
-                <TableHead className="text-right">Premio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {winners?.data.length
-                ? winners.data.map((bet) => (
-                    <TableRow key={bet.polla_bet_id}>
-                      <TableCell className="font-mono text-xs">{bet.ticket_number}</TableCell>
-                      <TableCell>{player(bet)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{bet.hits}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        ${fmtMoney(bet.prize)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : empty(loadingWinners, `Sin jugadas ganadoras ${span}`, 4)}
-            </TableBody>
-          </Table>
-        </div>
-      </section>
-
-      <section className="flex min-w-0 flex-col gap-1 md:col-span-2">
         <h3 className="text-sm font-semibold">Borradas {span}</h3>
         <div className="max-h-60 overflow-auto rounded-md border">
           <Table>

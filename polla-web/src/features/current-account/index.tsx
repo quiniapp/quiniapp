@@ -48,7 +48,6 @@ import { cn } from '@/lib/utils';
 import { groupLabel } from '@/lib/pollaGroups';
 import { CashierAccountView } from './CashierAccountView';
 import { GroupAccountsPanel } from './GroupAccounts';
-import { fetchWinnersByCashier } from './fetchers';
 import { ReportMode, fmtMoney } from './format';
 import { GenerateLiquidationDialog, LiquidateCashierDialog } from './dialogs/LiquidationDialogs';
 import { ReportDialog, ReportKind } from './dialogs/ReportDialogs';
@@ -60,7 +59,7 @@ const MONEY_COLUMNS = [
   ['bets_pass', 'Pase jugadas'],
   ['deleted_pass', 'Borradas'],
   ['pass', 'Pase'],
-  ['successes', 'Aciertos'],
+  // Los premios no van en la cuenta corriente (R18): están en Premios.
   ['claims', 'Reclamos'],
   ['subtotal', 'Subtotal'],
   ['previous_balance', 'Saldo anterior'],
@@ -184,16 +183,7 @@ const AdminAccountView = () => {
   const handleExportLiquidations = async (accounts: AccountPeriodView[]) => {
     setPrinting(true);
     try {
-      const winnersByCashier = await fetchWinnersByCashier({
-        accounts,
-        date,
-        organizationId,
-      });
-      await downloadLiquidationSlipsPDF({
-        accounts,
-        winnersByCashier,
-        cashierCodeOf: cashierCode,
-      });
+      await downloadLiquidationSlipsPDF({ accounts, cashierCodeOf: cashierCode });
       setExportingSlips(false);
     } catch {
       toast.error('No se pudieron exportar las liquidaciones');
@@ -204,7 +194,7 @@ const AdminAccountView = () => {
 
   return (
     <div>
-      <PageHeader description="Pase, borradas, aciertos, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación o en un rango de fechas. La liquidación no tiene deje." />
+      <PageHeader description="Pase, borradas, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación o en un rango de fechas. La liquidación no tiene deje ni premios: los premios están en Premios." />
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <ActionButton icon={<FileText />} onClick={handleExportDaily} disabled={printing}>

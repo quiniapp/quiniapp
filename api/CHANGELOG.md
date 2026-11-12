@@ -4,6 +4,60 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R19: admin en Premios)
+
+- **`GET /polla/private/prize`**: cada premio trae `admin_name`, el admin vigente del grupo del pasador (cada grupo tiene uno solo). `PollaPrizeRepository.getGroupAdmins` lo busca en una segunda consulta por los grupos de la página. Es `null` si el pasador no tiene grupo o el grupo no tiene admin.
+  - El cliente pidió el 6/11 ver el administrador además del grupo, el pasador y el jugador.
+
+### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **`GET /polla/private/prize`**: cada rol ve su alcance, validado en el backend (`pollaPrizeScope` del helper).
+  - Superadmin+ ve toda la organización.
+  - El admin ve su grupo, sin tildar.
+  - El pasador ve lo imputado a él (lo suyo y lo de sus jugadores) y si está pagado.
+  - El jugador ve sus tickets sin lo pagado (`prize_paid_*` y los totales de pagado en `null`).
+  - El Súper no entra (403).
+- Los totales son del alcance de quien mira. El cartel público de ganadores no cambia.
+- Sin migración.
+
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+#### Migración `20261106100000_polla_prize_paid.sql`
+- `polla_bets` suma `prize_paid_at` y `prize_paid_by`.
+- **`polla_mark_prize_paid(actor, bet)`** (nueva): tilda el premio como pagado y guarda quién y cuándo.
+  - Solo el dueño, el capitalista y el superadmin de la organización (`POLLA_PRIZE_PAY_FORBIDDEN`).
+  - Solo ganadoras (`POLLA_PRIZE_NOT_WINNER`).
+  - Una vez tildado no se vuelve a marcar ni se destilda (`POLLA_PRIZE_ALREADY_PAID`).
+- Sin CHECK contra `winner`: si una corrección anula a un ganador ya pagado, el reproceso no falla por eso.
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`POST /polla/private/prize/:betId/paid`** (nuevo, superadmin+).
+- **`GET /polla/private/prize`**:
+  - `paid=true|false` filtra pagados o pendientes.
+  - Cada premio trae `prize_paid_at` y `prize_paid_by_name`.
+  - Los totales (`count`, `amount`, `paid_count`, `paid_amount`, `pending_amount`) son de toda la edición.
+
+#### Tests
+- **`080_polla_prize_paid.test.sql`** (9): no marcan el Súper, el pasador ni otra organización; solo ganadoras; queda quién y cuándo; no se vuelve a marcar.
+
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **`GET /polla/private/prize?polla_edition_id`** (nuevo, `polla/prize/`): los tickets ganadores vigentes de la edición, con grupo, pasador, jugador o cliente, identificador, número de ticket, aciertos, día y monto. Devuelve también la cantidad y el total. Lo leen el dueño, el capitalista y el superadmin (`POLLA_API_ROLES.readPrizes`). Salen de la generación de ganadores que ya existe.
+- Sin migración.
+
+### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+#### Migración `20261106090000_polla_prizes_out_of_account.sql`
+- **`polla_calculate_current_account`** y **`polla_update_current_account_recompute`**: desde el período abierto (el día siguiente a la última liquidación de cada pasador), los premios ya no restan en el subtotal ni en el saldo, y `successes` queda en 0. La cuenta corriente queda con el pase de jugadas, las borradas, los reclamos, los cobros y los pagos. "Pagos" sigue igual: es lo que se le transfiere al pasador.
+- Los días ya liquidados no cambian: conservan sus premios aunque se recalculen, por ejemplo al corregir un resultado viejo.
+- Al aplicarse, recalcula el período abierto de cada organización (`polla_recalculate_open_period`), como "Actualizar".
+- No se borra nada: los premios siguen en `polla_bets` (ganadoras) y pasan a la sección Premios (R19).
+- Rollback comentado al final del archivo.
+
+#### Tests
+- **`070_polla_prizes_out_of_account.test.sql`** (9): en el período abierto el premio no figura ni resta en el subtotal ni en el saldo, tampoco al editar el día; un día ya liquidado conserva su premio al recalcularse y al editarse.
+
 ### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
 
 - Los guards salen de la matriz de acceso de `helper/polla/config/access.config.ts` (`POLLA_API_ROLES`), la misma que usan el menú y las rutas de polla-web.

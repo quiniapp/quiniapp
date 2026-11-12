@@ -5,6 +5,7 @@ import {
   PollaPage,
   canSeePollaPage,
   pollaHomePage,
+  pollaPrizeScope,
 } from '@helper/polla/config/access.config';
 import { POLLA_USER_TYPE, POLLA_USER_TYPE_LABEL } from '@helper/polla/types/user.type';
 
@@ -50,6 +51,7 @@ describe('los demás roles no cambian', () => {
       'SALES',
       'RESULTS',
       'USERS',
+      'PRIZES',
       'SETTINGS',
       'CHANGE_PASSWORD',
     ]);
@@ -65,13 +67,21 @@ describe('los demás roles no cambian', () => {
       'RESULTS',
       'USERS',
       'CURRENT_ACCOUNT',
+      'PRIZES',
       'SETTINGS',
       'CHANGE_PASSWORD',
     ]);
   });
 
-  it('el jugador: sus jugadas, cargar y resultados', () => {
-    expect(pagesOf(PLAYER)).toEqual(['BETS', 'MAKE_BET', 'RESULTS', 'SETTINGS', 'CHANGE_PASSWORD']);
+  it('el jugador: sus jugadas, cargar, resultados y sus premios', () => {
+    expect(pagesOf(PLAYER)).toEqual([
+      'BETS',
+      'MAKE_BET',
+      'RESULTS',
+      'PRIZES',
+      'SETTINGS',
+      'CHANGE_PASSWORD',
+    ]);
   });
 
   it('todos menos el Súper entran a Jugadas', () => {
@@ -82,5 +92,39 @@ describe('los demás roles no cambian', () => {
 
   it('sin rol no ve nada', () => {
     expect(PAGES.filter((page) => canSeePollaPage(null, page))).toEqual([]);
+  });
+});
+
+describe('quién ve qué premios (R21)', () => {
+  const user = (user_type: POLLA_USER_TYPE, polla_group_id: string | null = 'grupo-1') => ({
+    polla_user_id: 'yo',
+    user_type,
+    polla_group_id,
+  });
+
+  it('superadmin+ ve toda la organización y lo pagado', () => {
+    for (const role of [OWNER, CAPITALIST, SUPERADMIN]) {
+      expect(pollaPrizeScope(user(role, null))).toEqual({ seesPaid: true });
+    }
+  });
+
+  it('el admin, solo su grupo, con lo pagado', () => {
+    expect(pollaPrizeScope(user(ADMIN))).toEqual({ groupId: 'grupo-1', seesPaid: true });
+  });
+
+  it('un admin sin grupo no ve nada', () => {
+    expect(pollaPrizeScope(user(ADMIN, null))).toBeNull();
+  });
+
+  it('el pasador, lo imputado a él (lo suyo y lo de sus jugadores), con lo pagado', () => {
+    expect(pollaPrizeScope(user(CASHIER))).toEqual({ cashierId: 'yo', seesPaid: true });
+  });
+
+  it('el jugador, solo sus tickets y sin lo pagado', () => {
+    expect(pollaPrizeScope(user(PLAYER))).toEqual({ userId: 'yo', seesPaid: false });
+  });
+
+  it('el Súper no ve premios', () => {
+    expect(pollaPrizeScope(user(ASSISTANT))).toBeNull();
   });
 });

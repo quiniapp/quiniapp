@@ -13,6 +13,7 @@ import {
   ScanSearch,
   Settings,
   Ticket,
+  Trophy,
   Users,
   UsersRound,
   Building2,
@@ -49,6 +50,8 @@ const NAV_ITEMS: NavItem[] = [
   { page: 'USERS', label: 'Usuarios', icon: Users },
   // El pasador ve solo la suya. El admin no tiene cuenta corriente.
   { page: 'CURRENT_ACCOUNT', label: 'Cuenta corriente', icon: CreditCard },
+  // Debajo de Cuenta corriente: los premios ya no están en la cuenta (R18).
+  { page: 'PRIZES', label: 'Premios', icon: Trophy },
   { page: 'CATALOGS', label: 'Quinielas y turnos', icon: ListOrdered },
   { page: 'GROUPS', label: 'Grupos', icon: UsersRound },
   { page: 'ORGANIZATIONS', label: 'Organizaciones', icon: Building2 },

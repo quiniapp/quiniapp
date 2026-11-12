@@ -4,6 +4,38 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-11 (R19: admin en Premios)
+
+- **Premios**: columna "Admin" entre Grupo y Pasador. En mobile, la tarjeta muestra "Grupo · Admin" en una línea y el pasador en la siguiente.
+
+### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **Premios** también para el admin de grupo, el pasador y el jugador: el ítem del menú aparece para ellos y la API les da solo su alcance.
+  - El texto de la pantalla cambia según el rol.
+  - Solo superadmin+ tilda pagado.
+  - El jugador no ve el filtro de pagados, la columna Pagado ni los totales de pagado.
+- **Tests** (`access.test.ts`): la matriz con Premios para cada rol y `pollaPrizeScope`.
+
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+- **Premios** (`features/prizes/index.tsx`):
+  - Columna **Pagado**. El dueño, el capitalista y el superadmin tildan la casilla, con una confirmación porque no se destilda. Tildado, muestra cuándo y quién lo marcó.
+  - Filtro **Todos | No pagados | Pagados**.
+  - Totales de la edición: ganadores, en premios, pagado y falta pagar.
+- `useMarkPrizePaid` y la ruta `prize.paid`.
+
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **Premios** (`features/prizes/index.tsx`, ruta `/premios`, ítem del menú debajo de Cuenta corriente): con la edición elegida (en la URL, como Jugadas), la cantidad de ganadores, el total en premios y cada ticket ganador con grupo, pasador, jugador o cliente, número de ticket, aciertos, día en que ganó y monto. Tarjetas en mobile y planilla con total en desktop.
+- `usePrizes` y la ruta `prize.base`.
+
+### Removed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+- **Cuenta corriente** (planilla, vista del pasador, liquidar y generar liquidación): se saca la columna **Aciertos**, y del detalle del período, la tabla **Jugadas ganadoras** (`DayBetsTables`). Los textos ya no nombran los aciertos y avisan que los premios están en Premios.
+- **PDFs**: la hoja de liquidación (`liquidationSlipPDF.ts`) ya no tiene Aciertos ni la tabla de jugadas ganadoras. El diario y el resumen (`pdf-shared.ts`, `accountTablePDF.ts`) tampoco tienen la columna. Subtotales y cobros y pagos no la tenían.
+- `fetchWinnersByCashier` se borra, porque solo armaba la tabla de ganadoras de la hoja. Con eso se va el `limit: 200` que tenía.
+- `computeAccountTotals` y `liquidationSlipAmounts` ya no suman premios. El test de las hojas contra la liquidación general sigue andando.
+
 ### Changed - 2026-11-05 (R12: sin impresión para el Súper)
 
 - **Cargar jugada** (`features/make-bet/index.tsx`): cuando el Súper cierra un ticket (o repite), no se abre el diálogo de impresión ni el de compartir. Aparece un aviso con el número de ticket y el ticket queda en "Último ticket cargado". Lo puede reimprimir desde Administrar jugadas. Los demás roles no cambian.

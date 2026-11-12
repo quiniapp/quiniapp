@@ -16,6 +16,7 @@ export type PollaPage =
   | 'RESULTS'
   | 'USERS'
   | 'CURRENT_ACCOUNT'
+  | 'PRIZES'
   | 'CATALOGS'
   | 'ORGANIZATIONS'
   | 'GROUPS'
@@ -51,6 +52,9 @@ export const POLLA_PAGE_ROLES: Record<PollaPage, readonly POLLA_USER_TYPE[]> = {
   USERS: OPERATION,
   // Dueño, capitalista y superadmin; el pasador ve la suya.
   CURRENT_ACCOUNT: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
+  // Premios (R19, R21): superadmin+ toda la organización; el admin su grupo; el
+  // pasador lo imputado a él; el jugador lo suyo. El Súper no.
+  PRIZES: [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
   CATALOGS: POLLA_SUPER_ROLES,
   ORGANIZATIONS: [POLLA_USER_TYPE.OWNER],
   GROUPS: POLLA_SUPER_ROLES,
@@ -78,4 +82,38 @@ export const POLLA_API_ROLES = {
   sales: POLLA_PAGE_ROLES.SALES,
   /** `GET /result` (Resultados). */
   readResults: POLLA_PAGE_ROLES.RESULTS,
+  /** `GET /prize` (Premios). */
+  readPrizes: POLLA_PAGE_ROLES.PRIZES,
 } satisfies Record<string, readonly POLLA_USER_TYPE[]>;
+
+/** De quién son los premios que ve cada rol (R21). `null`: no ve premios. */
+export interface PollaPrizeScope {
+  /** Solo los imputados a este pasador (lo suyo y lo de sus jugadores). */
+  cashierId?: string;
+  /** Solo los de este grupo. */
+  groupId?: string;
+  /** Solo los tickets de este jugador. */
+  userId?: string;
+  /** Ve si el premio está pagado (el jugador no: es entre el capitalista y el pasador). */
+  seesPaid: boolean;
+}
+
+export const pollaPrizeScope = (user: {
+  polla_user_id: string;
+  user_type: POLLA_USER_TYPE;
+  polla_group_id: string | null;
+}): PollaPrizeScope | null => {
+  if (!canSeePollaPage(user.user_type, 'PRIZES')) return null;
+
+  switch (user.user_type) {
+    case POLLA_USER_TYPE.ADMIN:
+      // Un admin sin grupo no ve nada (la API ya lo frena antes).
+      return user.polla_group_id ? { groupId: user.polla_group_id, seesPaid: true } : null;
+    case POLLA_USER_TYPE.CASHIER:
+      return { cashierId: user.polla_user_id, seesPaid: true };
+    case POLLA_USER_TYPE.PLAYER:
+      return { userId: user.polla_user_id, seesPaid: false };
+    default:
+      return { seesPaid: true };
+  }
+};

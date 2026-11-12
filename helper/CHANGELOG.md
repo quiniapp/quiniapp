@@ -4,6 +4,30 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R19: admin en Premios)
+
+- `IPollaPrize.admin_name`: el admin del grupo del pasador, o `null` si no hay.
+
+### Added - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **`polla/config/access.config.ts`**:
+  - La pantalla `PRIZES` suma al admin, al pasador y al jugador.
+  - `pollaPrizeScope(user)` dice qué premios ve cada rol (organización, grupo, lo imputado al pasador o lo del jugador) y si ve lo pagado. Un admin sin grupo y el Súper no ven nada.
+- `IPollaPrizeList.paid_count`, `paid_amount` y `pending_amount` pueden venir en `null`, que es lo que recibe el jugador.
+
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+- **`polla/types/game.type.ts`**: `IPollaPrize.prize_paid_at` y `prize_paid_by_name`. `IPollaPrizeList` suma `paid_count`, `paid_amount` y `pending_amount`. Nuevo `PollaPrizePaidFilter`.
+
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **`polla/types/game.type.ts`**: `IPollaPrize` e `IPollaPrizeList`.
+- **`polla/config/access.config.ts`**: pantalla `PRIZES` (dueño, capitalista y superadmin) y `POLLA_API_ROLES.readPrizes`.
+
+### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+- **`polla/types/game.type.ts`**: comentario de `IPollaCurrentAccountEntityBack.successes`. Es 0 desde el período abierto; los días ya liquidados conservan los suyos.
+
 ### Added - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
 
 - **`polla/config/access.config.ts`** (nuevo): la matriz de acceso de Polla.
