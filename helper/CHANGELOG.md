@@ -4,6 +4,85 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Tipos y schemas:**
+  - `position` y `label` en las quinielas;
+  - `lottery_position` y `lottery_label` en los sorteos y los resultados;
+  - `reorderPollaLotteriesSchema`.
+- **`pollaDrawLabels`:** arma "1 - Nacional · Nocturna" y ordena por horario del turno y después por posición.
+
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- `IPollaEditionEntityBack.load_start_date` y `load_start_time`.
+- `newPollaEditionSchema` y `updatePollaEditionSchema` aceptan `load_start_date` y `load_start_time`, y validan que el inicio sea antes del cierre ("El inicio de carga tiene que ser antes del cierre de carga").
+
+### Added - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- `IPollaBetCourtesy` (ticket y edición de la cortesía de un ticket).
+- `IPollaRepeatSkipped.courtesy`.
+
+### Added - 2026-11-11 (R19: admin en Premios)
+
+- `IPollaPrize.admin_name`: el admin del grupo del pasador, o `null` si no hay.
+
+### Added - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **`polla/config/access.config.ts`**:
+  - La pantalla `PRIZES` suma al admin, al pasador y al jugador.
+  - `pollaPrizeScope(user)` dice qué premios ve cada rol (organización, grupo, lo imputado al pasador o lo del jugador) y si ve lo pagado. Un admin sin grupo y el Súper no ven nada.
+- `IPollaPrizeList.paid_count`, `paid_amount` y `pending_amount` pueden venir en `null`, que es lo que recibe el jugador.
+
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+- **`polla/types/game.type.ts`**: `IPollaPrize.prize_paid_at` y `prize_paid_by_name`. `IPollaPrizeList` suma `paid_count`, `paid_amount` y `pending_amount`. Nuevo `PollaPrizePaidFilter`.
+
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **`polla/types/game.type.ts`**: `IPollaPrize` e `IPollaPrizeList`.
+- **`polla/config/access.config.ts`**: pantalla `PRIZES` (dueño, capitalista y superadmin) y `POLLA_API_ROLES.readPrizes`.
+
+### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+- **`polla/types/game.type.ts`**: comentario de `IPollaCurrentAccountEntityBack.successes`. Es 0 desde el período abierto; los días ya liquidados conservan los suyos.
+
+### Added - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
+
+- **`polla/config/access.config.ts`** (nuevo): la matriz de acceso de Polla.
+  - `PollaPage` y `POLLA_PAGE_ROLES`: qué rol ve cada pantalla.
+  - `canSeePollaPage`.
+  - `pollaHomePage`: Jugadas, o Cargar jugada para el Súper.
+  - `POLLA_API_ROLES`: los roles de los endpoints que sirven a una sola pantalla.
+  - El Súper ve solo Cargar jugada, Administrar jugadas y Configuración. El resto de los roles no cambia.
+- **`polla/types/user.type.ts`**: la etiqueta de ASSISTANT pasa de "Super" a **"Súper"**.
+
+### Added - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **`polla/types/game.type.ts`**: `IPollaBetPublic.created_at`. `PollaBetGameStatus` (`PLAYING` | `WON` | `LOST`), `POLLA_BET_GAME_STATUS_LABEL` ("Jugando", "Ganadora", "No ganó") y `pollaBetGameStatus(bet, editionStatus)`: no ganó cuando su edición terminó sin que ganara.
+
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+- **`polla/types/game.type.ts`**: `IPollaUnpaidSummary` (`count`, `amount`, `winners_skipped`, `cutoff`, `can_delete`).
+
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+- **`polla/types/game.type.ts`**: `IPollaBetActions.can_mark_paid`. `IPollaBetPublic.payment_status`, que llega solo a quien cobra la jugada.
+- **`polla/schemas/game.schema.ts`**: `markPollaBetsPaidSchema` (tickets, o edición + jugador).
+
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+- **`polla/types/game.type.ts`**: `POLLA_PAYMENT_STATUS` (`PAID`, `OWED`) y `POLLA_PAYMENT_METHOD` (`CASH`), con sus etiquetas ("Pagado", "Debe", "Efectivo"). `IPollaBetEntityBack` suma `payment_status`, `payment_method`, `paid_at` y `paid_by`.
+- **`polla/schemas/game.schema.ts`**: `payment_status` opcional en `newPollaBetSchema` y `repeatPollaBetsSchema`.
+
+### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
+
+- **`polla/types/game.type.ts`**:
+  - `IPollaEditionDraw` y, en `IPollaEditionEntityBack`, `draws` (los sorteos, ordenados por hora del turno) y `min_winning_hits`. `polla_lottery_id`/`polla_schedule_id` quedan como el sorteo principal.
+  - `POLLA_SPECIAL_MIN_HITS_DEFAULT` (8).
+  - Para nombrar ediciones: `pollaEditionDraws` (con respaldo al principal), `pollaDrawLabels` / `pollaEditionDrawLabels` ("Nacional · Nocturna" por sorteo), `pollaEditionTitle` (nombre + sorteos separados por coma), `isPollaSpecialEdition` y `pollaPrizeRuleLabel`.
+  - `IPollaProcessedEdition` suma `winner_hits`, `min_winning_hits`, `pending_date`, `missing_date` y `missing_draws`. `IPollaTicketCheck.edition` suma `draws` y `min_winning_hits`.
+- **`polla/schemas/game.schema.ts`**: `newPollaEditionSchema` pide `draws` (al menos uno, sin repetir) y acepta `min_winning_hits` (entero de 1 a 10); ya no lleva `polla_lottery_id`/`polla_schedule_id`. `updatePollaEditionSchema` acepta los dos opcionales. `definePollaEditionDaySchema` (nuevo).
+
 ### Changed - 2026-10-29 (Polla: identificador opcional con jugador y ventas de la edición)
 
 - **`polla/types/game.type.ts`**: `IPollaDailySales.date` puede ser `null` y suma `polla_edition_id` (ventas de toda la edición); `IPollaDailySalesGroup.group_number`. El comentario de `identifier` dice la regla nueva: obligatorio a nombre de un pasador, opcional a nombre de un jugador.

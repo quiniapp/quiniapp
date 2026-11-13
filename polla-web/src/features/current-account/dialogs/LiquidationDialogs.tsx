@@ -57,7 +57,7 @@ const ReadOnlyAmount = ({ label, value }: { label: string; value: number }) => (
 
 /**
  * Liquidar un pasador, como el modal de QuiniApp, pero por período: pase,
- * borradas, comisión, aciertos y lo que deja se acumulan desde el día
+ * borradas, comisión y lo que deja se acumulan desde el día
  * siguiente a su última liquidación (o en el rango elegido). Reclamos, gastos,
  * cobro y pago se cargan en el día que se liquida. Sin deje.
  */
@@ -111,9 +111,8 @@ export const LiquidateCashierDialog = ({
             {account.user_name} · {periodLabel(view.period_from, account.date, 'DD-MM-YYYY')}
           </DialogTitle>
           <DialogDescription>
-            Pase, borradas, comisión, aciertos y lo que deja son del período. Reclamos, gastos,
-            cobro y pago son del {dayjs(account.date).format('DD-MM-YYYY')}. Pase jugadas − borradas
-            = pase.
+            Pase, borradas, comisión y lo que deja son del período. Reclamos, gastos, cobro y pago
+            son del {dayjs(account.date).format('DD-MM-YYYY')}. Pase jugadas − borradas = pase.
           </DialogDescription>
         </DialogHeader>
 
@@ -124,7 +123,6 @@ export const LiquidateCashierDialog = ({
               <ReadOnlyAmount label="Borradas" value={view.deleted_pass} />
               <ReadOnlyAmount label="Pase" value={view.pass} />
               <ReadOnlyAmount label="Comisión" value={view.cashier_commission} />
-              <ReadOnlyAmount label="Aciertos" value={view.successes} />
               <ReadOnlyAmount label="Reclamos del período" value={view.claims} />
               <ReadOnlyAmount label="Deja" value={view.revenue} />
               {!startsToday && (
@@ -283,7 +281,6 @@ export const GenerateLiquidationDialog = ({
                 <TableHead className="whitespace-nowrap text-right">Pase jugadas</TableHead>
                 <TableHead className="text-right">Borradas</TableHead>
                 <TableHead className="text-right">Pase</TableHead>
-                <TableHead className="text-right">Aciertos</TableHead>
                 <TableHead className="text-right">Reclamos del día</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
                 <TableHead className="text-right">Saldo anterior</TableHead>
@@ -312,9 +309,6 @@ export const GenerateLiquidationDialog = ({
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(view.pass)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      ${fmtMoney(view.successes)}
                     </TableCell>
                     {editCell(row, 'claims')}
                     <TableCell className="text-right tabular-nums">

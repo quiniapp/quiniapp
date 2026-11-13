@@ -4,6 +4,7 @@ import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/types/routes.type';
+import { homePath } from '@/routes/pages';
 
 const Splash = () => (
   <div className="flex h-screen w-full items-center justify-center text-muted-foreground">
@@ -58,7 +59,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     return <Navigate to={ROUTES.CHANGE_PASSWORD} replace />;
   }
   if (!mustChangePassword && onChangePassword) {
-    return <Navigate to={ROUTES.BETS} replace />;
+    return <Navigate to={homePath(user?.user_type)} replace />;
   }
 
   return <>{children}</>;
@@ -72,13 +73,23 @@ export const RoleRoute = ({
   allow,
   children,
 }: {
-  allow: POLLA_USER_TYPE[];
+  allow: readonly POLLA_USER_TYPE[];
   children: ReactNode;
 }) => {
   const { role, loading } = useAuth();
 
   if (loading) return <Splash />;
-  if (!role || !allow.includes(role)) return <Navigate to={ROUTES.BETS} replace />;
+  // Una pantalla que no le toca lleva al inicio de su rol (el Súper no tiene
+  // Jugadas: va a Cargar jugada).
+  if (!role || !allow.includes(role)) return <Navigate to={homePath(role)} replace />;
 
   return <>{children}</>;
+};
+
+/** `/`: Jugadas o, para el Súper, Cargar jugada. */
+export const HomeRedirect = () => {
+  const { role, loading } = useAuth();
+
+  if (loading) return <Splash />;
+  return <Navigate to={homePath(role)} replace />;
 };

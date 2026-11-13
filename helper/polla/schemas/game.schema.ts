@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { dateRegex } from '../../functions/dateRegex';
-import { POLLA_BET_IDENTIFIER_MAX, POLLA_NUMBERS_REQUIRED } from '../types/game.type';
+import {
+  POLLA_BET_IDENTIFIER_MAX,
+  POLLA_NUMBERS_REQUIRED,
+  POLLA_PAYMENT_STATUS,
+} from '../types/game.type';
 
 const isoDate = z.string().regex(dateRegex, 'Fecha inválida (YYYY-MM-DD)');
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Hora inválida (HH:mm)');
@@ -22,14 +26,46 @@ const editionDates = (data: { load_limit_date?: string; start_date?: string; end
  */
 const LOAD_LIMIT_MESSAGE = 'El cierre de carga no puede ser después de la fecha de inicio';
 
+const LOAD_START_MESSAGE = 'El inicio de carga tiene que ser antes del cierre de carga';
+
+/** `YYYY-MM-DD` + `HH:mm[:ss]` comparables como texto. */
+const moment = (date: string, time: string) => `${date}T${time.length === 5 ? `${time}:00` : time}`;
+
+/** Sorteos de la edición (quiniela × turno): al menos uno y sin repetir. */
+const editionDraws = z
+  .array(
+    z.object({
+      polla_lottery_id: z.string().uuid(),
+      polla_schedule_id: z.string().uuid(),
+    })
+  )
+  .min(1, 'Elegí al menos un sorteo (quiniela y turno)')
+  .max(100)
+  .refine(
+    (draws) =>
+      new Set(draws.map((d) => `${d.polla_lottery_id}/${d.polla_schedule_id}`)).size ===
+      draws.length,
+    'Hay sorteos repetidos'
+  );
+
+/** 10 = regular. La especial premia desde este mínimo si nadie completa 10. */
+const minWinningHits = z
+  .number()
+  .int()
+  .min(1, 'El mínimo de aciertos va de 1 a 10')
+  .max(POLLA_NUMBERS_REQUIRED, 'El mínimo de aciertos va de 1 a 10');
+
 export const newPollaEditionSchema = z
   .object({
-    polla_lottery_id: z.string().uuid(),
-    polla_schedule_id: z.string().uuid(),
+    draws: editionDraws,
+    min_winning_hits: minWinningHits.optional(),
     polla_organization_id: z.string().uuid().optional(),
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate,
     end_date: isoDate,
+    /** R29: sin inicio de carga, la base toma la fecha y hora actuales. */
+    load_start_date: isoDate.optional(),
+    load_start_time: clockTime.optional(),
     load_limit_date: isoDate,
     load_limit_time: clockTime,
     pool_amount: z.number().min(0),
@@ -44,6 +80,18 @@ export const newPollaEditionSchema = z
         message: LOAD_LIMIT_MESSAGE,
       });
     }
+    if (
+      data.load_start_date &&
+      data.load_start_time &&
+      moment(data.load_start_date, data.load_start_time) >=
+        moment(data.load_limit_date, data.load_limit_time)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['load_start_date'],
+        message: LOAD_START_MESSAGE,
+      });
+    }
     if (data.start_date > data.end_date) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -55,11 +103,14 @@ export const newPollaEditionSchema = z
 
 export const updatePollaEditionSchema = z
   .object({
-    polla_lottery_id: z.string().uuid().optional(),
-    polla_schedule_id: z.string().uuid().optional(),
+    /** Con sorteos cargados o con ganador no se cambian (lo controla la base). */
+    draws: editionDraws.optional(),
+    min_winning_hits: minWinningHits.optional(),
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate.optional(),
     end_date: isoDate.optional(),
+    load_start_date: isoDate.optional(),
+    load_start_time: clockTime.optional(),
     load_limit_date: isoDate.optional(),
     load_limit_time: clockTime.optional(),
     pool_amount: z.number().min(0).optional(),
@@ -74,6 +125,21 @@ export const updatePollaEditionSchema = z
         code: z.ZodIssueCode.custom,
         path: ['load_limit_date'],
         message: LOAD_LIMIT_MESSAGE,
+      });
+    }
+    // Con las cuatro puntas se valida acá; si no, la base (que tiene el resto).
+    if (
+      data.load_start_date &&
+      data.load_start_time &&
+      data.load_limit_date &&
+      data.load_limit_time &&
+      moment(data.load_start_date, data.load_start_time) >=
+        moment(data.load_limit_date, data.load_limit_time)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['load_start_date'],
+        message: LOAD_START_MESSAGE,
       });
     }
     if (d.start_date && d.end_date && d.start_date > d.end_date) {
@@ -111,6 +177,12 @@ export const processPollaResultsSchema = z.object({
   polla_organization_id: z.string().uuid().optional(),
 });
 
+/** "Definir con lo cargado": el día de la edición define con los sorteos que tiene. */
+export const definePollaEditionDaySchema = z.object({
+  polla_edition_id: z.string().uuid(),
+  date: isoDate,
+});
+
 // ----------------------------------------------------------------- jugadas
 
 export const newPollaBetSchema = z.object({
@@ -132,6 +204,11 @@ export const newPollaBetSchema = z.object({
     )
     .nullable()
     .optional(),
+  /**
+   * Efectivo (`PAID`, si no viene) o Debe (`OWED`). Lo que carga el jugador
+   * queda siempre en Debe: la base ignora lo que mande.
+   */
+  payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
 
 export const updatePollaBetSchema = z.object({
@@ -152,7 +229,28 @@ export const repeatPollaBetsSchema = z.object({
     .array(z.string().uuid())
     .min(1, 'Elegí al menos un ticket')
     .max(POLLA_REPEAT_MAX_BETS, `Se repiten hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`),
+  /** Pago de todo el lote (ver `newPollaBetSchema`). Lo sin cargo queda pagado. */
+  payment_status: z.nativeEnum(POLLA_PAYMENT_STATUS).optional(),
 });
+
+/**
+ * Marcar como pagados (R13): esos tickets (`polla_bet_ids`) o todos los
+ * impagos de un jugador en una edición (`polla_edition_id` + `polla_user_id`).
+ */
+export const markPollaBetsPaidSchema = z
+  .object({
+    polla_bet_ids: z
+      .array(z.string().uuid())
+      .min(1, 'Elegí al menos un ticket')
+      .max(POLLA_REPEAT_MAX_BETS, `Se marcan hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`)
+      .optional(),
+    polla_edition_id: z.string().uuid().optional(),
+    polla_user_id: z.string().uuid().optional(),
+  })
+  .refine(
+    (data) => Boolean(data.polla_bet_ids) || Boolean(data.polla_edition_id && data.polla_user_id),
+    'Elegí los tickets, o la edición y el jugador'
+  );
 
 // -------------------------------------------------------- cuenta corriente
 

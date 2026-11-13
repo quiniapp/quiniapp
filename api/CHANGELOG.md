@@ -4,6 +4,275 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-12 (R18: un día liquidado no vuelve a sumar premios)
+
+- **Migración `20261112054358_polla_liquidated_days_keep_prizes`**: `polla_calculate_current_account` y `polla_update_current_account_recompute` dejan de sacar los premios de las jugadas para los días ya liquidados. Ahora conservan el `successes` guardado de la fila: los liquidados antes de R18, con su premio; los de después, en 0.
+  - **Antes:** si se reprocesaba un resultado de un día liquidado después de R18 que tenía ganadores, el recálculo metía el premio en esa fila y le cambiaba el subtotal y el saldo.
+- **Test pgTAP `070`**:
+  - el caso de un día liquidado antes de R18 parte de la fila guardada;
+  - suma el caso de un día liquidado después de R18, que al recalcularse sigue sin premio. Con las funciones viejas, esos 3 casos fallan.
+
+### Changed - 2026-11-12 (R26, ajuste: mínimo de aciertos editable)
+
+- **Migración `20261112051924_polla_min_hits_editable`**: `polla_update_edition` deja cambiar `min_winning_hits` con resultados cargados y también con ganadores, mientras no haya ningún premio pagado (`POLLA_EDITION_PRIZE_PAID_LOCKED`).
+  - **Edición terminada** por la escalera o desierta: se vuelve a procesar el último día (`polla_process_edition_hits`) y se recalculan ganadores, premios y estado.
+  - **Terminada por un 10:** no cambia nada.
+  - **En juego:** solo se guarda el número.
+  - **Con ganadores**, el resto sigue fijo.
+  - Para corregir un mínimo cargado mal al crear la especial.
+- **`polla-errors.ts`**: mensajes nuevos de `POLLA_EDITION_HAS_WINNERS_LOCKED` y `POLLA_EDITION_DRAWS_LOCKED`, y error nuevo `POLLA_EDITION_PRIZE_PAID_LOCKED`.
+- **Tests pgTAP**:
+  - `150_polla_min_hits_editable`, nuevo (17 casos);
+  - el `020` pasa a esperar que el mínimo se pueda cambiar con ganador.
+
+### Added - 2026-11-11 (R28: orden de las quinielas)
+
+- **Migración `20261111223835_polla_lottery_order`**:
+  - normaliza `polla_lotteries."order"` a 1..N por organización, conservando el orden que se veía;
+  - una quiniela nueva va al final (trigger);
+  - `polla_reorder_lotteries(org, ids[])` reordena de forma atómica;
+  - `polla_lottery_positions(org)` da la posición y la etiqueta "1 - Nacional";
+  - `polla_edition_with_draws` suma `lottery_position` y `lottery_label`, ordenados por turno y después por posición.
+  - Nada hardcodeado: el orden lo define cada organización.
+- **`GET /lottery`** suma `position` y `label`. **`PUT /lottery/order`** es nuevo (dueño, capitalista, superadmin). **`GET /result`** suma `lottery_position` y `lottery_label`. El helper nuevo es `lottery-positions.ts`.
+- **Test pgTAP `140_polla_lottery_order`** (14 casos).
+
+### Changed - 2026-11-11 (R30: el cierre de carga rige para todos los roles)
+
+- **Migración `20261111223515_polla_load_cutoff_all_roles`**:
+  - **`polla_load_cutoff`:**
+    - dueño, capitalista, superadmin, Súper, pasador y jugador cortan en el cierre de carga;
+    - el admin de grupo corta a la hora del primer sorteo;
+    - para todos, el tope duro es el primer sorteo del día de inicio (`LEAST`), aunque el cierre esté mal configurado;
+    - ya no hay roles sin corte.
+
+    Antes, superadmin y superiores cargaban hasta el último día, con los sorteos en curso.
+  - **`polla_assert_bet_writable`:**
+    - superadmin y superiores editan números solo hasta el cierre, pero siguen borrando siempre (para corregir);
+    - el resto, hasta su corte.
+- **`GET /bet` (acciones)**: superadmin y superiores tienen `can_edit` solo con la carga abierta y `can_delete` siempre. `buildActionContext` mira los cortes también para ellos.
+- **Test pgTAP `130_polla_load_cutoff_all_roles`** (19 casos): carga, repetición, edición y borrado por rol, después del cierre y con el sorteo en curso.
+
+### Added - 2026-11-11 (R29: inicio de carga)
+
+- **Migración `20261111223001_polla_load_start`**:
+  - **Columnas nuevas:** `polla_editions.load_start_date` y `load_start_time` (Argentina). Las ediciones existentes toman su fecha de creación; si se crearon después de su propio cierre, un minuto antes del cierre. Sin dato, por defecto es ahora.
+  - **Trigger `validate_polla_edition_load_limit`:** valida además que el inicio sea anterior al cierre (`POLLA_LOAD_START_AFTER_LIMIT`).
+  - **Funciones de carga:**
+    - `polla_load_start(edition)` es nueva;
+    - `polla_can_load` da falso antes del inicio, así que nadie carga ni repite antes (también las ofrece así `polla_loadable_editions`);
+    - `polla_editions_load_state` suma `load_start` y `load_started`.
+  - **Alta y edición:** `polla_create_edition` (sin inicio, ahora) y `polla_update_edition` reciben los dos campos. Con ganador no se cambian.
+- **`POST /bet`, `/bet/repeat` y `/bet/free-repeat`**: antes del inicio responden 403 "La carga de esta edición abre el DD/MM a las HH:mm" (`assertLoadStarted`). La base lo vuelve a frenar.
+- **`polla-errors.ts`**: `POLLA_LOAD_START_AFTER_LIMIT`.
+- **Tests pgTAP**:
+  - `120_polla_load_start`, nuevo (12 casos);
+  - `060` y `065`, que mueven también el inicio al simular el cierre vencido.
+
+### Changed - 2026-11-11 (R33: cortesía una sola vez por ticket)
+
+- **Migración `20261111222341_polla_free_repeat_once`**:
+  - **Trigger `trg_polla_free_repeat_once`** (BEFORE INSERT en `polla_bets`), con dos reglas:
+    - un ticket no puede tener dos cortesías (repeticiones sin cargo) vigentes: `POLLA_BET_ALREADY_COURTESY`;
+    - una cortesía no se repite de cortesía: `POLLA_FREE_REPEAT_OF_COURTESY`.
+  - El trigger bloquea la fila del ticket original, así dos repeticiones a la vez no generan dos cortesías.
+  - **`polla_bet_courtesy(bet_id)`:** devuelve la cortesía vigente de un ticket.
+  - **`polla_repeat_bets`:** controla lo mismo antes de crear, y en `skipped[]` devuelve `courtesy` (ticket y edición de la cortesía que ya existe).
+  - **Corregir una cortesía:** se borra y se vuelve a repetir. Las duplicadas de antes quedan como están, pero no suman otra.
+- **`GET /bet` (Administrar)**: `with_courtesies=true` devuelve `courtesies` (la cortesía vigente de cada ticket listado) en lugar de `free_repeats` (el conteo). `getFreeRepeatCounts` pasa a ser `getCourtesies`.
+- **Test pgTAP `110_polla_free_repeat_once`** (14 casos).
+
+### Added - 2026-11-11 (R25: test del total de la edición)
+
+- **pgTAP `100_polla_daily_sales_edition_total`**: `polla_daily_sales` con la edición sola, que es el total de "Ventas del día", coincide con la suma de sus días de carga.
+  - Coincide en monto y en cantidad, grupo por grupo y para un pasador.
+  - No entran la repetida sin cargo, la borrada ni lo de otra edición superpuesta.
+  - El día sin edición suma todas las ediciones.
+  - R25 ya estaba hecho: solo faltaba este test.
+
+### Changed - 2026-11-11 (R14: Eliminar impagos también para el staff)
+
+- **Migración `20261111214856_polla_delete_unpaid_bets_staff`**:
+  - `polla_unpaid_bets_summary` y `polla_delete_unpaid_bets` reciben `p_cashier_id` (cuarto parámetro, opcional).
+  - Los usan el pasador, el admin de grupo, el superadmin, el capitalista y el dueño. El Súper y el jugador reciben `POLLA_UNPAID_DELETE_FORBIDDEN`.
+  - El pasador borra lo imputado a él, como antes. El staff tiene que elegir pasador y/o jugador; si no elige, recibe `POLLA_UNPAID_DELETE_TARGET_REQUIRED`. El admin solo puede elegir dentro de su grupo; si no, recibe `POLLA_USER_OTHER_GROUP`.
+  - La función nueva `polla_unpaid_bets_scope` resuelve el alcance de cada rol.
+  - El corte es el cierre de carga para todos.
+  - Cada baja se descuenta según la última liquidación de su propio pasador, y se refresca la fila de Borradas de cada pasador tocado.
+  - Pedido del cliente en la revisión del 10/11.
+- **`GET /bet/unpaid-summary` y `DELETE /bet/unpaid`**: aceptan `cashier_polla_user_id`. El guard pasa a `CASHIER` + `POLLA_ADMIN_ROLES`.
+- **`polla-errors.ts`**: `POLLA_UNPAID_DELETE_FORBIDDEN` y `POLLA_UNPAID_DELETE_TARGET_REQUIRED` reemplazan a `POLLA_UNPAID_DELETE_ONLY_CASHIER`.
+- **Tests pgTAP**:
+  - `060` ajusta los dos casos de quién puede borrar.
+  - `065`, nuevo, cubre al staff: alcance por grupo, Súper, pasador ajeno, pasador o jugador obligatorio, liquidado hoy → mañana, Borradas, conteo de la edición y corte.
+
+### Changed - 2026-11-11 (R19: admin en Premios)
+
+- **`GET /polla/private/prize`**: cada premio trae `admin_name`, el admin vigente del grupo del pasador (cada grupo tiene uno solo). `PollaPrizeRepository.getGroupAdmins` lo busca en una segunda consulta por los grupos de la página. Es `null` si el pasador no tiene grupo o el grupo no tiene admin.
+  - El cliente pidió el 6/11 ver el administrador además del grupo, el pasador y el jugador.
+
+### Changed - 2026-11-06 (R21: el pasador ve los premios de sus jugadores)
+
+- **`GET /polla/private/prize`**: cada rol ve su alcance, validado en el backend (`pollaPrizeScope` del helper).
+  - Superadmin+ ve toda la organización.
+  - El admin ve su grupo, sin tildar.
+  - El pasador ve lo imputado a él (lo suyo y lo de sus jugadores) y si está pagado.
+  - El jugador ve sus tickets sin lo pagado (`prize_paid_*` y los totales de pagado en `null`).
+  - El Súper no entra (403).
+- Los totales son del alcance de quien mira. El cartel público de ganadores no cambia.
+- Sin migración.
+
+### Added - 2026-11-06 (R20: premio pagado / no pagado)
+
+#### Migración `20261106100000_polla_prize_paid.sql`
+- `polla_bets` suma `prize_paid_at` y `prize_paid_by`.
+- **`polla_mark_prize_paid(actor, bet)`** (nueva): tilda el premio como pagado y guarda quién y cuándo.
+  - Solo el dueño, el capitalista y el superadmin de la organización (`POLLA_PRIZE_PAY_FORBIDDEN`).
+  - Solo ganadoras (`POLLA_PRIZE_NOT_WINNER`).
+  - Una vez tildado no se vuelve a marcar ni se destilda (`POLLA_PRIZE_ALREADY_PAID`).
+- Sin CHECK contra `winner`: si una corrección anula a un ganador ya pagado, el reproceso no falla por eso.
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`POST /polla/private/prize/:betId/paid`** (nuevo, superadmin+).
+- **`GET /polla/private/prize`**:
+  - `paid=true|false` filtra pagados o pendientes.
+  - Cada premio trae `prize_paid_at` y `prize_paid_by_name`.
+  - Los totales (`count`, `amount`, `paid_count`, `paid_amount`, `pending_amount`) son de toda la edición.
+
+#### Tests
+- **`080_polla_prize_paid.test.sql`** (9): no marcan el Súper, el pasador ni otra organización; solo ganadoras; queda quién y cuándo; no se vuelve a marcar.
+
+### Added - 2026-11-06 (R19: sección Premios)
+
+- **`GET /polla/private/prize?polla_edition_id`** (nuevo, `polla/prize/`): los tickets ganadores vigentes de la edición, con grupo, pasador, jugador o cliente, identificador, número de ticket, aciertos, día y monto. Devuelve también la cantidad y el total. Lo leen el dueño, el capitalista y el superadmin (`POLLA_API_ROLES.readPrizes`). Salen de la generación de ganadores que ya existe.
+- Sin migración.
+
+### Changed - 2026-11-06 (R18: premios fuera de la cuenta corriente)
+
+#### Migración `20261106090000_polla_prizes_out_of_account.sql`
+- **`polla_calculate_current_account`** y **`polla_update_current_account_recompute`**: desde el período abierto (el día siguiente a la última liquidación de cada pasador), los premios ya no restan en el subtotal ni en el saldo, y `successes` queda en 0. La cuenta corriente queda con el pase de jugadas, las borradas, los reclamos, los cobros y los pagos. "Pagos" sigue igual: es lo que se le transfiere al pasador.
+- Los días ya liquidados no cambian: conservan sus premios aunque se recalculen, por ejemplo al corregir un resultado viejo.
+- Al aplicarse, recalcula el período abierto de cada organización (`polla_recalculate_open_period`), como "Actualizar".
+- No se borra nada: los premios siguen en `polla_bets` (ganadoras) y pasan a la sección Premios (R19).
+- Rollback comentado al final del archivo.
+
+#### Tests
+- **`070_polla_prizes_out_of_account.test.sql`** (9): en el período abierto el premio no figura ni resta en el subtotal ni en el saldo, tampoco al editar el día; un día ya liquidado conserva su premio al recalcularse y al editarse.
+
+### Changed - 2026-11-05 (R11: el Súper solo carga y administra jugadas)
+
+- Los guards salen de la matriz de acceso de `helper/polla/config/access.config.ts` (`POLLA_API_ROLES`), la misma que usan el menú y las rutas de polla-web.
+- El Súper (ASSISTANT) recibe 403 en:
+  - **`GET /polla/private/bet`** sin `view=manage` ni `export` (Jugadas, su PDF y lo que lee la cuenta corriente). Administrar jugadas y su PDF siguen igual.
+  - **`GET /polla/private/bet/check/:ticket`** (Revisar ticket).
+  - **`GET /polla/private/bet/sales`**: el guard de la ruta reemplaza los dos chequeos dentro del handler (jugador y Súper).
+  - **`GET /polla/private/result`** y **`GET /result/:id`** (Resultados).
+- Sin migración.
+
+### Changed - 2026-11-05 (R10: fecha, hora y estado del ticket para todos)
+
+- **`GET /polla/private/bet`** (proyección pública del pasador, el jugador y el Súper): suma `created_at`, la fecha y hora reales de carga. El estado de pago sigue las reglas de R13: solo lo ve quien cobra la jugada.
+- Sin migración.
+
+### Added - 2026-11-05 (R14: borrar tickets impagos de una vez)
+
+#### Migración `20261105150000_polla_delete_unpaid_bets.sql`
+- **`polla_delete_unpaid_bets(actor, edición, jugador?)`** (nueva): el pasador borra de una vez sus tickets en Debe de la edición, o los de un jugador suyo. Toca solo lo imputado a él y nunca borra ganadoras.
+  - Corte: el mismo que el borrado de a uno, hasta el cierre de carga de la edición para el pasador (`POLLA_LOAD_LIMIT_EXCEEDED`).
+  - La baja se descuenta del pase hoy, o al día siguiente si su cuenta ya se liquidó hoy (Borradas, como `polla_delete_bet`).
+  - Descuenta los tickets y lo recaudado de la edición y refresca la fila de la cuenta corriente.
+- **`polla_unpaid_bets_summary(actor, edición, jugador?)`** (nueva): cuántos y cuánto se borrarían, cuántas ganadoras en Debe quedan afuera y si la carga sigue abierta.
+- Solo el pasador (`POLLA_UNPAID_DELETE_ONLY_CASHIER`).
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`GET /polla/private/bet/unpaid-summary?polla_edition_id&polla_user_id?`** y **`DELETE /polla/private/bet/unpaid?polla_edition_id&polla_user_id?`** (nuevos, solo pasador). Van antes de `/:id`.
+
+#### Tests
+- **`060_polla_delete_unpaid_bets.test.sql`** (16): solo el pasador; el resumen (cantidad, monto y ganadoras que no se borran); borrar los de un jugador y después el resto; lo pagado, las ganadoras y lo de otro pasador no se tocan; Borradas con fecha de hoy; la edición descuenta; pasado el cierre no se borra.
+
+### Added - 2026-11-05 (R13: marcar tickets en Debe como pagados)
+
+#### Migración `20261105140000_polla_mark_bets_paid.sql`
+- **`polla_mark_bets_paid(actor, bet_ids?, edition?, user?)`** (nueva): pasa a Pagado, en efectivo, esos tickets o todos los impagos de un jugador en una edición. Guarda quién cobró y cuándo. Solo Debe → Pagado: las que ya estaban pagadas no se tocan y no hay vuelta atrás.
+- **`polla_bet_in_payment_scope(actor, bet)`** (nueva): el alcance de quien cobra. El pasador cobra lo imputado a él; el admin, su grupo; el Súper y superadmin+, la organización; el jugador, nada. Si un ticket pedido está fuera del alcance, no se marca ninguno (`POLLA_BET_OUT_OF_SCOPE`).
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`PATCH /polla/private/bet/payment`** (nuevo, staff y pasador): `{polla_bet_ids}` o `{polla_edition_id, polla_user_id}`. Devuelve `{updated, amount}`.
+- **`GET /polla/private/bet`**: filtro `payment_status` (`OWED` = impagos).
+- Cada jugada trae `can_mark_paid`: está en Debe y el usuario la cobra.
+- La proyección pública (pasador y Súper) trae `payment_status` de lo que cobra quien mira. El jugador y los demás pasadores reciben `null`.
+- Errores nuevos: `POLLA_PAYMENT_FORBIDDEN` y `POLLA_PAYMENT_TARGET_REQUIRED`.
+
+#### Tests
+- **`050_polla_mark_bets_paid.test.sql`** (15): el jugador no marca; el pasador y el admin no salen de su alcance, y si falla uno no se marca ninguno; queda pagado en efectivo con quién lo cobró; no se vuelve a marcar; todos los impagos de un jugador, con su monto; el Súper en toda la organización.
+
+### Added - 2026-11-05 (R04: cerrar ticket con Efectivo o Debe)
+
+#### Migración `20261105130000_polla_bet_payment_status.sql`
+- Enums `polla_payment_status_enum` (`PAID`, `OWED`) y `polla_payment_method_enum` (`CASH`). QR o transferencia se suman después con `ALTER TYPE ... ADD VALUE`.
+- `polla_bets` suma `payment_status` (por defecto `PAID`), `payment_method`, `paid_at` y `paid_by`, con `polla_bets_payment_check`: una en Debe no tiene medio ni cobro. Índice `idx_polla_bets_edition_owed` para los impagos de una edición.
+- Backfill: las jugadas existentes quedan pagadas en efectivo, cobradas al cargarse (`paid_at = created_at`) por quien las cargó (`paid_by = created_by`). Las repetidas sin cargo, sin medio.
+- **`polla_create_bet`** recibe `p_payment_status`. El jugador carga siempre en Debe, sin elegir; lo repetido sin cargo queda pagado; el resto elige, y si no manda nada queda en Efectivo. Si queda pagada, guarda medio, hora y quién cobró.
+- **`polla_repeat_bets`** recibe `p_payment_status` para todo el lote.
+- Una jugada en Debe entra al sorteo y al pase como cualquier otra: la cuenta corriente no cambia.
+- Rollback comentado al final del archivo.
+
+#### Endpoints
+- **`POST /polla/private/bet`** y **`POST /bet/repeat`**: `payment_status` opcional (`PAID` | `OWED`).
+
+#### Tests
+- **`040_polla_bet_payment.test.sql`** (17): Efectivo, sin elegir, Debe (sin cobro y en el pase), el jugador forzado a Debe, el lote repetido con su pago y lo repetido sin cargo pagado.
+
+### Added - 2026-11-05 (R26: polla especial con varios sorteos y mínimo de aciertos)
+
+#### Migración `20261105090000_polla_edition_draws_min_hits.sql`
+- **`polla_edition_draws`** (nueva): los sorteos (quiniela × turno) de cada edición, de 1 a N. Las ediciones que ya existían quedan con su par. `polla_editions.polla_lottery_id` / `polla_schedule_id` pasan a ser el **sorteo principal**, el de horario más temprano: con él se siguen calculando el corte de carga (`polla_load_cutoff`) y el control del cierre (`validate_polla_edition_load_limit`), sin cambios. Un trigger (`trg_polla_edition_principal_draw`) agrega el principal a los sorteos en cada alta, también si llega por un insert directo de la API anterior durante el despliegue.
+- **`polla_editions.min_winning_hits`** (1 a 10, por defecto 10 = regular).
+- **`polla_edition_forced_days`** (nueva): días que el admin definió "con lo cargado". Backfill: las ediciones que ya cerraron sin ganador procesando un último día sin resultado quedan con ese día definido, para que reprocesar un día anterior no las vuelva a poner en juego.
+- **Regla de premio** (`polla_process_edition_hits(edición, fecha)`):
+  - Los aciertos del día suman todos los sorteos de la edición, contando repetidos (si el 32 sale en dos quinielas y está jugado dos veces, son dos aciertos).
+  - Si alguien completa 10, ganan los que completaron 10 el primer día en que pasó y la edición termina ahí (como antes).
+  - Si se llega al último día sin nadie en 10, ganan los que tienen más aciertos (9, si no 8, ...) siempre que lleguen al mínimo. Si nadie llega, queda desierta.
+  - Un día define ganadores solo con todos sus sorteos cargados, o si se definió con lo cargado. La respuesta suma `winner_hits`, `min_winning_hits`, `pending_date`, `missing_date` y `missing_draws`.
+  - El pozo (más el sorpresa) se reparte en partes iguales.
+  - **Cambio en la regular**: procesar el último día sin su resultado ya no la cierra sin ganador. Queda en juego y avisa que falta el sorteo (se puede definir con lo cargado).
+- **`polla_process_results_and_accounts`** procesa las ediciones que tienen algún sorteo del turno. El recálculo de cuentas pasa a `polla_recalculate_accounts_on(org, fechas)`.
+- **`polla_define_edition_day(edición, fecha, actor)`** (nueva): "Definir con lo cargado". Guarda quién lo definió, reprocesa el día y recalcula la cuenta corriente.
+- **`polla_create_edition(org, payload, draws)`** (nueva): alta atómica con sus sorteos. Valida que sean de la organización y no estén borrados.
+- **`polla_update_edition`** acepta `draws` y `min_winning_hits`. Con resultados cargados no se cambian sorteos, mínimo ni inicio (`POLLA_EDITION_DRAWS_LOCKED`); con ganador, solo el nombre. Si llegan `polla_lottery_id`/`polla_schedule_id` sueltos (la API anterior), valen como el único sorteo de una edición que tiene uno solo.
+- **`polla_loadable_editions`** devuelve cada edición con `draws`. Auxiliares nuevas: `polla_edition_with_draws`, `polla_edition_missing_draws`, `polla_edition_day_complete`, `polla_is_edition_winner` y `polla_parse_edition_draws`.
+- Rollback comentado al final del archivo. Antes de volver atrás hay que borrar las especiales.
+
+#### Endpoints
+- **`POST /polla/private/edition`**: recibe `draws` (`[{polla_lottery_id, polla_schedule_id}]`, al menos uno y sin repetir) y `min_winning_hits` (opcional) en lugar de `polla_lottery_id`/`polla_schedule_id`. Llama a `polla_create_edition`.
+- **`PUT /polla/private/edition/:id`**: `draws` y `min_winning_hits` opcionales.
+- **`GET /polla/private/edition`** y **`GET /:id`**: cada edición trae `draws` (embed de `polla_edition_draws`).
+- **`POST /polla/private/result/define`** (nuevo, superadmin+): `{polla_edition_id, date}`. "Definir con lo cargado"; responde igual que `/process`.
+- **`GET /polla/private/bet/check/:ticket`**: la edición trae `draws` y `min_winning_hits`.
+- Errores nuevos: `POLLA_EDITION_DRAWS_REQUIRED`, `POLLA_EDITION_DRAW_INVALID`, `POLLA_EDITION_DATE_OUT_OF_RANGE` y `polla_editions_min_winning_hits_check`. `POLLA_EDITION_DRAWS_LOCKED` habla de sorteos y mínimo.
+
+#### Tests
+- **`020_polla_prize_rule.test.sql`** (57): alta con sorteos y principal; ganadores de 10, solo de 9, solo de 8 (con sorpresa) y nadie con 8 (desierta); corte por 10 el primer día; multiconjunto entre quinielas; día incompleto que no define; "Definir con lo cargado"; un 10 con el día incompleto que espera al resto; la regular sin escalera; bloqueos de cambios.
+- **`030_polla_create_bet_regression.test.sql`** (16): regresión de la carga (R05, R07, R08) y la numeración (R09) con una especial de varios sorteos. El admin carga hasta el sorteo más temprano.
+
+### Changed - 2026-11-05 (R27: dos ediciones en la misma semana)
+
+#### Migración `20261105080000_polla_overlapping_editions.sql`
+- Se borra el constraint `no_overlapping_polla_editions`: dos ediciones de la misma quiniela y turno pueden cubrir los mismos días (por ejemplo, la regular y la especial del sábado). Cada ticket ya estaba atado a su edición.
+- **`polla_process_edition_hits(p_edition_id, p_date)`** reemplaza a `polla_process_edition_hits(org, quiniela, turno, fecha)`, que buscaba "la" edición del sorteo y con dos solapadas procesaba una sola. La regla de premio no cambia.
+- **`polla_process_results_and_accounts`** procesa todas las ediciones del turno que cubren el día, cada una con sus tickets y su pozo. Si una edición se saltea, la respuesta trae igual su `polla_edition_id`.
+- Rollback comentado al final del archivo. Volver a crear el constraint falla si ya hay ediciones solapadas.
+
+#### Endpoints
+- **`GET /polla/private/bet/sales`**: acepta `date` y `polla_edition_id` juntos (las ventas de ese día en esa edición). Con `polla_edition_id` solo sigue trayendo el total de la edición, y con `date` solo (o nada), el día en todas.
+- Se saca el mensaje de `no_overlapping_polla_editions` de `polla-errors.ts`.
+
+#### Tests
+- **`supabase/tests/database/010_polla_overlapping_editions.test.sql`**: dos ediciones solapadas de la misma quiniela y turno; un mismo sorteo procesa las dos y cada una reparte su pozo entre sus tickets.
+
 ### Added - 2026-11-05 (Polla: tests de base de datos con pgTAP)
 
 - **`supabase/tests/database/`**: tests pgTAP de las reglas de Polla en SQL. Se corren con `npx supabase test db` contra el Supabase local (ver `supabase/tests/README.md`). Cada archivo corre en una transacción que termina en `ROLLBACK` y crea sus propios datos.

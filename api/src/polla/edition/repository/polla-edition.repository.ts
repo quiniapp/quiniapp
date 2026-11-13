@@ -1,6 +1,7 @@
 import { supabase } from '@database/db.connection';
 import { NotFoundError } from '@helper/errors';
 import {
+  IPollaEditionDraw,
   IPollaEditionEntityBack,
   POLLA_EDITION_PERIOD,
   POLLA_EDITION_STATUS,
@@ -20,6 +21,9 @@ export interface PollaEditionFilters {
   periods?: { list: POLLA_EDITION_PERIOD[]; today: string };
 }
 
+/** La edición con sus sorteos (quiniela × turno). */
+const EDITION_COLUMNS = '*, draws:polla_edition_draws(polla_lottery_id, polla_schedule_id)';
+
 /** Condición PostgREST de un período (mismo criterio que `pollaEditionPeriod`). */
 const periodFilter = (period: POLLA_EDITION_PERIOD, today: string): string => {
   switch (period) {
@@ -36,7 +40,7 @@ export class PollaEditionRepository {
   async getAll(filters: PollaEditionFilters, pagination: PollaPagination) {
     let query = supabase
       .from('polla_editions')
-      .select('*', pagination.withCount ? { count: 'exact' } : {})
+      .select(EDITION_COLUMNS, pagination.withCount ? { count: 'exact' } : {})
       .is('deleted_at', null);
 
     if (filters.organizationId) {
@@ -87,7 +91,16 @@ export class PollaEditionRepository {
   async getLoadStates(
     editionIds: string[],
     role: POLLA_USER_TYPE
-  ): Promise<{ polla_edition_id: string; load_cutoff: string | null; can_load: boolean }[]> {
+  ): Promise<
+    {
+      polla_edition_id: string;
+      /** Inicio de carga (R29). */
+      load_start: string;
+      load_cutoff: string | null;
+      load_started: boolean;
+      can_load: boolean;
+    }[]
+  > {
     if (editionIds.length === 0) return [];
 
     const { data, error } = await supabase.rpc('polla_editions_load_state', {
@@ -102,7 +115,7 @@ export class PollaEditionRepository {
   async getById(editionId: string): Promise<IPollaEditionEntityBack> {
     const { data, error } = await supabase
       .from('polla_editions')
-      .select('*')
+      .select(EDITION_COLUMNS)
       .eq('polla_edition_id', editionId)
       .is('deleted_at', null)
       .maybeSingle();
@@ -112,22 +125,33 @@ export class PollaEditionRepository {
     return data as IPollaEditionEntityBack;
   }
 
-  async create(payload: Record<string, unknown>) {
-    const { data, error } = await supabase
-      .from('polla_editions')
-      .insert(payload)
-      .select('*')
-      .single();
+  /**
+   * Alta con sus sorteos en una sola transacción (`polla_create_edition`). El
+   * sorteo principal (el más temprano) lo elige la base: con él valida el
+   * cierre de carga.
+   */
+  async create(
+    organizationId: string,
+    payload: Record<string, unknown>,
+    draws: IPollaEditionDraw[]
+  ) {
+    const { data, error } = await supabase.rpc('polla_create_edition', {
+      p_organization_id: organizationId,
+      p_payload: payload,
+      p_draws: draws,
+    });
 
     throwIfPollaError(error);
-    return data;
+    return data as IPollaEditionEntityBack;
   }
 
   /**
    * Cambios de una edición con sus reglas (`polla_update_edition`): el precio
    * vale para las jugadas nuevas, extender una sin ganador la vuelve a poner
-   * en juego, con ganador solo se renombra y con sorteos cargados no se mueven
-   * quiniela, turno ni inicio.
+   * en juego, con ganador solo se cambian el nombre y el mínimo de aciertos, y
+   * con sorteos cargados no se mueven los sorteos ni el inicio. Cambiar el
+   * mínimo de una edición terminada recalcula ganadores y premios, salvo que
+   * haya premios pagados (ajuste de R26).
    */
   async update(editionId: string, payload: Record<string, unknown>) {
     const { data, error } = await supabase.rpc('polla_update_edition', {

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import type { jsPDF } from 'jspdf';
+import { POLLA_PAYMENT_STATUS } from '@helper/polla/types/game.type';
 
 // Mismas convenciones que makeTicket.ts: impresora térmica de 58mm, texto
 // monoespaciado (Courier) para que las columnas no se desalineen en el
@@ -23,18 +24,39 @@ export interface PollaTicketData {
   /** Pasador como `{grupo}-{número}` (ver `pollaTicketCashierCode`). */
   cashier_code?: string;
   numbers: string[]; // 10 números de 2 cifras
-  lotteryName: string;
-  scheduleName: string;
+  /** Nombre de la edición, si tiene ("Especial del sábado"). */
+  editionName?: string | null;
+  /** Sorteos de la edición, uno por línea: "Nacional · Nocturna". */
+  drawLines: string[];
   startDate: string;
   endDate: string;
   loadDate: string;
+  /** Momento real de carga (`created_at`): el ticket imprime su hora (R10). */
+  loadedAt?: string;
   ticketPrice: number;
   poolAmount: number;
   /** Pozo sorpresa: se imprime aparte si hay. */
   surprisePoolAmount?: number;
   /** Repetido sin cargo: en lugar del precio dice SIN CARGO. */
   isFree?: boolean;
+  /**
+   * PAGADO o DEBE (R04). Solo en el ticket que imprime el pasador o el staff:
+   * el del jugador no lo dice.
+   */
+  paymentStatus?: POLLA_PAYMENT_STATUS;
 }
+
+const PAYMENT_LINE: Record<POLLA_PAYMENT_STATUS, string> = {
+  [POLLA_PAYMENT_STATUS.PAID]: 'PAGADO',
+  [POLLA_PAYMENT_STATUS.OWED]: 'DEBE',
+};
+
+/** Lo sin cargo no tiene nada que cobrar: ya dice SIN CARGO. */
+const showsPayment = (data: PollaTicketData) => Boolean(data.paymentStatus && !data.isFree);
+
+/** Líneas de la edición: el nombre (si tiene) y un sorteo por línea. */
+const editionLines = (data: PollaTicketData) =>
+  [data.editionName, ...data.drawLines].filter((line): line is string => Boolean(line));
 
 /** Alto exacto del ticket (mm): cada página del PDF mide lo que su ticket. */
 const ticketHeight = (data: PollaTicketData) =>
@@ -43,12 +65,14 @@ const ticketHeight = (data: PollaTicketData) =>
   (data.cashier_code ? 7 : 0) +
   6 + // Ticket
   3 + // divider
-  8 + // edición (2 líneas)
+  8 + // edición (POLLA y la primera línea)
+  4 * Math.max(0, editionLines(data).length - 1) + // nombre y más sorteos
   5 + // fecha/hora
   3 + // divider
   5 * 5 + // 5 filas de números
   3 + // divider
   9 + // precio ticket
+  (showsPayment(data) ? 5 : 0) + // PAGADO / DEBE
   9 + // pozo
   (data.surprisePoolAmount ? 4 : 0) + // sorpresa
   (data.identifier ? 4 : 0) + // identificador
@@ -100,11 +124,17 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
   doc.text('POLLA', cx, y, { align: 'center' });
   y += 5;
   doc.setFont('helvetica', 'normal');
+  for (const line of editionLines(data)) {
+    doc.setFontSize(fitFontSize(doc, line, 7));
+    doc.text(line, cx, y, { align: 'center' });
+    y += 4;
+  }
   doc.setFontSize(7);
-  doc.text(`${data.lotteryName} - ${data.scheduleName}`, cx, y, { align: 'center' });
-  y += 4;
+  // La especial de un día dice el día; la regular, la semana.
   doc.text(
-    `Semana: ${dayjs(data.startDate).format('DD/MM')} al ${dayjs(data.endDate).format('DD/MM')}`,
+    data.startDate === data.endDate
+      ? `Juega: ${dayjs(data.startDate).format('DD/MM')}`
+      : `Semana: ${dayjs(data.startDate).format('DD/MM')} al ${dayjs(data.endDate).format('DD/MM')}`,
     cx,
     y,
     { align: 'center' }
@@ -117,8 +147,12 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
     const spaces = Math.max(1, CHARS_PER_LINE - left.length - right.length);
     return left + ' '.repeat(spaces) + right;
   };
+  // La hora de carga, no la de impresión (una reimpresión dice la misma).
   doc.text(
-    padLine(dayjs(data.loadDate).format('DD/MM/YYYY'), dayjs().format('HH:mm:ss')),
+    padLine(
+      dayjs(data.loadDate).format('DD/MM/YYYY'),
+      dayjs(data.loadedAt ?? undefined).format('HH:mm:ss')
+    ),
     MARGIN,
     y
   );
@@ -150,6 +184,12 @@ const drawTicket = (doc: jsPDF, data: PollaTicketData) => {
     y
   );
   y += 5;
+  if (data.paymentStatus && showsPayment(data)) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(PAYMENT_LINE[data.paymentStatus], PAGE_W / 2, y, { align: 'center' });
+    y += 5;
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.text(`Pozo: $${fmtAmount(data.poolAmount)}`, MARGIN, y);

@@ -32,7 +32,7 @@ export const POLLA_USER_TYPE_LABEL: Record<POLLA_USER_TYPE, string> = {
   [POLLA_USER_TYPE.OWNER]: 'Dueño',
   [POLLA_USER_TYPE.CAPITALIST]: 'Capitalista',
   [POLLA_USER_TYPE.SUPERADMIN]: 'Superadministrador',
-  [POLLA_USER_TYPE.ASSISTANT]: 'Super',
+  [POLLA_USER_TYPE.ASSISTANT]: 'Súper',
   [POLLA_USER_TYPE.ADMIN]: 'Administrador',
   [POLLA_USER_TYPE.CASHIER]: 'Pasador',
   [POLLA_USER_TYPE.PLAYER]: 'Jugador',

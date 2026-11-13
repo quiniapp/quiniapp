@@ -1,12 +1,8 @@
 import { lazy, ReactNode, Suspense } from 'react';
 import { Navigate, RouteObject } from 'react-router-dom';
-import {
-  POLLA_ACCOUNT_ROLES,
-  POLLA_SUPER_ROLES,
-  POLLA_USER_TYPE,
-} from '@helper/polla/types/user.type';
+import { POLLA_PAGE_ROLES, PollaPage } from '@helper/polla/config/access.config';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { ProtectedRoute, RoleRoute } from '@/protected/ProtectedRoute';
+import { HomeRedirect, ProtectedRoute, RoleRoute } from '@/protected/ProtectedRoute';
 import { ROUTES } from '@/types/routes.type';
 import LoginPage from '@/features/login';
 
@@ -24,25 +20,19 @@ const CurrentAccountPage = lazy(() => import('@/features/current-account'));
 const ChangePasswordPage = lazy(() => import('@/features/change-password'));
 const SettingsPage = lazy(() => import('@/features/settings'));
 const SalesPage = lazy(() => import('@/features/sales'));
-
-const ADMIN_AND_UP = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
-];
-
-const STAFF = [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER];
-
-/** El Super (ASSISTANT) solo carga, ve y administra jugadas. */
-const BET_STAFF = [...STAFF, POLLA_USER_TYPE.ASSISTANT];
+const PrizesPage = lazy(() => import('@/features/prizes'));
 
 const withSuspense = (node: ReactNode) => (
   <Suspense fallback={<div className="p-6 text-muted-foreground">Cargando…</div>}>{node}</Suspense>
 );
 
-const guarded = (allow: POLLA_USER_TYPE[], node: ReactNode) =>
-  withSuspense(<RoleRoute allow={allow}>{node}</RoleRoute>);
+/**
+ * Cada pantalla, con los roles de la matriz de acceso (`POLLA_PAGE_ROLES`):
+ * la misma que usan el menú y la API. Entrar por URL a una que no le toca
+ * lleva al inicio del rol.
+ */
+const guarded = (page: PollaPage, node: ReactNode) =>
+  withSuspense(<RoleRoute allow={POLLA_PAGE_ROLES[page]}>{node}</RoleRoute>);
 
 /**
  * El título de cada sección viaja en el `handle` de la ruta y lo pinta el
@@ -62,10 +52,11 @@ export const RoutesContent: RouteObject[] = [
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to={ROUTES.BETS} replace /> },
+      // Jugadas, o Cargar jugada para el Súper.
+      { index: true, element: <HomeRedirect /> },
       {
         path: ROUTES.BETS,
-        element: withSuspense(<BetsPage />),
+        element: guarded('BETS', <BetsPage />),
         handle: { title: 'Jugadas' } satisfies RouteHandle,
       },
       {
@@ -75,64 +66,70 @@ export const RoutesContent: RouteObject[] = [
       },
       {
         path: ROUTES.MAKE_BET,
-        element: guarded([POLLA_USER_TYPE.PLAYER, ...BET_STAFF], <MakeBetPage />),
+        element: guarded('MAKE_BET', <MakeBetPage />),
         handle: { title: 'Cargar jugada' } satisfies RouteHandle,
       },
       {
         // Jugadas es de solo lectura para todos; acá cada rol administra lo
         // suyo (el pasador, lo suyo y de sus jugadores; el admin, su grupo;
-        // el Super, toda la organización).
+        // el Súper, toda la organización).
         path: ROUTES.MANAGE_BETS,
-        element: guarded(BET_STAFF, <ManageBetsPage />),
+        element: guarded('MANAGE_BETS', <ManageBetsPage />),
         handle: { title: 'Administrar jugadas' } satisfies RouteHandle,
       },
       {
-        // Todos menos el jugador, siempre dentro de la propia organización.
+        // Todos menos el jugador y el Súper, dentro de la propia organización.
         path: ROUTES.CHECK_TICKET,
-        element: guarded(BET_STAFF, <CheckTicketPage />),
+        element: guarded('CHECK_TICKET', <CheckTicketPage />),
         handle: { title: 'Revisar ticket' } satisfies RouteHandle,
       },
       {
         path: ROUTES.SALES,
-        element: guarded(STAFF, <SalesPage />),
+        element: guarded('SALES', <SalesPage />),
         handle: { title: 'Ventas del día' } satisfies RouteHandle,
       },
       {
         path: ROUTES.EDITIONS,
-        element: guarded(POLLA_SUPER_ROLES, <EditionsPage />),
+        element: guarded('EDITIONS', <EditionsPage />),
         handle: { title: 'Ediciones' } satisfies RouteHandle,
       },
       {
-        // Todos los ven (como en QuiniApp); solo superadmin+ carga y procesa.
+        // Todos menos el Súper (como en QuiniApp); solo superadmin+ carga y procesa.
         path: ROUTES.RESULTS,
-        element: withSuspense(<ResultsPage />),
+        element: guarded('RESULTS', <ResultsPage />),
         handle: { title: 'Resultados' } satisfies RouteHandle,
       },
       {
         path: ROUTES.USERS,
-        element: guarded(STAFF, <UsersPage />),
+        element: guarded('USERS', <UsersPage />),
         handle: { title: 'Usuarios' } satisfies RouteHandle,
       },
       {
         // Dueño, capitalista y superadmin; el pasador ve la suya. El admin no
         // tiene acceso (la API tampoco se lo da).
         path: ROUTES.CURRENT_ACCOUNT,
-        element: guarded([...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER], <CurrentAccountPage />),
+        element: guarded('CURRENT_ACCOUNT', <CurrentAccountPage />),
         handle: { title: 'Cuenta corriente' } satisfies RouteHandle,
       },
       {
+        // Los premios no van en la cuenta corriente (R18): tienen su sección.
+        path: ROUTES.PRIZES,
+        element: guarded('PRIZES', <PrizesPage />),
+        handle: { title: 'Premios' } satisfies RouteHandle,
+      },
+      {
         path: ROUTES.CATALOGS,
-        element: guarded(POLLA_SUPER_ROLES, <CatalogsPage />),
+        element: guarded('CATALOGS', <CatalogsPage />),
         handle: { title: 'Quinielas y turnos' } satisfies RouteHandle,
       },
       {
         path: ROUTES.ORGANIZATIONS,
-        element: guarded([POLLA_USER_TYPE.OWNER], <OrganizationsPage />),
+        element: guarded('ORGANIZATIONS', <OrganizationsPage />),
         handle: { title: 'Organizaciones' } satisfies RouteHandle,
       },
       {
         path: ROUTES.GROUPS,
-        element: guarded(POLLA_SUPER_ROLES, <GroupsPage />),
+        element: guarded('GROUPS', <GroupsPage />),
         handle: { title: 'Grupos' } satisfies RouteHandle,
       },
       {
@@ -149,5 +146,5 @@ export const RoutesContent: RouteObject[] = [
       },
     ],
   },
-  { path: '*', element: <Navigate to={ROUTES.BETS} replace /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ];

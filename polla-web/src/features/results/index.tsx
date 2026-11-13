@@ -4,13 +4,19 @@ import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Pencil, Trash2 } from 'lucide-react';
 import { newPollaResultSchema } from '@helper/polla/schemas/game.schema';
-import { IPollaResultEntityFront } from '@helper/polla/types/game.type';
+import {
+  IPollaProcessedEdition,
+  IPollaResultEntityFront,
+  pollaDrawLabels,
+  pollaEditionTitle,
+} from '@helper/polla/types/game.type';
 import { isPollaSuperRole } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions, useResultFor, useResults } from '@/hooks/fetchs/usePollaData';
 import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
 import {
   useCreateResult,
+  useDefineEditionDay,
   useDeleteResult,
   useProcessResults,
   useUpdateResult,
@@ -67,8 +73,9 @@ export const ResultsPage = () => {
   const [numbers, setNumbers] = useState<string[]>(emptyResults);
   // Cajas que quedaron vacías al apretar Enter o al guardar.
   const [incomplete, setIncomplete] = useState<Set<number>>(new Set());
-  // Ediciones de la última vez que se generaron ganadores: se ofrece su PDF.
-  const [processedIds, setProcessedIds] = useState<string[]>([]);
+  // Lo que devolvió la última vez que se generaron ganadores: se ofrece el PDF
+  // de cada edición y se avisa qué sorteos le faltan.
+  const [processed, setProcessed] = useState<IPollaProcessedEdition[]>([]);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useResults({
@@ -79,12 +86,22 @@ export const ResultsPage = () => {
   const { data: lotteries } = useLotteries({ polla_organization_id: organizationId ?? undefined });
   const { data: schedules } = useSchedules({ polla_organization_id: organizationId ?? undefined });
   const { data: editions } = useEditions({ polla_organization_id: organizationId ?? undefined });
+  const catalogs = useMemo(
+    () => ({ lotteries: lotteries?.data, schedules: schedules?.data }),
+    [lotteries, schedules]
+  );
   const processedEditions = useMemo(
     () =>
-      processedIds
-        .map((id) => editions?.data.find((edition) => edition.polla_edition_id === id))
-        .filter((edition) => edition !== undefined),
-    [processedIds, editions]
+      processed.flatMap((report) => {
+        const edition = editions?.data.find((e) => e.polla_edition_id === report.polla_edition_id);
+        return edition && !report.skipped ? [{ edition, report }] : [];
+      }),
+    [processed, editions]
+  );
+  // Ediciones a las que les falta algún sorteo del día (el procesado o el que
+  // frena a los ganadores).
+  const incompleteEditions = processedEditions.filter(
+    ({ report }) => (report.missing_draws?.length ?? 0) > 0 && report.missing_date
   );
 
   // Si el día ya tiene resultado, se trae para corregirlo en vez de duplicarlo.
@@ -108,9 +125,10 @@ export const ResultsPage = () => {
   const { mutate: updateResult, isPending: isUpdating } = useUpdateResult();
   const { mutate: deleteResult } = useDeleteResult();
   const { mutate: processResults, isPending: isProcessing } = useProcessResults();
+  const { mutate: defineEditionDay, isPending: isDefining } = useDefineEditionDay();
 
   const lotteryById = useMemo(
-    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.name])),
+    () => new Map(lotteries?.data.map((l) => [l.polla_lottery_id, l.label ?? l.name])),
     [lotteries]
   );
   const scheduleById = useMemo(
@@ -219,11 +237,7 @@ export const ResultsPage = () => {
       },
       {
         onSuccess: (result) => {
-          setProcessedIds(
-            result.editions
-              .filter((edition) => edition.polla_edition_id && !edition.skipped)
-              .map((edition) => edition.polla_edition_id as string)
-          );
+          setProcessed(result.editions);
 
           // La corrección revirtió un ganador: los días posteriores que ya
           // estaban cargados quedaron sin procesar para esa edición.
@@ -233,6 +247,37 @@ export const ResultsPage = () => {
               { duration: 10000 }
             );
           }
+        },
+      }
+    );
+  };
+
+  /**
+   * "Definir con lo cargado": para un sorteo que no se hizo (un feriado de una
+   * quiniela). El día cuenta como completo y define con lo que hay.
+   */
+  const handleDefine = (report: IPollaProcessedEdition, title: string) => {
+    if (!report.polla_edition_id || !report.missing_date) return;
+    const missing = pollaDrawLabels(report.missing_draws ?? [], catalogs).join(', ');
+    if (
+      !window.confirm(
+        `¿Definir el ${fmtDate(report.missing_date)} de ${title} sin ${missing}? Usalo solo si ese sorteo no se hizo: los ganadores salen de los sorteos cargados.`
+      )
+    ) {
+      return;
+    }
+
+    defineEditionDay(
+      { polla_edition_id: report.polla_edition_id, date: report.missing_date },
+      {
+        onSuccess: (result) => {
+          const [updated] = result.editions;
+          if (!updated) return;
+          setProcessed((prev) =>
+            prev.map((item) =>
+              item.polla_edition_id === updated.polla_edition_id ? updated : item
+            )
+          );
         },
       }
     );
@@ -319,27 +364,60 @@ export const ResultsPage = () => {
             </div>
           </div>
 
+          {incompleteEditions.length > 0 && (
+            <div
+              role="status"
+              className="flex flex-col gap-3 rounded-md border-2 border-warning bg-warning/10 p-3 text-sm"
+            >
+              {incompleteEditions.map(({ edition, report }) => {
+                // Con nombre alcanza: los sorteos que faltan ya se nombran.
+                const title = edition.name || pollaEditionTitle(edition, catalogs);
+                const missing = pollaDrawLabels(report.missing_draws ?? [], catalogs).join(', ');
+                return (
+                  <div
+                    key={edition.polla_edition_id}
+                    className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                  >
+                    <p className="sm:mr-auto">
+                      <span className="font-medium">{title}:</span> faltan los resultados de{' '}
+                      {missing} del {fmtDate(report.missing_date as string)}.{' '}
+                      {report.pending_date
+                        ? 'Los ganadores se definen cuando estén todos.'
+                        : 'Los aciertos de ese día quedan parciales hasta cargarlos.'}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={isDefining}
+                      onClick={() => handleDefine(report, title)}
+                    >
+                      Definir con lo cargado
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {processedEditions.length > 0 && (
             <div className="flex flex-col gap-2 rounded-md border-2 border-success p-3 text-sm">
               <p className="font-medium">
                 Ganadores generados. Compartí los tickets de cada edición con sus aciertos:
               </p>
-              {processedEditions.map((edition) => {
-                const lotteryName = lotteryById.get(edition.polla_lottery_id) ?? 'Quiniela';
-                const scheduleName = scheduleById.get(edition.polla_schedule_id) ?? 'Turno';
+              {processedEditions.map(({ edition }) => {
+                const title = pollaEditionTitle(edition, catalogs);
                 return (
                   <div
                     key={edition.polla_edition_id}
                     className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
                   >
                     <span className="sm:mr-auto">
-                      {lotteryName} · {scheduleName} ({fmtDate(edition.start_date)} al{' '}
-                      {fmtDate(edition.end_date)})
+                      {title} ({fmtDate(edition.start_date)} al {fmtDate(edition.end_date)})
                     </span>
                     <ShareTicketsPdfButton
                       edition={edition}
-                      lotteryName={lotteryName}
-                      scheduleName={scheduleName}
+                      title={title}
                       filtersLabel="Todas las jugadas · por aciertos"
                     />
                     <Button asChild variant="ghost">

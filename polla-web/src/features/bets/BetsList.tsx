@@ -3,8 +3,12 @@ import { toast } from 'react-hot-toast';
 import { Copy, Gift } from 'lucide-react';
 import {
   IPollaBetListItem,
+  POLLA_BET_GAME_STATUS_LABEL,
+  POLLA_EDITION_STATUS,
   POLLA_NUMBERS_REQUIRED,
+  POLLA_PAYMENT_STATUS,
   isPublicPollaBet,
+  pollaBetGameStatus,
 } from '@helper/polla/types/game.type';
 import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState } from '@/components/PageHeader';
@@ -22,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { betNumberClass, hitTitle } from '@/lib/betNumbers';
 import { cn } from '@/lib/utils';
-import { cashierLabel, clientLabel, fmtDate } from './format';
+import { cashierLabel, clientLabel, fmtDate, fmtDateTime } from './format';
 
 const SLOTS = Array.from({ length: POLLA_NUMBERS_REQUIRED }, (_, i) => i);
 
@@ -40,13 +44,18 @@ interface BetsListProps {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
-  /** Veces que se repitió sin cargo cada ticket (Administrar). */
-  freeRepeats?: Record<string, number>;
+  /**
+   * Dónde está la cortesía de cada ticket que ya se repitió sin cargo (R33,
+   * Administrar): "Cortesía en Edición X · ticket N".
+   */
+  courtesyLabels?: Record<string, string>;
   /** Acciones de cada jugada (Administrar). Sin esto no hay columna de acciones. */
   renderActions?: (row: IPollaBetListItem) => ReactNode;
   selection?: BetsSelection;
   /** Botón para copiar el número de ticket (pasador y superiores). */
   canCopyTicket?: boolean;
+  /** Estado de la edición de cada jugada: con la edición terminada, "No ganó". */
+  editionStatusOf?: (editionId: string) => POLLA_EDITION_STATUS | undefined;
 }
 
 const CopyTicketButton = ({ ticketNumber }: { ticketNumber: string }) => (
@@ -70,28 +79,49 @@ const CopyTicketButton = ({ ticketNumber }: { ticketNumber: string }) => (
   </Button>
 );
 
-const BetStatus = ({ row, freeRepeats }: { row: IPollaBetListItem; freeRepeats: number }) => {
-  let main;
-  if (row.winner) {
-    main = <Badge variant="success">Ganadora {fmtDate(row.hit_date)}</Badge>;
-  } else if (isPublicPollaBet(row)) {
-    main = row.is_mine ? (
-      <Badge variant="outline">Mía</Badge>
-    ) : (
-      <Badge variant="secondary">Jugando</Badge>
-    );
-  } else {
-    main = <span className="text-xs text-muted-foreground">{fmtDate(row.load_date)}</span>;
-  }
+/**
+ * Fecha y hora de carga, estado de juego (Jugando / Ganadora / No ganó) y, a
+ * quien lo cobra, si está en Debe (R10). Para todos los roles.
+ */
+const BetStatus = ({
+  row,
+  courtesyLabel,
+  editionStatus,
+}: {
+  row: IPollaBetListItem;
+  courtesyLabel?: string;
+  editionStatus?: POLLA_EDITION_STATUS;
+}) => {
+  const game = pollaBetGameStatus(row, editionStatus);
 
   return (
     <span className="flex flex-wrap items-center gap-1">
-      {main}
+      <span className="text-xs tabular-nums text-muted-foreground" title="Cargado">
+        {fmtDateTime(row.created_at)}
+      </span>
+      {game === 'WON' && (
+        <Badge variant="success">
+          {POLLA_BET_GAME_STATUS_LABEL.WON} {fmtDate(row.hit_date)}
+        </Badge>
+      )}
+      {game === 'PLAYING' && (
+        <Badge variant="secondary">{POLLA_BET_GAME_STATUS_LABEL.PLAYING}</Badge>
+      )}
+      {game === 'LOST' && <Badge variant="outline">{POLLA_BET_GAME_STATUS_LABEL.LOST}</Badge>}
+      {isPublicPollaBet(row) && row.is_mine && <Badge variant="outline">Mía</Badge>}
+      {/* Solo llega a quien lo cobra (pasador y staff); el jugador no lo ve. */}
+      {row.payment_status === POLLA_PAYMENT_STATUS.OWED && (
+        <Badge variant="destructive">Debe</Badge>
+      )}
       {row.is_free && <Badge variant="outline">Sin cargo</Badge>}
-      {freeRepeats > 0 && (
-        <Badge variant="secondary" title="Veces que se repitió sin cargo">
-          <Gift className="mr-1 h-3 w-3" />
-          {freeRepeats}
+      {courtesyLabel && (
+        <Badge
+          variant="secondary"
+          className="whitespace-normal text-left"
+          title="Ya se repitió sin cargo: una sola cortesía por ticket"
+        >
+          <Gift className="mr-1 h-3 w-3 shrink-0" />
+          {courtesyLabel}
         </Badge>
       )}
     </span>
@@ -110,10 +140,11 @@ export const BetsList = ({
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
-  freeRepeats = {},
+  courtesyLabels = {},
   renderActions,
   selection,
   canCopyTicket = false,
+  editionStatusOf,
 }: BetsListProps) => {
   if (rows.length === 0) {
     return <EmptyState message={isFetching ? 'Cargando…' : 'No hay jugadas para mostrar'} />;
@@ -167,7 +198,11 @@ export const BetsList = ({
             </div>
 
             <div className="mt-2 flex items-center justify-between gap-2">
-              <BetStatus row={row} freeRepeats={freeRepeats[row.polla_bet_id] ?? 0} />
+              <BetStatus
+                row={row}
+                courtesyLabel={courtesyLabels[row.polla_bet_id]}
+                editionStatus={editionStatusOf?.(row.polla_edition_id)}
+              />
               {renderActions && <div className="flex gap-1">{renderActions(row)}</div>}
             </div>
           </li>
@@ -229,7 +264,11 @@ export const BetsList = ({
                   );
                 })}
                 <TableCell>
-                  <BetStatus row={row} freeRepeats={freeRepeats[row.polla_bet_id] ?? 0} />
+                  <BetStatus
+                    row={row}
+                    courtesyLabel={courtesyLabels[row.polla_bet_id]}
+                    editionStatus={editionStatusOf?.(row.polla_edition_id)}
+                  />
                 </TableCell>
                 {renderActions && (
                   <TableCell>

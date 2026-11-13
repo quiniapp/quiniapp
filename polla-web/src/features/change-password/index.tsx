@@ -5,7 +5,6 @@ import { pollaChangePasswordSchema } from '@helper/polla/schemas/auth.schema';
 import { apiClient } from '@/lib/apiClient';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useAuth } from '@/providers/AuthContext';
-import { ROUTES } from '@/types/routes.type';
 import { Button } from '@/components/ui/button';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
@@ -40,7 +39,8 @@ export const ChangePasswordPage = () => {
       await apiClient.post(BACKEND_ROUTES.auth.changePassword, parsed.data);
       toast.success('Contraseña actualizada');
       await refreshUser();
-      navigate(ROUTES.BETS, { replace: true });
+      // El inicio depende del rol (el Súper entra a Cargar jugada).
+      navigate('/', { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo cambiar la contraseña');
     } finally {

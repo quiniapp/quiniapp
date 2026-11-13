@@ -2,13 +2,17 @@ import { Request, Response, Router } from 'express';
 import { ForbiddenError } from '@helper/errors';
 import { POLLA_SUPER_ROLES } from '@helper/polla/types/user.type';
 import {
+  definePollaEditionDaySchema,
   newPollaResultSchema,
   updatePollaResultSchema,
   processPollaResultsSchema,
 } from '@helper/polla/schemas/game.schema';
+import { POLLA_API_ROLES } from '@helper/polla/config/access.config';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaResultRepository } from '../repository/polla-result.repository';
+import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
 import { parsePagination } from '../../helper/pagination';
+import { withLotteryPositions } from '../../helper/lottery-positions';
 import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
@@ -21,6 +25,8 @@ export class PollaResultRouter {
 
   private repository = new PollaResultRepository();
 
+  private editionRepository = new PollaEditionRepository();
+
   constructor() {
     this.router = Router();
     this.setupRoutes();
@@ -30,8 +36,11 @@ export class PollaResultRouter {
     const writeGuard = requirePollaRole(...POLLA_SUPER_ROLES);
 
     this.router.post('/process', writeGuard, this.processHandler);
-    this.router.get('/', this.getAllHandler);
-    this.router.get('/:id', this.getByIdHandler);
+    this.router.post('/define', writeGuard, this.defineHandler);
+    // Resultados: todos menos el Súper (R11).
+    const readGuard = requirePollaRole(...POLLA_API_ROLES.readResults);
+    this.router.get('/', readGuard, this.getAllHandler);
+    this.router.get('/:id', readGuard, this.getByIdHandler);
     this.router.post('/', writeGuard, this.createHandler);
     this.router.put('/:id', writeGuard, this.updateHandler);
     this.router.delete('/:id', writeGuard, this.deleteHandler);
@@ -64,7 +73,10 @@ export class PollaResultRouter {
       pagination
     );
 
-    res.status(200).json({ data: { results: result } });
+    // R28: cada resultado con la posición y la etiqueta de su quiniela.
+    res.status(200).json({
+      data: { results: { ...result, data: await withLotteryPositions(result.data) } },
+    });
   });
 
   private getByIdHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -109,6 +121,29 @@ export class PollaResultRouter {
       organizationId,
       payload.polla_schedule_id,
       payload.date
+    );
+
+    res.status(200).json({ data: { processed } });
+  });
+
+  /**
+   * "Definir con lo cargado": un día de la edición al que le falta un sorteo
+   * (uno que no se hizo) define ganadores con los que tiene. Misma respuesta
+   * que `/process`, con esa sola edición.
+   */
+  private defineHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const payload = definePollaEditionDaySchema.parse(req.body);
+
+    const edition = await this.editionRepository.getById(payload.polla_edition_id);
+    if (edition.polla_organization_id !== user.polla_organization_id) {
+      throw new ForbiddenError('La edición pertenece a otra organización');
+    }
+
+    const processed = await this.repository.defineEditionDay(
+      payload.polla_edition_id,
+      payload.date,
+      user.polla_user_id
     );
 
     res.status(200).json({ data: { processed } });

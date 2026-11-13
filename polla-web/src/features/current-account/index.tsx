@@ -17,7 +17,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
-import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/lib/accountPeriod';
+import {
+  AccountPeriodView,
+  accountRangeFrom,
+  oldestRangeFrom,
+  periodLabel,
+  periodView,
+} from '@/lib/accountPeriod';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -42,10 +48,10 @@ import { cn } from '@/lib/utils';
 import { groupLabel } from '@/lib/pollaGroups';
 import { CashierAccountView } from './CashierAccountView';
 import { GroupAccountsPanel } from './GroupAccounts';
-import { fetchWinnersByCashier } from './fetchers';
 import { ReportMode, fmtMoney } from './format';
 import { GenerateLiquidationDialog, LiquidateCashierDialog } from './dialogs/LiquidationDialogs';
 import { ReportDialog, ReportKind } from './dialogs/ReportDialogs';
+import { ExportLiquidationsDialog } from './dialogs/ExportLiquidationsDialog';
 import { ModeToggle } from './dialogs/shared';
 
 /** Pase jugadas − Borradas = Pase (más los reclamos positivos), base de la comisión. */
@@ -53,7 +59,7 @@ const MONEY_COLUMNS = [
   ['bets_pass', 'Pase jugadas'],
   ['deleted_pass', 'Borradas'],
   ['pass', 'Pase'],
-  ['successes', 'Aciertos'],
+  // Los premios no van en la cuenta corriente (R18): están en Premios.
   ['claims', 'Reclamos'],
   ['subtotal', 'Subtotal'],
   ['previous_balance', 'Saldo anterior'],
@@ -95,6 +101,7 @@ const AdminAccountView = () => {
   const [generating, setGenerating] = useState(false);
   const [report, setReport] = useState<ReportKind | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [exportingSlips, setExportingSlips] = useState(false);
 
   const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;
 
@@ -164,19 +171,20 @@ const AdminAccountView = () => {
     }
   };
 
-  const handleExportLiquidations = async () => {
+  // "Exportar liquidación" abre la lista para elegir qué pasadores exportar.
+  const handleOpenExportLiquidations = () => {
     if (!rows.length) {
       toast.error('No hay cuentas para liquidar');
       return;
     }
+    setExportingSlips(true);
+  };
+
+  const handleExportLiquidations = async (accounts: AccountPeriodView[]) => {
     setPrinting(true);
     try {
-      const winnersByCashier = await fetchWinnersByCashier({
-        accounts: views,
-        date,
-        organizationId,
-      });
-      await downloadLiquidationSlipsPDF({ accounts: views, winnersByCashier });
+      await downloadLiquidationSlipsPDF({ accounts, cashierCodeOf: cashierCode });
+      setExportingSlips(false);
     } catch {
       toast.error('No se pudieron exportar las liquidaciones');
     } finally {
@@ -186,13 +194,17 @@ const AdminAccountView = () => {
 
   return (
     <div>
-      <PageHeader description="Pase, borradas, aciertos, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación o en un rango de fechas. La liquidación no tiene deje." />
+      <PageHeader description="Pase, borradas, reclamos, cobros y pagos por pasador, acumulados desde su última liquidación o en un rango de fechas. La liquidación no tiene deje ni premios: los premios están en Premios." />
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <ActionButton icon={<FileText />} onClick={handleExportDaily} disabled={printing}>
           Exportar diario
         </ActionButton>
-        <ActionButton icon={<FileDown />} onClick={handleExportLiquidations} disabled={printing}>
+        <ActionButton
+          icon={<FileDown />}
+          onClick={handleOpenExportLiquidations}
+          disabled={printing}
+        >
           Exportar liquidación
         </ActionButton>
         <ActionButton icon={<CreditCard />} onClick={() => setReport('collections')}>
@@ -427,6 +439,15 @@ const AdminAccountView = () => {
           group={liquidationGroup}
           organizationId={organizationId}
           onClose={() => setGenerating(false)}
+        />
+      )}
+      {exportingSlips && (
+        <ExportLiquidationsDialog
+          accounts={views}
+          cashierCodeOf={cashierCode}
+          exporting={printing}
+          onExport={handleExportLiquidations}
+          onClose={() => setExportingSlips(false)}
         />
       )}
       {report && (

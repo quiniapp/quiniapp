@@ -48,14 +48,46 @@ export const POLLA_BET_IDENTIFIER_MAX = 60;
 
 // ---------------------------------------------------------------- ediciones
 
+/** Un sorteo con el que juega una edición: quiniela × turno. */
+export interface IPollaEditionDraw {
+  polla_lottery_id: string;
+  polla_schedule_id: string;
+  /** R28: posición de la quiniela en su organización (la API la manda al listar). */
+  lottery_position?: number | null;
+  /** R28: "1 - Nacional". */
+  lottery_label?: string;
+}
+
+/** Mínimo de aciertos que propone la pantalla para una edición especial. */
+export const POLLA_SPECIAL_MIN_HITS_DEFAULT = 8;
+
 export interface IPollaEditionEntityBack {
   polla_edition_id: string;
   polla_organization_id: string;
+  /** Quiniela del sorteo principal (el más temprano de `draws`). */
   polla_lottery_id: string;
+  /** Turno del sorteo principal: con su hora se calcula el corte de carga. */
   polla_schedule_id: string;
+  /**
+   * Sorteos con los que juega: uno la regular, varios la especial. Los
+   * aciertos de un día suman todos, contando repetidos. Vienen ordenados por
+   * hora del turno y orden de la quiniela.
+   */
+  draws: IPollaEditionDraw[];
+  /**
+   * Si nadie completa 10, al final ganan los que tienen más aciertos siempre
+   * que lleguen a este mínimo (si no, desierta). 10 = regular, sin escalera.
+   */
+  min_winning_hits: number;
   name: string | null;
+  /** Inicio de sorteo: primer día de juego. */
   start_date: string;
+  /** Fin de sorteo: último día de juego. */
   end_date: string;
+  /** Inicio de carga (R29): antes de `load_start_date` + `load_start_time` nadie carga. */
+  load_start_date: string;
+  /** Hora de inicio de carga (`HH:mm:ss`, Argentina). */
+  load_start_time: string;
   load_limit_date: string;
   /** Hora de cierre de carga (`HH:mm:ss`, Argentina) del día `load_limit_date`. */
   load_limit_time: string;
@@ -89,6 +121,114 @@ export type IPollaEditionEntityFront = Omit<
     my_load_cutoff?: string | null;
   };
 
+/**
+ * Sorteos de la edición. Si no vinieran (datos viejos en caché), el sorteo
+ * principal.
+ */
+export const pollaEditionDraws = (
+  edition: Pick<IPollaEditionEntityBack, 'polla_lottery_id' | 'polla_schedule_id'> & {
+    draws?: IPollaEditionDraw[];
+  }
+): IPollaEditionDraw[] =>
+  edition.draws?.length
+    ? edition.draws
+    : [
+        {
+          polla_lottery_id: edition.polla_lottery_id,
+          polla_schedule_id: edition.polla_schedule_id,
+        },
+      ];
+
+/** Lo que hace falta de los catálogos para nombrar un sorteo. */
+export interface IPollaDrawCatalogs {
+  lotteries?: {
+    polla_lottery_id: string;
+    name: string;
+    order?: number;
+    /** R28: posición en la organización. */
+    position?: number;
+    /** R28: "1 - Nacional". */
+    label?: string;
+  }[];
+  schedules?: { polla_schedule_id: string; name: string; time?: string }[];
+}
+
+/**
+ * "1 - Nacional · Nocturna" por sorteo (R28): ordenados por horario del turno
+ * y después por la posición de la quiniela, la que define cada organización.
+ * Sin catálogo cargado dice "Quiniela" / "Turno".
+ */
+export const pollaDrawLabels = (
+  draws: IPollaEditionDraw[],
+  { lotteries = [], schedules = [] }: IPollaDrawCatalogs
+): string[] => {
+  const lotteryById = new Map(lotteries.map((l) => [l.polla_lottery_id, l]));
+  const scheduleById = new Map(schedules.map((s) => [s.polla_schedule_id, s]));
+  const positionOf = (draw: IPollaEditionDraw) => {
+    const lottery = lotteryById.get(draw.polla_lottery_id);
+    return lottery?.position ?? draw.lottery_position ?? lottery?.order ?? Number.MAX_SAFE_INTEGER;
+  };
+
+  return [...draws]
+    .sort((a, b) => {
+      const sa = scheduleById.get(a.polla_schedule_id);
+      const sb = scheduleById.get(b.polla_schedule_id);
+      return (
+        (sa?.time ?? '').localeCompare(sb?.time ?? '') ||
+        positionOf(a) - positionOf(b) ||
+        (lotteryById.get(a.polla_lottery_id)?.name ?? '').localeCompare(
+          lotteryById.get(b.polla_lottery_id)?.name ?? ''
+        )
+      );
+    })
+    .map((draw) => {
+      const lottery = lotteryById.get(draw.polla_lottery_id);
+      const lotteryLabel = lottery?.label ?? draw.lottery_label ?? lottery?.name ?? 'Quiniela';
+      return `${lotteryLabel} · ${scheduleById.get(draw.polla_schedule_id)?.name ?? 'Turno'}`;
+    });
+};
+
+type IPollaEditionNaming = Pick<
+  IPollaEditionEntityBack,
+  'name' | 'polla_lottery_id' | 'polla_schedule_id'
+> & { draws?: IPollaEditionDraw[] };
+
+/** Los sorteos de la edición, uno por línea en el ticket o separados por coma. */
+export const pollaEditionDrawLabels = (
+  edition: IPollaEditionNaming,
+  catalogs: IPollaDrawCatalogs
+) => pollaDrawLabels(pollaEditionDraws(edition), catalogs);
+
+/**
+ * Nombre de la edición (si tiene) y sus sorteos separados por coma:
+ * "Especial · Nacional · Nocturna, Provincia · Nocturna".
+ */
+export const pollaEditionTitle = (edition: IPollaEditionNaming, catalogs: IPollaDrawCatalogs) => {
+  const draws = pollaEditionDrawLabels(edition, catalogs).join(', ');
+  return edition.name ? `${edition.name} · ${draws}` : draws;
+};
+
+/** Especial: juega con más de un sorteo o premia desde menos de 10 aciertos. */
+export const isPollaSpecialEdition = (
+  edition: Pick<IPollaEditionEntityBack, 'polla_lottery_id' | 'polla_schedule_id'> & {
+    draws?: IPollaEditionDraw[];
+    min_winning_hits?: number;
+  }
+) =>
+  pollaEditionDraws(edition).length > 1 ||
+  (edition.min_winning_hits ?? POLLA_NUMBERS_REQUIRED) < POLLA_NUMBERS_REQUIRED;
+
+/**
+ * La regla de premio en una línea: "Ganan los que aciertan 10" o, con mínimo,
+ * "Ganan los de 10; si nadie, los de más aciertos desde 8".
+ */
+export const pollaPrizeRuleLabel = (edition: { min_winning_hits?: number }) => {
+  const min = edition.min_winning_hits ?? POLLA_NUMBERS_REQUIRED;
+  return min >= POLLA_NUMBERS_REQUIRED
+    ? `Ganan los que aciertan ${POLLA_NUMBERS_REQUIRED}`
+    : `Ganan los de ${POLLA_NUMBERS_REQUIRED}; si nadie, los de más aciertos desde ${min}`;
+};
+
 /** Pozo que se reparte entre los ganadores: el de la edición más el sorpresa. */
 export const pollaTotalPool = (
   edition: Pick<IPollaEditionEntityBack, 'pool_amount' | 'surprise_pool_amount'>
@@ -121,6 +261,10 @@ export interface IPollaResultEntityBack {
   created_at: string;
   edited_at: string;
   deleted_at: string | null;
+  /** R28: posición de la quiniela (`null` si se borró). Solo al listar. */
+  lottery_position?: number | null;
+  /** R28: "1 - Nacional". Solo al listar. */
+  lottery_label?: string | null;
 }
 
 export type IPollaResultEntityFront = Omit<IPollaResultEntityBack, 'deleted_at'>;
@@ -131,8 +275,17 @@ export interface IPollaProcessedEdition {
   skipped?: boolean;
   bets_updated?: number;
   winners?: number;
+  /** Aciertos de los ganadores (10, o menos si bajó la escalera). */
+  winner_hits?: number | null;
+  min_winning_hits?: number;
   winner_date?: string | null;
   previous_winner_date?: string | null;
+  /** Día que espera los sorteos que faltan para definir ganadores. */
+  pending_date?: string | null;
+  /** Día al que le faltan los sorteos de `missing_draws` (el pendiente o el procesado). */
+  missing_date?: string | null;
+  /** Sorteos sin resultado ese día. Se puede definir igual ("Definir con lo cargado"). */
+  missing_draws?: IPollaEditionDraw[];
   /** Un reproceso revirtió al ganador: hay que procesar los días siguientes. */
   reopened?: boolean;
 }
@@ -144,6 +297,29 @@ export interface IPollaProcessResult {
 }
 
 // ----------------------------------------------------------------- jugadas
+
+/* eslint-disable no-unused-vars */
+/** Estado de pago del ticket (R04): pagado o fiado. Los dos entran al sorteo. */
+export enum POLLA_PAYMENT_STATUS {
+  PAID = 'PAID',
+  /** "Debe": fiado. */
+  OWED = 'OWED',
+}
+
+/** Medio de pago. Por ahora solo efectivo; QR o transferencia se suman acá y en la base. */
+export enum POLLA_PAYMENT_METHOD {
+  CASH = 'CASH',
+}
+/* eslint-enable no-unused-vars */
+
+export const POLLA_PAYMENT_STATUS_LABEL: Record<POLLA_PAYMENT_STATUS, string> = {
+  [POLLA_PAYMENT_STATUS.PAID]: 'Pagado',
+  [POLLA_PAYMENT_STATUS.OWED]: 'Debe',
+};
+
+export const POLLA_PAYMENT_METHOD_LABEL: Record<POLLA_PAYMENT_METHOD, string> = {
+  [POLLA_PAYMENT_METHOD.CASH]: 'Efectivo',
+};
 
 export interface IPollaBetEntityBack {
   polla_bet_id: string;
@@ -193,6 +369,14 @@ export interface IPollaBetEntityBack {
    * opcional a nombre de un jugador. `null` en tickets viejos.
    */
   identifier: string | null;
+  /** Pagado o Debe. Lo que carga el jugador queda siempre en Debe. */
+  payment_status: POLLA_PAYMENT_STATUS;
+  /** Medio con que se pagó; `null` en Debe y en las repetidas sin cargo. */
+  payment_method: POLLA_PAYMENT_METHOD | null;
+  /** Cuándo se cobró (al cargarla o al marcarla como pagada). */
+  paid_at: string | null;
+  /** Quién la cobró. */
+  paid_by: string | null;
 }
 
 /** Campos que la API agrega a cada jugada que lista. */
@@ -212,6 +396,11 @@ export interface IPollaBetDerivedFields {
 export interface IPollaBetActions {
   can_edit: boolean;
   can_delete: boolean;
+  /**
+   * Está en Debe y el usuario la cobra (R13): el pasador lo imputado a él, el
+   * admin su grupo, el Súper y superadmin+ la organización.
+   */
+  can_mark_paid: boolean;
 }
 
 export type IPollaBetEntityFront = Omit<IPollaBetEntityBack, 'deleted_at' | 'deleted_by'> &
@@ -246,6 +435,48 @@ export interface IPollaBetPublic extends IPollaBetDerivedFields, IPollaBetAction
   /** Repetida sin cargo. */
   is_free: boolean;
   identifier: string | null;
+  /**
+   * Pagado o Debe: solo para el pasador (lo imputado a él) y el Súper. El
+   * jugador y los demás pasadores reciben `null`.
+   */
+  payment_status: POLLA_PAYMENT_STATUS | null;
+  /** Fecha y hora reales de carga (R10). */
+  created_at: string;
+}
+
+/** Estado de juego de un ticket (R10): sigue jugando, ganó o no ganó. */
+export type PollaBetGameStatus = 'PLAYING' | 'WON' | 'LOST';
+
+export const POLLA_BET_GAME_STATUS_LABEL: Record<PollaBetGameStatus, string> = {
+  PLAYING: 'Jugando',
+  WON: 'Ganadora',
+  LOST: 'No ganó',
+};
+
+/**
+ * Ganadora si ganó; "No ganó" cuando su edición terminó sin que ganara; si
+ * no, sigue jugando.
+ */
+export const pollaBetGameStatus = (
+  bet: Pick<IPollaBetEntityBack, 'winner'>,
+  editionStatus?: POLLA_EDITION_STATUS | null
+): PollaBetGameStatus => {
+  if (bet.winner) return 'WON';
+  return editionStatus === POLLA_EDITION_STATUS.FINISHED ? 'LOST' : 'PLAYING';
+};
+
+/**
+ * "Eliminar impagos" (R14), antes de confirmar: los tickets en Debe del pasador
+ * que se borrarían en la edición y hasta cuándo puede borrar.
+ */
+export interface IPollaUnpaidSummary {
+  count: number;
+  amount: number;
+  /** Ganadoras en Debe: no se borran. */
+  winners_skipped: number;
+  /** Cierre de carga del pasador (`YYYY-MM-DDTHH:mm:ss`, Argentina). */
+  cutoff: string | null;
+  can_delete: boolean;
 }
 
 export type IPollaBetListItem = IPollaBetEntityFront | IPollaBetPublic;
@@ -273,12 +504,24 @@ export interface IPollaBetToRepeat {
   load_date: string;
 }
 
+/**
+ * La cortesía (repetición sin cargo) vigente de un ticket. R33: un ticket se
+ * repite de cortesía una sola vez; para corregirla se la borra y se repite.
+ */
+export interface IPollaBetCourtesy {
+  polla_bet_id: string;
+  ticket_number: string;
+  polla_edition_id: string;
+}
+
 /** Ticket que no se pudo repetir y por qué (código de la base). */
 export interface IPollaRepeatSkipped {
   polla_bet_id: string;
   ticket_number: string | null;
   user_name: string | null;
   reason: string;
+  /** Si ya tenía su cortesía (`POLLA_BET_ALREADY_COURTESY`): dónde está. */
+  courtesy?: IPollaBetCourtesy | null;
 }
 
 /** Resultado de repetir un lote de tickets (con o sin cargo). */
@@ -328,6 +571,8 @@ export interface IPollaTicketCheck {
     | 'polla_edition_id'
     | 'polla_lottery_id'
     | 'polla_schedule_id'
+    | 'draws'
+    | 'min_winning_hits'
     | 'name'
     | 'start_date'
     | 'end_date'
@@ -340,6 +585,54 @@ export interface IPollaTicketCheck {
     | 'winner_date'
   >;
   winners: IPollaTicketWinner[];
+}
+
+// ----------------------------------------------------------- premios
+
+/**
+ * Un ticket ganador en la sección Premios (R19): de quién es y cuánto ganó.
+ * Los premios no van en la cuenta corriente (R18).
+ */
+export interface IPollaPrize {
+  polla_bet_id: string;
+  polla_edition_id: string;
+  ticket_number: string;
+  /** Grupo del pasador (`null` = sin grupo). */
+  group_name: string | null;
+  group_number: number | null;
+  /** Admin del grupo (cada grupo tiene uno); `null` si el grupo no tiene o el pasador no tiene grupo. */
+  admin_name: string | null;
+  cashier_name: string;
+  cashier_number: number | null;
+  /** Jugador dueño del ticket; `null` si lo jugó el propio pasador. */
+  client_name: string | null;
+  identifier: string | null;
+  hits: number;
+  prize: number;
+  /** Día en que ganó. */
+  hit_date: string | null;
+  /** Cuándo se marcó como pagado (R20); `null` si todavía no. No se desmarca. */
+  prize_paid_at: string | null;
+  /** Quién lo marcó como pagado. */
+  prize_paid_by_name: string | null;
+}
+
+/** `paid=true|false` de `GET /prize`: solo pagados o solo pendientes. */
+export type PollaPrizePaidFilter = 'true' | 'false';
+
+/**
+ * Los premios de una edición que ve el usuario (con el filtro de pagados, si se
+ * pidió) y sus totales: cuánto hay en premios, cuánto se pagó y cuánto falta.
+ * Al jugador no le llega lo pagado (`null`, y `prize_paid_*` en `null`).
+ */
+export interface IPollaPrizeList {
+  polla_edition_id: string;
+  prizes: IPollaPrize[];
+  count: number;
+  amount: number;
+  paid_count: number | null;
+  paid_amount: number | null;
+  pending_amount: number | null;
 }
 
 // ----------------------------------------------------------- ventas
@@ -379,6 +672,10 @@ export interface IPollaCurrentAccountEntityBack {
   deleted_pass: number;
   /** Pase real: pase de jugadas − borradas + reclamos positivos. Base de la comisión. */
   pass: number;
+  /**
+   * Premios del día. Desde R18 no van en la cuenta corriente: es 0 desde el
+   * período abierto. Los días ya liquidados conservan los suyos.
+   */
   successes: number;
   cashier_commission: number;
   claims: number;

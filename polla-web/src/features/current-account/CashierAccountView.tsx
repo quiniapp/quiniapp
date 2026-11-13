@@ -2,8 +2,10 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Printer } from 'lucide-react';
+import { pollaCashierCode } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
+import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +15,6 @@ import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/li
 import { Label } from '@/components/ui/label';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
-import { fetchWinnersByCashier } from './fetchers';
 import { ReportMode, fmtMoney } from './format';
 import { ModeToggle } from './dialogs/shared';
 
@@ -23,7 +24,7 @@ const FIELDS = [
   ['deleted_pass', 'Borradas'],
   ['pass', 'Pase'],
   ['cashier_commission', 'Comisión'],
-  ['successes', 'Aciertos'],
+  // Los premios no van en la cuenta corriente (R18): están en Premios.
   ['claims', 'Reclamos'],
   ['bills', 'Gastos'],
   ['revenue', 'Deja'],
@@ -50,17 +51,20 @@ export const CashierAccountView = () => {
   const { data, isFetching } = useCurrentAccountsOfDay({ date, range_from: rangeFrom });
   const row = data?.data[0];
   const account = row ? periodView(row) : undefined;
+  // Para el nombre del archivo: `{grupo}-{número}`.
+  const { data: groups } = useGroups();
+  const groupNumber = groups?.data.find(
+    (group) => group.polla_group_id === user?.polla_group_id
+  )?.number;
 
   const handlePrint = async () => {
     if (!account || !user) return;
     setPrinting(true);
     try {
-      const winnersByCashier = await fetchWinnersByCashier({
+      await downloadLiquidationSlipsPDF({
         accounts: [account],
-        date,
-        ownAsCashier: { cashierId: user.polla_user_id },
+        cashierCodeOf: (of) => pollaCashierCode(groupNumber, of.user_number),
       });
-      await downloadLiquidationSlipsPDF({ accounts: [account], winnersByCashier });
     } catch {
       toast.error('No se pudo generar la liquidación');
     } finally {
@@ -73,7 +77,7 @@ export const CashierAccountView = () => {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tus aciertos y comisión, y lo que cobraste o te pagaron."
+        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tu comisión y lo que cobraste o te pagaron. Los premios de tus jugadores están en Premios."
         actions={
           <Button type="button" onClick={handlePrint} disabled={!account || printing}>
             <Printer />

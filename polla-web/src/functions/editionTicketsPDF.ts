@@ -3,6 +3,7 @@ import {
   IPollaBetListItem,
   IPollaEditionEntityFront,
   POLLA_NUMBERS_REQUIRED,
+  pollaPrizeRuleLabel,
 } from '@helper/polla/types/game.type';
 import { cashierLabel, clientLabel } from '@/features/bets/format';
 import {
@@ -36,11 +37,16 @@ const slug = (text: string) =>
 export interface EditionTicketsPdfParams {
   rows: IPollaBetListItem[];
   edition: IPollaEditionEntityFront;
-  lotteryName: string;
-  scheduleName: string;
+  /** Nombre y sorteos de la edición: "Nacional · Nocturna, Provincia · Nocturna". */
+  title: string;
   orgName?: string;
   /** Qué filtros se aplicaron (pasador, mis jugadas, orden). */
   filtersLabel?: string;
+  /**
+   * R24: la foto al cierre de ese día de sorteo (`YYYY-MM-DD`). Las filas ya
+   * vienen recortadas (`snapshotAtDay`); acá cambian los textos y el archivo.
+   */
+  snapshotDay?: string;
 }
 
 /**
@@ -49,19 +55,28 @@ export interface EditionTicketsPdfParams {
  * los aciertos, si ganó y cuánto. Una fila por ticket, aunque sean miles.
  */
 export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
-  const { rows, edition, lotteryName, scheduleName, orgName, filtersLabel } = params;
+  const { rows, edition, orgName, filtersLabel, snapshotDay } = params;
   const { jsPDF, autoTable } = await getPDFDeps();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }) as PdfDoc;
 
   const available = doc.internal.pageSize.getWidth() - MARGIN.left - MARGIN.right;
-  const title = `Polla ${lotteryName} · ${scheduleName}`;
+  const title = `Polla ${params.title}`;
   const winners = rows.filter((row) => row.winner);
   const prizes = winners.reduce((acc, row) => acc + Number(row.prize), 0);
 
   doc.setProperties({ title });
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text(orgName ? `${orgName} · ${title}` : title, MARGIN.left, 12);
+  // Una especial con varias quinielas no entra en una línea.
+  const titleLines: string[] = doc.splitTextToSize(
+    orgName ? `${orgName} · ${title}` : title,
+    available
+  );
+  doc.text(titleLines, MARGIN.left, 12);
+  const titleExtra = (titleLines.length - 1) * 5.5;
+
+  const isLadder =
+    Number(edition.min_winning_hits ?? POLLA_NUMBERS_REQUIRED) < POLLA_NUMBERS_REQUIRED;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -77,15 +92,20 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
       `${rows.length} tickets${filtersLabel ? ` · ${filtersLabel}` : ''} · Generado el ${dayjs().format(
         'DD/MM/YYYY HH:mm'
       )}`,
-      winners.length
-        ? `Ganadores: ${winners.length} · ${money(prizes)} en premios`
-        : 'Todavía no hay ganadores',
+      snapshotDay
+        ? winners.length
+          ? `Ganadores al ${fmtDate(snapshotDay)}: ${winners.length} · ${money(prizes)} en premios`
+          : `Al ${fmtDate(snapshotDay)} todavía no había ganadores`
+        : winners.length
+          ? `Ganadores: ${winners.length} · ${money(prizes)} en premios`
+          : 'Todavía no hay ganadores',
+      ...(isLadder ? [`${pollaPrizeRuleLabel(edition)}.`] : []),
       'Números acertados en negrita y sombreados.',
     ],
     MARGIN.left,
-    18
+    18 + titleExtra
   );
-  const startY = 36;
+  const startY = 36 + titleExtra + (isLadder ? 4 : 0);
 
   // Anchos fijos para números y montos; lo que sobra se reparte entre los nombres.
   const fixed = { ticket: 34, number: 8.5, hits: 13, won: 10, prize: 22 };
@@ -171,8 +191,9 @@ export async function makeEditionTicketsPdf(params: EditionTicketsPdfParams) {
 
   return {
     blob: doc.output('blob'),
-    fileName: `polla_${slug(lotteryName)}_${slug(scheduleName)}_${dayjs(edition.start_date).format(
+    // Una especial con 5 quinielas haría un nombre larguísimo: se corta.
+    fileName: `polla_${slug(params.title).slice(0, 60)}_${dayjs(edition.start_date).format(
       'DD-MM-YYYY'
-    )}.pdf`,
+    )}${snapshotDay ? `_al_${dayjs(snapshotDay).format('DD-MM-YYYY')}` : ''}.pdf`,
   };
 }

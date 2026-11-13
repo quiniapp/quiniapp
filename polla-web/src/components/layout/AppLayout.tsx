@@ -13,82 +13,49 @@ import {
   ScanSearch,
   Settings,
   Ticket,
+  Trophy,
   Users,
   UsersRound,
   Building2,
 } from 'lucide-react';
-import {
-  POLLA_ACCOUNT_ROLES,
-  POLLA_SUPER_ROLES,
-  POLLA_USER_TYPE,
-  POLLA_USER_TYPE_LABEL,
-} from '@helper/polla/types/user.type';
+import { POLLA_USER_TYPE_LABEL } from '@helper/polla/types/user.type';
+import { PollaPage, canSeePollaPage } from '@helper/polla/config/access.config';
 import { useAuth } from '@/providers/AuthContext';
 import type { RouteHandle } from '@/routes/route';
+import { PAGE_PATH } from '@/routes/pages';
 import { ROUTES } from '@/types/routes.type';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 
-const ADMIN_AND_UP = [
-  POLLA_USER_TYPE.OWNER,
-  POLLA_USER_TYPE.CAPITALIST,
-  POLLA_USER_TYPE.SUPERADMIN,
-  POLLA_USER_TYPE.ADMIN,
-];
-
-const STAFF = [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER];
-
-/** El Super (ASSISTANT) solo carga, ve y administra jugadas. */
-const BET_STAFF = [...STAFF, POLLA_USER_TYPE.ASSISTANT];
-
 interface NavItem {
-  to: string;
+  page: PollaPage;
   label: string;
   icon: typeof Ticket;
-  roles?: POLLA_USER_TYPE[];
 }
 
+/**
+ * El menú, en orden. Quién ve cada ítem sale de la matriz de acceso
+ * (`POLLA_PAGE_ROLES`, la misma que usan las rutas y la API): el Súper ve
+ * solo Cargar jugada, Administrar jugadas y Configuración.
+ */
 const NAV_ITEMS: NavItem[] = [
-  {
-    to: ROUTES.MAKE_BET,
-    label: 'Cargar jugada',
-    icon: PlusCircle,
-    roles: [POLLA_USER_TYPE.PLAYER, ...BET_STAFF],
-  },
-  { to: ROUTES.BETS, label: 'Jugadas', icon: Ticket },
-  {
-    to: ROUTES.MANAGE_BETS,
-    label: 'Administrar jugadas',
-    icon: ClipboardList,
-    roles: BET_STAFF,
-  },
-  { to: ROUTES.CHECK_TICKET, label: 'Revisar ticket', icon: ScanSearch, roles: BET_STAFF },
-  { to: ROUTES.SALES, label: 'Ventas del día', icon: BarChart3, roles: STAFF },
+  { page: 'MAKE_BET', label: 'Cargar jugada', icon: PlusCircle },
+  { page: 'BETS', label: 'Jugadas', icon: Ticket },
+  { page: 'MANAGE_BETS', label: 'Administrar jugadas', icon: ClipboardList },
+  { page: 'CHECK_TICKET', label: 'Revisar ticket', icon: ScanSearch },
+  { page: 'SALES', label: 'Ventas del día', icon: BarChart3 },
   // Ediciones, quinielas, turnos y grupos son de toda la organización.
-  { to: ROUTES.EDITIONS, label: 'Ediciones', icon: CalendarDays, roles: POLLA_SUPER_ROLES },
-  { to: ROUTES.RESULTS, label: 'Resultados', icon: FileText },
-  { to: ROUTES.USERS, label: 'Usuarios', icon: Users, roles: STAFF },
-  {
-    // El pasador ve solo la suya. El admin no tiene cuenta corriente.
-    to: ROUTES.CURRENT_ACCOUNT,
-    label: 'Cuenta corriente',
-    icon: CreditCard,
-    roles: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
-  },
-  {
-    to: ROUTES.CATALOGS,
-    label: 'Quinielas y turnos',
-    icon: ListOrdered,
-    roles: POLLA_SUPER_ROLES,
-  },
-  { to: ROUTES.GROUPS, label: 'Grupos', icon: UsersRound, roles: POLLA_SUPER_ROLES },
-  {
-    to: ROUTES.ORGANIZATIONS,
-    label: 'Organizaciones',
-    icon: Building2,
-    roles: [POLLA_USER_TYPE.OWNER],
-  },
-  { to: ROUTES.SETTINGS, label: 'Configuración', icon: Settings },
+  { page: 'EDITIONS', label: 'Ediciones', icon: CalendarDays },
+  { page: 'RESULTS', label: 'Resultados', icon: FileText },
+  { page: 'USERS', label: 'Usuarios', icon: Users },
+  // El pasador ve solo la suya. El admin no tiene cuenta corriente.
+  { page: 'CURRENT_ACCOUNT', label: 'Cuenta corriente', icon: CreditCard },
+  // Debajo de Cuenta corriente: los premios ya no están en la cuenta (R18).
+  { page: 'PRIZES', label: 'Premios', icon: Trophy },
+  { page: 'CATALOGS', label: 'Quinielas y turnos', icon: ListOrdered },
+  { page: 'GROUPS', label: 'Grupos', icon: UsersRound },
+  { page: 'ORGANIZATIONS', label: 'Organizaciones', icon: Building2 },
+  { page: 'SETTINGS', label: 'Configuración', icon: Settings },
 ];
 
 export const AppLayout = () => {
@@ -105,7 +72,11 @@ export const AppLayout = () => {
       .find(Boolean) ?? '';
 
   const items = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.roles || (role && item.roles.includes(role))),
+    () =>
+      NAV_ITEMS.filter((item) => canSeePollaPage(role, item.page)).map((item) => ({
+        ...item,
+        to: PAGE_PATH[item.page],
+      })),
     [role]
   );
 

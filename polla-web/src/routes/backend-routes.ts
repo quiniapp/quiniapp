@@ -30,6 +30,7 @@ export const BACKEND_ROUTES = {
   lottery: {
     base: `${PRIVATE}/lottery`,
     id: (id: string) => `${PRIVATE}/lottery/${id}`,
+    order: `${PRIVATE}/lottery/order`,
   },
   schedule: {
     base: `${PRIVATE}/schedule`,
@@ -54,14 +55,22 @@ export const BACKEND_ROUTES = {
     lastEdition: `${PRIVATE}/bet/mine/last-edition`,
     repeat: `${PRIVATE}/bet/repeat`,
     freeRepeat: `${PRIVATE}/bet/free-repeat`,
+    payment: `${PRIVATE}/bet/payment`,
+    unpaidSummary: `${PRIVATE}/bet/unpaid-summary`,
+    unpaid: `${PRIVATE}/bet/unpaid`,
     sales: `${PRIVATE}/bet/sales`,
     ticket: (ticketNumber: string) => `${PRIVATE}/bet/ticket/${encodeURIComponent(ticketNumber)}`,
     check: (ticketNumber: string) => `${PRIVATE}/bet/check/${encodeURIComponent(ticketNumber)}`,
+  },
+  prize: {
+    base: `${PRIVATE}/prize`,
+    paid: (betId: string) => `${PRIVATE}/prize/${betId}/paid`,
   },
   result: {
     base: `${PRIVATE}/result`,
     id: (id: string) => `${PRIVATE}/result/${id}`,
     process: `${PRIVATE}/result/process`,
+    define: `${PRIVATE}/result/define`,
   },
   currentAccount: {
     base: `${PRIVATE}/current_account`,

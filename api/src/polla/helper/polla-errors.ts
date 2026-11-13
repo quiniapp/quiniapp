@@ -14,6 +14,12 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_EDITION_HAS_WINNERS: () =>
     new ForbiddenError('La edición ya tiene ganadores: no se puede eliminar'),
   POLLA_LOAD_LIMIT_EXCEEDED: () => new ForbiddenError('Cerró la carga de esta edición'),
+  POLLA_LOTTERY_ORDER_INVALID: () =>
+    new BadRequestError(
+      'El orden tiene que incluir todas las quinielas de la organización, una sola vez'
+    ),
+  POLLA_LOAD_START_AFTER_LIMIT: () =>
+    new BadRequestError('El inicio de carga tiene que ser antes del cierre de carga'),
   POLLA_BET_NOT_FOUND: () => new NotFoundError('Jugada de Polla'),
   POLLA_BET_ALREADY_WINNER: () =>
     new ForbiddenError('La jugada ya es ganadora, no se puede modificar'),
@@ -56,11 +62,37 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_LOAD_LIMIT_AFTER_FIRST_DRAW: () =>
     new BadRequestError('El cierre de carga tiene que ser antes del primer sorteo'),
   POLLA_EDITION_HAS_WINNERS_LOCKED: () =>
-    new ForbiddenError('La edición ya tiene ganadores: solo se puede cambiar el nombre'),
+    new ForbiddenError(
+      'La edición ya tiene ganadores: solo se pueden cambiar el nombre y el mínimo de aciertos'
+    ),
   POLLA_EDITION_DRAWS_LOCKED: () =>
     new BadRequestError(
-      'La edición ya tiene sorteos cargados: no se cambian quiniela, turno ni fecha de inicio'
+      'La edición ya tiene sorteos cargados: no se cambian los sorteos ni la fecha de inicio'
     ),
+  POLLA_EDITION_PRIZE_PAID_LOCKED: () =>
+    new ConflictError(
+      'Ya hay premios pagados en esta edición: el mínimo de aciertos no se puede cambiar'
+    ),
+  POLLA_PAYMENT_FORBIDDEN: () => new ForbiddenError('Los jugadores no marcan pagos'),
+  POLLA_PRIZE_PAY_FORBIDDEN: () =>
+    new ForbiddenError('Solo el dueño, el capitalista o el superadmin marcan premios pagados'),
+  POLLA_PRIZE_NOT_WINNER: () => new BadRequestError('Ese ticket no ganó: no tiene premio'),
+  POLLA_PRIZE_ALREADY_PAID: () => new ConflictError('Ese premio ya está marcado como pagado'),
+  POLLA_UNPAID_DELETE_FORBIDDEN: () =>
+    new ForbiddenError(
+      'Borran impagos el pasador, el admin de grupo, el superadmin, el capitalista y el dueño'
+    ),
+  POLLA_UNPAID_DELETE_TARGET_REQUIRED: () =>
+    new BadRequestError('Elegí el pasador o el jugador de los tickets impagos'),
+  POLLA_PAYMENT_TARGET_REQUIRED: () =>
+    new BadRequestError('Elegí los tickets, o la edición y el jugador'),
+  POLLA_EDITION_DRAWS_REQUIRED: () =>
+    new BadRequestError('Elegí al menos un sorteo (quiniela y turno)'),
+  POLLA_EDITION_DRAW_INVALID: () =>
+    new BadRequestError('Hay una quiniela o un turno que no es de la organización o se borró'),
+  POLLA_EDITION_DATE_OUT_OF_RANGE: () => new BadRequestError('Ese día no es de la edición'),
+  polla_editions_min_winning_hits_check: () =>
+    new BadRequestError('El mínimo de aciertos va de 1 a 10'),
   POLLA_EDITION_END_BEFORE_DRAW: () =>
     new BadRequestError('La fecha de fin no puede ser anterior al último sorteo cargado'),
   POLLA_EDITION_EXTEND_AFTER_FREE_REPEAT: () =>
@@ -77,8 +109,6 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_GROUP_PERCENTAGE_INVALID: () =>
     new BadRequestError('El porcentaje del admin tiene que estar entre 0 y 100'),
   unique_polla_group_admin_active: () => new ConflictError('Ese grupo ya tiene un admin'),
-  no_overlapping_polla_editions: () =>
-    new ConflictError('Ya hay una edición para esa quiniela y turno en ese rango de fechas'),
   unique_polla_username_active: () => new ConflictError('Ese nombre de usuario ya está en uso'),
   unique_polla_cashier_number_active: () =>
     new ConflictError('Ese número de pasador ya está en uso en el grupo'),

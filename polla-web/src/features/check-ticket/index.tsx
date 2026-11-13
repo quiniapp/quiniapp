@@ -1,14 +1,17 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import dayjs from 'dayjs';
 import {
   IPollaTicketCheck,
   IPollaTicketHolder,
   POLLA_EDITION_STATUS,
   POLLA_TICKET_SEARCH,
+  isPollaSpecialEdition,
+  pollaEditionTitle,
+  pollaPrizeRuleLabel,
 } from '@helper/polla/types/game.type';
 import { pollaCashierCode } from '@helper/polla/types/user.type';
 import { useTicketCheck } from '@/hooks/fetchs/usePollaData';
-import { useLotteries, useSchedules } from '@/hooks/fetchs/useCatalogs';
+import { useDrawCatalogs } from '@/hooks/fetchs/useCatalogs';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { BetNumbers } from '@/components/BetNumbers';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
@@ -75,18 +78,7 @@ export const CheckTicketPage = () => {
   const ticketNumber = useDebouncedValue(ticket.trim());
 
   const { data: check, isFetching, isError } = useTicketCheck(ticketNumber);
-  const { data: lotteries } = useLotteries();
-  const { data: schedules } = useSchedules();
-
-  const lotteryName = useMemo(
-    () => lotteries?.data.find((l) => l.polla_lottery_id === check?.edition.polla_lottery_id)?.name,
-    [lotteries, check]
-  );
-  const scheduleName = useMemo(
-    () =>
-      schedules?.data.find((s) => s.polla_schedule_id === check?.edition.polla_schedule_id)?.name,
-    [schedules, check]
-  );
+  const catalogs = useDrawCatalogs();
 
   const isValid = POLLA_TICKET_SEARCH.test(ticketNumber);
 
@@ -143,15 +135,20 @@ export const CheckTicketPage = () => {
               <Detail label="Premio">
                 {check.bet.winner ? `$${fmtMoney(check.bet.prize)}` : '-'}
               </Detail>
-              <Detail label="Completó">{fmtDate(check.bet.hit_date)}</Detail>
+              {/* En la especial puede ganar con menos de 10: es el día en que ganó. */}
+              <Detail label="Ganó el">{fmtDate(check.bet.hit_date)}</Detail>
             </dl>
           </section>
 
           <section className="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground sm:p-6">
-            <h2 className="text-lg font-medium">
-              {lotteryName ?? 'Quiniela'} · {scheduleName ?? 'Turno'}
-              {check.edition.name ? ` · ${check.edition.name}` : ''}
-            </h2>
+            <div>
+              <h2 className="text-lg font-medium">{pollaEditionTitle(check.edition, catalogs)}</h2>
+              {isPollaSpecialEdition(check.edition) && (
+                <p className="text-sm text-muted-foreground">
+                  {pollaPrizeRuleLabel(check.edition)}.
+                </p>
+              )}
+            </div>
             <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
               <Detail label="Pozo">
                 ${fmtMoney(check.edition.pool_amount)}

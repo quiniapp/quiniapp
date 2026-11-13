@@ -16,6 +16,7 @@ import {
   IPollaGroupAccountEntityFront,
   IPollaGroupAccountPreview,
   IPollaOrgExpenseEntityFront,
+  IPollaPrizeList,
   IPollaResultEntityFront,
   IPollaTicketCheck,
   POLLA_TICKET_SEARCH,
@@ -206,6 +207,12 @@ export const useDailySales = (
   params: { date?: string; polla_edition_id?: string; polla_organization_id?: string | null },
   enabled = true
 ) => useApiQuery<IPollaDailySales>(['polla-sales'], BACKEND_ROUTES.bet.sales, params, { enabled });
+
+// ----------------------------------------------------------------- premios
+
+/** Los ganadores de una edición y cuánto suman (Premios, R19). */
+export const usePrizes = (params: QueryParams, enabled = true) =>
+  useApiQuery<IPollaPrizeList>(['polla-prizes'], BACKEND_ROUTES.prize.base, params, { enabled });
 
 // -------------------------------------------------------------- resultados
 

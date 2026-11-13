@@ -134,13 +134,13 @@ export function openPDFPrintDialog(doc: jsPDF, filename: string) {
 
 /**
  * Columnas de montos de la planilla de la cuenta corriente (sin Arrastre ni
- * Deje). Pase jugadas − Borradas = Pase (más los reclamos positivos).
+ * Deje). Pase jugadas − Borradas = Pase (más los reclamos positivos). Sin
+ * premios: no van en la cuenta corriente (R18), están en Premios.
  */
 export const ACCOUNT_MONEY_HEAD = [
   'Pase jugadas',
   'Borradas',
   'Pase',
-  'Aciertos',
   'Reclamos',
   'Subtotal',
   'Deuda',
@@ -153,7 +153,6 @@ export const accountMoneyCells = (a: {
   bets_pass: number;
   deleted_pass: number;
   pass: number;
-  successes: number;
   claims: number;
   subtotal: number;
   previous_balance: number;
@@ -164,7 +163,6 @@ export const accountMoneyCells = (a: {
   money(a.bets_pass),
   money(a.deleted_pass),
   money(a.pass),
-  money(a.successes),
   money(a.claims),
   money(a.subtotal),
   money(a.previous_balance),
@@ -179,7 +177,6 @@ export const computeAccountTotals = (rows: IPollaCurrentAccountEntityFront[]) =>
       bets_pass: acc.bets_pass + Number(row.bets_pass || 0),
       deleted_pass: acc.deleted_pass + Number(row.deleted_pass || 0),
       pass: acc.pass + Number(row.pass || 0),
-      successes: acc.successes + Number(row.successes || 0),
       claims: acc.claims + Number(row.claims || 0),
       subtotal: acc.subtotal + Number(row.subtotal || 0),
       previous_balance: acc.previous_balance + Number(row.previous_balance || 0),
@@ -191,7 +188,6 @@ export const computeAccountTotals = (rows: IPollaCurrentAccountEntityFront[]) =>
       bets_pass: 0,
       deleted_pass: 0,
       pass: 0,
-      successes: 0,
       claims: 0,
       subtotal: 0,
       previous_balance: 0,

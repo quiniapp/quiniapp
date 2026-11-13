@@ -13,6 +13,7 @@ export enum ROUTES {
   GROUPS = '/grupos',
   CHECK_TICKET = '/revisar-ticket',
   CURRENT_ACCOUNT = '/cuenta-corriente',
+  PRIZES = '/premios',
   CHANGE_PASSWORD = '/cambiar-password',
   SETTINGS = '/configuracion',
   NOT_FOUND = '/not-found',

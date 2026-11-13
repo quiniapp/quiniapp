@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { IPollaDrawCatalogs } from '@helper/polla/types/game.type';
 import {
   IPollaGroupWithAdmin,
   IPollaLotteryEntityFront,
@@ -53,3 +55,18 @@ export const useSchedules = (params: QueryParams = {}) =>
     { limit: 200, ...params },
     { staleTime: CATALOG_STALE_TIME }
   );
+
+/**
+ * Quinielas y turnos para nombrar los sorteos de una edición
+ * (`pollaEditionTitle`, `pollaEditionDrawLabels`).
+ */
+export const useDrawCatalogs = (organizationId?: string | null): IPollaDrawCatalogs => {
+  const params = organizationId ? { polla_organization_id: organizationId } : {};
+  const { data: lotteries } = useLotteries(params);
+  const { data: schedules } = useSchedules(params);
+
+  return useMemo(
+    () => ({ lotteries: lotteries?.data, schedules: schedules?.data }),
+    [lotteries, schedules]
+  );
+};

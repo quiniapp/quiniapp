@@ -3,11 +3,14 @@ import { supabase } from '@database/db.connection';
 import { BadRequestError, NotFoundError } from '@helper/errors';
 import { IPaginatedResponse } from '@helper/request/pagination.request';
 import {
+  IPollaBetCourtesy,
   IPollaBetDerivedFields,
   IPollaBetEntityBack,
   IPollaBetToRepeat,
   IPollaDailySalesGroup,
   IPollaRepeatResult,
+  IPollaUnpaidSummary,
+  POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
@@ -69,6 +72,8 @@ export interface PollaBetFilters {
   winner?: boolean | null;
   /** Aciertos exactos (cualquiera de la lista). */
   hits?: number[] | null;
+  /** Solo pagadas o solo en Debe ("Impagos"). */
+  paymentStatus?: POLLA_PAYMENT_STATUS | null;
 }
 
 export interface PollaBetQueryOptions {
@@ -227,6 +232,7 @@ export class PollaBetRepository {
       query = query.eq('winner', filters.winner);
     }
     if (filters.hits?.length) query = query.in('hits', filters.hits);
+    if (filters.paymentStatus) query = query.eq('payment_status', filters.paymentStatus);
 
     if (useKeyset) {
       query = query.or(afterCursor(decodeCursor(options.cursor!, options.sort), options.sort));
@@ -404,7 +410,8 @@ export class PollaBetRepository {
   /**
    * Alta de una jugada. El corte y a nombre de quién puede cargar salen del rol
    * del actor (la RPC), que exige el identificador a nombre de un pasador;
-   * `date` solo lo respeta para superadmin+.
+   * `date` solo lo respeta para superadmin+. `paymentStatus`: Efectivo si no
+   * viene; lo que carga el jugador queda siempre en Debe (lo fuerza la RPC).
    */
   async create(params: {
     editionId: string;
@@ -413,6 +420,7 @@ export class PollaBetRepository {
     numbers: string[];
     date?: string;
     identifier?: string | null;
+    paymentStatus?: POLLA_PAYMENT_STATUS;
   }) {
     const { data, error } = await supabase.rpc('polla_create_bet', {
       p_edition_id: params.editionId,
@@ -421,6 +429,7 @@ export class PollaBetRepository {
       p_numbers: params.numbers,
       p_date: params.date ?? pollaToday(),
       p_identifier: params.identifier || null,
+      p_payment_status: params.paymentStatus ?? null,
     });
 
     throwIfPollaError(error);
@@ -452,43 +461,123 @@ export class PollaBetRepository {
   /**
    * Repite tickets en una edición, a nombre de su dueño original. Los que no
    * se pueden (fuera de alcance, usuario dado de baja, etc.) vuelven en
-   * `skipped` con el código de la base.
+   * `skipped` con el código de la base. `paymentStatus` vale para todo el lote
+   * (lo sin cargo queda pagado y el jugador, en Debe).
    */
   async repeat(params: {
     actorId: string;
     editionId: string;
     betIds: string[];
     free: boolean;
+    paymentStatus?: POLLA_PAYMENT_STATUS;
   }): Promise<IPollaRepeatResult> {
     const { data, error } = await supabase.rpc('polla_repeat_bets', {
       p_actor_id: params.actorId,
       p_edition_id: params.editionId,
       p_bet_ids: params.betIds,
       p_free: params.free,
+      p_payment_status: params.paymentStatus ?? null,
     });
 
     throwIfPollaError(error);
     return data as IPollaRepeatResult;
   }
 
-  /** Cuántas veces se repitió sin cargo cada ticket (vigentes). */
-  async getFreeRepeatCounts(betIds: string[]): Promise<Record<string, number>> {
+  /**
+   * Marca como pagados (R13) esos tickets o todos los impagos de un jugador en
+   * una edición. Solo Debe → Pagado; el alcance lo controla la RPC.
+   */
+  async markPaid(params: {
+    actorId: string;
+    betIds?: string[];
+    editionId?: string;
+    userId?: string;
+  }): Promise<{ updated: number; amount: number }> {
+    const { data, error } = await supabase.rpc('polla_mark_bets_paid', {
+      p_actor_id: params.actorId,
+      p_bet_ids: params.betIds ?? null,
+      p_edition_id: params.editionId ?? null,
+      p_user_id: params.userId ?? null,
+    });
+
+    throwIfPollaError(error);
+    const result = data as { updated: number; amount: number };
+    return { updated: Number(result.updated), amount: Number(result.amount) };
+  }
+
+  /**
+   * "Eliminar impagos" (R14), antes de confirmar: cuántos tickets en Debe de
+   * ese pasador y/o jugador se borrarían en la edición y cuánto suman. Las
+   * ganadoras no cuentan: no se borran.
+   */
+  async unpaidSummary(params: {
+    actorId: string;
+    editionId: string;
+    userId?: string | null;
+    cashierId?: string | null;
+  }): Promise<IPollaUnpaidSummary> {
+    const { data, error } = await supabase.rpc('polla_unpaid_bets_summary', {
+      p_actor_id: params.actorId,
+      p_edition_id: params.editionId,
+      p_user_id: params.userId ?? null,
+      p_cashier_id: params.cashierId ?? null,
+    });
+
+    throwIfPollaError(error);
+    const summary = data as IPollaUnpaidSummary;
+    return {
+      ...summary,
+      count: Number(summary.count),
+      amount: Number(summary.amount),
+      winners_skipped: Number(summary.winners_skipped),
+    };
+  }
+
+  /** Borra los impagos de ese pasador y/o jugador en la edición (ver `unpaidSummary`). */
+  async deleteUnpaid(params: {
+    actorId: string;
+    editionId: string;
+    userId?: string | null;
+    cashierId?: string | null;
+  }): Promise<{ deleted: number; amount: number; deducted_on: string }> {
+    const { data, error } = await supabase.rpc('polla_delete_unpaid_bets', {
+      p_actor_id: params.actorId,
+      p_edition_id: params.editionId,
+      p_user_id: params.userId ?? null,
+      p_cashier_id: params.cashierId ?? null,
+    });
+
+    throwIfPollaError(error);
+    const result = data as { deleted: number; amount: number; deducted_on: string };
+    return { ...result, deleted: Number(result.deleted), amount: Number(result.amount) };
+  }
+
+  /**
+   * La cortesía vigente de cada ticket (R33: una sola por ticket; si quedaron
+   * varias de antes, la más nueva).
+   */
+  async getCourtesies(betIds: string[]): Promise<Record<string, IPollaBetCourtesy>> {
     if (betIds.length === 0) return {};
 
     const { data, error } = await supabase
       .from('polla_bets')
-      .select('repeated_from_bet_id')
+      .select('polla_bet_id, ticket_number, polla_edition_id, repeated_from_bet_id')
       .in('repeated_from_bet_id', betIds)
       .eq('is_free', true)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
     throwIfPollaError(error);
 
-    const counts: Record<string, number> = {};
-    for (const row of (data ?? []) as { repeated_from_bet_id: string }[]) {
-      counts[row.repeated_from_bet_id] = (counts[row.repeated_from_bet_id] ?? 0) + 1;
+    const courtesies: Record<string, IPollaBetCourtesy> = {};
+    for (const row of (data ?? []) as (IPollaBetCourtesy & { repeated_from_bet_id: string })[]) {
+      courtesies[row.repeated_from_bet_id] ??= {
+        polla_bet_id: row.polla_bet_id,
+        ticket_number: row.ticket_number,
+        polla_edition_id: row.polla_edition_id,
+      };
     }
-    return counts;
+    return courtesies;
   }
 
   /** Totales de una edición sin escanear jugadas fila por fila en el cliente. */

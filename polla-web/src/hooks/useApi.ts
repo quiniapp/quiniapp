@@ -146,7 +146,7 @@ interface ApiMutationConfig<TVariables> {
 }
 
 export const useApiMutation = <TData, TVariables>(
-  method: 'post' | 'put' | 'delete',
+  method: 'post' | 'put' | 'patch' | 'delete',
   url: string | ((variables: TVariables) => string),
   config: ApiMutationConfig<TVariables> = {},
   options?: Omit<UseMutationOptions<TData, Error, TVariables>, 'mutationFn'>
