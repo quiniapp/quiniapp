@@ -1,0 +1,281 @@
+import { useMemo, useState } from 'react';
+import { AlertTriangle, ArrowLeft } from 'lucide-react';
+import {
+  IPollaEditionAccountListItem,
+  IPollaEditionAccountRow,
+  POLLA_LIQUIDATION_NO_GROUP,
+} from '@helper/polla/types/game.type';
+import { IPollaUserOption, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { useAuth } from '@/providers/AuthContext';
+import { useEditionAccounts } from '@/hooks/fetchs/usePollaData';
+import { useSetEditionLiquidated } from '@/hooks/mutations/usePollaMutations';
+import { EmptyState } from '@/components/PageHeader';
+import { UserSearchPicker } from '@/components/UserSearchPicker';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { groupLabel } from '@/lib/pollaGroups';
+import { fmtMoney } from '../format';
+import { EditionReportDialog, EditionReportKind } from './EditionReportDialog';
+import { LiquidateEditionDialog } from './LiquidateEditionDialog';
+import { MovementsDialog } from './MovementsDialog';
+import { useCashierCode } from './useCashierCode';
+
+const REPORT_BUTTONS: [EditionReportKind, string][] = [
+  ['daily', 'Exportar diario'],
+  ['liquidation', 'Exportar liquidación'],
+  ['collections', 'Exportar cobros y pagos'],
+  ['summary', 'Resumen cuenta corriente'],
+  ['subtotals', 'Exportar subtotales'],
+];
+
+const MONEY_COLUMNS = [
+  ['bets_pass', 'Pase jugadas'],
+  ['deleted_pass', 'Borradas'],
+  ['pass', 'Pase'],
+  ['cashier_commission', 'Comisión'],
+  ['claims', 'Reclamos'],
+  ['subtotal', 'Subtotal'],
+  ['collections', 'Cobros'],
+  ['paid', 'Pagos'],
+  ['total', 'Debe'],
+] as const;
+
+type MoneyKey = (typeof MONEY_COLUMNS)[number][0];
+
+const sumColumns = (rows: IPollaEditionAccountRow[]) =>
+  Object.fromEntries(
+    MONEY_COLUMNS.map(([key]) => [key, rows.reduce((sum, row) => sum + Number(row[key] ?? 0), 0)])
+  ) as Record<MoneyKey, number>;
+
+/**
+ * Cuenta de cada pasador en una edición, con filtros de grupo y pasador. Tocar
+ * una fila abre sus movimientos; "Liquidar" baja las hojas; "Marcar como
+ * liquidada" la pasa a la lista de liquidaciones realizadas.
+ */
+export const EditionAccountDetail = ({
+  item,
+  title,
+  onBack,
+}: {
+  item: IPollaEditionAccountListItem;
+  title: string;
+  onBack: () => void;
+}) => {
+  const editionId = item.edition.polla_edition_id;
+  const { organizationId } = useAuth();
+  const { groups, cashierCode } = useCashierCode();
+
+  const [groupId, setGroupId] = useState('');
+  const [cashier, setCashier] = useState<IPollaUserOption | null>(null);
+  const [moving, setMoving] = useState<IPollaEditionAccountRow | null>(null);
+  const [liquidating, setLiquidating] = useState(false);
+  const [report, setReport] = useState<EditionReportKind | null>(null);
+
+  // "Sin grupo" no es un filtro de la API: se acota acá abajo.
+  const noGroup = groupId === POLLA_LIQUIDATION_NO_GROUP;
+  const { data, isFetching } = useEditionAccounts(editionId, {
+    polla_group_id: groupId && !noGroup ? groupId : undefined,
+    polla_user_id: cashier?.polla_user_id,
+  });
+  const rows = useMemo(
+    () => (data ?? []).filter((row) => !noGroup || !row.polla_group_id),
+    [data, noGroup]
+  );
+  const totals = useMemo(() => sumColumns(rows), [rows]);
+
+  const { mutate: setLiquidated, isPending: marking } = useSetEditionLiquidated();
+  const isLiquidated = item.liquidated_at !== null;
+
+  const openMovements = (row: IPollaEditionAccountRow) => setMoving(row);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={onBack}>
+          <ArrowLeft />
+          Volver
+        </Button>
+        <h2 className="min-w-0 flex-1 text-lg font-semibold">{title}</h2>
+        <Button type="button" onClick={() => setLiquidating(true)}>
+          Liquidar
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={marking}
+          onClick={() => setLiquidated({ editionId, liquidated: !isLiquidated })}
+        >
+          {isLiquidated ? 'Desmarcar' : 'Marcar como liquidada'}
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {REPORT_BUTTONS.map(([kind, label]) => (
+          <Button
+            key={kind}
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setReport(kind)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex min-w-0 flex-col gap-1">
+          <Label>Grupo</Label>
+          <Select value={groupId || 'all'} onValueChange={(v) => setGroupId(v === 'all' ? '' : v)}>
+            <SelectTrigger className="w-full sm:w-[200px]" aria-label="Grupo">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {groups.map((group) => (
+                <SelectItem key={group.polla_group_id} value={group.polla_group_id}>
+                  {groupLabel(group)}
+                </SelectItem>
+              ))}
+              <SelectItem value={POLLA_LIQUIDATION_NO_GROUP}>Sin grupo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <UserSearchPicker
+          id="edition-account-cashier"
+          label="Pasador"
+          userTypes={[POLLA_USER_TYPE.CASHIER]}
+          value={cashier}
+          onChange={setCashier}
+          placeholder="Todos: número o nombre"
+          clearLabel="Todos"
+          className="sm:w-[260px]"
+        />
+      </div>
+
+      {rows.length === 0 ? (
+        <EmptyState
+          message={isFetching ? 'Cargando…' : 'No hay pasadores con jugadas ni movimientos.'}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pasador</TableHead>
+                {MONEY_COLUMNS.map(([key, label]) => (
+                  <TableHead key={key} className="whitespace-nowrap text-right">
+                    {label}
+                  </TableHead>
+                ))}
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => {
+                const code = cashierCode(row);
+                return (
+                  <TableRow
+                    key={row.polla_user_id}
+                    className="cursor-pointer"
+                    tabIndex={0}
+                    onClick={() => openMovements(row)}
+                    onKeyDown={(event) => event.key === 'Enter' && openMovements(row)}
+                  >
+                    <TableCell className="max-w-[260px] truncate">
+                      {code ? `${code} · ` : ''}
+                      {row.user_name}
+                    </TableCell>
+                    {MONEY_COLUMNS.map(([key]) => (
+                      <TableCell
+                        key={key}
+                        className={
+                          key === 'total'
+                            ? 'text-right font-semibold tabular-nums'
+                            : 'text-right tabular-nums'
+                        }
+                      >
+                        ${fmtMoney(row[key])}
+                      </TableCell>
+                    ))}
+                    <TableCell className="whitespace-nowrap">
+                      <span className="flex items-center gap-2">
+                        {row.liquidation && <Badge variant="success">Liquidado</Badge>}
+                        {row.differs && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                role="img"
+                                aria-label="Cambió desde la última liquidación"
+                                className="text-amber-600"
+                              >
+                                <AlertTriangle className="size-4" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Cambió desde la última liquidación</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+            <TableFooter>
+              <TableRow className="font-semibold">
+                <TableCell>Total general</TableCell>
+                {MONEY_COLUMNS.map(([key]) => (
+                  <TableCell key={key} className="text-right tabular-nums">
+                    ${fmtMoney(totals[key])}
+                  </TableCell>
+                ))}
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
+      )}
+
+      {moving && (
+        <MovementsDialog
+          editionId={editionId}
+          userId={moving.polla_user_id}
+          title={`${cashierCode(moving) ? `${cashierCode(moving)} · ` : ''}${moving.user_name}`}
+          onClose={() => setMoving(null)}
+        />
+      )}
+      {report && (
+        <EditionReportDialog
+          kind={report}
+          edition={item}
+          title={title}
+          groups={groups}
+          organizationId={organizationId}
+          onClose={() => setReport(null)}
+        />
+      )}
+      {liquidating && (
+        <LiquidateEditionDialog item={item} title={title} onClose={() => setLiquidating(false)} />
+      )}
+    </div>
+  );
+};

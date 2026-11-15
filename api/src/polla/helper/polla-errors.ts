@@ -97,13 +97,25 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new BadRequestError('La fecha de fin no puede ser anterior al último sorteo cargado'),
   POLLA_EDITION_EXTEND_AFTER_FREE_REPEAT: () =>
     new ForbiddenError('Ya se repitieron tickets sin cargo desde esta edición: no se extiende'),
+  POLLA_EDITION_ACCOUNT_DISABLED: () =>
+    new BadRequestError('Esta edición se liquidó por días: está en el Historial por fechas'),
+  POLLA_DAILY_ACCOUNT_READ_ONLY: () =>
+    new ForbiddenError('La cuenta por días quedó solo para consultar'),
+  POLLA_EDITION_LOAD_OPEN: () => new BadRequestError('La carga de esta edición todavía no cerró'),
+  POLLA_EDITION_LIQUIDATION_EMPTY: () => new BadRequestError('Elegí al menos un pasador'),
+  POLLA_ACCOUNT_USER_NOT_CASHIER: () =>
+    new BadRequestError('El usuario no es un pasador de la organización'),
+  POLLA_EDITION_LIQUIDATION_SOURCE_INVALID: () =>
+    new BadRequestError('Elegí continuar con el valor nuevo o con el viejo'),
   POLLA_GROUP_NOT_FOUND: () => new NotFoundError('Grupo'),
   POLLA_GROUP_HAS_ACTIVE_BETS: () =>
     new ForbiddenError('El grupo tiene jugadas en ediciones en juego: no se puede borrar'),
   POLLA_GROUP_CASHIERS_PENDING: () =>
-    new ForbiddenError('Hay pasadores del grupo sin liquidar a esa fecha'),
+    new ForbiddenError('Hay pasadores del grupo sin liquidar en alguna edición'),
   POLLA_GROUP_ACCOUNT_OPEN: () =>
-    new ForbiddenError('El grupo tiene un período sin liquidar: liquidalo antes de borrarlo'),
+    new ForbiddenError(
+      'El grupo tiene una edición sin liquidar o con la liquidación desactualizada: liquidalo antes de borrarlo'
+    ),
   POLLA_GROUP_ACCOUNT_LATER_EXISTS: () =>
     new BadRequestError('El grupo ya tiene una liquidación posterior a esa fecha'),
   POLLA_GROUP_PERCENTAGE_INVALID: () =>

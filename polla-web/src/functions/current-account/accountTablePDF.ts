@@ -42,20 +42,25 @@ export async function downloadDailyAccountsPDF(params: {
   from?: string;
   title?: string;
   groupName?: string;
+  /** Cuenta por edición: reemplaza el texto del período bajo el título. */
+  periodText?: string;
+  /** Cuenta por edición: va en el nombre del archivo en lugar de la fecha. */
+  fileTag?: string;
 }) {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
   const title = params.title ?? 'Liquidación';
   const dateStr = dayjs(params.date).format('DD/MM/YYYY');
-  const fileName = `polla_${title.replace(/\s+/g, '_')}${slug(params.groupName)}_${dayjs(params.date).format('DD-MM-YYYY')}`;
+  const fileName = `polla_${title.replace(/\s+/g, '_')}${slug(params.groupName)}_${params.fileTag ?? dayjs(params.date).format('DD-MM-YYYY')}`;
 
   doc.setProperties({ title: fileName });
   doc.setFontSize(14);
   doc.text(title, 14, 14);
   doc.setFontSize(10);
   doc.text(
-    params.from
-      ? `Del ${dayjs(params.from).format('DD/MM/YYYY')} al ${dateStr}`
-      : `Acumulado desde la última liquidación de cada pasador hasta el ${dateStr}`,
+    params.periodText ??
+      (params.from
+        ? `Del ${dayjs(params.from).format('DD/MM/YYYY')} al ${dateStr}`
+        : `Acumulado desde la última liquidación de cada pasador hasta el ${dateStr}`),
     14,
     20
   );
@@ -99,11 +104,24 @@ export async function downloadDailyAccountsPDF(params: {
   openPDFPrintDialog(doc, fileName);
 }
 
-/** Resumen por fecha de un período: una fila por día con los totales. */
+/**
+ * Totales de un renglón del resumen. `label` es la cuenta por edición con
+ * varias ediciones: el título de la edición, para distinguir dos que empiezan
+ * el mismo día.
+ */
+export type SummaryTotalsRow = IPollaCurrentAccountDailyTotals & { label?: string };
+
+/** Primera columna del resumen: la fecha o, con `label`, `DD/MM · título`. */
+export const summaryRowLabel = (row: Pick<SummaryTotalsRow, 'date' | 'label'>) =>
+  row.label
+    ? `${dayjs(row.date).format('DD/MM')} · ${row.label}`
+    : dayjs(row.date).format('DD/MM/YYYY');
+
+/** Resumen por fecha de un período (una fila por día) o por edición (una por edición). */
 export async function downloadDailySummaryPDF(params: {
   from: string;
   to: string;
-  totals: IPollaCurrentAccountDailyTotals[];
+  totals: SummaryTotalsRow[];
   groupName?: string;
 }) {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
@@ -124,6 +142,8 @@ export async function downloadDailySummaryPDF(params: {
   const startY = params.groupName ? 32 : 26;
   doc.setFontSize(BASE_FONT);
 
+  // Con títulos de edición la primera columna se ensancha (y corta con "…").
+  const labeled = params.totals.some((t) => t.label);
   const options = gridTableOptions({
     fontSize: BASE_FONT,
     cellPadding: CELL_PAD,
@@ -132,7 +152,7 @@ export async function downloadDailySummaryPDF(params: {
     columnStyles: buildColumnStyles({
       available,
       minMoneyCol,
-      leadColumns: [22],
+      leadColumns: [labeled ? 70 : 22],
       moneyColumns: ACCOUNT_MONEY_HEAD.length,
     }),
   });
@@ -151,11 +171,8 @@ export async function downloadDailySummaryPDF(params: {
 
   autoTable(doc, {
     ...options,
-    head: [['Fecha', ...ACCOUNT_MONEY_HEAD]],
-    body: params.totals.map((t) => [
-      dayjs(t.date).format('DD/MM/YYYY'),
-      ...accountMoneyCells(asAccount(t)),
-    ]),
+    head: [[labeled ? 'Edición' : 'Fecha', ...ACCOUNT_MONEY_HEAD]],
+    body: params.totals.map((t) => [summaryRowLabel(t), ...accountMoneyCells(asAccount(t))]),
     startY,
   });
 

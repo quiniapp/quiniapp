@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dateRegex } from '../../functions/dateRegex';
 import {
+  POLLA_ACCOUNT_MOVEMENT_TYPE,
   POLLA_BET_IDENTIFIER_MAX,
   POLLA_NUMBERS_REQUIRED,
   POLLA_PAYMENT_STATUS,
@@ -252,59 +253,67 @@ export const markPollaBetsPaidSchema = z
     'Elegí los tickets, o la edición y el jugador'
   );
 
-// -------------------------------------------------------- cuenta corriente
-
-export const pollaCurrentAccountUpdateSchema = z.object({
-  claims: z.number().optional(),
-  collections: z.number().optional(),
-  paid: z.number().optional(),
-  bills: z.number().optional(),
-  previous_balance: z.number().optional(),
-  previous_drag: z.number().optional(),
-  /** Además de guardar, marca el día como liquidado para ese pasador. */
-  liquidate: z.boolean().optional(),
-});
-
-export const pollaCurrentAccountBulkUpdateSchema = z.object({
-  date: isoDate,
-  updates: z
-    .array(
-      z.object({
-        polla_current_account_id: z.string().uuid(),
-        props: pollaCurrentAccountUpdateSchema,
-      })
-    )
-    .min(1),
-});
-
-// ------------------------------------------------------- cuenta del grupo
-
-/** Liquidación del grupo: el % del admin se escribe cada vez. */
-export const liquidatePollaGroupSchema = z.object({
-  polla_group_id: z.string().uuid(),
-  date: isoDate,
-  admin_percentage: z.number().min(0).max(100),
-  /** Ajuste a mano (con signo) sobre lo que se le debe al admin. */
-  adjustments: z.number().optional(),
-  /** Lo que se le pagó al admin en esta liquidación. */
-  paid: z.number().min(0).optional(),
-});
-
 // ------------------------------------------------------------------ gastos
 
 export const newPollaOrgExpenseSchema = z.object({
-  date: isoDate,
+  polla_edition_id: z.string().uuid(),
   name: z.string().trim().min(1, 'El gasto necesita un nombre').max(120),
   amount: z.number().positive('El monto tiene que ser mayor a cero'),
   polla_group_id: z.string().uuid().nullable().optional(),
   polla_organization_id: z.string().uuid().optional(),
 });
 
+// ------------------------------------------------- cuenta por edición
+
+const ACCOUNT_AMOUNT_MESSAGE = 'El cobro y el pago tienen que ser mayores a 0';
+
+export const pollaAccountMovementSchema = z
+  .object({
+    polla_user_id: z.string().uuid(),
+    type: z.nativeEnum(POLLA_ACCOUNT_MOVEMENT_TYPE),
+    amount: z.number(),
+    date: isoDate.optional(),
+    note: z.string().max(200).optional(),
+  })
+  .refine((v) => v.amount !== 0 && (v.type === POLLA_ACCOUNT_MOVEMENT_TYPE.CLAIM || v.amount > 0), {
+    message: ACCOUNT_AMOUNT_MESSAGE,
+    path: ['amount'],
+  });
+
+export const pollaAccountMovementUpdateSchema = z
+  .object({
+    amount: z.number().optional(),
+    date: isoDate.optional(),
+    note: z.string().max(200).optional(),
+  })
+  .refine((v) => v.amount === undefined || v.amount !== 0, {
+    message: ACCOUNT_AMOUNT_MESSAGE,
+    path: ['amount'],
+  });
+
+export const liquidateEditionAccountsSchema = z.object({
+  polla_user_ids: z.array(z.string().uuid()).min(1),
+  ticket_source: z.enum(['NEW', 'OLD']).optional(),
+});
+
+export const setEditionLiquidatedSchema = z.object({ liquidated: z.boolean() });
+
+export const liquidatePollaGroupEditionSchema = z.object({
+  polla_group_id: z.string().uuid(),
+  admin_percentage: z.number().min(0).max(100),
+  adjustments: z.number().optional(),
+  paid: z.number().min(0).optional(),
+});
+
+export type IPollaAccountMovementPayload = z.infer<typeof pollaAccountMovementSchema>;
+export type IPollaAccountMovementUpdatePayload = z.infer<typeof pollaAccountMovementUpdateSchema>;
+export type ILiquidateEditionAccountsPayload = z.infer<typeof liquidateEditionAccountsSchema>;
+export type ISetEditionLiquidatedPayload = z.infer<typeof setEditionLiquidatedSchema>;
+export type ILiquidatePollaGroupEditionPayload = z.infer<typeof liquidatePollaGroupEditionSchema>;
+
 export type INewPollaEditionPayload = z.infer<typeof newPollaEditionSchema>;
 export type INewPollaResultPayload = z.infer<typeof newPollaResultSchema>;
 export type INewPollaBetPayload = z.infer<typeof newPollaBetSchema>;
 export type IUpdatePollaBetPayload = z.infer<typeof updatePollaBetSchema>;
 export type IRepeatPollaBetsPayload = z.infer<typeof repeatPollaBetsSchema>;
-export type ILiquidatePollaGroupPayload = z.infer<typeof liquidatePollaGroupSchema>;
-export type IPollaCurrentAccountUpdatePayload = z.infer<typeof pollaCurrentAccountUpdateSchema>;
 export type INewPollaOrgExpensePayload = z.infer<typeof newPollaOrgExpenseSchema>;

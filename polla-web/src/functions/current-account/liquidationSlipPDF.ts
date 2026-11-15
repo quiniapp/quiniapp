@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { AccountPeriodView, periodLabel } from '@/lib/accountPeriod';
+import { owedWord } from '@/lib/editionAccount';
 import { PdfDoc, addFooterPageNumbers, getPDFDeps, lastTableY } from './pdf-shared';
 
 const amount = (n?: number | null) =>
@@ -54,8 +55,13 @@ export const hasAccountMovement = (account: AccountPeriodView) => {
  * pasador como `{grupo}-{número}` (el número se repite entre grupos). Sin los
  * caracteres que no admite un nombre de archivo.
  */
-export const liquidationFileName = (account: AccountPeriodView, cashierCode: string) => {
-  const dateFile = dayjs(account.date).format('DD-MM-YYYY');
+export const liquidationFileName = (
+  account: AccountPeriodView,
+  cashierCode: string,
+  /** Lo que va en lugar de la fecha (la edición). */
+  tag?: string
+) => {
+  const dateFile = tag ?? dayjs(account.date).format('DD-MM-YYYY');
   const name = `${account.user_name ?? ''}${cashierCode ? `-${cashierCode}` : ''}`
     .replace(/[\\/:*?"<>|]+/g, '_')
     .trim();
@@ -63,7 +69,7 @@ export const liquidationFileName = (account: AccountPeriodView, cashierCode: str
 };
 
 /** Hoja de liquidación de un pasador. */
-async function buildLiquidationSlipPDF(account: AccountPeriodView) {
+async function buildLiquidationSlipPDF(account: AccountPeriodView, headerLabel?: string) {
   const { jsPDF, autoTable } = await getPDFDeps();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }) as PdfDoc;
 
@@ -84,7 +90,9 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView) {
     align: 'center',
   });
   doc.text(
-    `${account.period_from === account.date ? 'Fecha' : 'Período'} ${dateStr}`,
+    headerLabel !== undefined
+      ? `Edición ${headerLabel}`
+      : `${account.period_from === account.date ? 'Fecha' : 'Período'} ${dateStr}`,
     margin.left + usableW,
     14,
     { align: 'right' }
@@ -131,7 +139,7 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView) {
       [
         `Deja: ${amount(a.revenue)}`,
         `Subtotal: ${amount(a.subtotal)}`,
-        `${total > 0 ? 'Debe' : 'Cobra'}: ${amount(Math.abs(total))}`,
+        `${owedWord(total)}: ${amount(Math.abs(total))}`,
       ],
     ],
     theme: 'grid',
@@ -156,11 +164,15 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView) {
 export async function downloadLiquidationSlipsPDF(params: {
   accounts: AccountPeriodView[];
   cashierCodeOf: (account: AccountPeriodView) => string;
+  /** Cuenta por edición: la cabecera derecha dice `Edición ${headerLabel}`. */
+  headerLabel?: string;
+  /** Cuenta por edición: va en el nombre del archivo en lugar de la fecha. */
+  fileTag?: string;
 }) {
   for (const [index, account] of params.accounts.entries()) {
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_GAP_MS));
 
-    const doc = await buildLiquidationSlipPDF(account);
-    doc.save(liquidationFileName(account, params.cashierCodeOf(account)));
+    const doc = await buildLiquidationSlipPDF(account, params.headerLabel);
+    doc.save(liquidationFileName(account, params.cashierCodeOf(account), params.fileTag));
   }
 }

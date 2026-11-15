@@ -28,20 +28,26 @@ const centerLine = (text: string) =>
 const DIVIDER = '- '.repeat(CHARS / 2);
 
 export async function printGroupLiquidationTicket(params: {
-  account: IPollaGroupAccountEntityFront;
+  /** Con `periodText` no se leen `period_from` ni `date`. */
+  account: Omit<IPollaGroupAccountEntityFront, 'period_from' | 'date'> &
+    Partial<Pick<IPollaGroupAccountEntityFront, 'period_from' | 'date'>>;
   orgName: string;
+  /** Cuenta por edición: reemplaza el rango de fechas del encabezado. */
+  periodText?: string;
 }) {
-  const { account, orgName } = params;
+  const { account, orgName, periodText } = params;
   const { jsPDF } = await import('jspdf');
-
-  const fromStr = dayjs(account.period_from).format('DD/MM/YYYY');
-  const toStr = dayjs(account.date).format('DD/MM/YYYY');
 
   const lines: string[] = [];
   if (orgName) lines.push(centerLine(orgName.toUpperCase()));
   lines.push(centerLine(account.group_name.toUpperCase()));
   lines.push(centerLine('LIQUIDACION DEL GRUPO'));
-  lines.push(centerLine(`${fromStr} AL ${toStr}`));
+  lines.push(
+    centerLine(
+      periodText ??
+        `${dayjs(account.period_from).format('DD/MM/YYYY')} AL ${dayjs(account.date).format('DD/MM/YYYY')}`
+    )
+  );
   lines.push(centerLine(`HORA: ${dayjs().format('HH:mm')}`));
   lines.push(DIVIDER);
   lines.push(padLine('Deja pasadores:', money(account.cashiers_subtotal)));
@@ -71,7 +77,7 @@ export async function printGroupLiquidationTicket(params: {
 
   const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
-  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${dayjs(account.date).format('DD-MM-YYYY')}`;
+  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${periodText ? periodText.trim().replace(/\s+/g, '_') : dayjs(account.date).format('DD-MM-YYYY')}`;
 
   doc.setProperties({ title });
   doc.setFont('courier', 'normal');

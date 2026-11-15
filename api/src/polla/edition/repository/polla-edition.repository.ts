@@ -12,6 +12,8 @@ import { PollaPagination, buildPaginated } from '../../helper/pagination';
 
 export interface PollaEditionFilters {
   organizationId: string | null;
+  /** Solo estas ediciones. */
+  ids?: string[];
   status?: POLLA_EDITION_STATUS;
   /** Ediciones cuyo rango de juego incluye esta fecha. */
   playingOn?: string;
@@ -45,6 +47,9 @@ export class PollaEditionRepository {
 
     if (filters.organizationId) {
       query = query.eq('polla_organization_id', filters.organizationId);
+    }
+    if (filters.ids) {
+      query = query.in('polla_edition_id', filters.ids);
     }
     if (filters.status) {
       query = query.eq('status', filters.status);

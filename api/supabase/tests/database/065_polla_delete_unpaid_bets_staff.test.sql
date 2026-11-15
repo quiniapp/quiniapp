@@ -1,11 +1,12 @@
 -- R14 (ajuste del 10/11): "Eliminar impagos" también para el admin de grupo,
 -- el superadmin, el capitalista y el dueño. Eligen pasador y/o jugador; el
 -- admin, solo de su grupo. El Súper no. Mismo corte para todos (cierre de
--- carga) y cada baja entra en Borradas de su pasador.
+-- carga) y cada baja entra en Borradas de su pasador en la edición (la cuenta
+-- por días quedó solo para consultar: no se toca).
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
-SELECT plan(19);
+SELECT plan(21);
 
 INSERT INTO polla_organizations (polla_organization_id, name)
 VALUES ('f1000000-0000-0000-0000-000000000014', 'pgTAP impagos staff');
@@ -83,13 +84,18 @@ SELECT pg_temp.bet('c2', 'f1000000-0000-0000-0000-0000000014c2', 'f1000000-0000-
 SELECT pg_temp.bet('c3_jugador', 'f1000000-0000-0000-0000-0000000014c3', 'f1000000-0000-0000-0000-0000000014f3', NULL, 'OWED');
 SELECT pg_temp.bet('c3_pagado', 'f1000000-0000-0000-0000-0000000014c3', 'f1000000-0000-0000-0000-0000000014f3', NULL, 'PAID');
 
--- La cuenta de hoy calculada; c2 ya liquidado hoy.
-SELECT polla_calculate_current_account(
-  to_char(polla_today(), 'DD-MM-YYYY'), FALSE, FALSE, 'f1000000-0000-0000-0000-000000000014'
+-- La cuenta por días ya no se calcula. Quedan guardadas (de antes del corte)
+-- la liquidación de hoy de c2 y una fila de hoy de c3 sin liquidar.
+SELECT throws_ok(
+  $$SELECT polla_calculate_current_account(
+      to_char(polla_today(), 'DD-MM-YYYY'), FALSE, FALSE, 'f1000000-0000-0000-0000-000000000014')$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY',
+  'la cuenta por días ya no se calcula'
 );
-UPDATE polla_current_accounts
-SET is_liquidated = TRUE
-WHERE polla_user_id = 'f1000000-0000-0000-0000-0000000014c2' AND date = polla_today();
+INSERT INTO polla_current_accounts (polla_user_id, user_name, user_number, polla_organization_id, date, is_liquidated)
+VALUES
+  ('f1000000-0000-0000-0000-0000000014c2', 'Pasador dos', 2, 'f1000000-0000-0000-0000-000000000014', polla_today(), TRUE),
+  ('f1000000-0000-0000-0000-0000000014c3', 'Pasador tres', 1, 'f1000000-0000-0000-0000-000000000014', polla_today(), FALSE);
 
 -- -------------------------------------------------------------- quién
 
@@ -166,10 +172,17 @@ SELECT polla_delete_unpaid_bets('f1000000-0000-0000-0000-0000000014a4', (SELECT 
 SELECT is((SELECT (d->>'deleted')::INT FROM d3), 1, 'el dueño borra el impago del pasador tres');
 SELECT ok(NOT pg_temp.deleted('c3_pagado'), 'lo pagado no se toca');
 SELECT is(
+  (SELECT r->>'deleted_pass'
+   FROM polla_edition_account_rows('f1000000-0000-0000-0000-000000000014', (SELECT id FROM ed), NULL,
+     'f1000000-0000-0000-0000-0000000014c3') r),
+  '100.00',
+  'la baja entra en Borradas de la edición del pasador tres'
+);
+SELECT is(
   (SELECT deleted_pass FROM polla_current_accounts
    WHERE polla_user_id = 'f1000000-0000-0000-0000-0000000014c3' AND date = polla_today()),
-  100::NUMERIC,
-  'la baja entra en Borradas de hoy del pasador tres'
+  0::NUMERIC,
+  'y la fila por días del pasador tres no cambia'
 );
 SELECT is(
   (SELECT bets_count FROM polla_editions WHERE polla_edition_id = (SELECT id FROM ed)),

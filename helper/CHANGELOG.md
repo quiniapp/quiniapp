@@ -4,6 +4,18 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- **Tipos nuevos (`helper/polla/types/game.type.ts`)**: enum `POLLA_ACCOUNT_MOVEMENT_TYPE` (`COLLECTION`, `PAYMENT`, `CLAIM`) y `POLLA_ACCOUNT_MOVEMENT_LABEL` ("Cobro", "Pago", "Reclamo"). Interfaces `IPollaEditionAccountAmounts`, `IPollaEditionLiquidationRef`, `IPollaEditionAccountRow`, `IPollaEditionAccountMovement`, `IPollaEditionLiquidationAmounts`, `IPollaEditionLiquidationDifference`, `IPollaEditionLiquidationEntity`, `IPollaEditionLiquidationResult`, `IPollaEditionAccountListItem`, `IPollaEditionAccountTotals`, `IPollaUserEditionAccount`, `IPollaGroupEditionAccountEntity` e `IPollaGroupEditionAccountPreview`.
+- **Schemas nuevos (`helper/polla/schemas/game.schema.ts`)**: `pollaAccountMovementSchema`, `pollaAccountMovementUpdateSchema`, `liquidateEditionAccountsSchema`, `setEditionLiquidatedSchema` y `liquidatePollaGroupEditionSchema`, con sus tipos de payload.
+- **Cambio que rompe:** `newPollaOrgExpenseSchema` ahora exige `polla_edition_id` en lugar de `date`. Los clientes que crean gastos tienen que mandar la edición.
+
+- **`POLLA_ACCOUNT_RECALC_MAX_DAYS`** (`config/session.config.ts`): se corrige el comentario, que seguía describiendo el botón "Actualizar" ya eliminado. La constante sigue en uso como máximo de días de los filtros de fechas.
+
+### Removed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- Schemas y tipos sin uso de la escritura por días: `pollaCurrentAccountUpdateSchema`, `pollaCurrentAccountBulkUpdateSchema`, `liquidatePollaGroupSchema`, `IPollaCurrentAccountUpdatePayload`, `ILiquidatePollaGroupPayload`, `IPollaGroupPendingCashier` e `IPollaGroupAccountPreview`.
+
 ### Added - 2026-11-11 (R28: orden de las quinielas)
 
 - **Tipos y schemas:**

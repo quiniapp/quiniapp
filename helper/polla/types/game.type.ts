@@ -100,6 +100,11 @@ export interface IPollaEditionEntityBack {
   winner_date: string | null;
   bets_count: number;
   collected_amount: number;
+  /** La cuenta corriente se liquida por edición (no por días). */
+  account_by_edition: boolean;
+  /** Cuándo se marcó como liquidada (null = sin marcar). */
+  liquidated_at: string | null;
+  liquidated_by: string | null;
   created_at: string;
   edited_at: string;
   deleted_at: string | null;
@@ -781,35 +786,6 @@ export interface IPollaGroupAccountEntityBack {
 
 export type IPollaGroupAccountEntityFront = IPollaGroupAccountEntityBack;
 
-/** Pasador del grupo con movimientos sin liquidar a la fecha. */
-export interface IPollaGroupPendingCashier {
-  polla_user_id: string;
-  name: string;
-  number: number | null;
-  liquidated_on: string | null;
-}
-
-/** Lo que se liquidaría hoy al grupo (antes del % del admin). */
-export interface IPollaGroupAccountPreview {
-  polla_group_id: string;
-  group_name: string;
-  date: string;
-  period_from: string;
-  cashiers_subtotal: number;
-  expenses: number;
-  base: number;
-  previous_drag: number;
-  drag_base: number;
-  previous_balance: number;
-  last_liquidation_date: string | null;
-  /** Hay una liquidación posterior: esta fecha ya no se puede liquidar. */
-  later_liquidation_date: string | null;
-  /** Ya se liquidó en esta fecha: liquidar de nuevo la rehace. */
-  liquidated_on_date: boolean;
-  /** Hay que liquidarlos antes de liquidar el grupo. */
-  pending_cashiers: IPollaGroupPendingCashier[];
-}
-
 // ------------------------------------------------------------------ gastos
 
 export interface IPollaOrgExpenseEntityBack {
@@ -817,6 +793,8 @@ export interface IPollaOrgExpenseEntityBack {
   polla_organization_id: string;
   /** `null` = gasto de la organización; si no, de ese grupo. */
   polla_group_id: string | null;
+  /** Edición del gasto (null en los viejos, cargados por fecha). */
+  polla_edition_id: string | null;
   date: string;
   name: string;
   amount: number;
@@ -826,3 +804,161 @@ export interface IPollaOrgExpenseEntityBack {
 }
 
 export type IPollaOrgExpenseEntityFront = IPollaOrgExpenseEntityBack;
+
+// ------------------------------------------------- cuenta por edición
+
+/* eslint-disable no-unused-vars */
+export enum POLLA_ACCOUNT_MOVEMENT_TYPE {
+  COLLECTION = 'COLLECTION',
+  PAYMENT = 'PAYMENT',
+  CLAIM = 'CLAIM',
+}
+/* eslint-enable no-unused-vars */
+
+export const POLLA_ACCOUNT_MOVEMENT_LABEL: Record<POLLA_ACCOUNT_MOVEMENT_TYPE, string> = {
+  [POLLA_ACCOUNT_MOVEMENT_TYPE.COLLECTION]: 'Cobro',
+  [POLLA_ACCOUNT_MOVEMENT_TYPE.PAYMENT]: 'Pago',
+  [POLLA_ACCOUNT_MOVEMENT_TYPE.CLAIM]: 'Reclamo',
+};
+
+export interface IPollaEditionAccountAmounts {
+  bets_pass: number;
+  deleted_pass: number;
+  claims: number;
+  pass: number;
+  cashier_commission: number;
+  subtotal: number;
+  revenue: number;
+  collections: number;
+  paid: number;
+  total: number;
+}
+
+export interface IPollaEditionLiquidationRef {
+  polla_edition_liquidation_id: string;
+  created_at: string;
+  created_by_name: string | null;
+  total: number;
+  kept_previous_tickets: boolean;
+}
+
+export interface IPollaEditionAccountRow extends IPollaEditionAccountAmounts {
+  polla_user_id: string;
+  user_name: string;
+  user_number: number | null;
+  polla_group_id: string | null;
+  fee: number;
+  live_bets_pass: number;
+  live_deleted_pass: number;
+  live_fee: number;
+  differs: boolean;
+  liquidation: IPollaEditionLiquidationRef | null;
+}
+
+export interface IPollaEditionAccountMovement {
+  polla_edition_account_movement_id: string;
+  polla_edition_id: string;
+  polla_user_id: string;
+  type: POLLA_ACCOUNT_MOVEMENT_TYPE;
+  amount: number;
+  date: string;
+  note: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  edited_at: string;
+}
+
+export interface IPollaEditionLiquidationAmounts {
+  bets_pass: number;
+  deleted_pass: number;
+  fee: number;
+  total: number;
+}
+
+export interface IPollaEditionLiquidationDifference {
+  polla_user_id: string;
+  user_name: string;
+  user_number: number | null;
+  polla_group_id: string | null;
+  old: IPollaEditionLiquidationAmounts;
+  new: IPollaEditionLiquidationAmounts;
+}
+
+/** Foto de la cuenta de un pasador en una edición (`polla_edition_liquidations`). */
+export interface IPollaEditionLiquidationEntity {
+  polla_edition_liquidation_id: string;
+  polla_organization_id: string;
+  polla_edition_id: string;
+  polla_user_id: string;
+  user_name: string;
+  user_number: number | null;
+  /** Grupo del pasador al liquidar. */
+  polla_group_id: string | null;
+  fee: number | null;
+  bets_pass: number;
+  deleted_pass: number;
+  claims: number;
+  pass: number;
+  cashier_commission: number;
+  subtotal: number;
+  collections: number;
+  paid: number;
+  total: number;
+  kept_previous_tickets: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type IPollaEditionLiquidationResult =
+  | { status: 'DIFFERENCES'; differences: IPollaEditionLiquidationDifference[] }
+  | { status: 'LIQUIDATED'; liquidations: IPollaEditionLiquidationEntity[] };
+
+export interface IPollaEditionAccountListItem {
+  edition: IPollaEditionEntityFront;
+  liquidated_at: string | null;
+  liquidated_by_name: string | null;
+  cashiers_count: number;
+  liquidated_count: number;
+  owed: number;
+}
+
+export interface IPollaEditionAccountTotals extends IPollaCurrentAccountDailyTotals {
+  polla_edition_id: string;
+}
+
+export interface IPollaUserEditionAccount {
+  edition: IPollaEditionEntityFront;
+  account: IPollaEditionAccountRow;
+}
+
+/** Cuenta de un grupo en una edición (`polla_group_edition_accounts`). */
+export interface IPollaGroupEditionAccountEntity {
+  polla_group_edition_account_id: string;
+  polla_organization_id: string;
+  polla_group_id: string;
+  polla_edition_id: string;
+  group_name: string;
+  cashiers_subtotal: number;
+  expenses: number;
+  base: number;
+  admin_percentage: number;
+  admin_commission: number;
+  adjustments: number;
+  paid: number;
+  total: number;
+  created_by: string | null;
+  created_at: string;
+  edited_at: string;
+}
+
+export interface IPollaGroupEditionAccountPreview {
+  polla_group_id: string;
+  group_name: string;
+  polla_edition_id: string;
+  cashiers_subtotal: number;
+  expenses: number;
+  base: number;
+  pending_cashiers: { polla_user_id: string; name: string; number: number | null }[];
+  account: IPollaGroupEditionAccountEntity | null;
+}

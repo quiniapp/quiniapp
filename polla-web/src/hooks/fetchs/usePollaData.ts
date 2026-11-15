@@ -12,9 +12,14 @@ import {
   IPollaCurrentAccountEntityFront,
   IPollaCurrentAccountPeriodRow,
   IPollaDailySales,
+  IPollaEditionAccountListItem,
+  IPollaEditionAccountMovement,
+  IPollaEditionAccountRow,
   IPollaEditionEntityFront,
+  IPollaGroupEditionAccountEntity,
+  IPollaGroupEditionAccountPreview,
+  IPollaUserEditionAccount,
   IPollaGroupAccountEntityFront,
-  IPollaGroupAccountPreview,
   IPollaOrgExpenseEntityFront,
   IPollaPrizeList,
   IPollaResultEntityFront,
@@ -283,19 +288,16 @@ export const useGroupAccounts = (params: QueryParams = {}, enabled = true) =>
     { enabled, limit: 50 }
   );
 
-/** Lo que se liquidaría a cada grupo a la fecha y qué pasadores faltan. */
-export const useGroupAccountPreviews = (date: string, enabled = true) =>
-  useApiQuery<IPollaGroupAccountPreview[]>(
-    ['polla-group-accounts', 'previews'],
-    BACKEND_ROUTES.groupAccount.previews,
-    { date },
-    { enabled }
-  );
-
 // ------------------------------------------------------------------ gastos
 
 export const useOrgExpenses = (
-  params: { date: string; polla_group_id?: string | null; polla_organization_id?: string | null },
+  params: {
+    /** Por edición (lo normal) o, para el historial, por fecha. */
+    polla_edition_id?: string;
+    date?: string;
+    polla_group_id?: string | null;
+    polla_organization_id?: string | null;
+  },
   enabled = true
 ) =>
   useApiQuery<IPollaOrgExpenseEntityFront[]>(
@@ -303,4 +305,63 @@ export const useOrgExpenses = (
     BACKEND_ROUTES.expense.base,
     params,
     { enabled, placeholderData: undefined }
+  );
+
+// ------------------------------------------------ cuenta por edición
+
+/** Ediciones con la carga cortada y por edición, con sus conteos. */
+export const useEditionAccountList = (params: QueryParams = {}) =>
+  useApiQuery<IPollaEditionAccountListItem[]>(
+    ['edition-account', 'list'],
+    BACKEND_ROUTES.editionAccount.base,
+    params
+  );
+
+/** La cuenta en vivo de cada pasador de la edición. */
+export const useEditionAccounts = (editionId: string | null, params: QueryParams = {}) =>
+  useApiQuery<IPollaEditionAccountRow[]>(
+    ['edition-account', 'accounts', editionId],
+    editionId
+      ? BACKEND_ROUTES.editionAccount.accounts(editionId)
+      : BACKEND_ROUTES.editionAccount.base,
+    params,
+    { enabled: Boolean(editionId) }
+  );
+
+export const useEditionMovements = (editionId: string | null, userId?: string | null) =>
+  useApiQuery<IPollaEditionAccountMovement[]>(
+    ['edition-account', 'movements', editionId],
+    editionId
+      ? BACKEND_ROUTES.editionAccount.movements(editionId)
+      : BACKEND_ROUTES.editionAccount.base,
+    { polla_user_id: userId },
+    { enabled: Boolean(editionId) }
+  );
+
+/** Las ediciones donde el pasador tiene liquidación. */
+export const useMyEditionAccounts = (enabled = true) =>
+  useApiQuery<IPollaUserEditionAccount[]>(
+    ['edition-account', 'mine'],
+    BACKEND_ROUTES.editionAccount.mine,
+    {},
+    { enabled }
+  );
+
+export const useGroupEditionPreviews = (editionId: string | null) =>
+  useApiQuery<IPollaGroupEditionAccountPreview[]>(
+    ['edition-account', 'group-previews', editionId],
+    editionId
+      ? BACKEND_ROUTES.editionAccount.groupPreviews(editionId)
+      : BACKEND_ROUTES.editionAccount.base,
+    {},
+    { enabled: Boolean(editionId) }
+  );
+
+/** Cuentas de grupo ya liquidadas (`polla_edition_id`, `polla_group_id`). */
+export const useGroupEditionAccounts = (params: QueryParams = {}, enabled = true) =>
+  useApiQuery<IPollaGroupEditionAccountEntity[]>(
+    ['edition-account', 'group-accounts'],
+    BACKEND_ROUTES.editionAccount.groupAccounts,
+    params,
+    { enabled }
   );
