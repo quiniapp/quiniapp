@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (liquidación de grupos: sin ajustes ni pagado)
+
+- **`liquidatePollaGroupEditionSchema`** (`helper/polla/schemas/game.schema.ts`): solo `polla_group_id` y `admin_percentage`; se sacan `adjustments` y `paid`.
+
 ### Added - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
 
 - **`IPollaEditionEntityFront.can_repeat`** (`helper/polla/types/game.type.ts`): si el usuario todavía repite en una edición de Cargar jugada (el Súper, hasta el sorteo; el resto, hasta el cierre). Se corrige el comentario de `my_load_cutoff` (ya no es `null` para superadmin+).

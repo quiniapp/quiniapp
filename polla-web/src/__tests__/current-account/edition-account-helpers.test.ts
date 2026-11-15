@@ -7,7 +7,8 @@ import {
 import { summaryRowLabel } from '@/functions/current-account/accountTablePDF';
 import { rangeRowLines, ticketTitleLine } from '@/functions/current-account/totalsTicket';
 import { filterByGroup, pickedVisible } from '@/lib/cashierPick';
-import { groupAccountOutdated, owedWord } from '@/lib/editionAccount';
+import { groupEditionTicketLines } from '@/functions/current-account/groupLiquidationTicket';
+import { groupAccountOutdated, groupSplit, owedWord } from '@/lib/editionAccount';
 
 const totals = (date: string): IPollaCurrentAccountDailyTotals => ({
   date,
@@ -115,4 +116,44 @@ describe('Debe o Cobra', () => {
   it('positivo: Debe', () => expect(owedWord(150)).toBe('Debe'));
   it('negativo: Cobra', () => expect(owedWord(-20)).toBe('Cobra'));
   it('acepta el monto como texto', () => expect(owedWord('-0.01')).toBe('Cobra'));
+});
+
+describe('Liquidación del grupo: total para el admin y para el capitalista', () => {
+  it('al admin, el 100% de la comisión; al capitalista, el resto', () =>
+    expect(groupSplit(9000, 1800)).toEqual({ admin: 1800, capitalist: 7200 }));
+  it('sin errores de coma flotante y con montos como texto', () =>
+    expect(groupSplit('100.10', '33.37')).toEqual({ admin: 33.37, capitalist: 66.73 }));
+  it('total negativo: el admin no cobra y el capitalista pone la diferencia', () =>
+    expect(groupSplit(-500, 0)).toEqual({ admin: 0, capitalist: -500 }));
+
+  const ticket = (expenses: number) =>
+    groupEditionTicketLines({
+      account: {
+        group_name: 'Grupo 1',
+        cashiers_subtotal: 10000,
+        expenses,
+        base: 10000 - expenses,
+        admin_percentage: 20,
+        admin_commission: (10000 - expenses) * 0.2,
+      },
+      orgName: 'Sistema',
+      periodText: 'Semana 46',
+      time: '21:30',
+    });
+  const line = (lines: string[], label: string) => lines.find((l) => l.startsWith(label));
+
+  it('el ticket dice TOTAL, % ADMIN, TOTAL ADMIN y TOTAL CAPITALISTA', () => {
+    const lines = ticket(1000);
+    expect(line(lines, 'TOTAL:')).toMatch(/\$9\.000$/);
+    expect(line(lines, '% ADMIN:')).toMatch(/20%$/);
+    expect(line(lines, 'TOTAL ADMIN:')).toMatch(/\$1\.800$/);
+    expect(line(lines, 'TOTAL CAPITALISTA:')).toMatch(/\$7\.200$/);
+    expect(lines.every((l) => l.length <= 32)).toBe(true);
+  });
+  it('sin base, ajustes ni pagado al admin', () => {
+    const text = ticket(1000).join('\n');
+    expect(text).not.toMatch(/BASE|Ajustes|Pagado/);
+  });
+  it('sin gastos no imprime "$-0"', () =>
+    expect(line(ticket(0), 'Gastos del grupo:')).toMatch(/ \$0$/));
 });

@@ -4,6 +4,18 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (liquidación de grupos: total para el admin y para el capitalista)
+
+**Por qué.** Al admin se le paga siempre el 100% de su comisión, y se lo transfiere el capitalista por afuera: "Pagado al admin" era esa misma plata y los ajustes no se usan.
+
+- **Pestaña Grupos** (`features/current-account/edition/GroupEditionAccounts.tsx`):
+  - "Base" pasa a "Total" en el modal, la tarjeta del grupo y la tabla "Liquidaciones de grupo".
+  - El modal "Liquidar" deja solo el % del admin (sin "Ajustes" ni "Pagado al admin") y muestra "Total para el admin" (el 100% de la comisión) y "Total para el capitalista" (el total menos esa comisión).
+  - La tarjeta y la tabla muestran los mismos dos totales en lugar de Comisión, Ajustes, Pagado y Total admin. Una liquidación vieja los tacha, como antes.
+- **Ticket del grupo** (`functions/current-account/groupLiquidationTicket.ts`): `printGroupEditionLiquidationTicket` (renglones en `groupEditionTicketLines`) imprime TOTAL, % ADMIN, TOTAL ADMIN y TOTAL CAPITALISTA, sin base, ajustes ni pagado. Sin gastos ya no imprime "$-0". El del Historial por fechas (`printGroupLiquidationTicket`) no cambia y pierde la opción `periodText`, que ya no usa nadie.
+- **`groupSplit(total, comisión)`** (`lib/editionAccount.ts`): cuánto es para el admin y cuánto para el capitalista, en centavos exactos.
+- **Tests** (`edition-account-helpers.test.ts`): `groupSplit` y los renglones del ticket.
+
 ### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
 
 - **Cargar jugada** (`features/make-bet/index.tsx`):

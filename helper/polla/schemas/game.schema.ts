@@ -298,11 +298,14 @@ export const liquidateEditionAccountsSchema = z.object({
 
 export const setEditionLiquidatedSchema = z.object({ liquidated: z.boolean() });
 
+/**
+ * Liquidar un grupo en una edición: solo el % del admin. Sin ajustes ni
+ * pagado: al admin se le paga siempre el 100% de la comisión, y se lo
+ * transfiere el capitalista por afuera.
+ */
 export const liquidatePollaGroupEditionSchema = z.object({
   polla_group_id: z.string().uuid(),
   admin_percentage: z.number().min(0).max(100),
-  adjustments: z.number().optional(),
-  paid: z.number().min(0).optional(),
 });
 
 export type IPollaAccountMovementPayload = z.infer<typeof pollaAccountMovementSchema>;

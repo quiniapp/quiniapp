@@ -4,6 +4,10 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (liquidación de grupos: sin ajustes ni pagado)
+
+- **`POST /edition_account/:editionId/group_liquidate`** (`polla-edition-account.route.ts`): ya no recibe `adjustments` ni `paid`; siempre los guarda en 0, así el total del admin es el 100% de la comisión. La base no cambia: `polla_liquidate_group_edition` sigue con la misma firma.
+
 ### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
 
 **Qué cambia.** Los cortes por rol pasan a ser estos ("sorteo" = la hora del primer sorteo del día de inicio):
