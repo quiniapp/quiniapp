@@ -7,6 +7,7 @@ import {
   POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import {
+  IGenerateEditionLiquidationPayload,
   IPollaAccountMovementPayload,
   IPollaAccountMovementUpdatePayload,
   ILiquidatePollaGroupEditionPayload,
@@ -147,6 +148,14 @@ export const useUpdateUser = () =>
       invalidate: ['polla-users', 'polla-user', 'polla-user-search'],
       successMessage: 'Usuario actualizado',
     }
+  );
+
+/** Habilitar o deshabilitar desde la lista (al deshabilitar se cierran sus sesiones). */
+export const useSetUserDisabled = () =>
+  useApiMutation<unknown, { id: string; disabled: boolean }>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.user.disabled(id),
+    { invalidate: ['polla-users', 'polla-user', 'polla-user-search'] }
   );
 
 export const useDeleteUser = () =>
@@ -360,21 +369,18 @@ export { catalogKeys };
 
 const EDITION_ACCOUNT_KEYS = ['edition-account'];
 
-/** Sin `ticket_source` avisa las diferencias; con `NEW` u `OLD` liquida igual. */
-export const useLiquidateEditionAccounts = () =>
+/**
+ * "Generar liquidación": carga lo que se suma hoy, liquida a los tildados y
+ * marca la edición. Sin `ticket_source` avisa las diferencias (sin escribir
+ * nada); con `NEW` u `OLD` genera igual.
+ */
+export const useGenerateEditionLiquidation = () =>
   useApiMutation<
     IPollaEditionLiquidationResult,
-    { editionId: string; polla_user_ids: string[]; ticket_source?: 'NEW' | 'OLD' }
-  >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.liquidate(editionId), {
+    { editionId: string } & IGenerateEditionLiquidationPayload
+  >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.generate(editionId), {
     invalidate: EDITION_ACCOUNT_KEYS,
   });
-
-export const useSetEditionLiquidated = () =>
-  useApiMutation<unknown, { editionId: string; liquidated: boolean }>(
-    'put',
-    ({ editionId }) => BACKEND_ROUTES.editionAccount.liquidated(editionId),
-    { invalidate: EDITION_ACCOUNT_KEYS }
-  );
 
 export const useCreateAccountMovement = () =>
   useApiMutation<unknown, { editionId: string } & IPollaAccountMovementPayload>(

@@ -249,7 +249,13 @@ export type IPollaUserEntityFront = Omit<
   | 'last_login_ip'
   | 'deleted_at'
   | 'credit_balance'
->;
+> & {
+  /**
+   * Jugador con el pasador deshabilitado: queda frenado sin estarlo él. Lo
+   * trae la lista de usuarios.
+   */
+  cashier_disabled?: boolean;
+};
 
 /** Usuario encontrado por número para cargarle una jugada a su nombre. */
 export interface IPollaUserByNumber {
@@ -273,6 +279,10 @@ export interface IPollaUserOption extends IPollaUserByNumber {
   /** Número del grupo (del pasador, o del pasador del jugador); `null` = sin grupo. */
   group_number: number | null;
   is_street: boolean;
+  /** Deshabilitado: solo aparece en los buscadores que filtran, no en los de cargar. */
+  disabled: boolean;
+  /** Jugador con el pasador deshabilitado (queda frenado como si lo estuviera él). */
+  cashier_disabled: boolean;
 }
 
 /** Usuario autenticado tal como lo devuelve /auth/validate. */

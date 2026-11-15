@@ -45,7 +45,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { printGroupEditionLiquidationTicket } from '@/functions/current-account/groupLiquidationTicket';
-import { groupAccountOutdated, groupCommission, groupSplit } from '@/lib/editionAccount';
+import {
+  groupAccountOutdated,
+  groupCommission,
+  groupSplit,
+  parseAmount,
+} from '@/lib/editionAccount';
 import { cn } from '@/lib/utils';
 import { fetchOrganizationName } from '../fetchers';
 import { fmtMoney } from '../format';
@@ -63,12 +68,6 @@ const OutdatedNotice = () => (
     {OUTDATED_TEXT}: volvé a liquidar el grupo.
   </p>
 );
-
-/** Acepta coma decimal. */
-const parseAmount = (raw: string): number | null => {
-  const value = Number(raw.replace(',', '.'));
-  return raw.trim() !== '' && Number.isFinite(value) ? value : null;
-};
 
 const Amount = ({ label, value, strong }: { label: string; value: number; strong?: boolean }) => (
   <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm">

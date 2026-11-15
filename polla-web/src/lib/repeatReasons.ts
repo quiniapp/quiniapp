@@ -8,6 +8,7 @@ const REPEAT_REASON_LABEL: Record<string, string> = {
   POLLA_SOURCE_EDITION_NOT_FINISHED: 'su edición todavía no terminó',
   POLLA_USER_NOT_FOUND: 'el usuario está deshabilitado o borrado',
   POLLA_PARENT_NOT_FOUND: 'el jugador ya no tiene pasador',
+  POLLA_CASHIER_DISABLED: 'su pasador está deshabilitado',
   POLLA_USER_OTHER_GROUP: 'el usuario ya no está en tu grupo',
   POLLA_BET_TARGET_FORBIDDEN: 'el jugador ya no es tuyo',
   POLLA_LOAD_LIMIT_EXCEEDED: 'cerró la carga de la edición',

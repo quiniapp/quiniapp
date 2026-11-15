@@ -102,6 +102,55 @@ export const groupAccountOutdated = (
   );
 };
 
+/** Monto escrito a mano: acepta coma decimal; vacío o inválido → `null`. */
+export const parseAmount = (raw: string): number | null => {
+  const value = Number(raw.replace(',', '.'));
+  return raw.trim() !== '' && Number.isFinite(value) ? value : null;
+};
+
+/** Lo que se suma hoy a un pasador en "Generar liquidación". */
+export interface IEditionNewMovements {
+  collection: number;
+  payment: number;
+  /** Con signo: un reclamo negativo resta. */
+  claim: number;
+}
+
+/** `ROUND(x)` de Postgres: la mitad se aleja del cero. */
+const roundHalfAway = (value: number) => Math.sign(value) * Math.round(Math.abs(value));
+
+/**
+ * La fila con los movimientos que se suman hoy, con la fórmula de la base
+ * (`polla_edition_account_base`): un reclamo positivo suma al pase (y a la
+ * comisión); uno negativo, al subtotal. `total = subtotal − cobros + pagos`.
+ */
+export const withNewMovements = (
+  row: IPollaEditionAccountRow,
+  added: IEditionNewMovements
+): IPollaEditionAccountRow => {
+  const tickets = cents(row.bets_pass) - cents(row.deleted_pass);
+  const claimsPos = cents(row.pass) - tickets + Math.max(cents(added.claim), 0);
+  const claimsNeg =
+    cents(row.claims) - (cents(row.pass) - tickets) + Math.min(cents(added.claim), 0);
+  const pass = tickets + claimsPos;
+  const commission = roundHalfAway((pass * Number(row.fee ?? 0)) / 100);
+  const subtotal = pass - commission + claimsNeg;
+  const collections = cents(row.collections) + cents(added.collection);
+  const paid = cents(row.paid) + cents(added.payment);
+
+  return {
+    ...row,
+    claims: (cents(row.claims) + cents(added.claim)) / 100,
+    pass: pass / 100,
+    cashier_commission: commission / 100,
+    subtotal: subtotal / 100,
+    revenue: subtotal / 100,
+    collections: collections / 100,
+    paid: paid / 100,
+    total: (subtotal - collections + paid) / 100,
+  };
+};
+
 /**
  * `Debe` si el pasador tiene que pasar plata o la cuenta está en cero; `Cobra`
  * si le deben a él. Un saldo en cero nunca dice "Cobra $0".

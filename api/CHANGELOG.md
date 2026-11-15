@@ -4,6 +4,42 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 ("Generar liquidación" por edición)
+
+**Qué cambia.** La liquidación de los pasadores de una edición se genera desde un modal, como en QuiniApp: se tilda a quién liquidar y se escribe lo que se suma hoy en reclamos, cobros y pagos. Al generar, la edición queda marcada como liquidada. Después se sigue editando a medida que los pasadores pagan (los movimientos son siempre en vivo).
+
+- **Migración `20261115195936_polla_generate_edition_liquidation`**: `polla_generate_edition_liquidation(p_organization_id, p_edition_id, p_actor_id, p_entries, p_ticket_source)`, en una transacción:
+  - `p_entries` es `[{ polla_user_id, collection, payment, claim }]`. Carga como movimientos de hoy los cobros y pagos mayores a 0 y los reclamos distintos de 0.
+  - Liquida a esos pasadores con `polla_liquidate_edition_accounts`; la foto incluye los movimientos recién cargados.
+  - Marca la edición. Si ya estaba marcada, conserva quién y cuándo la marcó primero.
+  - Sin `p_ticket_source` y con las jugadas cambiadas desde la liquidación anterior, devuelve `DIFFERENCES` sin escribir nada, tampoco los movimientos.
+  - Errores nuevos: `POLLA_EDITION_LIQUIDATION_DUPLICATE` (pasador repetido) y `POLLA_EDITION_LIQUIDATION_AMOUNT_INVALID` (cobro o pago negativo).
+  - No usa tabla temporal propia.
+- **`POST /edition_account/:editionId/generate`** (nuevo, `polla-edition-account.route.ts`): `{ entries, ticket_source? }`, para dueño, capitalista y superadmin. Repositorio: `generate`. La respuesta tiene la misma forma que `POST /:editionId/liquidate`.
+- `POST /:editionId/liquidate` y `PUT /:editionId/liquidated` siguen existiendo, pero la web ya no los usa.
+- **Tests pgTAP:** `210_polla_generate_edition_liquidation` cubre:
+  - movimientos, foto y marca;
+  - el pasador en cero;
+  - volver a generar sin perder la primera marca;
+  - las diferencias, que no escriben nada, y seguir con la nueva;
+  - los errores (vacío, repetido, negativo, quien no es pasador y la carga abierta, que no deja el cobro cargado).
+
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+**Qué cambia.** Un usuario se habilita o deshabilita desde la lista de Usuarios; lo hace quien lo puede editar (cada rol sobre los suyos). Al deshabilitarlo se cierran sus sesiones. Si es un pasador, sus jugadores también quedan frenados mientras él esté deshabilitado: no entran, no cargan y nadie les carga (ni el staff, ni repitiendo, ni de cortesía). No se los marca uno por uno: vuelven solos al habilitar al pasador.
+
+- **Migración `20261115194736_polla_cashier_disabled_blocks_players`**:
+  - `polla_create_bet` (misma firma): si el destinatario es un jugador con el pasador deshabilitado → `POLLA_CASHIER_DISABLED`. Repetir y cortesía cargan con esta función: el ticket queda en "No se repitieron".
+  - `polla_revoke_player_sessions(p_cashier_id)` (nueva): cierra las sesiones activas de los jugadores del pasador y devuelve cuántas.
+- **`PUT /user/:id/disabled`** (nuevo, `polla-user.route.ts`): `{ disabled }`. Mismo alcance que `PUT /user/:id` (`assertReachable`). Al deshabilitar cierra sus sesiones y, si es pasador, las de sus jugadores. `PUT /user/:id` hace lo mismo cuando la casilla de "Editar usuario" pasa a deshabilitado.
+- **Sesión** (`polla-auth.repository.ts`): `getSessionUserById` trae al pasador del jugador; con el pasador deshabilitado devuelve `null`, así que la sesión y el refresh dan 401. Antes ya frenaba al propio deshabilitado, pero sus sesiones quedaban activas y revivían al habilitarlo.
+- **Login** (`polla-auth.controller.ts`): el jugador con el pasador deshabilitado recibe 403 "Tu pasador está deshabilitado".
+- **`GET /user/search`**: con `scope=writable` (cargar a nombre de otro) excluye deshabilitados y jugadores de pasadores deshabilitados. Sin scope (filtros) los incluye y cada opción trae `disabled` y `cashier_disabled`.
+- **`GET /user/by-number/:number`**: el jugador de un pasador deshabilitado da 403.
+- **`GET /user`**: cada usuario trae `cashier_disabled`.
+- **`polla-errors.ts`**: mensaje de `POLLA_CASHIER_DISABLED` (403).
+- **Tests pgTAP:** `200_polla_cashier_disabled` (el jugador, el staff y repetir quedan frenados; el jugador no se marca; vuelve al habilitar; `polla_revoke_player_sessions` cierra solo las de sus jugadores).
+
 ### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
 
 **Qué cambia.** Repetir de cortesía (sin cargo) tickets de una edición finalizada lo hacen dueño, capitalista, superadmin y el Súper, en toda la organización. El admin de grupo ya no. El resto sigue igual: el ticket tiene que ser de una edición finalizada (con ganadores, o desierta al procesar el último día) y se carga en una edición con la carga abierta.

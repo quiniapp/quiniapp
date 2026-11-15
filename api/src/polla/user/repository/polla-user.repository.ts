@@ -1,5 +1,5 @@
 import { supabase } from '@database/db.connection';
-import { ConflictError, NotFoundError } from '@helper/errors';
+import { ConflictError, ForbiddenError, NotFoundError } from '@helper/errors';
 import {
   IPollaUserByNumber,
   IPollaUserEntityBack,
@@ -38,7 +38,12 @@ export class PollaUserRepository {
   async getAll(filters: PollaUserFilters, pagination: PollaPagination) {
     let query = supabase
       .from('polla_users')
-      .select(PUBLIC_COLUMNS, pagination.withCount ? { count: 'exact' } : {})
+      // Embebido por columna: el pasador del jugador, para avisar si está
+      // deshabilitado (el jugador queda frenado sin estarlo él).
+      .select(
+        `${PUBLIC_COLUMNS}, parent:parent_polla_user_id(disabled)`,
+        pagination.withCount ? { count: 'exact' } : {}
+      )
       .is('deleted_at', null)
       .in('user_type', filters.userTypes);
 
@@ -77,7 +82,24 @@ export class PollaUserRepository {
       .range(pagination.from, pagination.to);
 
     throwIfPollaError(error);
-    return buildPaginated(data ?? [], pagination, pagination.withCount ? (count ?? 0) : null);
+    const users = (
+      (data ?? []) as unknown as (IPollaUserEntityBack & { parent: { disabled: boolean } | null })[]
+    ).map(({ parent, ...user }) => ({ ...user, cashier_disabled: Boolean(parent?.disabled) }));
+    return buildPaginated(users, pagination, pagination.withCount ? (count ?? 0) : null);
+  }
+
+  /** Pasadores deshabilitados de la organización: sus jugadores quedan frenados. */
+  private async disabledCashierIds(organizationId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('polla_users')
+      .select('polla_user_id')
+      .eq('polla_organization_id', organizationId)
+      .eq('user_type', POLLA_USER_TYPE.CASHIER)
+      .eq('disabled', true)
+      .is('deleted_at', null);
+
+    throwIfPollaError(error);
+    return (data ?? []).map((row) => row.polla_user_id as string);
   }
 
   async getById(pollaUserId: string) {
@@ -250,9 +272,15 @@ export class PollaUserRepository {
       parent_polla_user_id: string | null;
     };
 
-    const cashierName = user.parent_polla_user_id
-      ? (await this.getById(user.parent_polla_user_id)).name
-      : user.name;
+    let cashierName = user.name;
+    if (user.parent_polla_user_id) {
+      const cashier = await this.getById(user.parent_polla_user_id);
+      // Se busca por número para cargarle: el jugador de un pasador
+      // deshabilitado queda frenado.
+      if (cashier.disabled)
+        throw new ForbiddenError('El pasador de ese jugador está deshabilitado');
+      cashierName = cashier.name;
+    }
 
     return {
       polla_user_id: user.polla_user_id,
@@ -280,6 +308,11 @@ export class PollaUserRepository {
       groupId?: string | null;
       /** Solo los jugadores de ese pasador. */
       parentId?: string | null;
+      /**
+       * Para cargar a nombre de otro: sin deshabilitados ni jugadores de un
+       * pasador deshabilitado. Para filtrar aparecen, marcados.
+       */
+      writable: boolean;
     },
     pagination: PollaPagination
   ) {
@@ -290,13 +323,23 @@ export class PollaUserRepository {
       // pasador.
       // El grupo del jugador es el de su pasador (lo sincroniza la base).
       .select(
-        'polla_user_id, name, last_name, username, number, user_type, is_street, parent:parent_polla_user_id(name, number), grp:polla_group_id(number)',
+        'polla_user_id, name, last_name, username, number, user_type, is_street, disabled, parent:parent_polla_user_id(name, number, disabled), grp:polla_group_id(number)',
         pagination.withCount ? { count: 'exact' } : {}
       )
       .eq('polla_organization_id', params.organizationId)
       .in('user_type', params.userTypes)
-      .eq('disabled', false)
       .is('deleted_at', null);
+
+    if (params.writable) {
+      query = query.eq('disabled', false);
+      const disabledCashiers = await this.disabledCashierIds(params.organizationId);
+      if (disabledCashiers.length > 0) {
+        // `not.in` solo no alcanza: con el padre en NULL (pasadores) da NULL.
+        query = query.or(
+          `parent_polla_user_id.is.null,parent_polla_user_id.not.in.(${disabledCashiers.join(',')})`
+        );
+      }
+    }
 
     if (params.groupId) query = query.eq('polla_group_id', params.groupId);
     if (params.parentId) query = query.eq('parent_polla_user_id', params.parentId);
@@ -330,7 +373,8 @@ export class PollaUserRepository {
       number: number;
       user_type: POLLA_USER_TYPE;
       is_street: boolean;
-      parent: { name: string; number: number | null } | null;
+      disabled: boolean;
+      parent: { name: string; number: number | null; disabled: boolean } | null;
       grp: { number: number } | null;
     }[];
 
@@ -338,6 +382,7 @@ export class PollaUserRepository {
       ...user,
       cashier_name: parent ? parent.name : user.name,
       cashier_number: parent ? parent.number : user.number,
+      cashier_disabled: Boolean(parent?.disabled),
       group_number: grp?.number ?? null,
     }));
 

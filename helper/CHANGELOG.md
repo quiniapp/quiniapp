@@ -4,6 +4,19 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 ("Generar liquidación" por edición)
+
+- **`generateEditionLiquidationSchema`** e **`IGenerateEditionLiquidationPayload`** (`helper/polla/schemas/game.schema.ts`):
+  - `entries` lleva al menos un pasador y no admite repetidos;
+  - `collection` y `payment` son opcionales y ≥ 0; `claim` es opcional y con signo;
+  - `ticket_source` es opcional.
+
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+- **`setPollaUserDisabledSchema`** (`helper/polla/schemas/user.schema.ts`): `{ disabled }` para `PUT /user/:id/disabled`.
+- **`IPollaUserOption`** (`helper/polla/types/user.type.ts`): `disabled` y `cashier_disabled` (jugador con el pasador deshabilitado). Solo aparecen en los buscadores que filtran.
+- **`IPollaUserEntityFront`**: `cashier_disabled` opcional (lo trae la lista de usuarios).
+
 ### Added - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
 
 - **`POLLA_COURTESY_ROLES` e `isPollaCourtesyRole`** (`helper/polla/types/user.type.ts`): quién repite de cortesía (superadmin+ y el Súper). Se corrigen los comentarios de `POLLA_SUPER_ROLES`, `POLLA_ADMIN_ROLES` y `POLLA_LOADER_ROLES`, y el de `repeatPollaBetsSchema`.

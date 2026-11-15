@@ -14,6 +14,7 @@ import {
 import {
   newPollaUserSchema,
   resetPollaPasswordSchema,
+  setPollaUserDisabledSchema,
   updatePollaUserSchema,
 } from '@helper/polla/schemas/user.schema';
 import { hashPassword } from 'api/helper/password';
@@ -87,6 +88,7 @@ export class PollaUserRouter {
     this.router.get('/:id', staffAndAssistant, this.getByIdHandler);
     this.router.post('/', staffOnly, this.createHandler);
     this.router.put('/:id', staffOnly, this.updateHandler);
+    this.router.put('/:id/disabled', staffOnly, this.setDisabledHandler);
     this.router.post('/:id/reset-password', staffOnly, this.resetPasswordHandler);
     this.router.delete('/:id', staffOnly, this.deleteHandler);
   }
@@ -238,6 +240,7 @@ export class PollaUserRouter {
         q: typeof req.query.q === 'string' ? req.query.q : '',
         groupId: (writable ? writableGroupId(user) : null) ?? queryString(req.query.polla_group_id),
         parentId: cashierLoading ? user.polla_user_id : queryString(req.query.parent_polla_user_id),
+        writable,
       },
       pagination
     );
@@ -461,9 +464,38 @@ export class PollaUserRouter {
 
     const updated = await this.repository.update(req.params.id, changes);
     if (toStreet) await this.authRepository.revokeAllSessions(target.polla_user_id);
+    if (rest.disabled === true && !target.disabled) await this.closeSessionsOnDisable(target);
 
     res.status(200).json({ data: { user: updated } });
   });
+
+  /**
+   * Habilitar o deshabilitar desde la lista: lo hace quien lo puede editar
+   * (cada rol sobre los suyos). El deshabilitado no entra ni juega; si es
+   * pasador, sus jugadores tampoco, hasta que se lo habilite.
+   */
+  private setDisabledHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const target = await this.assertReachable(user, req.params.id);
+    const { disabled } = setPollaUserDisabledSchema.parse(req.body);
+
+    const updated = await this.repository.update(target.polla_user_id, { disabled });
+    if (disabled && !target.disabled) await this.closeSessionsOnDisable(target);
+
+    res.status(200).json({ data: { user: updated } });
+  });
+
+  /**
+   * Al deshabilitar se cierran sus sesiones (y las de sus jugadores si es
+   * pasador): la app abierta lo saca en la próxima consulta y, al volver a
+   * habilitarlo, una sesión vieja no revive.
+   */
+  private closeSessionsOnDisable = async (target: { polla_user_id: string; user_type: string }) => {
+    await this.authRepository.revokeAllSessions(target.polla_user_id);
+    if (target.user_type === POLLA_USER_TYPE.CASHIER) {
+      await this.authRepository.revokePlayerSessions(target.polla_user_id);
+    }
+  };
 
   /**
    * La contraseña la pone siempre un superior y queda definitiva: nadie se la

@@ -8,7 +8,6 @@ import {
 import { IPollaUserOption, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditionAccounts } from '@/hooks/fetchs/usePollaData';
-import { useSetEditionLiquidated } from '@/hooks/mutations/usePollaMutations';
 import { EmptyState } from '@/components/PageHeader';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { Badge } from '@/components/ui/badge';
@@ -34,16 +33,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { groupLabel } from '@/lib/pollaGroups';
 import { fmtMoney } from '../format';
 import { EditionReportDialog, EditionReportKind } from './EditionReportDialog';
-import { LiquidateEditionDialog } from './LiquidateEditionDialog';
+import { GenerateEditionLiquidationDialog } from './GenerateEditionLiquidationDialog';
 import { MovementsDialog } from './MovementsDialog';
 import { useCashierCode } from './useCashierCode';
 
 const REPORT_BUTTONS: [EditionReportKind, string][] = [
   ['daily', 'Exportar diario'],
   ['liquidation', 'Exportar liquidación'],
+  ['subtotals', 'Exportar subtotales'],
   ['collections', 'Exportar cobros y pagos'],
   ['summary', 'Resumen cuenta corriente'],
-  ['subtotals', 'Exportar subtotales'],
 ];
 
 const MONEY_COLUMNS = [
@@ -67,8 +66,10 @@ const sumColumns = (rows: IPollaEditionAccountRow[]) =>
 
 /**
  * Cuenta de cada pasador en una edición, con filtros de grupo y pasador. Tocar
- * una fila abre sus movimientos; "Liquidar" baja las hojas; "Marcar como
- * liquidada" la pasa a la lista de liquidaciones realizadas.
+ * una fila abre sus movimientos. "Generar liquidación" liquida a los pasadores
+ * del filtro (con lo que se suma hoy en reclamos, cobros y pagos) y pasa la
+ * edición a la lista de liquidaciones realizadas; después se sigue editando a
+ * medida que los pasadores pagan.
  */
 export const EditionAccountDetail = ({
   item,
@@ -86,7 +87,7 @@ export const EditionAccountDetail = ({
   const [groupId, setGroupId] = useState('');
   const [cashier, setCashier] = useState<IPollaUserOption | null>(null);
   const [moving, setMoving] = useState<IPollaEditionAccountRow | null>(null);
-  const [liquidating, setLiquidating] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [report, setReport] = useState<EditionReportKind | null>(null);
 
   // "Sin grupo" no es un filtro de la API: se acota acá abajo.
@@ -101,9 +102,6 @@ export const EditionAccountDetail = ({
   );
   const totals = useMemo(() => sumColumns(rows), [rows]);
 
-  const { mutate: setLiquidated, isPending: marking } = useSetEditionLiquidated();
-  const isLiquidated = item.liquidated_at !== null;
-
   const openMovements = (row: IPollaEditionAccountRow) => setMoving(row);
 
   return (
@@ -114,17 +112,6 @@ export const EditionAccountDetail = ({
           Volver
         </Button>
         <h2 className="min-w-0 flex-1 text-lg font-semibold">{title}</h2>
-        <Button type="button" onClick={() => setLiquidating(true)}>
-          Liquidar
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={marking}
-          onClick={() => setLiquidated({ editionId, liquidated: !isLiquidated })}
-        >
-          {isLiquidated ? 'Desmarcar' : 'Marcar como liquidada'}
-        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -170,6 +157,15 @@ export const EditionAccountDetail = ({
           clearLabel="Todos"
           className="sm:w-[260px]"
         />
+
+        <Button
+          type="button"
+          disabled={rows.length === 0}
+          title={rows.length === 0 ? 'No hay pasadores con este filtro' : undefined}
+          onClick={() => setGenerating(true)}
+        >
+          Generar liquidación
+        </Button>
       </div>
 
       {rows.length === 0 ? (
@@ -273,8 +269,14 @@ export const EditionAccountDetail = ({
           onClose={() => setReport(null)}
         />
       )}
-      {liquidating && (
-        <LiquidateEditionDialog item={item} title={title} onClose={() => setLiquidating(false)} />
+      {generating && (
+        <GenerateEditionLiquidationDialog
+          item={item}
+          title={title}
+          rows={rows}
+          cashierCode={cashierCode}
+          onClose={() => setGenerating(false)}
+        />
       )}
     </div>
   );

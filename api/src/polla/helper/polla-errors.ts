@@ -38,6 +38,8 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_USER_OTHER_ORGANIZATION: () =>
     new ForbiddenError('El usuario pertenece a otra organización'),
   POLLA_PARENT_NOT_FOUND: () => new NotFoundError('Pasador del jugador'),
+  POLLA_CASHIER_DISABLED: () =>
+    new ForbiddenError('El pasador de ese jugador está deshabilitado: no se le puede cargar'),
   POLLA_PARENT_NOT_CASHIER: () => new BadRequestError('El padre de un jugador debe ser un pasador'),
   POLLA_PARENT_OTHER_ORGANIZATION: () =>
     new BadRequestError('El pasador pertenece a otra organización'),
@@ -107,6 +109,9 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new BadRequestError('El usuario no es un pasador de la organización'),
   POLLA_EDITION_LIQUIDATION_SOURCE_INVALID: () =>
     new BadRequestError('Elegí continuar con el valor nuevo o con el viejo'),
+  POLLA_EDITION_LIQUIDATION_DUPLICATE: () => new BadRequestError('Hay un pasador repetido'),
+  POLLA_EDITION_LIQUIDATION_AMOUNT_INVALID: () =>
+    new BadRequestError('El cobro y el pago no pueden ser negativos'),
   POLLA_GROUP_NOT_FOUND: () => new NotFoundError('Grupo'),
   POLLA_GROUP_HAS_ACTIVE_BETS: () =>
     new ForbiddenError('El grupo tiene jugadas en ediciones en juego: no se puede borrar'),
