@@ -67,6 +67,8 @@ export interface PollaBetFilters {
    * día de carga (`deducted_on`): los tickets del período cuadran con el pase.
    */
   withDeducted?: boolean;
+  /** Solo las borradas que se descuentan del pase (`deleted_at` y `deducted_on` no nulos). */
+  deductedOnly?: boolean;
   onlyWinners?: boolean;
   /** `true`: solo ganadoras; `false`: solo no ganadoras. */
   winner?: boolean | null;
@@ -203,6 +205,8 @@ export class PollaBetRepository {
       query = query
         .gte('deducted_on', filters.deductedRange.from)
         .lte('deducted_on', filters.deductedRange.to);
+    } else if (filters.deductedOnly) {
+      query = query.not('deleted_at', 'is', null).not('deducted_on', 'is', null);
     } else if (filters.withDeducted) {
       query = query.or('deleted_at.is.null,deducted_on.not.is.null');
     } else {

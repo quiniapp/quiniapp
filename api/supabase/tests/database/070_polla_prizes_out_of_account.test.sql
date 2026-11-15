@@ -1,18 +1,19 @@
--- R18: los premios no van en la cuenta corriente desde el período abierto.
--- Lo ya liquidado conserva lo que tiene guardado aunque se recalcule: los
--- liquidados antes de R18, su premio; los de después, ninguno.
+-- R18 después de la cuenta por edición: la cuenta por días quedó solo para
+-- consultar. Lo guardado no cambia (tampoco el premio de un día liquidado
+-- antes de R18) y las funciones que la escribían responden
+-- POLLA_DAILY_ACCOUNT_READ_ONLY. Que los premios no entran en la cuenta por
+-- edición lo prueba 175.
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
-SELECT plan(13);
+SELECT plan(10);
 
 INSERT INTO polla_organizations (polla_organization_id, name)
 VALUES ('a1000000-0000-0000-0000-000000000018', 'pgTAP R18');
 
 INSERT INTO polla_users (polla_user_id, user_type, name, number, polla_organization_id, fee, fee_plus) VALUES
   ('a1000000-0000-0000-0000-0000000018c1', 'CASHIER', 'Abierto', 1, 'a1000000-0000-0000-0000-000000000018', 10, 0),
-  ('a1000000-0000-0000-0000-0000000018c2', 'CASHIER', 'Liquidado', 2, 'a1000000-0000-0000-0000-000000000018', 10, 0),
-  ('a1000000-0000-0000-0000-0000000018c3', 'CASHIER', 'Después de R18', 3, 'a1000000-0000-0000-0000-000000000018', 10, 0);
+  ('a1000000-0000-0000-0000-0000000018c2', 'CASHIER', 'Liquidado', 2, 'a1000000-0000-0000-0000-000000000018', 10, 0);
 
 INSERT INTO polla_lotteries (polla_lottery_id, polla_organization_id, name)
 VALUES ('a1000000-0000-0000-0000-0000000018a1', 'a1000000-0000-0000-0000-000000000018', 'Nacional R18');
@@ -45,88 +46,71 @@ CREATE FUNCTION pg_temp.row_of(p_cashier UUID, p_date DATE) RETURNS polla_curren
   SELECT * FROM polla_current_accounts WHERE polla_user_id = p_cashier AND date = p_date;
 $$;
 
--- ------------------------------------------- período abierto: sin premios
+-- Cantidad y md5 de las dos tablas por días.
+CREATE FUNCTION pg_temp.daily_snapshot() RETURNS TEXT LANGUAGE sql AS $$
+  SELECT
+    (SELECT count(*) || ':' || COALESCE(md5(string_agg(ca::TEXT, '|' ORDER BY ca.polla_current_account_id)), '')
+     FROM polla_current_accounts ca)
+    || ' / ' ||
+    (SELECT count(*) || ':' || COALESCE(md5(string_agg(ga::TEXT, '|' ORDER BY ga.polla_group_account_id)), '')
+     FROM polla_group_accounts ga);
+$$;
 
--- Dos tickets el 10 y uno de ellos gana $5.000 el 12.
+-- Lo guardado por días antes del corte. El pasador 1 cargó dos tickets el 10 y
+-- uno ganó $5.000 el 12 (sin liquidar, el premio afuera). El pasador 2 ganó
+-- $5.000 el 5 y se liquidó el 6, antes de R18: la fila del 5 lleva el premio.
 SELECT pg_temp.bet('R18-1', 'a1000000-0000-0000-0000-0000000018c1', '2030-01-10', 0, NULL);
 SELECT pg_temp.bet('R18-2', 'a1000000-0000-0000-0000-0000000018c1', '2030-01-10', 5000, '2030-01-12');
-
-SELECT polla_calculate_current_account('10-01-2030', FALSE, FALSE, 'a1000000-0000-0000-0000-000000000018');
-SELECT polla_calculate_current_account('12-01-2030', FALSE, FALSE, 'a1000000-0000-0000-0000-000000000018');
-
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-10')).subtotal,
-          180.00::NUMERIC(12,2), 'el pase menos la comisión sigue igual');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).successes,
-          0.00::NUMERIC(12,2), 'el premio del día no figura en la cuenta');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).subtotal,
-          0.00::NUMERIC(12,2), 'ni resta en el subtotal');
-
--- La cascada encadena el saldo: el total del 12 es el del 10, sin el premio.
-SELECT polla_cascade_current_account_from_date('10-01-2030', 'a1000000-0000-0000-0000-000000000018');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).total,
-          180.00::NUMERIC(12,2), 'ni en el saldo');
-
--- Editar el día (cobros, reclamos) tampoco lo vuelve a sumar.
-SELECT polla_update_current_account_recompute(
-  (pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).polla_current_account_id,
-  '{"collections": 50}', FALSE, 'a1000000-0000-0000-0000-000000000018'
-);
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).successes,
-          0.00::NUMERIC(12,2), 'al editar el día el premio sigue afuera');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).total,
-          130.00::NUMERIC(12,2), 'y el cobro se descuenta del saldo como siempre');
-
--- ---------------------------------------- lo liquidado conserva su premio
-
--- El pasador 2 ganó $5.000 el 5 y se liquidó el 6, antes de R18: la fila del
--- 5 quedó guardada con el premio.
 SELECT pg_temp.bet('R18-3', 'a1000000-0000-0000-0000-0000000018c2', '2030-01-04', 5000, '2030-01-05');
 INSERT INTO polla_current_accounts (
   polla_user_id, user_name, user_number, polla_organization_id, date, is_liquidated,
-  successes, subtotal, revenue, total
+  bets_pass, pass, cashier_commission, successes, subtotal, revenue, total
 ) VALUES
+  ('a1000000-0000-0000-0000-0000000018c1', 'Abierto', 1, 'a1000000-0000-0000-0000-000000000018',
+   '2030-01-10', FALSE, 200, 200, 20, 0, 180, 180, 180),
+  ('a1000000-0000-0000-0000-0000000018c1', 'Abierto', 1, 'a1000000-0000-0000-0000-000000000018',
+   '2030-01-12', FALSE, 0, 0, 0, 0, 0, 0, 180),
   ('a1000000-0000-0000-0000-0000000018c2', 'Liquidado', 2, 'a1000000-0000-0000-0000-000000000018',
-   '2030-01-05', TRUE, 5000, -5000, -5000, -5000),
+   '2030-01-05', TRUE, 0, 0, 0, 5000, -5000, -5000, -5000),
   ('a1000000-0000-0000-0000-0000000018c2', 'Liquidado', 2, 'a1000000-0000-0000-0000-000000000018',
-   '2030-01-06', TRUE, 0, 0, 0, -5000);
+   '2030-01-06', TRUE, 0, 0, 0, 0, 0, 0, -5000);
 
--- Recalcular el 5 (por ejemplo, al corregir un resultado viejo).
-SELECT polla_calculate_current_account('05-01-2030', FALSE, FALSE, 'a1000000-0000-0000-0000-000000000018');
+CREATE TEMP TABLE daily_before AS SELECT pg_temp.daily_snapshot() AS h;
+
+-- ------------------------------------------- las escrituras por días
+
+SELECT throws_ok(
+  $$SELECT polla_calculate_current_account('12-01-2030', FALSE, FALSE, 'a1000000-0000-0000-0000-000000000018')$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY', 'no se calcula un día');
+SELECT throws_ok(
+  $$SELECT polla_calculate_current_account('05-01-2030', FALSE, TRUE, 'a1000000-0000-0000-0000-000000000018')$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY', 'ni se liquida por días');
+SELECT throws_ok(
+  $$SELECT polla_cascade_current_account_from_date('10-01-2030', 'a1000000-0000-0000-0000-000000000018')$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY', 'ni se encadenan los saldos');
+SELECT throws_ok(
+  $$SELECT polla_update_current_account_recompute(
+      (pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).polla_current_account_id,
+      '{"collections": 50}', FALSE, 'a1000000-0000-0000-0000-000000000018')$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY', 'ni se edita una fila');
+SELECT throws_ok(
+  $$SELECT polla_recalculate_open_period('a1000000-0000-0000-0000-000000000018', '2030-01-12')$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY', 'ni se recalcula el período abierto');
+SELECT throws_ok(
+  $$SELECT polla_liquidate_group('a1000000-0000-0000-0000-000000000018', gen_random_uuid(), '2030-01-12', 10, 0, 0, NULL)$$,
+  'P0001', 'POLLA_DAILY_ACCOUNT_READ_ONLY', 'ni se liquida un grupo por fecha');
+SELECT lives_ok(
+  $$SELECT polla_refresh_current_account_row('a1000000-0000-0000-0000-0000000018c1', '2030-01-12',
+      'a1000000-0000-0000-0000-000000000018')$$,
+  'actualizar la fila de un día (al cargar o borrar tickets) no falla y no hace nada');
+
+-- ------------------------------------------------- lo guardado no cambia
+
+SELECT is(pg_temp.daily_snapshot(), (SELECT h FROM daily_before), 'la cuenta por días quedó igual');
 SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c2', '2030-01-05')).successes,
-          5000.00::NUMERIC(12,2), 'un día ya liquidado conserva su premio');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c2', '2030-01-05')).subtotal,
-          -5000.00::NUMERIC(12,2), 'y su subtotal de entonces');
-
-SELECT polla_update_current_account_recompute(
-  (pg_temp.row_of('a1000000-0000-0000-0000-0000000018c2', '2030-01-05')).polla_current_account_id,
-  '{}', FALSE, 'a1000000-0000-0000-0000-000000000018'
-);
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c2', '2030-01-05')).successes,
-          5000.00::NUMERIC(12,2), 'también al editarlo');
-
--- ----------------- liquidado después de R18: el premio no vuelve al recalcular
-
--- El pasador 3 cargó el 20, un ticket ganó $5.000 el 21 y se liquidó el 21
--- (sin premio, como corresponde desde R18).
-SELECT pg_temp.bet('R18-4', 'a1000000-0000-0000-0000-0000000018c3', '2030-01-20', 0, NULL);
-SELECT pg_temp.bet('R18-5', 'a1000000-0000-0000-0000-0000000018c3', '2030-01-20', 5000, '2030-01-21');
-SELECT polla_calculate_current_account('20-01-2030', FALSE, FALSE, 'a1000000-0000-0000-0000-000000000018');
-SELECT polla_calculate_current_account('21-01-2030', FALSE, TRUE, 'a1000000-0000-0000-0000-000000000018');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c3', '2030-01-21')).successes,
-          0.00::NUMERIC(12,2), 'se liquida sin el premio');
-
--- Se corrige un resultado del 21 y se vuelve a calcular ese día.
-SELECT polla_calculate_current_account('21-01-2030', FALSE, FALSE, 'a1000000-0000-0000-0000-000000000018');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c3', '2030-01-21')).successes,
-          0.00::NUMERIC(12,2), 'al recalcular el día liquidado el premio no vuelve');
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c3', '2030-01-21')).subtotal,
-          0.00::NUMERIC(12,2), 'ni le cambia el subtotal');
-SELECT polla_update_current_account_recompute(
-  (pg_temp.row_of('a1000000-0000-0000-0000-0000000018c3', '2030-01-21')).polla_current_account_id,
-  '{}', FALSE, 'a1000000-0000-0000-0000-000000000018'
-);
-SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c3', '2030-01-21')).successes,
-          0.00::NUMERIC(12,2), 'tampoco al editarlo');
+          5000.00::NUMERIC(12,2), 'un día liquidado antes de R18 conserva su premio');
+SELECT is((pg_temp.row_of('a1000000-0000-0000-0000-0000000018c1', '2030-01-12')).total,
+          180.00::NUMERIC(12,2), 'y un día sin liquidar no suma el premio');
 
 SELECT * FROM finish();
 ROLLBACK;

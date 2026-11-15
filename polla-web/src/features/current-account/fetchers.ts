@@ -1,6 +1,8 @@
 import {
   IPollaCurrentAccountDailyTotals,
   IPollaCurrentAccountPeriodRow,
+  IPollaEditionAccountRow,
+  IPollaEditionAccountTotals,
   IPollaOrgExpenseEntityFront,
 } from '@helper/polla/types/game.type';
 import { IPollaOrganizationEntityFront } from '@helper/polla/types/catalog.type';
@@ -25,6 +27,26 @@ export const fetchAccountsOfDay = async (params: QueryParams) =>
 export const fetchDailyTotals = (params: QueryParams) =>
   apiClient.get<IPollaCurrentAccountDailyTotals[]>(BACKEND_ROUTES.currentAccount.totals, {
     params: cleanParams(params),
+  });
+
+/** Cuenta en vivo de cada pasador de una edición. */
+export const fetchEditionAccounts = (editionId: string, params: QueryParams = {}) =>
+  apiClient.get<IPollaEditionAccountRow[]>(BACKEND_ROUTES.editionAccount.accounts(editionId), {
+    params: cleanParams(params),
+  });
+
+/** Una fila por edición (`date` = inicio de la edición); la API admite hasta 60. */
+export const fetchEditionTotals = (
+  editionIds: string[],
+  groupId: string | null,
+  organizationId: string | null
+) =>
+  apiClient.get<IPollaEditionAccountTotals[]>(BACKEND_ROUTES.editionAccount.totals, {
+    params: cleanParams({
+      polla_edition_ids: editionIds.join(','),
+      polla_group_id: groupId,
+      polla_organization_id: organizationId,
+    }),
   });
 
 export const fetchExpenses = (params: QueryParams) =>

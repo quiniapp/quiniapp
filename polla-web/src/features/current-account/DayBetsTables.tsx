@@ -26,26 +26,21 @@ const player = (bet: IPollaBetListItem) => bet.client_name ?? bet.identifier ?? 
 
 const money = (bet: IPollaBetListItem) => (bet.amount !== null ? `$${fmtMoney(bet.amount)}` : '-');
 
-/**
- * Lo que se liquida de un pasador en el período: los tickets que cargó (el
- * pase de jugadas, con los que se borraron después) y las borradas que se
- * descuentan en el período. Tickets − borradas = pase. Los premios no van en
- * la cuenta corriente (R18): están en Premios.
- */
-export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTablesProps) => {
-  const scope = cashierId ? { cashier_polla_user_id: cashierId } : { mine: true };
-  const span = from === to ? 'del día' : 'del período';
-  const rangeFrom = betsRangeFrom(from, to);
-
-  const { data: tickets, isFetching: loadingTickets } = useBetsOfDay(
-    { ...scope, load_from: rangeFrom, load_to: to, with_deducted: true },
-    enabled
-  );
-  const { data: deleted, isFetching: loadingDeleted } = useBetsOfDay(
-    { ...scope, deducted_from: rangeFrom, deducted_to: to },
-    enabled
-  );
-
+/** Las dos tablas, tickets y borradas, con lo que ya se cargó. */
+export const BetsTablesView = ({
+  span,
+  tickets,
+  deleted,
+  loadingTickets,
+  loadingDeleted,
+}: {
+  /** "del día", "del período" o "de la edición". */
+  span: string;
+  tickets?: IPollaBetListItem[];
+  deleted?: IPollaBetListItem[];
+  loadingTickets: boolean;
+  loadingDeleted: boolean;
+}) => {
   const empty = (loading: boolean, message: string, colSpan: number) => (
     <TableRow>
       <TableCell colSpan={colSpan} className="text-center text-muted-foreground">
@@ -68,8 +63,8 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets?.data.length
-                ? tickets.data.map((bet) => (
+              {tickets?.length
+                ? tickets.map((bet) => (
                     <TableRow key={bet.polla_bet_id}>
                       <TableCell className="font-mono text-xs">
                         {bet.ticket_number}
@@ -103,8 +98,8 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
               </TableRow>
             </TableHeader>
             <TableBody>
-              {deleted?.data.length
-                ? deleted.data.map((bet) => (
+              {deleted?.length
+                ? deleted.map((bet) => (
                     <TableRow key={bet.polla_bet_id}>
                       <TableCell className="font-mono text-xs">{bet.ticket_number}</TableCell>
                       <TableCell>{player(bet)}</TableCell>
@@ -123,5 +118,35 @@ export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTa
         </div>
       </section>
     </div>
+  );
+};
+
+/**
+ * Lo que se liquida de un pasador en el período: los tickets que cargó (el
+ * pase de jugadas, con los que se borraron después) y las borradas que se
+ * descuentan en el período. Tickets − borradas = pase. Los premios no van en
+ * la cuenta corriente (R18): están en Premios.
+ */
+export const DayBetsTables = ({ from, to, cashierId, enabled = true }: DayBetsTablesProps) => {
+  const scope = cashierId ? { cashier_polla_user_id: cashierId } : { mine: true };
+  const rangeFrom = betsRangeFrom(from, to);
+
+  const { data: tickets, isFetching: loadingTickets } = useBetsOfDay(
+    { ...scope, load_from: rangeFrom, load_to: to, with_deducted: true },
+    enabled
+  );
+  const { data: deleted, isFetching: loadingDeleted } = useBetsOfDay(
+    { ...scope, deducted_from: rangeFrom, deducted_to: to },
+    enabled
+  );
+
+  return (
+    <BetsTablesView
+      span={from === to ? 'del día' : 'del período'}
+      tickets={tickets?.data}
+      deleted={deleted?.data}
+      loadingTickets={loadingTickets}
+      loadingDeleted={loadingDeleted}
+    />
   );
 };

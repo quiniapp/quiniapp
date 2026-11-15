@@ -39,9 +39,5 @@ export const POLLA_MAX_PAGE_SIZE = 200;
 /** Páginas del PDF de tickets: el `max_rows` de PostgREST. */
 export const POLLA_EXPORT_PAGE_SIZE = 1000;
 
-/**
- * Días hacia atrás que recalcula "Actualizar" en la cuenta corriente (el
- * período abierto más viejo). La RPC `polla_recalculate_open_period` usa el
- * mismo número.
- */
+/** Máximo de días de un rango de fechas en los listados de la cuenta por días (solo consulta). */
 export const POLLA_ACCOUNT_RECALC_MAX_DAYS = 62;

@@ -419,7 +419,8 @@ export class PollaBetRouter {
     // grupo.
     const deductedRange = queryDateRange(req.query.deducted_from, req.query.deducted_to);
     const withDeducted = req.query.with_deducted === 'true';
-    const deletedOnes = Boolean(deductedRange) || withDeducted;
+    const deductedOnly = req.query.deducted_only === 'true';
+    const deletedOnes = Boolean(deductedRange) || withDeducted || deductedOnly;
 
     if (deletedOnes && user.user_type === POLLA_USER_TYPE.PLAYER) {
       throw new ForbiddenError('Los jugadores no ven jugadas borradas');
@@ -454,6 +455,7 @@ export class PollaBetRouter {
       hitRange,
       deductedRange,
       withDeducted,
+      deductedOnly,
       onlyWinners: req.query.winners === 'true',
       winner: queryWinner(req.query.winner),
       hits: queryHits(req.query.hits),

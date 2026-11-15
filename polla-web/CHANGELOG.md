@@ -4,6 +4,31 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+**Qué cambia.** Cuenta corriente deja de liquidarse por rango de días y pasa a liquidarse por edición. Lo liquidado por días queda para consultar.
+
+- **Cuenta corriente (staff)**: pestañas "Pasadores" (por edición), "Grupos" (por edición) e "Historial por fechas" (lo de antes, solo lectura).
+  - **Pasadores** (`features/current-account/edition/`): listas "Pollas a liquidar" y "Liquidaciones realizadas"; detalle por edición con movimientos "Cobro", "Pago" y "Reclamo" (fechas `DD/MM/YYYY`); liquidar con aviso de diferencias ("Continuar con el nuevo", "Continuar con el viejo", "Cancelar"); "Marcar como liquidada" y "Desmarcar".
+    - **Eliminar un movimiento** (`MovementsDialog.tsx`) pide confirmación en un diálogo de la app con el tipo, el monto y la fecha.
+    - **Liquidar** (`CashierPickDialog`): con un filtro de grupo en la lista, se liquida solo a los tildados que se ven, y el botón dice cuántos son. Un tildado de otro grupo sigue tildado (vuelve al sacar el filtro), pero no entra, y la lista lo avisa. "Exportar liquidación", que no tiene filtro, no cambia.
+  - **Grupos** (`GroupEditionAccounts.tsx`): cuenta del grupo por edición. Si después de liquidar el grupo cambia lo que dejaron sus pasadores o los gastos de la edición, la tarjeta avisa "Cambió desde la liquidación del grupo" y tacha la Comisión y el Total guardados, y el historial marca esa liquidación. Reimprimir su ticket pide confirmación ("Imprimir igual"). Volver a liquidar lo limpia.
+  - **Historial por fechas** (`history/DailyHistoryView.tsx`): la vista por días, sin acciones de escritura.
+- **Vista del pasador**: "Por edición" e "Historial por fechas". Solo ve las ediciones donde ya lo liquidaron. Una cuenta en cero dice "Debe $0,00", nunca "Cobra $0,00" (también en el historial y en la hoja de liquidación; `owedWord` en `lib/editionAccount.ts`).
+- **Reportes** (`EditionReportDialog.tsx`): de una edición o de varias. Exportar liquidación con varias ediciones descarga sin pedir la lista, con solo las hojas de los pasadores con movimiento de cada edición; con una sola, se elige como siempre.
+  - **Varias ediciones, un renglón por edición:** cada renglón lleva el título de su edición, para distinguir dos que empiezan el mismo día (la regular y la especial). En el PDF (`downloadDailySummaryPDF`) la primera columna pasa a "Edición" con `DD/MM · título`; en los tickets de 58 mm (`printRangeTotalsTicket`, `printSubtotalsRangeTicket`) el título va en su propia línea arriba de los números, cortado a 32 caracteres. Sin título (Historial por fechas), salen como antes.
+- **`components/ConfirmDialog.tsx`**: confirmación dentro de la app, sobre el `Dialog` de shadcn (no hay `AlertDialog` instalado), en lugar de `window.confirm`.
+- **Tests** (`edition-account-helpers.test.ts`): renglones con título, cuenta del grupo vieja, filtro de grupo al liquidar y "Debe" en cero.
+- **Gastos por edición** (`EditionExpensesEditor.tsx`): se cargan en cada edición. Los viejos por fecha se ven en el historial.
+- **PDF y tickets**: se reusan mapeando la fila de edición a la forma de la fila de período (`lib/editionAccount.ts`).
+- **Hooks y rutas**: nuevos en `usePollaData.ts`, `usePollaMutations.ts` y `routes/backend-routes.ts` (`/edition_account`).
+
+- **Vista previa de la comisión del grupo (`lib/editionAccount.ts` `groupCommission`)**: el porcentaje se redondea a 2 decimales antes de calcular, igual que `ROUND(p_percentage, 2)` en SQL (12,345% de 220 da 27,17 y no 27,16).
+
+### Removed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- `LiquidationDialogs.tsx` y las acciones de liquidar, recalcular y masivo por días, que dejaron de existir en la API. La cuenta del grupo por días ya no se liquida desde la pantalla.
+
 ### Changed - 2026-11-12 (R26, ajuste: mínimo de aciertos editable)
 
 - **Ediciones → Editar**: "Edición especial" y "Mínimo de aciertos" se pueden cambiar con la edición empezada o con ganadores.

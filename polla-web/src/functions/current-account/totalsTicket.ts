@@ -12,7 +12,12 @@ import { openPDFPrintDialog } from './pdf-shared';
  */
 
 type Account = IPollaCurrentAccountEntityFront;
-type DailyTotals = IPollaCurrentAccountDailyTotals;
+/**
+ * Totales de un renglón por fecha. `label` es la cuenta por edición con varias
+ * ediciones: el título de la edición, para distinguir dos que empiezan el
+ * mismo día.
+ */
+type DailyTotals = IPollaCurrentAccountDailyTotals & { label?: string };
 
 const PAPER_W = 58;
 const CHARS = 32;
@@ -44,6 +49,13 @@ function centerLine(text: string): string {
 
 const DIVIDER = '- '.repeat(CHARS / 2);
 
+/** El título de una edición en su propia línea del ticket: sin saltos y cortado al ancho. */
+export const ticketTitleLine = (label: string) => label.replace(/\s+/g, ' ').trim().slice(0, CHARS);
+
+/** Las líneas de un renglón por fecha: con `label`, el título arriba de los números. */
+export const rangeRowLines = (entry: DailyTotals, numbers: string) =>
+  entry.label ? [ticketTitleLine(entry.label), numbers] : [numbers];
+
 const fileSlug = (s?: string) => (s ? `_${s.trim().replace(/\s+/g, '_')}` : '');
 
 /** Parte del capitalista sobre el saldo (la liquidación no descuenta el pozo). */
@@ -60,8 +72,12 @@ export async function printDailyTotalsTicket(params: {
   orgName: string;
   groupName?: string;
   expenses: { nombre: string; monto: number }[];
+  /** Cuenta por edición: reemplaza la fecha del encabezado. */
+  periodText?: string;
+  /** Cuenta por edición: va en el nombre del archivo en lugar de la fecha. */
+  fileTag?: string;
 }) {
-  const { data, date, orgName, groupName, expenses } = params;
+  const { data, date, orgName, groupName, expenses, periodText } = params;
   const { jsPDF } = await getPDFDeps();
 
   const mePago = data.filter((a) => Number(a.collections ?? 0) > 0);
@@ -72,7 +88,7 @@ export async function printDailyTotalsTicket(params: {
   const saldoDia = totalCollections - totalPaid - totalExpenses;
 
   const dateStr = dayjs(date).format('DD/MM/YYYY');
-  const dateFile = dayjs(date).format('DD-MM-YYYY');
+  const dateFile = params.fileTag ?? dayjs(date).format('DD-MM-YYYY');
   const timeStr = dayjs().format('HH:mm');
 
   const lines: string[] = [];
@@ -80,7 +96,7 @@ export async function printDailyTotalsTicket(params: {
   if (orgName) lines.push(centerLine(orgName.toUpperCase()));
   if (groupName) lines.push(centerLine(groupName.toUpperCase()));
   lines.push(centerLine('ENTRADA Y SALIDA DEL DIA'));
-  lines.push(centerLine(`FECHA: ${dateStr} ${timeStr}`));
+  lines.push(centerLine(periodText ?? `FECHA: ${dateStr} ${timeStr}`));
   lines.push(DIVIDER);
   lines.push(padLine('Nro'.padEnd(NUM_COL) + ' Detalle', 'Importe'));
   lines.push(DIVIDER);
@@ -181,7 +197,7 @@ export async function printRangeTotalsTicket(params: {
     const neg = Number(entry.net_balance) < 0;
     const result = neg ? 'Gana:' : 'Deja:';
     const amount = money(entry.net_balance);
-    lines.push(padLine(`${dateLabel} ${result}`, amount));
+    lines.push(...rangeRowLines(entry, padLine(`${dateLabel} ${result}`, amount)));
   }
 
   lines.push(DIVIDER);
@@ -230,12 +246,16 @@ export async function printSubtotalsDayTicket(params: {
   groupName?: string;
   expenses?: { nombre: string; monto: number }[];
   percentage?: number;
+  /** Cuenta por edición: reemplaza la fecha del encabezado. */
+  periodText?: string;
+  /** Cuenta por edición: va en el nombre del archivo en lugar de la fecha. */
+  fileTag?: string;
 }) {
-  const { data, date, orgName, groupName, expenses = [], percentage } = params;
+  const { data, date, orgName, groupName, expenses = [], percentage, periodText } = params;
   const { jsPDF } = await getPDFDeps();
 
   const dateStr = dayjs(date).format('DD/MM/YYYY');
-  const dateFile = dayjs(date).format('DD-MM-YYYY');
+  const dateFile = params.fileTag ?? dayjs(date).format('DD-MM-YYYY');
   const timeStr = dayjs().format('HH:mm');
   const grandTotal = data.reduce((s, a) => s + Number(a.subtotal ?? 0), 0);
   const totalExpenses = expenses.reduce((s, e) => s + (e.monto ?? 0), 0);
@@ -246,7 +266,7 @@ export async function printSubtotalsDayTicket(params: {
   if (orgName) lines.push(centerLine(orgName.toUpperCase()));
   if (groupName) lines.push(centerLine(groupName.toUpperCase()));
   lines.push(centerLine('SUBTOTALES DEL DIA'));
-  lines.push(centerLine(`FECHA: ${dateStr} ${timeStr}`));
+  lines.push(centerLine(periodText ?? `FECHA: ${dateStr} ${timeStr}`));
   lines.push(DIVIDER);
   lines.push(padLine('Nro'.padEnd(NUM_COL) + ' Nombre', 'Subtotal'));
   lines.push(DIVIDER);
@@ -321,7 +341,7 @@ export async function printSubtotalsRangeTicket(params: {
 
   for (const entry of dailySummary) {
     const dateLabel = dayjs(entry.date).format('DD/MM/YY');
-    lines.push(padLine(dateLabel, money(entry.total_subtotal)));
+    lines.push(...rangeRowLines(entry, padLine(dateLabel, money(entry.total_subtotal))));
   }
 
   lines.push(DIVIDER);

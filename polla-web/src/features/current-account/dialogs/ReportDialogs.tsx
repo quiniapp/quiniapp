@@ -31,7 +31,7 @@ import {
   fetchOrganizationName,
 } from '../fetchers';
 import { ALL_GROUPS, ReportMode } from '../format';
-import { DateField, ExpensesEditor, GroupSelect, ModeToggle } from './shared';
+import { DateField, ExpensesList, GroupSelect, ModeToggle } from './shared';
 
 /** Qué reporte arma el diálogo (los tres comparten filtros). */
 export type ReportKind = 'collections' | 'summary' | 'subtotals';
@@ -220,11 +220,7 @@ export const ReportDialog = ({
           )}
 
           {hasExpenses && (
-            <ExpensesEditor
-              date={date}
-              groupId={effectiveGroupId}
-              organizationId={organizationId}
-            />
+            <ExpensesList date={date} groupId={effectiveGroupId} organizationId={organizationId} />
           )}
         </div>
 
