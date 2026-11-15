@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`):
+  - El aviso "vos podés cargar hasta el …" pasa del admin de grupo a dueño, capitalista, superadmin y Súper, y sale solo cuando su corte es distinto del cierre de carga.
+  - "Repetir ticket" y su diálogo ofrecen solo las ediciones donde el usuario todavía repite (`isPollaEditionRepeatable`): entre el cierre y el sorteo dueño, capitalista y superadmin cargan, pero no repiten; el Súper sí repite. Sin ninguna, el botón no aparece.
+- **Repetir de cortesía** (`features/bets/FreeRepeatDialog.tsx`): ofrece solo las ediciones donde todavía se puede repetir.
+- **Tests** (`__tests__/helper/edition.test.ts`): `isPollaEditionRepeatable`.
+
 ### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
 
 **Qué cambia.** Cuenta corriente deja de liquidarse por rango de días y pasa a liquidarse por edición. Lo liquidado por días queda para consultar.

@@ -1,11 +1,12 @@
--- R30: el cierre de carga rige para todos los roles. Dueño, capitalista,
--- superadmin, Súper, pasador y jugador cargan hasta el cierre; el admin de
--- grupo, hasta la hora del sorteo; con el sorteo en curso, nadie. Editar
--- números, cada uno hasta su corte; borrar, superadmin+ siempre.
+-- R30 (con el ajuste de 20261115124454): dueño, capitalista y superadmin
+-- cargan y editan números hasta la hora del sorteo; el Súper carga, repite y
+-- borra hasta el sorteo, pero edita números hasta el cierre; admin de grupo,
+-- pasador y jugador, todo hasta el cierre de carga; con el sorteo en curso,
+-- nadie. Borrar, superadmin+ siempre.
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
-SELECT plan(19);
+SELECT plan(23);
 
 INSERT INTO polla_organizations (polla_organization_id, name)
 VALUES ('a6000000-0000-0000-0000-000000000030', 'pgTAP cierre R30');
@@ -62,28 +63,29 @@ CREATE TEMP TABLE t AS
 SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030c1') AS editar,
        pg_temp.bet('a6000000-0000-0000-0000-0000000030c1') AS borrar_super,
        pg_temp.bet('a6000000-0000-0000-0000-0000000030c1') AS borrar_admin,
-       pg_temp.bet('a6000000-0000-0000-0000-0000000030c1') AS borrar_super2;
+       pg_temp.bet('a6000000-0000-0000-0000-0000000030c1') AS borrar_super2,
+       pg_temp.bet('a6000000-0000-0000-0000-0000000030c1') AS borrar_asistente;
 
 -- Cerró la carga ayer a las 20; el sorteo sigue siendo mañana a las 21.
 UPDATE polla_editions SET load_limit_date = polla_today() - 1 WHERE polla_edition_id = (SELECT id FROM ed);
 
 -- ------------------------------------------- pasado el cierre: cargar
 
-SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a4')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el dueño no carga después del cierre');
-SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a3')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el capitalista tampoco');
-SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a2')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el superadmin tampoco');
-SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a5')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el Súper tampoco');
+SELECT lives_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a4')$$,
+  'el dueño carga después del cierre, hasta la hora del sorteo');
+SELECT lives_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a3')$$,
+  'el capitalista también');
+SELECT lives_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a2')$$,
+  'el superadmin también');
+SELECT lives_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a5')$$,
+  'el Súper también');
 SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030c1')$$,
   'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el pasador tampoco');
 SELECT throws_ok(
   $$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030f1', 'a6000000-0000-0000-0000-0000000030f1')$$,
   'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el jugador tampoco');
-SELECT lives_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a1')$$,
-  'el admin de grupo carga hasta la hora del sorteo');
+SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a1')$$,
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el admin de grupo tampoco (corta en el cierre)');
 SELECT throws_ok(
   $$SELECT polla_repeat_bets('a6000000-0000-0000-0000-0000000030a2', (SELECT id FROM ed),
       ARRAY[(SELECT editar FROM t)], FALSE, 'PAID')$$,
@@ -91,35 +93,48 @@ SELECT throws_ok(
 
 SELECT is(
   (SELECT load_cutoff FROM polla_editions_load_state(ARRAY[(SELECT id FROM ed)], 'ADMIN')),
-  (polla_today() + 1) + '21:00'::TIME,
-  'el corte del admin es la hora del sorteo'
+  (polla_today() - 1) + '20:00'::TIME,
+  'el corte del admin es el cierre de carga'
 );
 SELECT is(
   (SELECT load_cutoff FROM polla_editions_load_state(ARRAY[(SELECT id FROM ed)], 'OWNER')),
-  (polla_today() - 1) + '20:00'::TIME,
-  'el del dueño, el cierre de carga'
+  (polla_today() + 1) + '21:00'::TIME,
+  'el del dueño, la hora del sorteo'
 );
 
 -- ---------------------------------------- pasado el cierre: editar y borrar
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$SELECT polla_update_bet_numbers((SELECT editar FROM t),
       ARRAY['11','12','13','14','15','16','17','18','19','20'], 'a6000000-0000-0000-0000-0000000030a2')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el superadmin no edita números después del cierre');
+  'el superadmin edita números después del cierre, hasta la hora del sorteo');
 SELECT throws_ok(
   $$SELECT polla_update_bet_numbers((SELECT editar FROM t),
       ARRAY['11','12','13','14','15','16','17','18','19','20'], 'a6000000-0000-0000-0000-0000000030a5')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el Súper tampoco');
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el Súper no (edita hasta el cierre)');
+SELECT is(
+  (SELECT ARRAY[can_load, can_edit] FROM polla_editions_load_state(ARRAY[(SELECT id FROM ed)], 'ASSISTANT')),
+  ARRAY[TRUE, FALSE],
+  'Administrar jugadas: el Súper carga y borra, pero no edita'
+);
+SELECT is(
+  (SELECT can_edit FROM polla_editions_load_state(ARRAY[(SELECT id FROM ed)], 'SUPERADMIN')),
+  TRUE,
+  'el superadmin sí edita'
+);
 SELECT lives_ok(
+  $$SELECT polla_delete_bet((SELECT borrar_asistente FROM t), 'a6000000-0000-0000-0000-0000000030a5')$$,
+  'el Súper borra después del cierre, hasta la hora del sorteo');
+SELECT throws_ok(
   $$SELECT polla_update_bet_numbers((SELECT editar FROM t),
       ARRAY['11','12','13','14','15','16','17','18','19','20'], 'a6000000-0000-0000-0000-0000000030a1')$$,
-  'el admin edita hasta la hora del sorteo');
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el admin tampoco (corta en el cierre)');
 SELECT lives_ok(
   $$SELECT polla_delete_bet((SELECT borrar_super FROM t), 'a6000000-0000-0000-0000-0000000030a2')$$,
   'el superadmin borra para corregir');
-SELECT lives_ok(
+SELECT throws_ok(
   $$SELECT polla_delete_bet((SELECT borrar_admin FROM t), 'a6000000-0000-0000-0000-0000000030a1')$$,
-  'el admin borra hasta la hora del sorteo');
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'el admin borra hasta el cierre');
 
 -- ------------------------------------------------ con el sorteo en curso
 
@@ -129,14 +144,16 @@ SET load_start_date = polla_today() - 5, load_limit_date = polla_today() - 3, st
 WHERE polla_edition_id = (SELECT id FROM ed);
 
 SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a1')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'con el sorteo en curso el admin ya no carga');
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'con el sorteo en curso el admin no carga');
 SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a4')$$,
-  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'ni el dueño (antes cargaba hasta el último día)');
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'ni el dueño (su corte es la hora del sorteo)');
 SELECT is(
   (SELECT can_load FROM polla_editions_load_state(ARRAY[(SELECT id FROM ed)], 'SUPERADMIN')),
   FALSE,
   'y Cargar jugada no se la ofrece al superadmin'
 );
+SELECT throws_ok($$SELECT pg_temp.bet('a6000000-0000-0000-0000-0000000030a5')$$,
+  'P0001', 'POLLA_LOAD_LIMIT_EXCEEDED', 'ni el Súper carga');
 SELECT lives_ok(
   $$SELECT polla_delete_bet((SELECT borrar_super2 FROM t), 'a6000000-0000-0000-0000-0000000030a4')$$,
   'el dueño sigue pudiendo borrar para corregir');

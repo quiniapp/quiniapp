@@ -4,6 +4,7 @@ import {
   IPollaEditionEntityFront,
   IPollaRepeatResult,
   POLLA_EDITION_STATUS,
+  isPollaEditionRepeatable,
 } from '@helper/polla/types/game.type';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
 import { useFreeRepeatBets } from '@/hooks/mutations/usePollaMutations';
@@ -39,7 +40,7 @@ interface FreeRepeatDialogProps {
 
 /**
  * Repetir sin cargo los tickets elegidos de una edición finalizada en una
- * edición abierta (con el corte del rol). Cada uno se carga a nombre de su
+ * edición abierta (hasta el cierre de carga). Cada uno se carga a nombre de su
  * dueño, a $0: no suma al pase, la comisión ni lo recaudado. Un ticket tiene
  * una sola cortesía (R33): si ya la tiene, se dice dónde está. Al terminar se
  * ve cuántos se cargaron y cuáles no (y por qué).
@@ -57,7 +58,9 @@ export const FreeRepeatDialog = ({
     loadable: true,
     polla_organization_id: organizationId ?? undefined,
   });
-  const loadable = editions?.data ?? [];
+  // La cortesía (superadmin+ y admin de grupo) corta en el cierre de carga,
+  // aunque dueño, capitalista y superadmin sigan cargando hasta el sorteo.
+  const loadable = (editions?.data ?? []).filter(isPollaEditionRepeatable);
   const [editionId, setEditionId] = useState('');
   const [result, setResult] = useState<IPollaRepeatResult | null>(null);
   const { mutate: freeRepeat, isPending } = useFreeRepeatBets();

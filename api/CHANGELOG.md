@@ -4,6 +4,32 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
+
+**Qué cambia.** Los cortes por rol pasan a ser estos ("sorteo" = la hora del primer sorteo del día de inicio):
+
+| Rol | Cargar | Editar números | Repetir | Borrar de a uno |
+| --- | --- | --- | --- | --- |
+| Dueño, capitalista, superadmin | sorteo | sorteo | cierre | siempre |
+| Súper | sorteo | cierre | sorteo | sorteo |
+| Admin de grupo, pasador | cierre | cierre | cierre | cierre |
+| Jugador | cierre | - | cierre | - |
+
+El admin de grupo, que cargaba hasta el sorteo, pasa a cortar en el cierre.
+
+- **Migración `20261115124454_polla_staff_load_until_draw`**:
+  - Funciones nuevas: `polla_edition_draw_start(polla_editions)` (hora del primer sorteo del día de inicio), `polla_edition_load_close(polla_editions)` (cierre de carga, con tope en el primer sorteo), `polla_edit_cutoff(polla_editions, rol)` y `polla_repeat_cutoff(polla_editions, rol)`.
+  - `polla_load_cutoff` (cargar, y borrar para los que no son superadmin+): `OWNER`, `CAPITALIST`, `SUPERADMIN` y `ASSISTANT`, la hora del sorteo; el resto (`ADMIN` incluido), el cierre de carga. Con eso cambian también `polla_can_load`, `polla_loadable_editions` y `polla_create_bet`.
+  - `polla_assert_bet_writable`: editar números usa `polla_edit_cutoff` (superadmin+ hasta el sorteo; el resto, el Súper incluido, hasta el cierre); borrar sigue con `polla_load_cutoff`.
+  - `polla_editions_load_state` (se borra y se vuelve a crear): suma `can_edit`.
+  - `polla_repeat_bets`: agrega el corte de `polla_repeat_cutoff` (`POLLA_LOAD_LIMIT_EXCEEDED`).
+  - `polla_loadable_editions`: cada edición suma `can_repeat` (si el rol todavía repite).
+  - `polla_liquidate_edition_accounts` y `polla_edition_account_list`: la liquidación por edición se sigue habilitando desde el cierre de carga (antes tomaban el corte del dueño, que ahora es la hora del sorteo). Lo que el staff cargue entre el cierre y el sorteo aparece como diferencia al volver a liquidar.
+  - `polla_unpaid_bets_summary` y `polla_delete_unpaid_bets` no cambian: siguen cortando en el cierre.
+- **`GET /edition?loadable=true`** (`polla-edition.repository.ts`, `polla-edition.route.ts`): devuelve `can_repeat` en cada edición.
+- **Acciones de cada jugada** (`polla-bet.route.ts`): `can_edit` sale de `can_edit` de la base (el Súper borra hasta el sorteo, pero edita hasta el cierre); `can_delete`, de `can_load`.
+- **Tests pgTAP:** `130_polla_load_cutoff_all_roles` y `030_polla_create_bet_regression` pasan a la regla nueva; `190_polla_staff_load_until_draw` prueba repetir, `can_repeat` y la liquidación desde el cierre.
+
 ### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
 
 **Qué se reemplaza.** La cuenta corriente de Polla deja de liquidarse por rango de días y pasa a liquidarse por edición. Cada edición es estanca: tiene sus movimientos, sus liquidaciones repetibles con aviso de diferencias, la marca de liquidada, la cuenta del grupo, sus gastos y sus reportes. Lo ya liquidado por días queda solo para consultar.

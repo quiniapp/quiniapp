@@ -10,6 +10,7 @@ import {
   POLLA_EDITION_STATUS,
   POLLA_PAYMENT_STATUS,
   POLLA_PAYMENT_STATUS_LABEL,
+  isPollaEditionRepeatable,
   isPollaSpecialEdition,
   pollaBetGameStatus,
   pollaEditionDrawLabels,
@@ -21,6 +22,7 @@ import {
   IPollaUserOption,
   POLLA_USER_TYPE,
   isPollaLoaderRole,
+  isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
@@ -104,8 +106,9 @@ export const MakeBetPage = () => {
     (isCashier && !target) || (isLoader && targetType === POLLA_USER_TYPE.CASHIER);
 
   // Las que tienen la carga abierta ahora para el rol (hora de Argentina, R30):
-  // todos desde el inicio hasta el cierre de carga, salvo el admin de grupo,
-  // que carga hasta la hora del sorteo.
+  // todos desde el inicio hasta el cierre de carga, salvo dueño, capitalista,
+  // superadmin y Súper, que cargan hasta la hora del sorteo. Repetir tiene su
+  // corte (`can_repeat`): el Súper, hasta el sorteo; el resto, hasta el cierre.
   const { data: editions } = useEditions({
     status: POLLA_EDITION_STATUS.ACTIVE,
     loadable: true,
@@ -127,6 +130,14 @@ export const MakeBetPage = () => {
   const selectedEditionId =
     editionId || (loadable.length === 1 ? loadable[0].polla_edition_id : '');
   const edition = loadable.find((e) => e.polla_edition_id === selectedEditionId);
+  // Entre el cierre y el sorteo dueño, capitalista y superadmin cargan, pero
+  // no repiten.
+  const repeatable = loadable.filter(isPollaEditionRepeatable);
+  const repeatDefaultId = repeatable.some((e) => e.polla_edition_id === selectedEditionId)
+    ? selectedEditionId
+    : '';
+  // Dueño, capitalista, superadmin y Súper cargan después del cierre, hasta el sorteo.
+  const showMyCutoff = Boolean(role && (isPollaSuperRole(role) || isAssistant));
 
   const ticketDataOf = (bet: TicketBet, of: IPollaEditionEntityFront): PollaTicketData => ({
     ticket_number: bet.ticket_number,
@@ -279,10 +290,17 @@ export const MakeBetPage = () => {
           <div className="flex flex-col gap-2">
             <div className="flex items-end justify-between gap-2">
               <Label>Edición</Label>
-              <Button type="button" variant="outline" size="sm" onClick={() => setRepeatOpen(true)}>
-                <Repeat2 />
-                {isPlayer ? 'Repetir mis tickets' : 'Repetir ticket'}
-              </Button>
+              {repeatable.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRepeatOpen(true)}
+                >
+                  <Repeat2 />
+                  {isPlayer ? 'Repetir mis tickets' : 'Repetir ticket'}
+                </Button>
+              )}
             </div>
             <Select value={selectedEditionId} onValueChange={setEditionId}>
               <SelectTrigger>
@@ -305,8 +323,10 @@ export const MakeBetPage = () => {
                   </span>
                 )}
                 {` · cierre de carga ${fmtDate(edition.load_limit_date)} ${fmtTime(edition.load_limit_time)}`}
-                {role === POLLA_USER_TYPE.ADMIN &&
+                {showMyCutoff &&
                   edition.my_load_cutoff &&
+                  edition.my_load_cutoff.slice(0, 16) !==
+                    `${edition.load_limit_date}T${edition.load_limit_time.slice(0, 5)}` &&
                   ` · vos podés cargar hasta el ${fmtCutoff(edition.my_load_cutoff)}`}
               </p>
             )}
@@ -456,9 +476,9 @@ export const MakeBetPage = () => {
           choosePayment={!isPlayer}
           prints={!isAssistant}
           onClose={() => setRepeatOpen(false)}
-          editions={loadable}
+          editions={repeatable}
           editionLabel={editionLabel}
-          defaultEditionId={selectedEditionId}
+          defaultEditionId={repeatDefaultId}
           onCreated={printTickets}
         />
       )}
