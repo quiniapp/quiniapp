@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+**Qué cambia.** Repetir de cortesía (sin cargo) tickets de una edición finalizada lo hacen dueño, capitalista, superadmin y el Súper, en toda la organización. El admin de grupo ya no. El resto sigue igual: el ticket tiene que ser de una edición finalizada (con ganadores, o desierta al procesar el último día) y se carga en una edición con la carga abierta.
+
+- **Migración `20261115140021_polla_courtesy_staff_roles`**: `polla_create_bet` y `polla_repeat_bets` (mismas firmas) cambian quién carga sin cargo (`POLLA_FREE_BET_FORBIDDEN`): `OWNER`, `CAPITALIST`, `SUPERADMIN` y `ASSISTANT`.
+- **`POST /bet/free-repeat`** (`polla-bet.route.ts`): `requirePollaRole(...POLLA_COURTESY_ROLES)`.
+- **`GET /bet?view=manage&with_courtesies=true`**: la cortesía vigente de cada ticket la reciben superadmin+, el Súper y el admin de grupo (que la sigue viendo aunque ya no repita).
+- **Tests pgTAP:** `110_polla_free_repeat_once` repite con el Súper y prueba los roles (dueño, capitalista y superadmin sí; admin de grupo y pasador, `POLLA_FREE_BET_FORBIDDEN`); `040_polla_bet_payment` repite sin cargo con el Súper.
+
 ### Changed - 2026-11-15 (liquidación de grupos: sin ajustes ni pagado)
 
 - **`POST /edition_account/:editionId/group_liquidate`** (`polla-edition-account.route.ts`): ya no recibe `adjustments` ni `paid`; siempre los guarda en 0, así el total del admin es el 100% de la comisión. La base no cambia: `polla_liquidate_group_edition` sigue con la misma firma.

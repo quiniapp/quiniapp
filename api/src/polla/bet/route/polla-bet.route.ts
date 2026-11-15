@@ -2,10 +2,12 @@ import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import {
   POLLA_ADMIN_ROLES,
+  POLLA_COURTESY_ROLES,
   POLLA_USER_TYPE,
   POLLA_STAFF_ROLES,
   IPollaSessionUser,
   isPollaAdminRole,
+  isPollaCourtesyRole,
   isPollaLoaderRole,
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
@@ -311,7 +313,7 @@ export class PollaBetRouter {
     this.router.post('/repeat', this.repeatHandler);
     this.router.post(
       '/free-repeat',
-      requirePollaRole(...POLLA_ADMIN_ROLES),
+      requirePollaRole(...POLLA_COURTESY_ROLES),
       this.freeRepeatHandler
     );
     this.router.get('/', this.getAllHandler);
@@ -505,9 +507,12 @@ export class PollaBetRouter {
       ctx ? forViewer(bet, user, ctx) : toPublicBet(bet, user, NO_ACTIONS)
     );
 
-    // La cortesía vigente de cada ticket (R33), para quien puede repetir sin cargo.
+    // La cortesía vigente de cada ticket (R33): para quien repite de cortesía
+    // (superadmin+ y el Súper) y para el admin de grupo, que la sigue viendo.
     const courtesies =
-      isAdmin && managing && req.query.with_courtesies === 'true'
+      (isAdmin || isPollaCourtesyRole(user.user_type)) &&
+      managing &&
+      req.query.with_courtesies === 'true'
         ? await this.repository.getCourtesies(result.data.map((bet) => bet.polla_bet_id))
         : undefined;
 
@@ -658,8 +663,9 @@ export class PollaBetRouter {
   });
 
   /**
-   * Repetir sin cargo (admin+, en su alcance) tickets de ediciones finalizadas
-   * en una edición abierta: $0 en el pase, la comisión y lo recaudado.
+   * Repetir de cortesía (dueño, capitalista, superadmin y Súper, en toda la
+   * organización) tickets de ediciones finalizadas en una edición abierta: $0
+   * en el pase, la comisión y lo recaudado.
    */
   private freeRepeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);

@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+- **`POLLA_COURTESY_ROLES` e `isPollaCourtesyRole`** (`helper/polla/types/user.type.ts`): quién repite de cortesía (superadmin+ y el Súper). Se corrigen los comentarios de `POLLA_SUPER_ROLES`, `POLLA_ADMIN_ROLES` y `POLLA_LOADER_ROLES`, y el de `repeatPollaBetsSchema`.
+
 ### Changed - 2026-11-15 (liquidación de grupos: sin ajustes ni pagado)
 
 - **`liquidatePollaGroupEditionSchema`** (`helper/polla/schemas/game.schema.ts`): solo `polla_group_id` y `admin_percentage`; se sacan `adjustments` y `paid`.

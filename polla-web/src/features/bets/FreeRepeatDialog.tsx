@@ -58,8 +58,9 @@ export const FreeRepeatDialog = ({
     loadable: true,
     polla_organization_id: organizationId ?? undefined,
   });
-  // La cortesía (superadmin+ y admin de grupo) corta en el cierre de carga,
-  // aunque dueño, capitalista y superadmin sigan cargando hasta el sorteo.
+  // La cortesía tiene el corte de repetir del rol (`can_repeat`): dueño,
+  // capitalista y superadmin, hasta el cierre de carga (aunque sigan cargando
+  // hasta el sorteo); el Super, hasta el sorteo.
   const loadable = (editions?.data ?? []).filter(isPollaEditionRepeatable);
   const [editionId, setEditionId] = useState('');
   const [result, setResult] = useState<IPollaRepeatResult | null>(null);

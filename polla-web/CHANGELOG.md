@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): con una edición finalizada, "Repetir sin cargo" aparece para dueño, capitalista, superadmin y el Súper (toda la organización); el admin de grupo ya no lo ve, pero sigue viendo "Cortesía en Edición X · ticket N". Se puede elegir cualquier ticket de la lista (al Súper le llega la versión pública de cada jugada).
+- **Tests** (`__tests__/helper/access.test.ts`): `isPollaCourtesyRole`.
+
 ### Changed - 2026-11-15 (liquidación de grupos: total para el admin y para el capitalista)
 
 **Por qué.** Al admin se le paga siempre el 100% de su comisión, y se lo transfiere el capitalista por afuera: "Pagado al admin" era esa misma plata y los ajustes no se usan.

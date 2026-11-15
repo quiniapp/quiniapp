@@ -220,9 +220,9 @@ export const updatePollaBetSchema = z.object({
 export const POLLA_REPEAT_MAX_BETS = 500;
 
 /**
- * Repetir tickets en una edición, cada uno a nombre de su dueño original. Sin
- * cargo (`/bet/free-repeat`) solo para admin+ y tickets de ediciones
- * finalizadas.
+ * Repetir tickets en una edición, cada uno a nombre de su dueño original. De
+ * cortesía (`/bet/free-repeat`) solo dueño, capitalista, superadmin y Súper,
+ * y tickets de ediciones finalizadas.
  */
 export const repeatPollaBetsSchema = z.object({
   polla_edition_id: z.string().uuid(),

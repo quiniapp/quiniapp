@@ -7,7 +7,11 @@ import {
   pollaHomePage,
   pollaPrizeScope,
 } from '@helper/polla/config/access.config';
-import { POLLA_USER_TYPE, POLLA_USER_TYPE_LABEL } from '@helper/polla/types/user.type';
+import {
+  POLLA_USER_TYPE,
+  POLLA_USER_TYPE_LABEL,
+  isPollaCourtesyRole,
+} from '@helper/polla/types/user.type';
 
 const PAGES = Object.keys(POLLA_PAGE_ROLES) as PollaPage[];
 const pagesOf = (role: POLLA_USER_TYPE) => PAGES.filter((page) => canSeePollaPage(role, page));
@@ -126,5 +130,15 @@ describe('quién ve qué premios (R21)', () => {
 
   it('el Súper no ve premios', () => {
     expect(pollaPrizeScope(user(ASSISTANT))).toBeNull();
+  });
+});
+
+describe('repetir de cortesía', () => {
+  it('lo hacen dueño, capitalista, superadmin y el Súper', () => {
+    expect([OWNER, CAPITALIST, SUPERADMIN, ASSISTANT].every(isPollaCourtesyRole)).toBe(true);
+  });
+
+  it('el admin de grupo, el pasador y el jugador no', () => {
+    expect([ADMIN, CASHIER, PLAYER].some(isPollaCourtesyRole)).toBe(false);
   });
 });
