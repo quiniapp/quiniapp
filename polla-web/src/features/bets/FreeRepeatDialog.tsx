@@ -62,6 +62,9 @@ export const FreeRepeatDialog = ({
   // capitalista y superadmin, hasta el cierre de carga (aunque sigan cargando
   // hasta el sorteo); el Super, hasta el sorteo.
   const loadable = (editions?.data ?? []).filter(isPollaEditionRepeatable);
+  // Los tickets elegidos al abrir: al cargarse, la pantalla limpia la selección
+  // (`onDone`) y la descripción tiene que seguir diciendo cuántos eran.
+  const [ticketIds] = useState(betIds);
   const [editionId, setEditionId] = useState('');
   const [result, setResult] = useState<IPollaRepeatResult | null>(null);
   const { mutate: freeRepeat, isPending } = useFreeRepeatBets();
@@ -74,7 +77,7 @@ export const FreeRepeatDialog = ({
       return;
     }
     freeRepeat(
-      { polla_edition_id: target.polla_edition_id, polla_bet_ids: betIds },
+      { polla_edition_id: target.polla_edition_id, polla_bet_ids: ticketIds },
       {
         onSuccess: (data) => {
           setResult(data);
@@ -90,8 +93,8 @@ export const FreeRepeatDialog = ({
         <DialogHeader>
           <DialogTitle>Repetir sin cargo</DialogTitle>
           <DialogDescription>
-            {betIds.length} ticket{betIds.length === 1 ? '' : 's'}, cada uno a nombre de su dueño y
-            sin cargo: no suman al pase, a la comisión ni a lo recaudado.
+            {ticketIds.length} ticket{ticketIds.length === 1 ? '' : 's'}, cada uno a nombre de su
+            dueño y sin cargo: no suman al pase, a la comisión ni a lo recaudado.
           </DialogDescription>
         </DialogHeader>
 
