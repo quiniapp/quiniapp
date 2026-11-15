@@ -81,8 +81,9 @@ export class PollaEditionRouter {
     const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
 
     // Carga abierta ahora mismo para el rol (fecha y hora de Argentina), cada
-    // una con su corte: pasador y jugador, el de la edición; el admin, el del
-    // turno más tarde; superadmin+, hasta el último día de juego.
+    // una con su corte: dueño, capitalista, superadmin y Súper, la hora del
+    // sorteo; el resto, el cierre de carga. `can_repeat`: si el rol todavía
+    // repite (el Súper, hasta el sorteo; el resto, hasta el cierre).
     if (req.query.loadable === 'true') {
       const rows = await this.repository.getLoadable(organizationId, user.user_type);
       const data = isSuper ? rows : rows.map(withoutTotals);

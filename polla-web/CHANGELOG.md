@@ -4,6 +4,31 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): con una edición finalizada, "Repetir sin cargo" aparece para dueño, capitalista, superadmin y el Súper (toda la organización); el admin de grupo ya no lo ve, pero sigue viendo "Cortesía en Edición X · ticket N". Se puede elegir cualquier ticket de la lista (al Súper le llega la versión pública de cada jugada).
+- **Tests** (`__tests__/helper/access.test.ts`): `isPollaCourtesyRole`.
+
+### Changed - 2026-11-15 (liquidación de grupos: total para el admin y para el capitalista)
+
+**Por qué.** Al admin se le paga siempre el 100% de su comisión, y se lo transfiere el capitalista por afuera: "Pagado al admin" era esa misma plata y los ajustes no se usan.
+
+- **Pestaña Grupos** (`features/current-account/edition/GroupEditionAccounts.tsx`):
+  - "Base" pasa a "Total" en el modal, la tarjeta del grupo y la tabla "Liquidaciones de grupo".
+  - El modal "Liquidar" deja solo el % del admin (sin "Ajustes" ni "Pagado al admin") y muestra "Total para el admin" (el 100% de la comisión) y "Total para el capitalista" (el total menos esa comisión).
+  - La tarjeta y la tabla muestran los mismos dos totales en lugar de Comisión, Ajustes, Pagado y Total admin. Una liquidación vieja los tacha, como antes.
+- **Ticket del grupo** (`functions/current-account/groupLiquidationTicket.ts`): `printGroupEditionLiquidationTicket` (renglones en `groupEditionTicketLines`) imprime TOTAL, % ADMIN, TOTAL ADMIN y TOTAL CAPITALISTA, sin base, ajustes ni pagado. Sin gastos ya no imprime "$-0". El del Historial por fechas (`printGroupLiquidationTicket`) no cambia y pierde la opción `periodText`, que ya no usa nadie.
+- **`groupSplit(total, comisión)`** (`lib/editionAccount.ts`): cuánto es para el admin y cuánto para el capitalista, en centavos exactos.
+- **Tests** (`edition-account-helpers.test.ts`): `groupSplit` y los renglones del ticket.
+
+### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`):
+  - El aviso "vos podés cargar hasta el …" pasa del admin de grupo a dueño, capitalista, superadmin y Súper, y sale solo cuando su corte es distinto del cierre de carga.
+  - "Repetir ticket" y su diálogo ofrecen solo las ediciones donde el usuario todavía repite (`isPollaEditionRepeatable`): entre el cierre y el sorteo dueño, capitalista y superadmin cargan, pero no repiten; el Súper sí repite. Sin ninguna, el botón no aparece.
+- **Repetir de cortesía** (`features/bets/FreeRepeatDialog.tsx`): ofrece solo las ediciones donde todavía se puede repetir.
+- **Tests** (`__tests__/helper/edition.test.ts`): `isPollaEditionRepeatable`.
+
 ### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
 
 **Qué cambia.** Cuenta corriente deja de liquidarse por rango de días y pasa a liquidarse por edición. Lo liquidado por días queda para consultar.

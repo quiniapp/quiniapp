@@ -1,10 +1,15 @@
 import dayjs from 'dayjs';
-import { IPollaGroupAccountEntityFront } from '@helper/polla/types/game.type';
+import {
+  IPollaGroupAccountEntityFront,
+  IPollaGroupEditionAccountEntity,
+} from '@helper/polla/types/game.type';
+import { groupSplit } from '@/lib/editionAccount';
 import { openPDFPrintDialog } from './pdf-shared';
 
 /**
- * Ticket térmico de 58 mm de la liquidación de un grupo, con el mismo formato
- * que los de cobros y pagos (`totalsTicket.ts`).
+ * Tickets térmicos de 58 mm de la liquidación de un grupo, con el mismo
+ * formato que los de cobros y pagos (`totalsTicket.ts`): el de la cuenta por
+ * edición y el del Historial por fechas.
  */
 
 const PAPER_W = 58;
@@ -27,16 +32,85 @@ const centerLine = (text: string) =>
 
 const DIVIDER = '- '.repeat(CHARS / 2);
 
-export async function printGroupLiquidationTicket(params: {
-  /** Con `periodText` no se leen `period_from` ni `date`. */
-  account: Omit<IPollaGroupAccountEntityFront, 'period_from' | 'date'> &
-    Partial<Pick<IPollaGroupAccountEntityFront, 'period_from' | 'date'>>;
-  orgName: string;
-  /** Cuenta por edición: reemplaza el rango de fechas del encabezado. */
-  periodText?: string;
-}) {
-  const { account, orgName, periodText } = params;
+/** Arma el PDF de 58 mm con esas líneas y abre el diálogo de impresión. */
+async function printTicketLines(lines: string[], title: string) {
   const { jsPDF } = await import('jspdf');
+  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
+
+  doc.setProperties({ title });
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(FONT_SIZE);
+
+  let y = MARGIN + 4;
+  for (const line of lines) {
+    doc.text(line, MARGIN, y);
+    y += LINE_H;
+  }
+
+  openPDFPrintDialog(doc, title);
+}
+
+export type GroupEditionTicketAccount = Pick<
+  IPollaGroupEditionAccountEntity,
+  'group_name' | 'cashiers_subtotal' | 'expenses' | 'base' | 'admin_percentage' | 'admin_commission'
+>;
+
+/**
+ * Renglones del ticket de la liquidación de un grupo en una edición: el total
+ * (lo que dejaron los pasadores menos los gastos) y cuánto es para el admin
+ * (el 100% de su comisión) y para el capitalista. Sin ajustes ni pagado.
+ */
+export const groupEditionTicketLines = (params: {
+  account: GroupEditionTicketAccount;
+  orgName: string;
+  /** Título de la edición. */
+  periodText: string;
+  /** `HH:mm` de la impresión. */
+  time: string;
+}): string[] => {
+  const { account, orgName, periodText, time } = params;
+  const split = groupSplit(account.base, account.admin_commission);
+  const lines: string[] = [];
+  if (orgName) lines.push(centerLine(orgName.toUpperCase()));
+  lines.push(centerLine(account.group_name.toUpperCase()));
+  lines.push(centerLine('LIQUIDACION DEL GRUPO'));
+  lines.push(centerLine(periodText));
+  lines.push(centerLine(`HORA: ${time}`));
+  lines.push(DIVIDER);
+  lines.push(padLine('Deja pasadores:', money(account.cashiers_subtotal)));
+  // `|| 0`: sin gastos no imprime "$-0".
+  lines.push(padLine('Gastos del grupo:', money(-Number(account.expenses) || 0)));
+  lines.push(padLine('TOTAL:', money(account.base)));
+  lines.push(DIVIDER);
+  lines.push(padLine('% ADMIN:', `${Number(account.admin_percentage)}%`));
+  lines.push(padLine('TOTAL ADMIN:', money(split.admin)));
+  lines.push(padLine('TOTAL CAPITALISTA:', money(split.capitalist)));
+  // Mismo relleno que los demás tickets: vacía el buffer de la impresora.
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+  lines.push(DIVIDER);
+  return lines;
+};
+
+/** Ticket de la liquidación de un grupo en una edición. */
+export async function printGroupEditionLiquidationTicket(params: {
+  account: GroupEditionTicketAccount;
+  orgName: string;
+  periodText: string;
+}) {
+  const { account, periodText } = params;
+  const lines = groupEditionTicketLines({ ...params, time: dayjs().format('HH:mm') });
+  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${periodText.trim().replace(/\s+/g, '_')}`;
+  await printTicketLines(lines, title);
+}
+
+/** Ticket de una liquidación de grupo del Historial por fechas (con arrastre y saldo). */
+export async function printGroupLiquidationTicket(params: {
+  account: IPollaGroupAccountEntityFront;
+  orgName: string;
+}) {
+  const { account, orgName } = params;
 
   const lines: string[] = [];
   if (orgName) lines.push(centerLine(orgName.toUpperCase()));
@@ -44,8 +118,7 @@ export async function printGroupLiquidationTicket(params: {
   lines.push(centerLine('LIQUIDACION DEL GRUPO'));
   lines.push(
     centerLine(
-      periodText ??
-        `${dayjs(account.period_from).format('DD/MM/YYYY')} AL ${dayjs(account.date).format('DD/MM/YYYY')}`
+      `${dayjs(account.period_from).format('DD/MM/YYYY')} AL ${dayjs(account.date).format('DD/MM/YYYY')}`
     )
   );
   lines.push(centerLine(`HORA: ${dayjs().format('HH:mm')}`));
@@ -75,19 +148,6 @@ export async function printGroupLiquidationTicket(params: {
   lines.push(DIVIDER);
   lines.push(DIVIDER);
 
-  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
-  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${periodText ? periodText.trim().replace(/\s+/g, '_') : dayjs(account.date).format('DD-MM-YYYY')}`;
-
-  doc.setProperties({ title });
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(FONT_SIZE);
-
-  let y = MARGIN + 4;
-  for (const line of lines) {
-    doc.text(line, MARGIN, y);
-    y += LINE_H;
-  }
-
-  openPDFPrintDialog(doc, title);
+  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${dayjs(account.date).format('DD-MM-YYYY')}`;
+  await printTicketLines(lines, title);
 }

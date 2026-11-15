@@ -77,7 +77,8 @@ export class PollaEditionRepository {
 
   /**
    * Ediciones donde el rol carga en este momento, cada una con su corte
-   * (`my_load_cutoff`). La regla vive en la base (`polla_load_cutoff`).
+   * (`my_load_cutoff`) y si todavía se puede repetir (`can_repeat`). La regla
+   * vive en la base (`polla_load_cutoff`, `polla_edition_load_close`).
    */
   async getLoadable(organizationId: string, role: POLLA_USER_TYPE) {
     const { data, error } = await supabase.rpc('polla_loadable_editions', {
@@ -86,7 +87,10 @@ export class PollaEditionRepository {
     });
 
     throwIfPollaError(error);
-    return (data ?? []) as (IPollaEditionEntityBack & { my_load_cutoff: string | null })[];
+    return (data ?? []) as (IPollaEditionEntityBack & {
+      my_load_cutoff: string | null;
+      can_repeat: boolean;
+    })[];
   }
 
   /**
@@ -104,6 +108,8 @@ export class PollaEditionRepository {
       load_cutoff: string | null;
       load_started: boolean;
       can_load: boolean;
+      /** Si el rol todavía edita números (el Súper, hasta el cierre). */
+      can_edit: boolean;
     }[]
   > {
     if (editionIds.length === 0) return [];

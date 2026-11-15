@@ -44,8 +44,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { printGroupLiquidationTicket } from '@/functions/current-account/groupLiquidationTicket';
-import { groupAccountOutdated, groupCommission } from '@/lib/editionAccount';
+import { printGroupEditionLiquidationTicket } from '@/functions/current-account/groupLiquidationTicket';
+import { groupAccountOutdated, groupCommission, groupSplit } from '@/lib/editionAccount';
 import { cn } from '@/lib/utils';
 import { fetchOrganizationName } from '../fetchers';
 import { fmtMoney } from '../format';
@@ -64,7 +64,7 @@ const OutdatedNotice = () => (
   </p>
 );
 
-/** Acepta coma decimal y signo (un ajuste puede ser negativo). */
+/** Acepta coma decimal. */
 const parseAmount = (raw: string): number | null => {
   const value = Number(raw.replace(',', '.'));
   return raw.trim() !== '' && Number.isFinite(value) ? value : null;
@@ -86,15 +86,8 @@ const printTicket = async (
   periodText: string
 ) => {
   try {
-    await printGroupLiquidationTicket({
-      account: {
-        ...account,
-        polla_group_account_id: account.polla_group_edition_account_id,
-        drag_base: account.base,
-        previous_drag: 0,
-        drag: 0,
-        previous_balance: 0,
-      },
+    await printGroupEditionLiquidationTicket({
+      account,
       orgName: await fetchOrganizationName(organizationId),
       periodText,
     });
@@ -103,7 +96,11 @@ const printTicket = async (
   }
 };
 
-/** Liquidar un grupo en la edición: % del admin, ajustes y pagado. */
+/**
+ * Liquidar un grupo en la edición: solo el % del admin. Muestra cuánto del
+ * total es para el admin (el 100% de su comisión, que le transfiere el
+ * capitalista por afuera) y cuánto para el capitalista.
+ */
 const LiquidateGroupDialog = ({
   preview,
   editionId,
@@ -120,28 +117,17 @@ const LiquidateGroupDialog = ({
   const [percentage, setPercentage] = useState(
     account ? String(Number(account.admin_percentage)) : ''
   );
-  const [adjustments, setAdjustments] = useState(
-    account ? String(Number(account.adjustments)) : '0'
-  );
-  const [paid, setPaid] = useState(account ? String(Number(account.paid)) : '0');
   const { mutate: liquidate, isPending } = useLiquidateGroupEdition();
 
-  const base = Number(preview.base);
-  const commission = groupCommission(base, parseAmount(percentage) ?? 0);
-  const total = commission + (parseAmount(adjustments) ?? 0) - (parseAmount(paid) ?? 0);
+  const total = Number(preview.base);
+  const split = groupSplit(total, groupCommission(total, parseAmount(percentage) ?? 0));
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const adminPercentage = parseAmount(percentage);
-    const adjustmentsValue = parseAmount(adjustments);
-    const paidValue = parseAmount(paid);
 
     if (adminPercentage === null || adminPercentage < 0 || adminPercentage > 100) {
       toast.error('Poné el porcentaje del admin (0 a 100)');
-      return;
-    }
-    if (adjustmentsValue === null || paidValue === null || paidValue < 0) {
-      toast.error('Revisá ajustes y pago');
       return;
     }
 
@@ -150,8 +136,6 @@ const LiquidateGroupDialog = ({
         editionId,
         polla_group_id: preview.polla_group_id,
         admin_percentage: adminPercentage,
-        adjustments: adjustmentsValue,
-        paid: paidValue,
       },
       {
         onSuccess: (saved) => {
@@ -168,7 +152,8 @@ const LiquidateGroupDialog = ({
         <DialogHeader>
           <DialogTitle>Liquidar {preview.group_name}</DialogTitle>
           <DialogDescription>
-            {title}. El total es lo que la organización le debe al admin.
+            {title}. Al admin se le paga el 100% de su comisión; el resto del total es del
+            capitalista.
           </DialogDescription>
         </DialogHeader>
 
@@ -176,43 +161,23 @@ const LiquidateGroupDialog = ({
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Amount label="Deja pasadores" value={Number(preview.cashiers_subtotal)} />
             <Amount label="Gastos del grupo" value={-Number(preview.expenses) || 0} />
-            <Amount label="Base" value={base} strong />
+            <Amount label="Total" value={total} strong />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="group-edition-percentage">% del admin</Label>
-              <Input
-                id="group-edition-percentage"
-                inputMode="decimal"
-                autoFocus
-                value={percentage}
-                onChange={(e) => setPercentage(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="group-edition-adjustments">Ajustes</Label>
-              <Input
-                id="group-edition-adjustments"
-                inputMode="decimal"
-                value={adjustments}
-                onChange={(e) => setAdjustments(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="group-edition-paid">Pagado al admin</Label>
-              <Input
-                id="group-edition-paid"
-                inputMode="decimal"
-                value={paid}
-                onChange={(e) => setPaid(e.target.value)}
-              />
-            </div>
+          <div className="flex flex-col gap-1 sm:w-1/3">
+            <Label htmlFor="group-edition-percentage">% del admin</Label>
+            <Input
+              id="group-edition-percentage"
+              inputMode="decimal"
+              autoFocus
+              value={percentage}
+              onChange={(e) => setPercentage(e.target.value)}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Amount label="Comisión del admin" value={commission} />
-            <Amount label="Total admin" value={total} strong />
+            <Amount label="Total para el admin" value={split.admin} strong />
+            <Amount label="Total para el capitalista" value={split.capitalist} strong />
           </div>
 
           <DialogFooter>
@@ -243,6 +208,7 @@ const GroupCard = ({
 }) => {
   const { account, pending_cashiers: pending } = preview;
   const outdated = groupAccountOutdated(preview);
+  const split = account ? groupSplit(account.base, account.admin_commission) : null;
   return (
     <li className="flex flex-col gap-3 rounded-md border bg-card p-3 text-card-foreground">
       <div className="flex items-start justify-between gap-2">
@@ -267,29 +233,25 @@ const GroupCard = ({
         <dd className="text-right tabular-nums">${fmtMoney(preview.cashiers_subtotal)}</dd>
         <dt className="text-muted-foreground">Gastos</dt>
         <dd className="text-right tabular-nums">${fmtMoney(preview.expenses)}</dd>
-        <dt className="font-medium">Base</dt>
+        <dt className="font-medium">Total</dt>
         <dd className="text-right font-semibold tabular-nums">${fmtMoney(preview.base)}</dd>
-        {account && (
+        {account && split && (
           <>
             <dt className="text-muted-foreground">% del admin</dt>
             <dd className="text-right tabular-nums">{Number(account.admin_percentage)}%</dd>
-            <dt className="text-muted-foreground">Comisión</dt>
-            <dd
-              className={cn('text-right tabular-nums', outdatedAmount(outdated))}
-              title={outdated ? OUTDATED_TEXT : undefined}
-            >
-              ${fmtMoney(account.admin_commission)}
-            </dd>
-            <dt className="text-muted-foreground">Ajustes</dt>
-            <dd className="text-right tabular-nums">${fmtMoney(account.adjustments)}</dd>
-            <dt className="text-muted-foreground">Pagado</dt>
-            <dd className="text-right tabular-nums">${fmtMoney(account.paid)}</dd>
-            <dt className="font-medium">Total</dt>
+            <dt className="font-medium">Total para el admin</dt>
             <dd
               className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
               title={outdated ? OUTDATED_TEXT : undefined}
             >
-              ${fmtMoney(account.total)}
+              ${fmtMoney(split.admin)}
+            </dd>
+            <dt className="font-medium">Total para el capitalista</dt>
+            <dd
+              className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
+              title={outdated ? OUTDATED_TEXT : undefined}
+            >
+              ${fmtMoney(split.capitalist)}
             </dd>
           </>
         )}
@@ -377,18 +339,17 @@ const GroupEditionHistory = ({
             <TableHead>Grupo</TableHead>
             <TableHead className="text-right">Deja pasadores</TableHead>
             <TableHead className="text-right">Gastos</TableHead>
-            <TableHead className="text-right">Base</TableHead>
+            <TableHead className="text-right">Total</TableHead>
             <TableHead className="text-right">% admin</TableHead>
-            <TableHead className="text-right">Comisión</TableHead>
-            <TableHead className="text-right">Ajustes</TableHead>
-            <TableHead className="text-right">Pagado</TableHead>
             <TableHead className="text-right">Total admin</TableHead>
+            <TableHead className="text-right">Total capitalista</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {accounts.map((account) => {
             const outdated = outdatedGroups.has(account.polla_group_id);
+            const split = groupSplit(account.base, account.admin_commission);
             return (
               <TableRow key={account.polla_group_edition_account_id}>
                 <TableCell className="font-medium">
@@ -416,17 +377,15 @@ const GroupEditionHistory = ({
                 <TableCell className="text-right tabular-nums">
                   {Number(account.admin_percentage)}%
                 </TableCell>
-                <TableCell className={cn('text-right tabular-nums', outdatedAmount(outdated))}>
-                  ${fmtMoney(account.admin_commission)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  ${fmtMoney(account.adjustments)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">${fmtMoney(account.paid)}</TableCell>
                 <TableCell
                   className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
                 >
-                  ${fmtMoney(account.total)}
+                  ${fmtMoney(split.admin)}
+                </TableCell>
+                <TableCell
+                  className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
+                >
+                  ${fmtMoney(split.capitalist)}
                 </TableCell>
                 <TableCell>
                   <Button

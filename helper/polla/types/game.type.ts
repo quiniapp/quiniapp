@@ -112,7 +112,8 @@ export interface IPollaEditionEntityBack {
 
 /**
  * `bets_count` y `collected_amount` son totales: la API solo se los manda a
- * superadmin+. `my_load_cutoff` viene en las ediciones de Cargar jugada.
+ * superadmin+. `my_load_cutoff` y `can_repeat` vienen en las ediciones de
+ * Cargar jugada.
  */
 export type IPollaEditionEntityFront = Omit<
   IPollaEditionEntityBack,
@@ -120,11 +121,25 @@ export type IPollaEditionEntityFront = Omit<
 > &
   Partial<Pick<IPollaEditionEntityBack, 'bets_count' | 'collected_amount'>> & {
     /**
-     * Hasta cuándo carga el usuario (`YYYY-MM-DDTHH:mm:ss`, Argentina). `null`:
-     * sin corte, hasta el último día de juego (superadmin+).
+     * Hasta cuándo carga jugadas nuevas el usuario (`YYYY-MM-DDTHH:mm:ss`,
+     * Argentina): dueño, capitalista, superadmin y Súper, hasta la hora del
+     * sorteo; el resto, hasta el cierre de carga.
      */
     my_load_cutoff?: string | null;
+    /**
+     * Si el usuario todavía repite en la edición (con cargo y de cortesía):
+     * el Súper, hasta la hora del sorteo; el resto, hasta el cierre de carga,
+     * aunque dueño, capitalista y superadmin sigan cargando hasta el sorteo.
+     */
+    can_repeat?: boolean;
   };
+
+/**
+ * ¿Se puede repetir en esta edición de Cargar jugada? Sin el dato (caché
+ * vieja), sí: la base lo vuelve a controlar.
+ */
+export const isPollaEditionRepeatable = (edition: Pick<IPollaEditionEntityFront, 'can_repeat'>) =>
+  edition.can_repeat !== false;
 
 /**
  * Sorteos de la edición. Si no vinieran (datos viejos en caché), el sorteo

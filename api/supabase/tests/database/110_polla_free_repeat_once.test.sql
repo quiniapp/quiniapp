@@ -1,10 +1,11 @@
 -- R33: un ticket se repite de cortesía una sola vez. Borrando la cortesía se
 -- puede volver a repetir; una cortesía no se repite de cortesía; las
--- duplicadas de antes quedan; la repetición con cargo no cambia.
+-- duplicadas de antes quedan; la repetición con cargo no cambia. La hacen
+-- dueño, capitalista, superadmin y Súper; el admin de grupo y el pasador no.
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
-SELECT plan(14);
+SELECT plan(19);
 
 INSERT INTO polla_organizations (polla_organization_id, name)
 VALUES ('a4000000-0000-0000-0000-000000000033', 'pgTAP cortesía R33');
@@ -16,9 +17,15 @@ INSERT INTO polla_users (polla_user_id, user_type, name, number, polla_organizat
 VALUES ('a4000000-0000-0000-0000-0000000033c1', 'CASHIER', 'Pasador R33', 1,
         'a4000000-0000-0000-0000-000000000033', 'a4000000-0000-0000-0000-0000000033e1', 0, 0);
 
-INSERT INTO polla_users (polla_user_id, user_type, name, polla_organization_id, polla_group_id)
-VALUES ('a4000000-0000-0000-0000-0000000033a1', 'ADMIN', 'Admin R33',
-        'a4000000-0000-0000-0000-000000000033', 'a4000000-0000-0000-0000-0000000033e1');
+-- Repiten de cortesía dueño, capitalista, superadmin y Súper (20261115140021);
+-- el admin de grupo ya no.
+INSERT INTO polla_users (polla_user_id, user_type, name, polla_organization_id, polla_group_id) VALUES
+  ('a4000000-0000-0000-0000-0000000033a1', 'ASSISTANT', 'Súper R33', 'a4000000-0000-0000-0000-000000000033', NULL),
+  ('a4000000-0000-0000-0000-0000000033a2', 'ADMIN', 'Admin R33',
+   'a4000000-0000-0000-0000-000000000033', 'a4000000-0000-0000-0000-0000000033e1'),
+  ('a4000000-0000-0000-0000-0000000033a3', 'CAPITALIST', 'Capitalista R33', 'a4000000-0000-0000-0000-000000000033', NULL),
+  ('a4000000-0000-0000-0000-0000000033a4', 'OWNER', 'Dueño R33', 'a4000000-0000-0000-0000-000000000033', NULL),
+  ('a4000000-0000-0000-0000-0000000033a6', 'SUPERADMIN', 'Superadmin R33', 'a4000000-0000-0000-0000-000000000033', NULL);
 
 INSERT INTO polla_lotteries (polla_lottery_id, polla_organization_id, name)
 VALUES ('a4000000-0000-0000-0000-0000000033b1', 'a4000000-0000-0000-0000-000000000033', 'Nacional R33');
@@ -62,6 +69,10 @@ $$;
 
 SELECT pg_temp.bet('uno');
 SELECT pg_temp.bet('viejo');
+SELECT pg_temp.bet('rol_dueno');
+SELECT pg_temp.bet('rol_capitalista');
+SELECT pg_temp.bet('rol_superadmin');
+SELECT pg_temp.bet('rol_admin');
 -- La edición de origen terminó: sus tickets se pueden repetir de cortesía.
 UPDATE polla_editions SET status = 'FINISHED' WHERE polla_edition_id = (SELECT origen FROM ed);
 
@@ -146,6 +157,24 @@ CREATE TEMP TABLE r6 AS
 SELECT polla_repeat_bets('a4000000-0000-0000-0000-0000000033a1', (SELECT destino FROM ed), ARRAY[pg_temp.id('uno')], FALSE, 'PAID') AS r;
 SELECT is(jsonb_array_length((SELECT r->'created' FROM r6)), 1, 'repetir con cargo un ticket con cortesía sigue andando');
 SELECT is(((SELECT r->'created'->0 FROM r6)->>'is_free')::BOOLEAN, FALSE, 'y no es cortesía');
+
+-- ------------------------------------------------- quién repite de cortesía
+
+CREATE FUNCTION pg_temp.free_repeat_as(p_actor UUID, p_name TEXT) RETURNS INTEGER LANGUAGE sql AS $$
+  SELECT jsonb_array_length(
+    polla_repeat_bets(p_actor, (SELECT destino FROM ed), ARRAY[pg_temp.id(p_name)], TRUE)->'created');
+$$;
+
+SELECT is(pg_temp.free_repeat_as('a4000000-0000-0000-0000-0000000033a4', 'rol_dueno'), 1,
+  'el dueño repite de cortesía');
+SELECT is(pg_temp.free_repeat_as('a4000000-0000-0000-0000-0000000033a3', 'rol_capitalista'), 1,
+  'el capitalista también');
+SELECT is(pg_temp.free_repeat_as('a4000000-0000-0000-0000-0000000033a6', 'rol_superadmin'), 1,
+  'y el superadmin');
+SELECT throws_ok($$SELECT pg_temp.free_repeat_as('a4000000-0000-0000-0000-0000000033a2', 'rol_admin')$$,
+  'P0001', 'POLLA_FREE_BET_FORBIDDEN', 'el admin de grupo ya no repite de cortesía');
+SELECT throws_ok($$SELECT pg_temp.free_repeat_as('a4000000-0000-0000-0000-0000000033c1', 'rol_admin')$$,
+  'P0001', 'POLLA_FREE_BET_FORBIDDEN', 'ni el pasador');
 
 SELECT * FROM finish();
 ROLLBACK;

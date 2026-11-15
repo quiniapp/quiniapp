@@ -74,6 +74,19 @@ export const groupCommission = (base: number, percentage: number): number =>
 const cents = (value: number | string | null | undefined) => Math.round(Number(value ?? 0) * 100);
 
 /**
+ * Cómo se reparte el total del grupo (lo que dejaron los pasadores menos los
+ * gastos): al admin, el 100% de su comisión (se la transfiere el capitalista
+ * por afuera); al capitalista, el resto.
+ */
+export const groupSplit = (
+  total: number | string,
+  adminCommission: number | string
+): { admin: number; capitalist: number } => ({
+  admin: cents(adminCommission) / 100,
+  capitalist: (cents(total) - cents(adminCommission)) / 100,
+});
+
+/**
  * La cuenta guardada del grupo quedó vieja: lo que dejaron los pasadores o los
  * gastos de la edición (y con eso la base) ya no son los de su liquidación.
  * Sin liquidación, no hay nada viejo.

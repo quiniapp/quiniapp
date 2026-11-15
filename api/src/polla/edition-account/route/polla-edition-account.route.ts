@@ -359,8 +359,9 @@ export class PollaEditionAccountRouter {
       groupId: payload.polla_group_id,
       editionId: paramUuid(req.params.editionId, 'Edición'),
       percentage: payload.admin_percentage,
-      adjustments: payload.adjustments ?? 0,
-      paid: payload.paid ?? 0,
+      // Sin ajustes ni pagado: el total del admin es el 100% de la comisión.
+      adjustments: 0,
+      paid: 0,
       actorId: user.polla_user_id,
     });
 
