@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+- **Usuarios** (`features/users/index.tsx`): en Acciones (tabla y tarjetas) hay un botón para deshabilitar (ícono de prohibido, pide confirmación) o habilitar (ícono de check, sin confirmación). La confirmación avisa que se le cierra la sesión y, si es pasador, que sus jugadores también quedan frenados. Los jugadores de un pasador deshabilitado muestran "Pasador deshabilitado".
+- **`useSetUserDisabled`** (`hooks/mutations/usePollaMutations.ts`) y `BACKEND_ROUTES.user.disabled`.
+- **Buscadores** (`lib/pollaUsers.ts`, `UserSearchPicker`): en los que filtran, los deshabilitados y los jugadores de un pasador deshabilitado aparecen con "deshabilitado" o "pasador deshabilitado" (`pollaUserBlockedText`). En los de cargar a nombre de otro no aparecen.
+- **Repetir** (`lib/repeatReasons.ts`): motivo "su pasador está deshabilitado".
+- **Tests** (`__tests__/users/user-disabled.test.ts`): la marca en los buscadores, el esquema y el motivo de repetir.
+
 ### Fixed - 2026-11-15 (cantidad de tickets en "Repetir sin cargo")
 
 - **Repetir sin cargo** (`features/bets/FreeRepeatDialog.tsx`): después de cargar, la descripción del diálogo decía "0 tickets" porque la pantalla limpia la selección al terminar. El diálogo ahora guarda los tickets elegidos al abrirse y sigue mostrando cuántos eran.

@@ -149,6 +149,14 @@ export const useUpdateUser = () =>
     }
   );
 
+/** Habilitar o deshabilitar desde la lista (al deshabilitar se cierran sus sesiones). */
+export const useSetUserDisabled = () =>
+  useApiMutation<unknown, { id: string; disabled: boolean }>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.user.disabled(id),
+    { invalidate: ['polla-users', 'polla-user', 'polla-user-search'] }
+  );
+
 export const useDeleteUser = () =>
   useApiMutation<unknown, { id: string }>('delete', ({ id }) => BACKEND_ROUTES.user.id(id), {
     invalidate: ['polla-users', 'polla-user-search'],

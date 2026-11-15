@@ -17,6 +17,18 @@ export const pollaUserCode = (user: IPollaUserOption) =>
     ? pollaCashierCode(user.group_number, user.number)
     : String(user.number);
 
+/**
+ * Por qué no puede entrar ni jugar: deshabilitado, o jugador de un pasador
+ * deshabilitado. Solo aparecen así en los buscadores que filtran.
+ */
+export const pollaUserBlockedText = (
+  user: Pick<IPollaUserOption, 'disabled' | 'cashier_disabled'>
+): string | null => {
+  if (user.disabled) return 'deshabilitado';
+  if (user.cashier_disabled) return 'pasador deshabilitado';
+  return null;
+};
+
 /** "pasador" / "jugador de 2-3 · Pedro" (solo "jugador" sin el pasador a mano). */
 const roleText = (user: IPollaUserOption) => {
   const street = user.is_street ? ' de calle' : '';
@@ -26,13 +38,17 @@ const roleText = (user: IPollaUserOption) => {
   return `jugador${street} de ${code ? `${code} · ` : ''}${user.cashier_name}`;
 };
 
+/** Partes de una línea, sin las vacías, con la marca de frenado al final. */
+const joinWithBlocked = (user: IPollaUserOption, parts: (string | null)[]) =>
+  [...parts, pollaUserBlockedText(user)].filter(Boolean).join(' · ');
+
 /** "Juan Pérez · pasador" / "Ana Gómez · jugador de 3 · Pedro". */
 export const describePollaUser = (user: IPollaUserOption) =>
-  `${pollaUserFullName(user)} · ${roleText(user)}`;
+  joinWithBlocked(user, [pollaUserFullName(user), roleText(user)]);
 
 /** Segunda línea de cada fila del buscador: el tipo y el usuario. */
 export const pollaUserTypeLine = (user: IPollaUserOption) =>
-  user.username ? `${roleText(user)} · ${user.username}` : roleText(user);
+  joinWithBlocked(user, [roleText(user), user.username]);
 
 /**
  * Un usuario traído por id (p. ej. el filtro que quedó en la URL) como opción
@@ -56,5 +72,8 @@ export const pollaUserOption = (
     cashier_number: owner?.number ?? null,
     group_number: groupNumber,
     is_street: user.is_street,
+    disabled: user.disabled,
+    cashier_disabled:
+      user.user_type === POLLA_USER_TYPE.PLAYER ? Boolean(cashier?.disabled) : false,
   };
 };

@@ -38,6 +38,8 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_USER_OTHER_ORGANIZATION: () =>
     new ForbiddenError('El usuario pertenece a otra organización'),
   POLLA_PARENT_NOT_FOUND: () => new NotFoundError('Pasador del jugador'),
+  POLLA_CASHIER_DISABLED: () =>
+    new ForbiddenError('El pasador de ese jugador está deshabilitado: no se le puede cargar'),
   POLLA_PARENT_NOT_CASHIER: () => new BadRequestError('El padre de un jugador debe ser un pasador'),
   POLLA_PARENT_OTHER_ORGANIZATION: () =>
     new BadRequestError('El pasador pertenece a otra organización'),

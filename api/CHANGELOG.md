@@ -4,6 +4,22 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+**Qué cambia.** Un usuario se habilita o deshabilita desde la lista de Usuarios; lo hace quien lo puede editar (cada rol sobre los suyos). Al deshabilitarlo se cierran sus sesiones. Si es un pasador, sus jugadores también quedan frenados mientras él esté deshabilitado: no entran, no cargan y nadie les carga (ni el staff, ni repitiendo, ni de cortesía). No se los marca uno por uno: vuelven solos al habilitar al pasador.
+
+- **Migración `20261115194736_polla_cashier_disabled_blocks_players`**:
+  - `polla_create_bet` (misma firma): si el destinatario es un jugador con el pasador deshabilitado → `POLLA_CASHIER_DISABLED`. Repetir y cortesía cargan con esta función: el ticket queda en "No se repitieron".
+  - `polla_revoke_player_sessions(p_cashier_id)` (nueva): cierra las sesiones activas de los jugadores del pasador y devuelve cuántas.
+- **`PUT /user/:id/disabled`** (nuevo, `polla-user.route.ts`): `{ disabled }`. Mismo alcance que `PUT /user/:id` (`assertReachable`). Al deshabilitar cierra sus sesiones y, si es pasador, las de sus jugadores. `PUT /user/:id` hace lo mismo cuando la casilla de "Editar usuario" pasa a deshabilitado.
+- **Sesión** (`polla-auth.repository.ts`): `getSessionUserById` trae al pasador del jugador; con el pasador deshabilitado devuelve `null`, así que la sesión y el refresh dan 401. Antes ya frenaba al propio deshabilitado, pero sus sesiones quedaban activas y revivían al habilitarlo.
+- **Login** (`polla-auth.controller.ts`): el jugador con el pasador deshabilitado recibe 403 "Tu pasador está deshabilitado".
+- **`GET /user/search`**: con `scope=writable` (cargar a nombre de otro) excluye deshabilitados y jugadores de pasadores deshabilitados. Sin scope (filtros) los incluye y cada opción trae `disabled` y `cashier_disabled`.
+- **`GET /user/by-number/:number`**: el jugador de un pasador deshabilitado da 403.
+- **`GET /user`**: cada usuario trae `cashier_disabled`.
+- **`polla-errors.ts`**: mensaje de `POLLA_CASHIER_DISABLED` (403).
+- **Tests pgTAP:** `200_polla_cashier_disabled` (el jugador, el staff y repetir quedan frenados; el jugador no se marca; vuelve al habilitar; `polla_revoke_player_sessions` cierra solo las de sus jugadores).
+
 ### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
 
 **Qué cambia.** Repetir de cortesía (sin cargo) tickets de una edición finalizada lo hacen dueño, capitalista, superadmin y el Súper, en toda la organización. El admin de grupo ya no. El resto sigue igual: el ticket tiene que ser de una edición finalizada (con ganadores, o desierta al procesar el último día) y se carga en una edición con la carga abierta.
