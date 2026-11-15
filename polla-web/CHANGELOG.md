@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-15 (cantidad de tickets en "Repetir sin cargo")
+
+- **Repetir sin cargo** (`features/bets/FreeRepeatDialog.tsx`): después de cargar, la descripción del diálogo decía "0 tickets" porque la pantalla limpia la selección al terminar. El diálogo ahora guarda los tickets elegidos al abrirse y sigue mostrando cuántos eran.
+
 ### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
 
 - **Administrar jugadas** (`features/manage-bets/index.tsx`): con una edición finalizada, "Repetir sin cargo" aparece para dueño, capitalista, superadmin y el Súper (toda la organización); el admin de grupo ya no lo ve, pero sigue viendo "Cortesía en Edición X · ticket N". Se puede elegir cualquier ticket de la lista (al Súper le llega la versión pública de cada jugada).
