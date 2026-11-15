@@ -4,6 +4,26 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 ("Generar liquidación" por edición)
+
+**Qué cambia.** La liquidación de los pasadores de una edición se genera desde un modal, como en QuiniApp: se tilda a quién liquidar y se escribe lo que se suma hoy en reclamos, cobros y pagos. Al generar, la edición queda marcada como liquidada. Después se sigue editando a medida que los pasadores pagan (los movimientos son siempre en vivo).
+
+- **Migración `20261115195936_polla_generate_edition_liquidation`**: `polla_generate_edition_liquidation(p_organization_id, p_edition_id, p_actor_id, p_entries, p_ticket_source)`, en una transacción:
+  - `p_entries` es `[{ polla_user_id, collection, payment, claim }]`. Carga como movimientos de hoy los cobros y pagos mayores a 0 y los reclamos distintos de 0.
+  - Liquida a esos pasadores con `polla_liquidate_edition_accounts`; la foto incluye los movimientos recién cargados.
+  - Marca la edición. Si ya estaba marcada, conserva quién y cuándo la marcó primero.
+  - Sin `p_ticket_source` y con las jugadas cambiadas desde la liquidación anterior, devuelve `DIFFERENCES` sin escribir nada, tampoco los movimientos.
+  - Errores nuevos: `POLLA_EDITION_LIQUIDATION_DUPLICATE` (pasador repetido) y `POLLA_EDITION_LIQUIDATION_AMOUNT_INVALID` (cobro o pago negativo).
+  - No usa tabla temporal propia.
+- **`POST /edition_account/:editionId/generate`** (nuevo, `polla-edition-account.route.ts`): `{ entries, ticket_source? }`, para dueño, capitalista y superadmin. Repositorio: `generate`. La respuesta tiene la misma forma que `POST /:editionId/liquidate`.
+- `POST /:editionId/liquidate` y `PUT /:editionId/liquidated` siguen existiendo, pero la web ya no los usa.
+- **Tests pgTAP:** `210_polla_generate_edition_liquidation` cubre:
+  - movimientos, foto y marca;
+  - el pasador en cero;
+  - volver a generar sin perder la primera marca;
+  - las diferencias, que no escriben nada, y seguir con la nueva;
+  - los errores (vacío, repetido, negativo, quien no es pasador y la carga abierta, que no deja el cobro cargado).
+
 ### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
 
 **Qué cambia.** Un usuario se habilita o deshabilita desde la lista de Usuarios; lo hace quien lo puede editar (cada rol sobre los suyos). Al deshabilitarlo se cierran sus sesiones. Si es un pasador, sus jugadores también quedan frenados mientras él esté deshabilitado: no entran, no cargan y nadie les carga (ni el staff, ni repitiendo, ni de cortesía). No se los marca uno por uno: vuelven solos al habilitar al pasador.

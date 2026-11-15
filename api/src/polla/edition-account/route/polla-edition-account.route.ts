@@ -11,6 +11,7 @@ import {
 } from '@helper/polla/types/game.type';
 import { IPollaGroupEntityBack } from '@helper/polla/types/catalog.type';
 import {
+  generateEditionLiquidationSchema,
   liquidateEditionAccountsSchema,
   liquidatePollaGroupEditionSchema,
   pollaAccountMovementSchema,
@@ -108,6 +109,7 @@ export class PollaEditionAccountRouter {
 
     this.router.get('/:editionId/accounts', readGuard, this.accountsHandler);
     this.router.post('/:editionId/liquidate', accountGuard, this.liquidateHandler);
+    this.router.post('/:editionId/generate', accountGuard, this.generateHandler);
     this.router.put('/:editionId/liquidated', accountGuard, this.setLiquidatedHandler);
     this.router.get('/:editionId/movements', readGuard, this.movementsHandler);
     this.router.post('/:editionId/movements', accountGuard, this.createMovementHandler);
@@ -282,6 +284,26 @@ export class PollaEditionAccountRouter {
       editionId: paramUuid(req.params.editionId, 'Edición'),
       userIds: payload.polla_user_ids,
       actorId: user.polla_user_id,
+      ticketSource: payload.ticket_source,
+    });
+
+    res.status(200).json({ data: { result } });
+  });
+
+  /**
+   * "Generar liquidación": los pasadores tildados con lo que se suma hoy en
+   * reclamos, cobros y pagos. Carga los movimientos, liquida y marca la
+   * edición, todo junto (ver `polla_generate_edition_liquidation`).
+   */
+  private generateHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const payload = generateEditionLiquidationSchema.parse(req.body);
+
+    const result = await this.repository.generate({
+      organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+      editionId: paramUuid(req.params.editionId, 'Edición'),
+      actorId: user.polla_user_id,
+      entries: payload.entries,
       ticketSource: payload.ticket_source,
     });
 

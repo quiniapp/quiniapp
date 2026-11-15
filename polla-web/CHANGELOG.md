@@ -4,6 +4,27 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 ("Generar liquidación" por edición)
+
+- **Cuenta corriente → Pasadores → detalle de la edición** (`features/current-account/edition/EditionAccountDetail.tsx`):
+  - "Generar liquidación" está al lado del buscador de Pasador y abre el modal con los pasadores del filtro.
+  - Los exportes quedan en este orden: Exportar diario, Exportar liquidación, Exportar subtotales, Exportar cobros y pagos, Resumen cuenta corriente.
+  - Se sacan "Liquidar" y "Marcar como liquidada"/"Desmarcar".
+- **`GenerateEditionLiquidationDialog`** (nuevo):
+  - Tabla con casilla y "Seleccionar todos". Vienen tildados los que tienen jugadas, borradas o movimientos.
+  - Columnas: código y nombre, pase jugadas, borradas, pase, comisión, reclamos, subtotal, cobros, pagos y Debe.
+  - En Reclamos, Cobros y Pagos se escribe lo que se suma hoy; al lado se ve lo que ya tenía.
+  - El pase, la comisión, el subtotal y el Debe se recalculan al escribir, y abajo está el Debe de los tildados.
+  - Un cobro o un pago negativo no deja generar.
+  - Al generar, la edición pasa a "Liquidaciones realizadas". Las hojas se bajan con "Exportar liquidación".
+  - Si las jugadas cambiaron, muestra las diferencias. Se puede seguir con la liquidación vieja o la nueva, o volver a la tabla sin perder lo escrito.
+- **`lib/editionAccount.ts`**:
+  - `withNewMovements`: la fila con los movimientos nuevos, con la fórmula de `polla_edition_account_base` y el redondeo de `ROUND`.
+  - `parseAmount`: ahora compartido; `GroupEditionAccounts` lo importa de acá.
+- **Hooks**: `useGenerateEditionLiquidation` y `BACKEND_ROUTES.editionAccount.generate`.
+- **Removed**: `LiquidateEditionDialog.tsx`, `useLiquidateEditionAccounts`, `useSetEditionLiquidated` y las rutas `liquidate` y `liquidated` de `BACKEND_ROUTES`.
+- **Tests** (`__tests__/current-account/generate-liquidation.test.ts`): `withNewMovements` (cobro, pago, reclamo positivo y negativo, redondeo), `parseAmount` y el esquema.
+
 ### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
 
 - **Usuarios** (`features/users/index.tsx`): en Acciones (tabla y tarjetas) hay un botón para deshabilitar (ícono de prohibido, pide confirmación) o habilitar (ícono de check, sin confirmación). La confirmación avisa que se le cierra la sesión y, si es pasador, que sus jugadores también quedan frenados. Los jugadores de un pasador deshabilitado muestran "Pasador deshabilitado".

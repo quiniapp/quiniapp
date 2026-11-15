@@ -298,6 +298,29 @@ export const liquidateEditionAccountsSchema = z.object({
 
 export const setEditionLiquidatedSchema = z.object({ liquidated: z.boolean() });
 
+const LIQUIDATION_AMOUNT_MESSAGE = 'El cobro y el pago no pueden ser negativos';
+
+/**
+ * "Generar liquidación" de una edición: los pasadores tildados, cada uno con
+ * lo que se suma hoy (0 = nada). Cobro y pago, positivos; el reclamo, con signo.
+ */
+export const generateEditionLiquidationSchema = z.object({
+  entries: z
+    .array(
+      z.object({
+        polla_user_id: z.string().uuid(),
+        collection: z.number().finite().min(0, LIQUIDATION_AMOUNT_MESSAGE).optional(),
+        payment: z.number().finite().min(0, LIQUIDATION_AMOUNT_MESSAGE).optional(),
+        claim: z.number().finite().optional(),
+      })
+    )
+    .min(1, 'Elegí al menos un pasador')
+    .refine((entries) => new Set(entries.map((e) => e.polla_user_id)).size === entries.length, {
+      message: 'Hay un pasador repetido',
+    }),
+  ticket_source: z.enum(['NEW', 'OLD']).optional(),
+});
+
 /**
  * Liquidar un grupo en una edición: solo el % del admin. Sin ajustes ni
  * pagado: al admin se le paga siempre el 100% de la comisión, y se lo
@@ -312,6 +335,7 @@ export type IPollaAccountMovementPayload = z.infer<typeof pollaAccountMovementSc
 export type IPollaAccountMovementUpdatePayload = z.infer<typeof pollaAccountMovementUpdateSchema>;
 export type ILiquidateEditionAccountsPayload = z.infer<typeof liquidateEditionAccountsSchema>;
 export type ISetEditionLiquidatedPayload = z.infer<typeof setEditionLiquidatedSchema>;
+export type IGenerateEditionLiquidationPayload = z.infer<typeof generateEditionLiquidationSchema>;
 export type ILiquidatePollaGroupEditionPayload = z.infer<typeof liquidatePollaGroupEditionSchema>;
 
 export type INewPollaEditionPayload = z.infer<typeof newPollaEditionSchema>;

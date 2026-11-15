@@ -11,6 +11,7 @@ import {
   IPollaGroupEditionAccountPreview,
 } from '@helper/polla/types/game.type';
 import {
+  IGenerateEditionLiquidationPayload,
   IPollaAccountMovementPayload,
   IPollaAccountMovementUpdatePayload,
 } from '@helper/polla/schemas/game.schema';
@@ -73,6 +74,31 @@ export class PollaEditionAccountRepository {
       p_edition_id: p.editionId,
       p_user_ids: p.userIds,
       p_actor_id: p.actorId,
+      p_ticket_source: p.ticketSource ?? null,
+    });
+
+    throwIfPollaError(error);
+    return data as IPollaEditionLiquidationResult;
+  }
+
+  /**
+   * "Generar liquidación": carga los movimientos nuevos de cada pasador, los
+   * liquida y marca la edición (si no estaba marcada), todo junto. Sin
+   * `ticketSource`, si cambiaron las jugadas devuelve las diferencias sin
+   * escribir nada.
+   */
+  async generate(p: {
+    organizationId: string;
+    editionId: string;
+    actorId: string;
+    entries: IGenerateEditionLiquidationPayload['entries'];
+    ticketSource?: 'NEW' | 'OLD';
+  }): Promise<IPollaEditionLiquidationResult> {
+    const { data, error } = await supabase.rpc('polla_generate_edition_liquidation', {
+      p_organization_id: p.organizationId,
+      p_edition_id: p.editionId,
+      p_actor_id: p.actorId,
+      p_entries: p.entries,
       p_ticket_source: p.ticketSource ?? null,
     });
 

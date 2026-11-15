@@ -84,8 +84,7 @@ export const BACKEND_ROUTES = {
     groupAccounts: `${PRIVATE}/edition_account/group_accounts`,
     movement: (id: string) => `${PRIVATE}/edition_account/movements/${id}`,
     accounts: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/accounts`,
-    liquidate: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/liquidate`,
-    liquidated: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/liquidated`,
+    generate: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/generate`,
     movements: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/movements`,
     groupPreviews: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/group_previews`,
     groupLiquidate: (editionId: string) =>
