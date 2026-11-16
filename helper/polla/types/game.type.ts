@@ -929,14 +929,26 @@ export type IPollaEditionLiquidationResult =
   | { status: 'DIFFERENCES'; differences: IPollaEditionLiquidationDifference[] }
   | { status: 'LIQUIDATED'; liquidations: IPollaEditionLiquidationEntity[] };
 
+/**
+ * Una edición de la lista de la cuenta corriente. Los contadores y el Debe
+ * vienen en `null` cuando se piden sin cuenta (`counts=false`: selectores).
+ */
 export interface IPollaEditionAccountListItem {
   edition: IPollaEditionEntityFront;
   liquidated_at: string | null;
   liquidated_by_name: string | null;
-  cashiers_count: number;
-  liquidated_count: number;
-  owed: number;
+  /** Pasadores con jugadas, borradas o movimientos. */
+  cashiers_count: number | null;
+  /** De esos, los que tienen liquidación (los liquidados en cero no cuentan). */
+  liquidated_count: number | null;
+  /** Lo que deben los pasadores (suma de los Debe positivos). */
+  owed_by_cashiers: number | null;
+  /** Lo que hay que pagarles (suma de los Cobra), en positivo. */
+  owed_to_cashiers: number | null;
 }
+
+/** Qué ediciones lista `GET /edition_account`: a liquidar o liquidaciones realizadas. */
+export type IPollaEditionAccountListStatus = 'pending' | 'done';
 
 export interface IPollaEditionAccountTotals extends IPollaCurrentAccountDailyTotals {
   polla_edition_id: string;

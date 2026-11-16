@@ -14,7 +14,7 @@ import { todayIso } from '@/lib/dates';
 import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/lib/accountPeriod';
 import { owedWord } from '@/lib/editionAccount';
 import { Label } from '@/components/ui/label';
-import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
+import { downloadLiquidationSlipPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
 import { ReportMode, fmtMoney } from './format';
 import { AccountTabs, ModeToggle } from './dialogs/shared';
@@ -63,9 +63,9 @@ const CashierDailyHistory = () => {
     if (!account || !user) return;
     setPrinting(true);
     try {
-      await downloadLiquidationSlipsPDF({
-        accounts: [account],
-        cashierCodeOf: (of) => pollaCashierCode(groupNumber, of.user_number),
+      await downloadLiquidationSlipPDF({
+        account,
+        cashierCode: pollaCashierCode(groupNumber, account.user_number),
       });
     } catch {
       toast.error('No se pudo generar la liquidación');
@@ -79,7 +79,7 @@ const CashierDailyHistory = () => {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tu comisión y lo que cobraste o te pagaron. Los premios de tus jugadores están en Premios."
+        description="Liquidaciones por días anteriores al cambio, solo para consultar. Desde ahora te liquidan por edición: está en la pestaña Por edición. Los premios de tus jugadores están en Premios."
         actions={
           <Button type="button" onClick={handlePrint} disabled={!account || printing}>
             <Printer />

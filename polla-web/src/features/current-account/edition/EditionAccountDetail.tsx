@@ -8,7 +8,7 @@ import {
 import { IPollaUserOption, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useEditionAccounts } from '@/hooks/fetchs/usePollaData';
-import { EmptyState } from '@/components/PageHeader';
+import { EmptyState, ErrorState } from '@/components/PageHeader';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,37 @@ const MONEY_COLUMNS = [
 
 type MoneyKey = (typeof MONEY_COLUMNS)[number][0];
 
+/** Lo que muestra la tarjeta del celular (el Debe va aparte, destacado). */
+const CARD_FIELDS = [
+  ['pass', 'Pase'],
+  ['cashier_commission', 'Comisión'],
+  ['claims', 'Reclamos'],
+  ['subtotal', 'Subtotal'],
+  ['collections', 'Cobros'],
+  ['paid', 'Pagos'],
+] as const;
+
+/** Liquidado y el aviso de que cambió desde la última liquidación. */
+const RowStatus = ({ row }: { row: IPollaEditionAccountRow }) => (
+  <span className="flex shrink-0 items-center gap-2">
+    {row.liquidation && <Badge variant="success">Liquidado</Badge>}
+    {row.differs && (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            role="img"
+            aria-label="Cambió desde la última liquidación"
+            className="text-amber-600"
+          >
+            <AlertTriangle className="size-4" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Cambió desde la última liquidación</TooltipContent>
+      </Tooltip>
+    )}
+  </span>
+);
+
 const sumColumns = (rows: IPollaEditionAccountRow[]) =>
   Object.fromEntries(
     MONEY_COLUMNS.map(([key]) => [key, rows.reduce((sum, row) => sum + Number(row[key] ?? 0), 0)])
@@ -92,7 +123,7 @@ export const EditionAccountDetail = ({
 
   // "Sin grupo" no es un filtro de la API: se acota acá abajo.
   const noGroup = groupId === POLLA_LIQUIDATION_NO_GROUP;
-  const { data, isFetching } = useEditionAccounts(editionId, {
+  const { data, isFetching, isError, refetch } = useEditionAccounts(editionId, {
     polla_group_id: groupId && !noGroup ? groupId : undefined,
     polla_user_id: cashier?.polla_user_id,
   });
@@ -168,87 +199,114 @@ export const EditionAccountDetail = ({
         </Button>
       </div>
 
-      {rows.length === 0 ? (
+      {isError && !data ? (
+        <ErrorState onRetry={() => void refetch()} />
+      ) : rows.length === 0 ? (
         <EmptyState
           message={isFetching ? 'Cargando…' : 'No hay pasadores con jugadas ni movimientos.'}
         />
       ) : (
-        <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pasador</TableHead>
-                {MONEY_COLUMNS.map(([key, label]) => (
-                  <TableHead key={key} className="whitespace-nowrap text-right">
-                    {label}
-                  </TableHead>
-                ))}
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => {
-                const code = cashierCode(row);
-                return (
-                  <TableRow
-                    key={row.polla_user_id}
-                    className="cursor-pointer"
-                    tabIndex={0}
+        <>
+          {/* Celular: una tarjeta por pasador; tocarla abre sus movimientos. */}
+          <ul className="flex flex-col gap-2 md:hidden" aria-label="Pasadores">
+            {rows.map((row) => {
+              const code = cashierCode(row);
+              return (
+                <li key={row.polla_user_id}>
+                  <button
+                    type="button"
                     onClick={() => openMovements(row)}
-                    onKeyDown={(event) => event.key === 'Enter' && openMovements(row)}
+                    className="flex w-full flex-col gap-2 rounded-md border bg-card p-3 text-left text-card-foreground transition-colors hover:bg-accent"
                   >
-                    <TableCell className="max-w-[260px] truncate">
-                      {code ? `${code} · ` : ''}
-                      {row.user_name}
-                    </TableCell>
-                    {MONEY_COLUMNS.map(([key]) => (
-                      <TableCell
-                        key={key}
-                        className={
-                          key === 'total'
-                            ? 'text-right font-semibold tabular-nums'
-                            : 'text-right tabular-nums'
-                        }
-                      >
-                        ${fmtMoney(row[key])}
-                      </TableCell>
-                    ))}
-                    <TableCell className="whitespace-nowrap">
-                      <span className="flex items-center gap-2">
-                        {row.liquidation && <Badge variant="success">Liquidado</Badge>}
-                        {row.differs && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                role="img"
-                                aria-label="Cambió desde la última liquidación"
-                                className="text-amber-600"
-                              >
-                                <AlertTriangle className="size-4" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>Cambió desde la última liquidación</TooltipContent>
-                          </Tooltip>
-                        )}
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="min-w-0 break-words font-medium">
+                        {code ? `${code} · ` : ''}
+                        {row.user_name}
                       </span>
+                      <RowStatus row={row} />
+                    </span>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      {CARD_FIELDS.map(([key, label]) => (
+                        <div key={key} className="flex justify-between gap-2">
+                          <dt className="text-muted-foreground">{label}</dt>
+                          <dd className="tabular-nums">${fmtMoney(row[key])}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <span className="text-right font-semibold tabular-nums">
+                      Debe ${fmtMoney(row.total)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+            <li className="flex justify-between rounded-md border bg-muted px-3 py-2 text-sm font-semibold">
+              <span>Total general</span>
+              <span className="tabular-nums">Debe ${fmtMoney(totals.total)}</span>
+            </li>
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-md border bg-card text-card-foreground md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Pasador</TableHead>
+                  {MONEY_COLUMNS.map(([key, label]) => (
+                    <TableHead key={key} className="whitespace-nowrap text-right">
+                      {label}
+                    </TableHead>
+                  ))}
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => {
+                  const code = cashierCode(row);
+                  return (
+                    <TableRow
+                      key={row.polla_user_id}
+                      className="cursor-pointer"
+                      tabIndex={0}
+                      onClick={() => openMovements(row)}
+                      onKeyDown={(event) => event.key === 'Enter' && openMovements(row)}
+                    >
+                      <TableCell className="max-w-[260px] truncate">
+                        {code ? `${code} · ` : ''}
+                        {row.user_name}
+                      </TableCell>
+                      {MONEY_COLUMNS.map(([key]) => (
+                        <TableCell
+                          key={key}
+                          className={
+                            key === 'total'
+                              ? 'text-right font-semibold tabular-nums'
+                              : 'text-right tabular-nums'
+                          }
+                        >
+                          ${fmtMoney(row[key])}
+                        </TableCell>
+                      ))}
+                      <TableCell className="whitespace-nowrap">
+                        <RowStatus row={row} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="font-semibold">
+                  <TableCell>Total general</TableCell>
+                  {MONEY_COLUMNS.map(([key]) => (
+                    <TableCell key={key} className="text-right tabular-nums">
+                      ${fmtMoney(totals[key])}
                     </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-            <TableFooter>
-              <TableRow className="font-semibold">
-                <TableCell>Total general</TableCell>
-                {MONEY_COLUMNS.map(([key]) => (
-                  <TableCell key={key} className="text-right tabular-nums">
-                    ${fmtMoney(totals[key])}
-                  </TableCell>
-                ))}
-                <TableCell />
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </div>
+                  ))}
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+        </>
       )}
 
       {moving && (

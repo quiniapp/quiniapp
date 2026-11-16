@@ -14,6 +14,7 @@ import {
   useDeleteGroup,
   useUpdateGroup,
 } from '@/hooks/mutations/usePollaMutations';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -325,9 +326,10 @@ type DialogState =
  */
 export const GroupsPage = () => {
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [deleting, setDeleting] = useState<IPollaGroupWithAdmin | null>(null);
 
   const { data, isFetching } = useGroups();
-  const { mutate: deleteGroup } = useDeleteGroup();
+  const { mutate: deleteGroup, isPending: isDeleting } = useDeleteGroup();
 
   const groups = data?.data ?? [];
 
@@ -392,15 +394,7 @@ export const GroupsPage = () => {
                         variant="ghost"
                         title="Eliminar"
                         aria-label={`Eliminar ${group.name}`}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `¿Eliminar el grupo ${group.name}? Se borran también su admin, sus pasadores y sus jugadores.`
-                            )
-                          ) {
-                            deleteGroup({ id: group.polla_group_id });
-                          }
-                        }}
+                        onClick={() => setDeleting(group)}
                       >
                         <Trash2 />
                       </Button>
@@ -419,6 +413,32 @@ export const GroupsPage = () => {
       )}
       {dialog?.kind === 'admin' && (
         <AssignAdminDialog group={dialog.group} onClose={() => setDialog(null)} />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title={`¿Eliminar el grupo ${deleting.name}?`}
+          description={
+            <ul className="list-disc space-y-1 pl-4 text-left">
+              <li>
+                Se borran también su admin, sus pasadores y sus jugadores: no van a poder entrar ni
+                jugar, y se les cierra la sesión.
+              </li>
+              <li>
+                Solo se puede si el grupo no tiene jugadas en ediciones en juego y tiene todo
+                liquidado (sus pasadores y la cuenta del grupo, en cada edición).
+              </li>
+              <li>Lo ya liquidado queda en el historial de la cuenta corriente.</li>
+              <li>No se puede deshacer.</li>
+            </ul>
+          }
+          confirmLabel="Eliminar grupo"
+          destructive
+          busy={isDeleting}
+          onConfirm={() =>
+            deleteGroup({ id: deleting.polla_group_id }, { onSettled: () => setDeleting(null) })
+          }
+          onCancel={() => setDeleting(null)}
+        />
       )}
     </div>
   );

@@ -4,6 +4,13 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (lista de ediciones paginada)
+
+- **`IPollaEditionAccountListItem`** (`helper/polla/types/game.type.ts`):
+  - `owed` se reemplaza por `owed_by_cashiers` y `owed_to_cashiers`.
+  - `cashiers_count`, `liquidated_count` y los dos Debe pueden venir en `null` cuando se piden sin cuenta (`counts=false`).
+- **`IPollaEditionAccountListStatus`** (nuevo): `'pending' | 'done'`.
+
 ### Added - 2026-11-15 ("Generar liquidación" por edición)
 
 - **`generateEditionLiquidationSchema`** e **`IGenerateEditionLiquidationPayload`** (`helper/polla/schemas/game.schema.ts`):

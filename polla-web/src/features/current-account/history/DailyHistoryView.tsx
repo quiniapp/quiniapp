@@ -41,7 +41,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { downloadDailyAccountsPDF } from '@/functions/current-account/accountTablePDF';
-import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
+import { exportLiquidationSlipsZip } from '@/functions/current-account/liquidationSlipPDF';
+import { liquidationZipName } from '@/lib/liquidationZip';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
 import { groupLabel } from '@/lib/pollaGroups';
 import { ReportMode, fmtMoney } from '../format';
@@ -159,9 +160,21 @@ export const DailyHistoryView = () => {
   const handleExportLiquidations = async (accounts: AccountPeriodView[]) => {
     setPrinting(true);
     try {
-      await downloadLiquidationSlipsPDF({ accounts, cashierCodeOf: cashierCode });
+      const selectedGroup = groupId ? groupById.get(groupId) : undefined;
+      await exportLiquidationSlipsZip({
+        sheets: accounts.map((account) => ({
+          account,
+          cashierCode: cashierCode(account),
+          group: groupOf(account),
+        })),
+        zipName: liquidationZipName(
+          rangeFrom ? { kind: 'range', from: rangeFrom, to: date } : { kind: 'day', date },
+          noGroup ? 'none' : selectedGroup ? { number: selectedGroup.number } : undefined
+        ),
+      });
       setExportingSlips(false);
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error('No se pudieron exportar las liquidaciones');
     } finally {
       setPrinting(false);

@@ -25,7 +25,11 @@ import {
   downloadDailyAccountsPDF,
   downloadDailySummaryPDF,
 } from '@/functions/current-account/accountTablePDF';
-import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
+import {
+  type LiquidationSlipSheet,
+  exportLiquidationSlipsZip,
+} from '@/functions/current-account/liquidationSlipPDF';
+import { editionZipFolder, liquidationZipName } from '@/lib/liquidationZip';
 import {
   printDailyTotalsTicket,
   printRangeTotalsTicket,
@@ -56,9 +60,6 @@ export type EditionReportKind = 'daily' | 'collections' | 'summary' | 'subtotals
 
 type Scope = 'one' | 'many';
 
-/** Tope de ediciones por pedido de totales (el de la API). */
-const MAX_EDITIONS = 60;
-
 const COPY: Record<EditionReportKind, { title: string; description: string; action: string }> = {
   daily: {
     title: 'Exportar diario',
@@ -68,7 +69,7 @@ const COPY: Record<EditionReportKind, { title: string; description: string; acti
   liquidation: {
     title: 'Exportar liquidación',
     description:
-      'Una hoja por pasador. Con varias ediciones se descargan las hojas de los pasadores con movimiento de cada una.',
+      'Una hoja por pasador, en un ZIP. Con varias ediciones van las hojas de los pasadores con movimiento de cada una, en una carpeta por edición.',
     action: 'Exportar',
   },
   collections: {
@@ -120,11 +121,8 @@ export const EditionReportDialog = ({
   onClose,
 }: EditionReportDialogProps) => {
   const { edition } = item;
-  const { cashierCode } = useCashierCode();
+  const { cashierCode, groupById } = useCashierCode();
   const catalogs = useDrawCatalogs(organizationId);
-  const { data: list } = useEditionAccountList({
-    polla_organization_id: organizationId ?? undefined,
-  });
 
   const today = todayIso();
   const [scope, setScope] = useState<Scope>('one');
@@ -133,6 +131,14 @@ export const EditionReportDialog = ({
     return monthStart < today ? monthStart : today;
   });
   const [to, setTo] = useState(today);
+  // Las ediciones que empiezan en el rango, sin contadores (hasta 200).
+  const { data: list } = useEditionAccountList({
+    polla_organization_id: organizationId ?? undefined,
+    from,
+    to,
+    counts: false,
+    limit: 200,
+  });
   const [unchecked, setUnchecked] = useState<Set<string>>(new Set());
   const [groupId, setGroupId] = useState(ALL_GROUPS);
   const [percentage, setPercentage] = useState('50');
@@ -141,14 +147,18 @@ export const EditionReportDialog = ({
 
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
   const groupName = groups.find((g) => g.polla_group_id === effectiveGroupId)?.name;
+  // Filtro de grupo para el nombre del ZIP (solo si el grupo elegido está en el catálogo).
+  const selectedGroup = effectiveGroupId ? groupById.get(effectiveGroupId) : undefined;
+  const zipGroupFilter = selectedGroup ? { number: selectedGroup.number } : undefined;
   const copy = COPY[kind];
   const many = scope === 'many';
   const editionId = edition.polla_edition_id;
   const hasExpenses = !many && (kind === 'collections' || kind === 'subtotals');
   const hasPercentage = (kind === 'collections' && many) || kind === 'subtotals';
-  const hasGroup = kind !== 'liquidation' && groups.length > 0;
+  // También en Exportar liquidación: opcional, "Todos los grupos" por defecto.
+  const hasGroup = groups.length > 0;
 
-  const inRange = useMemo(() => editionsInRange(list ?? [], from, to), [list, from, to]);
+  const inRange = useMemo(() => editionsInRange(list?.data ?? [], from, to), [list, from, to]);
   const checked = inRange.filter((entry) => !unchecked.has(entry.edition.polla_edition_id));
   const toggle = (id: string, on: boolean) =>
     setUnchecked((prev) => {
@@ -161,28 +171,37 @@ export const EditionReportDialog = ({
   const titleOf = (entry: IPollaEditionAccountListItem) =>
     pollaEditionTitle(entry.edition, catalogs);
 
-  /** Hojas de los pasadores con movimiento de cada edición tildada, sin pedir la lista. */
+  /** Un ZIP con las hojas de los pasadores con movimiento de cada edición tildada, sin pedir la lista. */
   const exportManySlips = async () => {
-    let downloaded = 0;
+    const sheets: LiquidationSlipSheet[] = [];
     for (const entry of checked) {
       const entryTitle = titleOf(entry);
-      const rows = (await fetchEditionAccounts(entry.edition.polla_edition_id)).filter(
-        hasEditionMovement
-      );
-      if (rows.length === 0) continue;
-      await downloadLiquidationSlipsPDF({
-        accounts: rows.map((row) => editionAccountView(row, entry.edition)),
-        cashierCodeOf: cashierCode,
-        headerLabel: entryTitle,
-        fileTag: editionFileTag(entryTitle),
-      });
-      downloaded += rows.length;
+      const rows = (
+        await fetchEditionAccounts(entry.edition.polla_edition_id, {
+          polla_group_id: effectiveGroupId,
+        })
+      ).filter(hasEditionMovement);
+      for (const row of rows) {
+        sheets.push({
+          account: editionAccountView(row, entry.edition),
+          cashierCode: cashierCode(row),
+          group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
+          edition: {
+            key: entry.edition.polla_edition_id,
+            folder: editionZipFolder(entry.edition.start_date, entryTitle),
+          },
+          headerLabel: entryTitle,
+        });
+      }
     }
-    if (downloaded === 0) {
+    if (sheets.length === 0) {
       toast.error('Ninguna edición tiene pasadores con movimiento');
       return false;
     }
-    return true;
+    return exportLiquidationSlipsZip({
+      sheets,
+      zipName: liquidationZipName({ kind: 'range', from, to }, zipGroupFilter),
+    });
   };
 
   const printOne = async () => {
@@ -255,10 +274,6 @@ export const EditionReportDialog = ({
       toast.error('Elegí al menos una edición');
       return false;
     }
-    if (checked.length > MAX_EDITIONS) {
-      toast.error(`Elegí hasta ${MAX_EDITIONS} ediciones`);
-      return false;
-    }
     if (kind === 'liquidation') return exportManySlips();
 
     // Cada renglón lleva el título de su edición: dos que empiezan el mismo
@@ -321,14 +336,18 @@ export const EditionReportDialog = ({
   const handleExportPicked = async (selected: IPollaEditionAccountRow[]) => {
     try {
       setPrinting(true);
-      await downloadLiquidationSlipsPDF({
-        accounts: selected.map((row) => editionAccountView(row, edition)),
-        cashierCodeOf: cashierCode,
-        headerLabel: title,
-        fileTag: editionFileTag(title),
+      await exportLiquidationSlipsZip({
+        sheets: selected.map((row) => ({
+          account: editionAccountView(row, edition),
+          cashierCode: cashierCode(row),
+          group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
+          headerLabel: title,
+        })),
+        zipName: liquidationZipName({ kind: 'edition', title }, zipGroupFilter),
       });
       onClose();
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error('No se pudieron exportar las liquidaciones');
     } finally {
       setPrinting(false);
@@ -339,7 +358,7 @@ export const EditionReportDialog = ({
     return (
       <CashierPickDialog
         title="Exportar liquidación"
-        description="Se descarga un PDF por pasador. Los que no tienen movimiento en la edición vienen sin tildar."
+        description="Se descarga un ZIP con un PDF por pasador, en carpetas por grupo. Los que no tienen movimiento en la edición vienen sin tildar."
         items={picking}
         idOf={(row) => row.polla_user_id}
         labelOf={(row) => {

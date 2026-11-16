@@ -92,6 +92,7 @@ export const UsersPage = () => {
   const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
   /** A quién se está por deshabilitar (pide confirmación; habilitar no). */
   const [disabling, setDisabling] = useState<IPollaUserEntityFront | null>(null);
+  const [deleting, setDeleting] = useState<IPollaUserEntityFront | null>(null);
   // El número se precarga con el siguiente libre hasta que lo cambian a mano.
   const [numberTouched, setNumberTouched] = useState(false);
 
@@ -114,7 +115,7 @@ export const UsersPage = () => {
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
 
   const { mutate: createUser, isPending } = useCreateUser();
-  const { mutate: deleteUser } = useDeleteUser();
+  const { mutate: deleteUser, isPending: isDeleting } = useDeleteUser();
   const { mutate: resetPassword, isPending: isResetting } = useResetUserPassword();
   const { mutate: setUserDisabled, isPending: isTogglingDisabled } = useSetUserDisabled();
 
@@ -305,11 +306,7 @@ export const UsersPage = () => {
         variant="ghost"
         title="Eliminar"
         aria-label={`Eliminar a ${item.name}`}
-        onClick={() => {
-          if (window.confirm(`¿Eliminar a ${item.name}?`)) {
-            deleteUser({ id: item.polla_user_id });
-          }
-        }}
+        onClick={() => setDeleting(item)}
       >
         <Trash2 />
       </Button>
@@ -648,6 +645,34 @@ export const UsersPage = () => {
           busy={isTogglingDisabled}
           onConfirm={() => toggleDisabled(disabling, true)}
           onCancel={() => setDisabling(null)}
+        />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title={`¿Eliminar a ${deleting.name}?`}
+          description={
+            <ul className="list-disc space-y-1 pl-4 text-left">
+              <li>
+                No va a poder entrar ni jugar, y deja de aparecer en las listas y los buscadores.
+              </li>
+              {deleting.user_type === POLLA_USER_TYPE.CASHIER && (
+                <li>
+                  Sus jugadores no se borran, pero sin pasador no van a poder cargar jugadas (ni
+                  nadie a nombre de ellos).
+                </li>
+              )}
+              {deleting.user_type === POLLA_USER_TYPE.ADMIN && <li>Su grupo queda sin admin.</li>}
+              <li>Sus tickets y su cuenta corriente quedan en el historial.</li>
+              <li>No se puede deshacer. Si es por un tiempo, mejor deshabilitalo.</li>
+            </ul>
+          }
+          confirmLabel="Eliminar"
+          destructive
+          busy={isDeleting}
+          onConfirm={() =>
+            deleteUser({ id: deleting.polla_user_id }, { onSettled: () => setDeleting(null) })
+          }
+          onCancel={() => setDeleting(null)}
         />
       )}
       {resetting && (

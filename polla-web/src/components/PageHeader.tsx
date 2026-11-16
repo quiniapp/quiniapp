@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface PageHeaderProps {
   /** El título de la sección lo pinta el header de la app; acá solo se usa
@@ -32,5 +33,27 @@ export const PageHeader = ({ title, description, actions }: PageHeaderProps) => 
 export const EmptyState = ({ message }: { message: string }) => (
   <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground sm:p-8">
     {message}
+  </div>
+);
+
+/**
+ * Lo que se ve en lugar de una lista cuando su consulta falló: no es lo mismo
+ * que "no hay nada". El motivo ya lo avisó el toast global.
+ */
+export const ErrorState = ({
+  message = 'No se pudo cargar.',
+  onRetry,
+}: {
+  message?: string;
+  onRetry: () => void;
+}) => (
+  <div
+    role="alert"
+    className="flex flex-col items-center gap-3 rounded-md border border-dashed border-destructive/50 p-6 text-center text-sm text-destructive sm:p-8"
+  >
+    {message}
+    <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+      Reintentar
+    </Button>
   </div>
 );

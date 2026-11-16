@@ -187,7 +187,7 @@ export const CashierPickDialog = <T,>({
   );
 };
 
-/** "Exportar liquidación": un PDF por pasador. */
+/** "Exportar liquidación": un ZIP con un PDF por pasador. */
 export const ExportLiquidationsDialog = ({
   accounts,
   cashierCodeOf,
@@ -209,7 +209,7 @@ export const ExportLiquidationsDialog = ({
   return (
     <CashierPickDialog
       title="Exportar liquidación"
-      description={`Se descarga un PDF por pasador.${
+      description={`Se descarga un ZIP con un PDF por pasador, en carpetas por grupo.${
         withoutMovement > 0
           ? ` ${withoutMovement === 1 ? 'El que no tuvo' : `Los ${withoutMovement} que no tuvieron`} movimiento en el período ${withoutMovement === 1 ? 'viene' : 'vienen'} sin tildar.`
           : ''
