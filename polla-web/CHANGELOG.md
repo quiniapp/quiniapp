@@ -4,6 +4,63 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (modal al borrar grupo o usuario)
+
+- **Grupos** (`features/groups/index.tsx`): borrar un grupo pide confirmación con un `ConfirmDialog` en lugar del aviso del navegador. Explica que:
+  - se borran también su admin, sus pasadores y sus jugadores, y se les cierra la sesión;
+  - solo se puede sin jugadas en ediciones en juego y con todo liquidado;
+  - lo liquidado queda en el historial;
+  - no se puede deshacer.
+- **Usuarios** (`features/users/index.tsx`): borrar un usuario usa un `ConfirmDialog` en lugar de "¿Eliminar a X?". Explica:
+  - que no va a poder entrar ni jugar y deja de aparecer en listas y buscadores;
+  - si es pasador, que sus jugadores no se borran pero sin pasador no van a poder cargar;
+  - si es admin, que su grupo queda sin admin;
+  - que sus tickets y su cuenta quedan en el historial;
+  - que no se puede deshacer, y que si es por un tiempo conviene deshabilitarlo.
+
+### Added - 2026-11-15 (avisos en la cuenta del pasador)
+
+- **Historial por fechas del pasador** (`CashierAccountView.tsx`): la descripción avisa que son liquidaciones por días anteriores al cambio, solo para consultar, y que ahora lo liquidan por edición. Es el mismo aviso que ve el staff.
+- **Edición del pasador** (`CashierEditionAccounts.tsx`):
+  - Si sus tickets cambiaron desde la liquidación (`differs`), arriba de la lista aparece: "Tus tickets cambiaron desde la liquidación…". El resumen es el de la liquidación y la lista muestra los tickets de hoy, así que pueden no sumar igual.
+  - La lista de ediciones muestra "No se pudo cargar." con Reintentar si falla.
+
+### Changed - 2026-11-15 (cuenta por edición en el celular)
+
+- **Detalle de la edición** (`EditionAccountDetail.tsx`):
+  - En el celular, una tarjeta por pasador, con pase, comisión, reclamos, subtotal, cobros, pagos, Debe y el estado. Tocarla abre sus movimientos.
+  - Abajo va el total general. En la computadora sigue la tabla.
+  - Si falla la consulta, "No se pudo cargar." con Reintentar.
+  - `RowStatus` junta "Liquidado" y el aviso de cambios.
+- **Generar liquidación** (`GenerateEditionLiquidationDialog.tsx`):
+  - En el celular, una tarjeta por pasador: casilla, Debe recalculado, pase, comisión y subtotal, y las celdas de reclamos, cobros y pagos con lo que tenía.
+  - La celda se comparte con la tabla (`amountInput`).
+
+### Changed - 2026-11-15 (lista de ediciones, Grupos y exportes)
+
+- **Cuenta corriente → Pasadores** (`EditionAccountsView.tsx`):
+  - "Pollas a liquidar" se trae en una página (hasta 200).
+  - "Liquidaciones realizadas" va con scroll infinito, de a 20 (`useDoneEditionAccounts`, `InfiniteList`).
+  - Cada lista muestra "No se pudo cargar." con Reintentar si falla.
+  - La tarjeta dice "X de Y pasadores liquidados", contando solo a quienes tienen movimiento, y el Debe separado: "Debe $X · Cobra $Y" (`owedSummary` en `format.ts`).
+  - Al generar la liquidación, el detalle sigue abierto aunque la edición pase de una lista a la otra.
+- **`useEditionAccountList`**: devuelve una página (`PollaPage`) y acepta `status`, `from`, `to`, `counts` y `limit`.
+- **Grupos** (`GroupEditionAccounts.tsx`):
+  - El selector de edición pide la lista sin contadores (las 200 más nuevas).
+  - Los grupos llegan en una consulta.
+  - La lista, los grupos y el historial muestran "No se pudo cargar." con Reintentar.
+- **Reportes** (`EditionReportDialog.tsx`):
+  - "Varias ediciones" pide al servidor las que empiezan en el rango, sin contadores.
+  - Exportar liquidación tiene el filtro de grupo, opcional y con "Todos los grupos" por defecto, para una y para varias ediciones.
+  - Con más de 60 ediciones, `fetchEditionTotals` parte el pedido en tandas de 60 (`chunk` en `lib/utils.ts`), en vez de pedir que elijas menos.
+- **Tests** (`__tests__/current-account/edition-list.test.ts`): `owedSummary`, `queryErrorMessage` y `chunk`.
+
+### Added - 2026-11-15 (aviso cuando falla una consulta)
+
+- **`App.tsx`**: `QueryCache.onError` muestra un toast con el motivo cada vez que falla una consulta (después del reintento), en toda la app. No avisa la sesión vencida (401), que ya la maneja el `apiClient`. El id del toast evita apilar el mismo aviso.
+- **`lib/queryErrors.ts`** (nuevo): `queryErrorMessage`, que da el motivo de la API, "No se pudo conectar con el servidor" sin respuesta, o `null` si es un 401.
+- **`ErrorState`** (`components/PageHeader.tsx`): "No se pudo cargar." con el botón Reintentar, para usar en lugar del texto de "vacío" cuando la consulta falló.
+
 ### Changed - 2026-11-15 ("Generar liquidación" por edición)
 
 - **Cuenta corriente → Pasadores → detalle de la edición** (`features/current-account/edition/EditionAccountDetail.tsx`):

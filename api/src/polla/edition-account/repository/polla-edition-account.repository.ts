@@ -34,11 +34,47 @@ const toMovement = ({ creator, ...movement }: MovementRow): IPollaEditionAccount
  */
 export class PollaEditionAccountRepository {
   /** Ediciones con la carga cortada y su resumen; el sorteo lo arma la ruta. */
-  async list(
-    organizationId: string
-  ): Promise<(Omit<IPollaEditionAccountListItem, 'edition'> & { polla_edition_id: string })[]> {
+  /**
+   * Ediciones con la carga cerrada, de la más nueva a la más vieja. Cada fila
+   * trae `total_count` (cuántas hay con esos filtros, sin la página).
+   */
+  async list(p: {
+    organizationId: string;
+    /** `null`: todas; `false`: a liquidar; `true`: liquidaciones realizadas. */
+    liquidated: boolean | null;
+    from: string | null;
+    to: string | null;
+    withCounts: boolean;
+    limit: number;
+    offset: number;
+  }): Promise<
+    (Omit<IPollaEditionAccountListItem, 'edition'> & {
+      polla_edition_id: string;
+      total_count: number;
+    })[]
+  > {
     const { data, error } = await supabase.rpc('polla_edition_account_list', {
+      p_organization_id: p.organizationId,
+      p_liquidated: p.liquidated,
+      p_from: p.from,
+      p_to: p.to,
+      p_with_counts: p.withCounts,
+      p_limit: p.limit,
+      p_offset: p.offset,
+    });
+
+    throwIfPollaError(error);
+    return data ?? [];
+  }
+
+  /** La cuenta de todos los grupos de la organización en la edición, en una consulta. */
+  async groupPreviews(
+    organizationId: string,
+    editionId: string
+  ): Promise<IPollaGroupEditionAccountPreview[]> {
+    const { data, error } = await supabase.rpc('polla_group_edition_account_previews', {
       p_organization_id: organizationId,
+      p_edition_id: editionId,
     });
 
     throwIfPollaError(error);
@@ -283,21 +319,6 @@ export class PollaEditionAccountRepository {
 
     throwIfPollaError(error);
     return data ?? [];
-  }
-
-  async groupPreview(
-    organizationId: string,
-    groupId: string,
-    editionId: string
-  ): Promise<IPollaGroupEditionAccountPreview> {
-    const { data, error } = await supabase.rpc('polla_group_edition_account_preview', {
-      p_organization_id: organizationId,
-      p_group_id: groupId,
-      p_edition_id: editionId,
-    });
-
-    throwIfPollaError(error);
-    return data as IPollaGroupEditionAccountPreview;
   }
 
   async liquidateGroup(p: {

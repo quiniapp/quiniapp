@@ -137,6 +137,27 @@ export const GenerateEditionLiquidationDialog = ({
   const setInput = (id: string, key: InputKey, value: string) =>
     setInputs((prev) => ({ ...prev, [id]: { ...prev[id], [key]: value } }));
 
+  /** La celda para escribir lo que se suma hoy (en la tabla y en la tarjeta). */
+  const amountInput = (
+    row: IPollaEditionAccountRow,
+    { key, label }: (typeof INPUTS)[number],
+    className?: string
+  ) => (
+    <Input
+      aria-label={`${label} de ${row.user_name}`}
+      aria-invalid={parsed.get(row.polla_user_id)?.invalid.has(key) || undefined}
+      inputMode="decimal"
+      placeholder="+ 0"
+      disabled={!selected.has(row.polla_user_id) || isPending}
+      className={cn(
+        'h-8 w-24 shrink-0 text-right tabular-nums aria-[invalid]:border-destructive',
+        className
+      )}
+      value={inputs[row.polla_user_id]?.[key] ?? ''}
+      onChange={(event) => setInput(row.polla_user_id, key, event.target.value)}
+    />
+  );
+
   const run = async (entries: Entries, source?: 'NEW' | 'OLD') => {
     try {
       const result = await generate({ editionId, entries, ticket_source: source });
@@ -278,7 +299,63 @@ export const GenerateEditionLiquidationDialog = ({
           Seleccionar todos ({chosen.length} de {rows.length})
         </label>
 
-        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+        {/* Celular: una tarjeta por pasador. */}
+        <ul
+          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto md:hidden"
+          aria-label="Pasadores a liquidar"
+        >
+          {rows.map((row) => {
+            const id = row.polla_user_id;
+            const isChosen = selected.has(id);
+            const view = preview(row);
+            return (
+              <li
+                key={id}
+                className={cn('rounded-md border p-3', !isChosen && 'text-muted-foreground')}
+              >
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    checked={isChosen}
+                    onCheckedChange={(checked) => toggle(id, checked === true)}
+                    aria-label={`Liquidar a ${row.user_name}`}
+                    disabled={isPending}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0 flex-1 break-words font-medium">
+                    {codeOf(row)}
+                    {row.user_name}
+                    {row.differs && (
+                      <AlertTriangle
+                        className="ml-1 inline size-4 text-amber-600"
+                        aria-label="Cambió desde la última liquidación"
+                      />
+                    )}
+                  </span>
+                  <span className="shrink-0 font-semibold tabular-nums">
+                    Debe ${fmtMoney(view.total)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                  Pase ${fmtMoney(view.pass)} · Comisión ${fmtMoney(view.cashier_commission)} ·
+                  Subtotal ${fmtMoney(view.subtotal)}
+                </p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {INPUTS.map((input) => (
+                    <div key={input.key} className="flex items-center gap-2 text-sm">
+                      <span className="w-20 shrink-0">{input.label}</span>
+                      {amountInput(row, input)}
+                      <span className="min-w-0 text-xs text-muted-foreground tabular-nums">
+                        tenía ${fmtMoney(row[input.column])}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="hidden min-h-0 flex-1 overflow-auto rounded-md border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -300,22 +377,12 @@ export const GenerateEditionLiquidationDialog = ({
                 const id = row.polla_user_id;
                 const isChosen = selected.has(id);
                 const view = preview(row);
-                const invalid = parsed.get(id)?.invalid;
-                const inputCell = ({ key, column, label }: (typeof INPUTS)[number]) => (
-                  <TableCell key={key} className="text-right">
+                const inputCell = (input: (typeof INPUTS)[number]) => (
+                  <TableCell key={input.key} className="text-right">
                     <span className="block whitespace-nowrap text-xs text-muted-foreground tabular-nums">
-                      Tenía ${fmtMoney(row[column])}
+                      Tenía ${fmtMoney(row[input.column])}
                     </span>
-                    <Input
-                      aria-label={`${label} de ${row.user_name}`}
-                      aria-invalid={invalid?.has(key) || undefined}
-                      inputMode="decimal"
-                      placeholder="+ 0"
-                      disabled={!isChosen || isPending}
-                      className="ml-auto h-8 w-24 text-right tabular-nums aria-[invalid]:border-destructive"
-                      value={inputs[id]?.[key] ?? ''}
-                      onChange={(event) => setInput(id, key, event.target.value)}
-                    />
+                    {amountInput(row, input, 'ml-auto')}
                   </TableCell>
                 );
                 return (

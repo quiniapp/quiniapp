@@ -4,6 +4,37 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (tests de la lista, grupos, pasador eliminado y movimientos)
+
+- **Test pgTAP `220_polla_edition_account_list_and_groups`** (24 pruebas):
+  - **Lista:** contadores sin los liquidados en cero, Debe/Cobra separados, filtros (realizadas, a liquidar y rango), páginas con `total_count`, sin contadores y la llamada vieja.
+  - **Pasador eliminado:** con liquidación aparece; donde no tuvo nada, no.
+  - **Grupos:** todos los grupos ordenados, iguales a pedirlos de a uno, con su pendiente y su base; también una edición que no existe.
+  - **Movimientos:** con la carga abierta no se cargan ni se editan, pero se dan de baja.
+
+### Changed - 2026-11-15 (lista de ediciones paginada y Grupos en una consulta)
+
+- **Migración `20261115204744_polla_edition_account_list_paged`**: `polla_edition_account_list` pasa a `(p_organization_id, p_liquidated, p_from, p_to, p_with_counts, p_limit, p_offset)`. Es `DROP` y `CREATE`; la llamada con solo la organización sigue andando.
+  - **Filtros:** liquidadas o no, rango de inicio y página. La cuenta se calcula solo para las ediciones de la página.
+  - `p_with_counts = FALSE` no calcula la cuenta y devuelve los contadores en `NULL`.
+  - Cada fila trae `total_count`: cuántas hay con esos filtros, sin la página.
+  - **Contadores:** `cashiers_count` y `liquidated_count` cuentan solo a los pasadores con jugadas, borradas o movimientos. Antes, un liquidado en cero sumaba a los liquidados y podía quedar "52 de 1".
+  - `owed` se reemplaza por `owed_by_cashiers` (lo que deben) y `owed_to_cashiers` (lo que hay que pagarles), sin compensar.
+- **Migración `20261115205800_polla_group_edition_account_previews`**: `polla_group_edition_account_previews(org, edition)` devuelve la cuenta de todos los grupos de la organización, ordenados por nombre, y calcula la cuenta de la edición una sola vez.
+- **`GET /edition_account`**:
+  - Filtros: `status` (`pending` | `done`), `from`, `to` (fechas ISO), `counts=false`, `page` y `limit` (hasta 200).
+  - Responde paginado: `{ editions: { data, pagination } }`.
+  - `loadEditions` trae las ediciones por id en tandas de 100.
+- **`GET /edition_account/:editionId/group_previews`**: una sola consulta con la función nueva. Antes hacía una por grupo y cortaba en 100 grupos. Sale el método `groupPreview` del repositorio.
+
+### Changed - 2026-11-15 (movimientos solo con la carga cerrada)
+
+- **Migración `20261115210000_polla_movements_after_load_close`**: el trigger `polla_validate_edition_account_movement` rechaza cobros, pagos y reclamos (`POLLA_EDITION_LOAD_OPEN`) en una edición con la carga todavía abierta, al cargarlos y al editarlos. Darlos de baja sigue andando siempre. Antes, `POST /edition_account/:id/movements` los aceptaba si se llamaba a la API directo; la web ya solo los cargaba con la carga cerrada.
+
+### Fixed - 2026-11-15 (pasador eliminado en la cuenta por edición)
+
+- **Migración `20261115205500_polla_edition_account_deleted_cashier`**: `polla_edition_account_base` (misma firma) suma a la cuenta de una edición al pasador eliminado (soft delete) que tiene una liquidación en ella. Antes, si además le habían borrado todos los tickets sin descontar y no tenía movimientos, desaparecía de la lista junto con su liquidación. El deshabilitado ya aparecía siempre.
+
 ### Added - 2026-11-15 ("Generar liquidación" por edición)
 
 **Qué cambia.** La liquidación de los pasadores de una edición se genera desde un modal, como en QuiniApp: se tilda a quién liquidar y se escribe lo que se suma hoy en reclamos, cobros y pagos. Al generar, la edición queda marcada como liquidada. Después se sigue editando a medida que los pasadores pagan (los movimientos son siempre en vivo).

@@ -56,9 +56,6 @@ export type EditionReportKind = 'daily' | 'collections' | 'summary' | 'subtotals
 
 type Scope = 'one' | 'many';
 
-/** Tope de ediciones por pedido de totales (el de la API). */
-const MAX_EDITIONS = 60;
-
 const COPY: Record<EditionReportKind, { title: string; description: string; action: string }> = {
   daily: {
     title: 'Exportar diario',
@@ -122,9 +119,6 @@ export const EditionReportDialog = ({
   const { edition } = item;
   const { cashierCode } = useCashierCode();
   const catalogs = useDrawCatalogs(organizationId);
-  const { data: list } = useEditionAccountList({
-    polla_organization_id: organizationId ?? undefined,
-  });
 
   const today = todayIso();
   const [scope, setScope] = useState<Scope>('one');
@@ -133,6 +127,14 @@ export const EditionReportDialog = ({
     return monthStart < today ? monthStart : today;
   });
   const [to, setTo] = useState(today);
+  // Las ediciones que empiezan en el rango, sin contadores (hasta 200).
+  const { data: list } = useEditionAccountList({
+    polla_organization_id: organizationId ?? undefined,
+    from,
+    to,
+    counts: false,
+    limit: 200,
+  });
   const [unchecked, setUnchecked] = useState<Set<string>>(new Set());
   const [groupId, setGroupId] = useState(ALL_GROUPS);
   const [percentage, setPercentage] = useState('50');
@@ -146,9 +148,10 @@ export const EditionReportDialog = ({
   const editionId = edition.polla_edition_id;
   const hasExpenses = !many && (kind === 'collections' || kind === 'subtotals');
   const hasPercentage = (kind === 'collections' && many) || kind === 'subtotals';
-  const hasGroup = kind !== 'liquidation' && groups.length > 0;
+  // También en Exportar liquidación: opcional, "Todos los grupos" por defecto.
+  const hasGroup = groups.length > 0;
 
-  const inRange = useMemo(() => editionsInRange(list ?? [], from, to), [list, from, to]);
+  const inRange = useMemo(() => editionsInRange(list?.data ?? [], from, to), [list, from, to]);
   const checked = inRange.filter((entry) => !unchecked.has(entry.edition.polla_edition_id));
   const toggle = (id: string, on: boolean) =>
     setUnchecked((prev) => {
@@ -166,9 +169,11 @@ export const EditionReportDialog = ({
     let downloaded = 0;
     for (const entry of checked) {
       const entryTitle = titleOf(entry);
-      const rows = (await fetchEditionAccounts(entry.edition.polla_edition_id)).filter(
-        hasEditionMovement
-      );
+      const rows = (
+        await fetchEditionAccounts(entry.edition.polla_edition_id, {
+          polla_group_id: effectiveGroupId,
+        })
+      ).filter(hasEditionMovement);
       if (rows.length === 0) continue;
       await downloadLiquidationSlipsPDF({
         accounts: rows.map((row) => editionAccountView(row, entry.edition)),
@@ -253,10 +258,6 @@ export const EditionReportDialog = ({
     }
     if (checked.length === 0) {
       toast.error('Elegí al menos una edición');
-      return false;
-    }
-    if (checked.length > MAX_EDITIONS) {
-      toast.error(`Elegí hasta ${MAX_EDITIONS} ediciones`);
       return false;
     }
     if (kind === 'liquidation') return exportManySlips();

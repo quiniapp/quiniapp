@@ -7,6 +7,7 @@ import {
 } from '@helper/polla/types/game.type';
 import { IPollaOrganizationEntityFront } from '@helper/polla/types/catalog.type';
 import { apiClient } from '@/lib/apiClient';
+import { chunk } from '@/lib/utils';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { PollaPage, QueryParams, cleanParams } from '@/hooks/useApi';
 
@@ -35,19 +36,33 @@ export const fetchEditionAccounts = (editionId: string, params: QueryParams = {}
     params: cleanParams(params),
   });
 
-/** Una fila por edición (`date` = inicio de la edición); la API admite hasta 60. */
-export const fetchEditionTotals = (
+/** La API admite hasta 60 ediciones por pedido de totales (los ids van en la URL). */
+export const EDITION_TOTALS_PER_REQUEST = 60;
+
+/**
+ * Una fila por edición (`date` = inicio de la edición). Con más de 60 parte el
+ * pedido en tandas (una después de la otra) y junta las filas en el mismo
+ * orden.
+ */
+export const fetchEditionTotals = async (
   editionIds: string[],
   groupId: string | null,
   organizationId: string | null
-) =>
-  apiClient.get<IPollaEditionAccountTotals[]>(BACKEND_ROUTES.editionAccount.totals, {
-    params: cleanParams({
-      polla_edition_ids: editionIds.join(','),
-      polla_group_id: groupId,
-      polla_organization_id: organizationId,
-    }),
-  });
+) => {
+  const rows: IPollaEditionAccountTotals[] = [];
+  for (const ids of chunk(editionIds, EDITION_TOTALS_PER_REQUEST)) {
+    rows.push(
+      ...(await apiClient.get<IPollaEditionAccountTotals[]>(BACKEND_ROUTES.editionAccount.totals, {
+        params: cleanParams({
+          polla_edition_ids: ids.join(','),
+          polla_group_id: groupId,
+          polla_organization_id: organizationId,
+        }),
+      }))
+    );
+  }
+  return rows;
+};
 
 export const fetchExpenses = (params: QueryParams) =>
   apiClient.get<IPollaOrgExpenseEntityFront[]>(BACKEND_ROUTES.expense.base, {
