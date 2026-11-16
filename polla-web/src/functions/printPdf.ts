@@ -66,13 +66,13 @@ export function downloadPdfBlob(blob: Blob, fileName: string) {
 }
 
 /**
- * Para compartir un PDF largo: en mobile abre el share sheet con el archivo; en
- * desktop lo descarga (el fallback a WhatsApp de `sharePdfBlob` no adjunta
- * archivos).
+ * Para compartir un archivo (PDF, ZIP): en mobile abre el share sheet con el
+ * archivo; en desktop lo descarga (el fallback a WhatsApp de `sharePdfBlob` no
+ * adjunta archivos).
  */
-export const sharePdf = async (blob: Blob, fileName: string, text: string) => {
+export const shareFile = async (blob: Blob, fileName: string, text: string, type: string) => {
   if (isMobileDevice()) {
-    const file = new File([blob], fileName, { type: 'application/pdf' });
+    const file = new File([blob], fileName, { type });
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ title: fileName, text, files: [file] });
@@ -85,3 +85,7 @@ export const sharePdf = async (blob: Blob, fileName: string, text: string) => {
   }
   downloadPdfBlob(blob, fileName);
 };
+
+/** Comparte un PDF largo (ver `shareFile`). */
+export const sharePdf = (blob: Blob, fileName: string, text: string) =>
+  shareFile(blob, fileName, text, 'application/pdf');

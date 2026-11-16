@@ -4,6 +4,21 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (exportar liquidación en ZIP por carpetas)
+
+- **Exportar liquidación** (`EditionReportDialog.tsx` en "Una edición" y "Varias ediciones", `DailyHistoryView.tsx`): en lugar de un PDF suelto por pasador, baja un solo ZIP (`exportLiquidationSlipsZip` en `liquidationSlipPDF.ts`). Reemplaza las descargas separadas de R01.
+  - Carpetas: `Grupo N - Nombre/` (o `Sin grupo/`); con varias ediciones, `<edición>/Grupo N - Nombre/`. Las hojas repetidas llevan ` (2)`, ` (3)`.
+  - Nombre del ZIP: `polla_Liquidaciones_<edición | desde_al_hasta | fecha>[_Grupo_N | _Sin_grupo].zip`.
+  - En el celular se comparte (`shareFile` en `printPdf.ts`, `sharePdf` pasa por ahí); si se cancela no pasa nada y, si falla o no se puede compartir, se descarga.
+  - Usa la dependencia `fflate`, cargada recién al exportar (`lib/liquidationZip.ts`). El ZIP va comprimido (nivel 6): el PDF de jsPDF sale sin comprimir.
+  - Ajustes 2026-11-16:
+    - Con varias ediciones, la carpeta de cada una es `YYYY-MM-DD <título>` (título cortado a 40 caracteres con `…`; `editionZipFolder`). Las carpetas no se repiten aunque difieran solo en mayúsculas.
+    - Dentro del ZIP cada PDF se llama `{código} {nombre}.pdf` (`liquidationZipPdfName`), p. ej. `10-15 María José Fernández.pdf`.
+    - En el historial por rango el ZIP se llama `polla_Liquidaciones_<desde>_al_<hasta>.zip`.
+    - Si falla el exporte, el error se registra en consola además del aviso.
+- **Historial del pasador** (`CashierAccountView.tsx`): sigue bajando su PDF suelto (`downloadLiquidationSlipPDF`).
+- Se quita `downloadLiquidationSlipsPDF`.
+
 ### Changed - 2026-11-15 (modal al borrar grupo o usuario)
 
 - **Grupos** (`features/groups/index.tsx`): borrar un grupo pide confirmación con un `ConfirmDialog` en lugar del aviso del navegador. Explica que:
