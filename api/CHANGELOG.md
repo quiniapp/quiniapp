@@ -4,6 +4,10 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (movimientos solo con la carga cerrada)
+
+- **Migración `20261115210000_polla_movements_after_load_close`**: el trigger `polla_validate_edition_account_movement` rechaza cobros, pagos y reclamos (`POLLA_EDITION_LOAD_OPEN`) en una edición con la carga todavía abierta, al cargarlos y al editarlos. Darlos de baja sigue andando siempre. Antes, `POST /edition_account/:id/movements` los aceptaba si se llamaba a la API directo; la web ya solo los cargaba con la carga cerrada.
+
 ### Fixed - 2026-11-15 (pasador eliminado en la cuenta por edición)
 
 - **Migración `20261115205500_polla_edition_account_deleted_cashier`**: `polla_edition_account_base` (misma firma) suma a la cuenta de una edición al pasador eliminado (soft delete) que tiene una liquidación en ella. Antes, si además le habían borrado todos los tickets sin descontar y no tenía movimientos, desaparecía de la lista junto con su liquidación. El deshabilitado ya aparecía siempre.
