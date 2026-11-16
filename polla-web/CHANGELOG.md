@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16
+
+- Botón Actualizar en Cuenta corriente (`features/current-account/RefreshAccountButton.tsx`, `refresh.ts`): recarga las consultas de la cuenta que están en pantalla (pasadores, grupos, historial y la vista del pasador). Gira y se deshabilita mientras carga.
+
 ### Changed - 2026-11-15 (exportar liquidación en ZIP por carpetas)
 
 - **Exportar liquidación** (`EditionReportDialog.tsx` en "Una edición" y "Varias ediciones", `DailyHistoryView.tsx`): en lugar de un PDF suelto por pasador, baja un solo ZIP (`exportLiquidationSlipsZip` en `liquidationSlipPDF.ts`). Reemplaza las descargas separadas de R01.
