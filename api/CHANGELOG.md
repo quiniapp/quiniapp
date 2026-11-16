@@ -4,6 +4,10 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-15 (pasador eliminado en la cuenta por edición)
+
+- **Migración `20261115205500_polla_edition_account_deleted_cashier`**: `polla_edition_account_base` (misma firma) suma a la cuenta de una edición al pasador eliminado (soft delete) que tiene una liquidación en ella. Antes, si además le habían borrado todos los tickets sin descontar y no tenía movimientos, desaparecía de la lista junto con su liquidación. El deshabilitado ya aparecía siempre.
+
 ### Added - 2026-11-15 ("Generar liquidación" por edición)
 
 **Qué cambia.** La liquidación de los pasadores de una edición se genera desde un modal, como en QuiniApp: se tilda a quién liquidar y se escribe lo que se suma hoy en reclamos, cobros y pagos. Al generar, la edición queda marcada como liquidada. Después se sigue editando a medida que los pasadores pagan (los movimientos son siempre en vivo).
