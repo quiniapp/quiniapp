@@ -79,7 +79,7 @@ const CashierDailyHistory = () => {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        description="Tu liquidación desde la última vez que te liquidaron (o en un rango de fechas): lo que pasaste, las borradas que se descuentan, tu comisión y lo que cobraste o te pagaron. Los premios de tus jugadores están en Premios."
+        description="Liquidaciones por días anteriores al cambio, solo para consultar. Desde ahora te liquidan por edición: está en la pestaña Por edición. Los premios de tus jugadores están en Premios."
         actions={
           <Button type="button" onClick={handlePrint} disabled={!account || printing}>
             <Printer />

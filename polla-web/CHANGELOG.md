@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (avisos en la cuenta del pasador)
+
+- **Historial por fechas del pasador** (`CashierAccountView.tsx`): la descripción avisa que son liquidaciones por días anteriores al cambio, solo para consultar, y que ahora lo liquidan por edición. Es el mismo aviso que ve el staff.
+- **Edición del pasador** (`CashierEditionAccounts.tsx`):
+  - Si sus tickets cambiaron desde la liquidación (`differs`), arriba de la lista aparece: "Tus tickets cambiaron desde la liquidación…". El resumen es el de la liquidación y la lista muestra los tickets de hoy, así que pueden no sumar igual.
+  - La lista de ediciones muestra "No se pudo cargar." con Reintentar si falla.
+
 ### Changed - 2026-11-15 (cuenta por edición en el celular)
 
 - **Detalle de la edición** (`EditionAccountDetail.tsx`):
