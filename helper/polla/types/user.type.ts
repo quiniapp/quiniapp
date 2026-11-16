@@ -51,7 +51,8 @@ export const POLLA_USER_HIERARCHY: Record<POLLA_USER_TYPE, number> = {
 
 /**
  * Roles de toda la organización: ediciones, quinielas, turnos, resultados,
- * grupos y cuenta corriente. Cargan sin corte hasta el último día de juego.
+ * grupos y cuenta corriente. Cargan y editan números hasta la hora del sorteo
+ * (R30).
  */
 export const POLLA_SUPER_ROLES: POLLA_USER_TYPE[] = [
   POLLA_USER_TYPE.OWNER,
@@ -60,15 +61,26 @@ export const POLLA_SUPER_ROLES: POLLA_USER_TYPE[] = [
 ];
 
 /**
- * Roles que cargan a nombre de otros y repiten sin cargo. El ADMIN lo hace
- * solo dentro de su grupo; los `POLLA_SUPER_ROLES`, en toda la organización.
+ * Roles que repiten de cortesía (sin cargo) tickets de ediciones finalizadas,
+ * en toda la organización: los `POLLA_SUPER_ROLES` y el Super (ASSISTANT). El
+ * ADMIN no.
+ */
+export const POLLA_COURTESY_ROLES: POLLA_USER_TYPE[] = [
+  ...POLLA_SUPER_ROLES,
+  POLLA_USER_TYPE.ASSISTANT,
+];
+
+/**
+ * Los `POLLA_SUPER_ROLES` y el ADMIN, que actúa solo dentro de su grupo (por
+ * ejemplo, eliminar impagos o ver en qué edición está la cortesía de cada
+ * ticket).
  */
 export const POLLA_ADMIN_ROLES: POLLA_USER_TYPE[] = [...POLLA_SUPER_ROLES, POLLA_USER_TYPE.ADMIN];
 
 /**
  * Roles que cargan y administran jugadas a nombre de pasadores y jugadores:
  * los `POLLA_ADMIN_ROLES` y el Super (ASSISTANT), que lo hace en toda la
- * organización pero no repite sin cargo.
+ * organización.
  */
 export const POLLA_LOADER_ROLES: POLLA_USER_TYPE[] = [
   ...POLLA_ADMIN_ROLES,
@@ -86,6 +98,9 @@ export const isPollaSuperRole = (role: POLLA_USER_TYPE): boolean =>
 
 export const isPollaAdminRole = (role: POLLA_USER_TYPE): boolean =>
   POLLA_ADMIN_ROLES.includes(role);
+
+export const isPollaCourtesyRole = (role: POLLA_USER_TYPE): boolean =>
+  POLLA_COURTESY_ROLES.includes(role);
 
 export const isPollaLoaderRole = (role: POLLA_USER_TYPE): boolean =>
   POLLA_LOADER_ROLES.includes(role);
@@ -234,7 +249,13 @@ export type IPollaUserEntityFront = Omit<
   | 'last_login_ip'
   | 'deleted_at'
   | 'credit_balance'
->;
+> & {
+  /**
+   * Jugador con el pasador deshabilitado: queda frenado sin estarlo él. Lo
+   * trae la lista de usuarios.
+   */
+  cashier_disabled?: boolean;
+};
 
 /** Usuario encontrado por número para cargarle una jugada a su nombre. */
 export interface IPollaUserByNumber {
@@ -258,6 +279,10 @@ export interface IPollaUserOption extends IPollaUserByNumber {
   /** Número del grupo (del pasador, o del pasador del jugador); `null` = sin grupo. */
   group_number: number | null;
   is_street: boolean;
+  /** Deshabilitado: solo aparece en los buscadores que filtran, no en los de cargar. */
+  disabled: boolean;
+  /** Jugador con el pasador deshabilitado (queda frenado como si lo estuviera él). */
+  cashier_disabled: boolean;
 }
 
 /** Usuario autenticado tal como lo devuelve /auth/validate. */

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newPollaEditionSchema, updatePollaEditionSchema } from '@helper/polla/schemas/game.schema';
 import {
+  isPollaEditionRepeatable,
   isPollaSpecialEdition,
   pollaEditionDrawLabels,
   pollaEditionDraws,
@@ -155,5 +156,19 @@ describe('newPollaEditionSchema', () => {
   it('en un cambio los sorteos son opcionales, pero si vienen no pueden estar vacíos', () => {
     expect(updatePollaEditionSchema.safeParse({ name: 'Otra' }).success).toBe(true);
     expect(updatePollaEditionSchema.safeParse({ draws: [] }).success).toBe(false);
+  });
+});
+
+describe('isPollaEditionRepeatable', () => {
+  it('pasado el cierre de carga no se repite, aunque el staff siga cargando', () => {
+    expect(isPollaEditionRepeatable({ can_repeat: false })).toBe(false);
+  });
+
+  it('antes del cierre se repite', () => {
+    expect(isPollaEditionRepeatable({ can_repeat: true })).toBe(true);
+  });
+
+  it('sin el dato (caché vieja) se ofrece y la base lo vuelve a controlar', () => {
+    expect(isPollaEditionRepeatable({})).toBe(true);
   });
 });

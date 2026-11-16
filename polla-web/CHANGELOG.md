@@ -4,6 +4,89 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 ("Generar liquidación" por edición)
+
+- **Cuenta corriente → Pasadores → detalle de la edición** (`features/current-account/edition/EditionAccountDetail.tsx`):
+  - "Generar liquidación" está al lado del buscador de Pasador y abre el modal con los pasadores del filtro.
+  - Los exportes quedan en este orden: Exportar diario, Exportar liquidación, Exportar subtotales, Exportar cobros y pagos, Resumen cuenta corriente.
+  - Se sacan "Liquidar" y "Marcar como liquidada"/"Desmarcar".
+- **`GenerateEditionLiquidationDialog`** (nuevo):
+  - Tabla con casilla y "Seleccionar todos". Vienen tildados los que tienen jugadas, borradas o movimientos.
+  - Columnas: código y nombre, pase jugadas, borradas, pase, comisión, reclamos, subtotal, cobros, pagos y Debe.
+  - En Reclamos, Cobros y Pagos se escribe lo que se suma hoy; al lado se ve lo que ya tenía.
+  - El pase, la comisión, el subtotal y el Debe se recalculan al escribir, y abajo está el Debe de los tildados.
+  - Un cobro o un pago negativo no deja generar.
+  - Al generar, la edición pasa a "Liquidaciones realizadas". Las hojas se bajan con "Exportar liquidación".
+  - Si las jugadas cambiaron, muestra las diferencias. Se puede seguir con la liquidación vieja o la nueva, o volver a la tabla sin perder lo escrito.
+- **`lib/editionAccount.ts`**:
+  - `withNewMovements`: la fila con los movimientos nuevos, con la fórmula de `polla_edition_account_base` y el redondeo de `ROUND`.
+  - `parseAmount`: ahora compartido; `GroupEditionAccounts` lo importa de acá.
+- **Hooks**: `useGenerateEditionLiquidation` y `BACKEND_ROUTES.editionAccount.generate`.
+- **Removed**: `LiquidateEditionDialog.tsx`, `useLiquidateEditionAccounts`, `useSetEditionLiquidated` y las rutas `liquidate` y `liquidated` de `BACKEND_ROUTES`.
+- **Tests** (`__tests__/current-account/generate-liquidation.test.ts`): `withNewMovements` (cobro, pago, reclamo positivo y negativo, redondeo), `parseAmount` y el esquema.
+
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+- **Usuarios** (`features/users/index.tsx`): en Acciones (tabla y tarjetas) hay un botón para deshabilitar (ícono de prohibido, pide confirmación) o habilitar (ícono de check, sin confirmación). La confirmación avisa que se le cierra la sesión y, si es pasador, que sus jugadores también quedan frenados. Los jugadores de un pasador deshabilitado muestran "Pasador deshabilitado".
+- **`useSetUserDisabled`** (`hooks/mutations/usePollaMutations.ts`) y `BACKEND_ROUTES.user.disabled`.
+- **Buscadores** (`lib/pollaUsers.ts`, `UserSearchPicker`): en los que filtran, los deshabilitados y los jugadores de un pasador deshabilitado aparecen con "deshabilitado" o "pasador deshabilitado" (`pollaUserBlockedText`). En los de cargar a nombre de otro no aparecen.
+- **Repetir** (`lib/repeatReasons.ts`): motivo "su pasador está deshabilitado".
+- **Tests** (`__tests__/users/user-disabled.test.ts`): la marca en los buscadores, el esquema y el motivo de repetir.
+
+### Fixed - 2026-11-15 (cantidad de tickets en "Repetir sin cargo")
+
+- **Repetir sin cargo** (`features/bets/FreeRepeatDialog.tsx`): después de cargar, la descripción del diálogo decía "0 tickets" porque la pantalla limpia la selección al terminar. El diálogo ahora guarda los tickets elegidos al abrirse y sigue mostrando cuántos eran.
+
+### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): con una edición finalizada, "Repetir sin cargo" aparece para dueño, capitalista, superadmin y el Súper (toda la organización); el admin de grupo ya no lo ve, pero sigue viendo "Cortesía en Edición X · ticket N". Se puede elegir cualquier ticket de la lista (al Súper le llega la versión pública de cada jugada).
+- **Tests** (`__tests__/helper/access.test.ts`): `isPollaCourtesyRole`.
+
+### Changed - 2026-11-15 (liquidación de grupos: total para el admin y para el capitalista)
+
+**Por qué.** Al admin se le paga siempre el 100% de su comisión, y se lo transfiere el capitalista por afuera: "Pagado al admin" era esa misma plata y los ajustes no se usan.
+
+- **Pestaña Grupos** (`features/current-account/edition/GroupEditionAccounts.tsx`):
+  - "Base" pasa a "Total" en el modal, la tarjeta del grupo y la tabla "Liquidaciones de grupo".
+  - El modal "Liquidar" deja solo el % del admin (sin "Ajustes" ni "Pagado al admin") y muestra "Total para el admin" (el 100% de la comisión) y "Total para el capitalista" (el total menos esa comisión).
+  - La tarjeta y la tabla muestran los mismos dos totales en lugar de Comisión, Ajustes, Pagado y Total admin. Una liquidación vieja los tacha, como antes.
+- **Ticket del grupo** (`functions/current-account/groupLiquidationTicket.ts`): `printGroupEditionLiquidationTicket` (renglones en `groupEditionTicketLines`) imprime TOTAL, % ADMIN, TOTAL ADMIN y TOTAL CAPITALISTA, sin base, ajustes ni pagado. Sin gastos ya no imprime "$-0". El del Historial por fechas (`printGroupLiquidationTicket`) no cambia y pierde la opción `periodText`, que ya no usa nadie.
+- **`groupSplit(total, comisión)`** (`lib/editionAccount.ts`): cuánto es para el admin y cuánto para el capitalista, en centavos exactos.
+- **Tests** (`edition-account-helpers.test.ts`): `groupSplit` y los renglones del ticket.
+
+### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
+
+- **Cargar jugada** (`features/make-bet/index.tsx`):
+  - El aviso "vos podés cargar hasta el …" pasa del admin de grupo a dueño, capitalista, superadmin y Súper, y sale solo cuando su corte es distinto del cierre de carga.
+  - "Repetir ticket" y su diálogo ofrecen solo las ediciones donde el usuario todavía repite (`isPollaEditionRepeatable`): entre el cierre y el sorteo dueño, capitalista y superadmin cargan, pero no repiten; el Súper sí repite. Sin ninguna, el botón no aparece.
+- **Repetir de cortesía** (`features/bets/FreeRepeatDialog.tsx`): ofrece solo las ediciones donde todavía se puede repetir.
+- **Tests** (`__tests__/helper/edition.test.ts`): `isPollaEditionRepeatable`.
+
+### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+**Qué cambia.** Cuenta corriente deja de liquidarse por rango de días y pasa a liquidarse por edición. Lo liquidado por días queda para consultar.
+
+- **Cuenta corriente (staff)**: pestañas "Pasadores" (por edición), "Grupos" (por edición) e "Historial por fechas" (lo de antes, solo lectura).
+  - **Pasadores** (`features/current-account/edition/`): listas "Pollas a liquidar" y "Liquidaciones realizadas"; detalle por edición con movimientos "Cobro", "Pago" y "Reclamo" (fechas `DD/MM/YYYY`); liquidar con aviso de diferencias ("Continuar con el nuevo", "Continuar con el viejo", "Cancelar"); "Marcar como liquidada" y "Desmarcar".
+    - **Eliminar un movimiento** (`MovementsDialog.tsx`) pide confirmación en un diálogo de la app con el tipo, el monto y la fecha.
+    - **Liquidar** (`CashierPickDialog`): con un filtro de grupo en la lista, se liquida solo a los tildados que se ven, y el botón dice cuántos son. Un tildado de otro grupo sigue tildado (vuelve al sacar el filtro), pero no entra, y la lista lo avisa. "Exportar liquidación", que no tiene filtro, no cambia.
+  - **Grupos** (`GroupEditionAccounts.tsx`): cuenta del grupo por edición. Si después de liquidar el grupo cambia lo que dejaron sus pasadores o los gastos de la edición, la tarjeta avisa "Cambió desde la liquidación del grupo" y tacha la Comisión y el Total guardados, y el historial marca esa liquidación. Reimprimir su ticket pide confirmación ("Imprimir igual"). Volver a liquidar lo limpia.
+  - **Historial por fechas** (`history/DailyHistoryView.tsx`): la vista por días, sin acciones de escritura.
+- **Vista del pasador**: "Por edición" e "Historial por fechas". Solo ve las ediciones donde ya lo liquidaron. Una cuenta en cero dice "Debe $0,00", nunca "Cobra $0,00" (también en el historial y en la hoja de liquidación; `owedWord` en `lib/editionAccount.ts`).
+- **Reportes** (`EditionReportDialog.tsx`): de una edición o de varias. Exportar liquidación con varias ediciones descarga sin pedir la lista, con solo las hojas de los pasadores con movimiento de cada edición; con una sola, se elige como siempre.
+  - **Varias ediciones, un renglón por edición:** cada renglón lleva el título de su edición, para distinguir dos que empiezan el mismo día (la regular y la especial). En el PDF (`downloadDailySummaryPDF`) la primera columna pasa a "Edición" con `DD/MM · título`; en los tickets de 58 mm (`printRangeTotalsTicket`, `printSubtotalsRangeTicket`) el título va en su propia línea arriba de los números, cortado a 32 caracteres. Sin título (Historial por fechas), salen como antes.
+- **`components/ConfirmDialog.tsx`**: confirmación dentro de la app, sobre el `Dialog` de shadcn (no hay `AlertDialog` instalado), en lugar de `window.confirm`.
+- **Tests** (`edition-account-helpers.test.ts`): renglones con título, cuenta del grupo vieja, filtro de grupo al liquidar y "Debe" en cero.
+- **Gastos por edición** (`EditionExpensesEditor.tsx`): se cargan en cada edición. Los viejos por fecha se ven en el historial.
+- **PDF y tickets**: se reusan mapeando la fila de edición a la forma de la fila de período (`lib/editionAccount.ts`).
+- **Hooks y rutas**: nuevos en `usePollaData.ts`, `usePollaMutations.ts` y `routes/backend-routes.ts` (`/edition_account`).
+
+- **Vista previa de la comisión del grupo (`lib/editionAccount.ts` `groupCommission`)**: el porcentaje se redondea a 2 decimales antes de calcular, igual que `ROUND(p_percentage, 2)` en SQL (12,345% de 220 da 27,17 y no 27,16).
+
+### Removed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- `LiquidationDialogs.tsx` y las acciones de liquidar, recalcular y masivo por días, que dejaron de existir en la API. La cuenta del grupo por días ya no se liquida desde la pantalla.
+
 ### Changed - 2026-11-12 (R26, ajuste: mínimo de aciertos editable)
 
 - **Ediciones → Editar**: "Edición especial" y "Mínimo de aciertos" se pueden cambiar con la edición empezada o con ganadores.

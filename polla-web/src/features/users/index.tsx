@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { KeyRound, Pencil, Trash2 } from 'lucide-react';
+import { Ban, CircleCheck, KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { newPollaUserSchema } from '@helper/polla/schemas/user.schema';
 import {
   POLLA_CREATABLE_TYPES,
@@ -21,7 +21,9 @@ import {
   useCreateUser,
   useDeleteUser,
   useResetUserPassword,
+  useSetUserDisabled,
 } from '@/hooks/mutations/usePollaMutations';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { UserSearchPicker } from '@/components/UserSearchPicker';
@@ -88,6 +90,8 @@ export const UsersPage = () => {
   const [parentCashier, setParentCashier] = useState<IPollaUserOption | null>(null);
   const [editing, setEditing] = useState<IPollaUserEntityFront | null>(null);
   const [resetting, setResetting] = useState<IPollaUserEntityFront | null>(null);
+  /** A quién se está por deshabilitar (pide confirmación; habilitar no). */
+  const [disabling, setDisabling] = useState<IPollaUserEntityFront | null>(null);
   // El número se precarga con el siguiente libre hasta que lo cambian a mano.
   const [numberTouched, setNumberTouched] = useState(false);
 
@@ -112,6 +116,18 @@ export const UsersPage = () => {
   const { mutate: createUser, isPending } = useCreateUser();
   const { mutate: deleteUser } = useDeleteUser();
   const { mutate: resetPassword, isPending: isResetting } = useResetUserPassword();
+  const { mutate: setUserDisabled, isPending: isTogglingDisabled } = useSetUserDisabled();
+
+  const toggleDisabled = (item: IPollaUserEntityFront, disabled: boolean) =>
+    setUserDisabled(
+      { id: item.polla_user_id, disabled },
+      {
+        onSuccess: () => {
+          toast.success(`${item.name} quedó ${disabled ? 'deshabilitado' : 'habilitado'}`);
+          setDisabling(null);
+        },
+      }
+    );
 
   const groupById = useMemo(
     () => new Map(groups?.data.map((group) => [group.polla_group_id, group])),
@@ -258,6 +274,31 @@ export const UsersPage = () => {
             <KeyRound />
           </Button>
         )}
+      {item.disabled ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          title="Habilitar"
+          aria-label={`Habilitar a ${item.name}`}
+          disabled={isTogglingDisabled}
+          onClick={() => toggleDisabled(item, false)}
+        >
+          <CircleCheck />
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          title="Deshabilitar"
+          aria-label={`Deshabilitar a ${item.name}`}
+          disabled={isTogglingDisabled}
+          onClick={() => setDisabling(item)}
+        >
+          <Ban />
+        </Button>
+      )}
       <Button
         type="button"
         size="icon"
@@ -521,6 +562,9 @@ export const UsersPage = () => {
                       <Badge variant="secondary">{POLLA_USER_TYPE_LABEL[item.user_type]}</Badge>
                       {item.is_street && <Badge variant="outline">Calle</Badge>}
                       {item.disabled && <Badge variant="outline">Deshabilitado</Badge>}
+                      {!item.disabled && item.cashier_disabled && (
+                        <Badge variant="outline">Pasador deshabilitado</Badge>
+                      )}
                     </div>
                     {userDetails(item) && (
                       <p className="mt-1 break-words text-xs text-muted-foreground">
@@ -562,6 +606,11 @@ export const UsersPage = () => {
                           Deshabilitado
                         </Badge>
                       )}
+                      {!item.disabled && item.cashier_disabled && (
+                        <Badge variant="outline" className="ml-2">
+                          Pasador deshabilitado
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{POLLA_USER_TYPE_LABEL[item.user_type]}</TableCell>
                     <TableCell>{item.username ?? '-'}</TableCell>
@@ -584,6 +633,21 @@ export const UsersPage = () => {
           groups={groups?.data ?? []}
           canEditFee={!isCashier}
           onClose={() => setEditing(null)}
+        />
+      )}
+      {disabling && (
+        <ConfirmDialog
+          title={`¿Deshabilitar a ${disabling.name}?`}
+          description={
+            disabling.user_type === POLLA_USER_TYPE.CASHIER
+              ? 'No va a poder entrar ni jugar, y sus jugadores tampoco, hasta que lo vuelvas a habilitar. Si tienen la aplicación abierta, se les cierra la sesión.'
+              : 'No va a poder entrar ni jugar hasta que lo vuelvas a habilitar. Si tiene la aplicación abierta, se le cierra la sesión.'
+          }
+          confirmLabel="Deshabilitar"
+          destructive
+          busy={isTogglingDisabled}
+          onConfirm={() => toggleDisabled(disabling, true)}
+          onCancel={() => setDisabling(null)}
         />
       )}
       {resetting && (

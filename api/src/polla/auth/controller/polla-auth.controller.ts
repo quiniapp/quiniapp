@@ -1,5 +1,5 @@
 import { UnauthorizedError, ForbiddenError, BadRequestError } from '@helper/errors';
-import { IPollaSessionUser, POLLA_THEME } from '@helper/polla/types/user.type';
+import { IPollaSessionUser, POLLA_THEME, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { comparePassword, hashPassword } from 'api/helper/password';
 import { PollaAuthRepository } from '../repository/polla-auth.repository';
 import {
@@ -59,6 +59,16 @@ export class PollaAuthController {
 
     if (user.disabled) {
       throw new ForbiddenError('El usuario está deshabilitado');
+    }
+
+    // El jugador de un pasador deshabilitado queda frenado hasta que se lo
+    // habilite (no se lo marca a él).
+    if (
+      user.user_type === POLLA_USER_TYPE.PLAYER &&
+      user.parent_polla_user_id &&
+      (await this.repository.isUserDisabled(user.parent_polla_user_id))
+    ) {
+      throw new ForbiddenError('Tu pasador está deshabilitado');
     }
 
     if (user.locked_until && new Date(user.locked_until) > new Date()) {

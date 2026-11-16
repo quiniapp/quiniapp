@@ -4,6 +4,127 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 ("Generar liquidación" por edición)
+
+**Qué cambia.** La liquidación de los pasadores de una edición se genera desde un modal, como en QuiniApp: se tilda a quién liquidar y se escribe lo que se suma hoy en reclamos, cobros y pagos. Al generar, la edición queda marcada como liquidada. Después se sigue editando a medida que los pasadores pagan (los movimientos son siempre en vivo).
+
+- **Migración `20261115195936_polla_generate_edition_liquidation`**: `polla_generate_edition_liquidation(p_organization_id, p_edition_id, p_actor_id, p_entries, p_ticket_source)`, en una transacción:
+  - `p_entries` es `[{ polla_user_id, collection, payment, claim }]`. Carga como movimientos de hoy los cobros y pagos mayores a 0 y los reclamos distintos de 0.
+  - Liquida a esos pasadores con `polla_liquidate_edition_accounts`; la foto incluye los movimientos recién cargados.
+  - Marca la edición. Si ya estaba marcada, conserva quién y cuándo la marcó primero.
+  - Sin `p_ticket_source` y con las jugadas cambiadas desde la liquidación anterior, devuelve `DIFFERENCES` sin escribir nada, tampoco los movimientos.
+  - Errores nuevos: `POLLA_EDITION_LIQUIDATION_DUPLICATE` (pasador repetido) y `POLLA_EDITION_LIQUIDATION_AMOUNT_INVALID` (cobro o pago negativo).
+  - No usa tabla temporal propia.
+- **`POST /edition_account/:editionId/generate`** (nuevo, `polla-edition-account.route.ts`): `{ entries, ticket_source? }`, para dueño, capitalista y superadmin. Repositorio: `generate`. La respuesta tiene la misma forma que `POST /:editionId/liquidate`.
+- `POST /:editionId/liquidate` y `PUT /:editionId/liquidated` siguen existiendo, pero la web ya no los usa.
+- **Tests pgTAP:** `210_polla_generate_edition_liquidation` cubre:
+  - movimientos, foto y marca;
+  - el pasador en cero;
+  - volver a generar sin perder la primera marca;
+  - las diferencias, que no escriben nada, y seguir con la nueva;
+  - los errores (vacío, repetido, negativo, quien no es pasador y la carga abierta, que no deja el cobro cargado).
+
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+**Qué cambia.** Un usuario se habilita o deshabilita desde la lista de Usuarios; lo hace quien lo puede editar (cada rol sobre los suyos). Al deshabilitarlo se cierran sus sesiones. Si es un pasador, sus jugadores también quedan frenados mientras él esté deshabilitado: no entran, no cargan y nadie les carga (ni el staff, ni repitiendo, ni de cortesía). No se los marca uno por uno: vuelven solos al habilitar al pasador.
+
+- **Migración `20261115194736_polla_cashier_disabled_blocks_players`**:
+  - `polla_create_bet` (misma firma): si el destinatario es un jugador con el pasador deshabilitado → `POLLA_CASHIER_DISABLED`. Repetir y cortesía cargan con esta función: el ticket queda en "No se repitieron".
+  - `polla_revoke_player_sessions(p_cashier_id)` (nueva): cierra las sesiones activas de los jugadores del pasador y devuelve cuántas.
+- **`PUT /user/:id/disabled`** (nuevo, `polla-user.route.ts`): `{ disabled }`. Mismo alcance que `PUT /user/:id` (`assertReachable`). Al deshabilitar cierra sus sesiones y, si es pasador, las de sus jugadores. `PUT /user/:id` hace lo mismo cuando la casilla de "Editar usuario" pasa a deshabilitado.
+- **Sesión** (`polla-auth.repository.ts`): `getSessionUserById` trae al pasador del jugador; con el pasador deshabilitado devuelve `null`, así que la sesión y el refresh dan 401. Antes ya frenaba al propio deshabilitado, pero sus sesiones quedaban activas y revivían al habilitarlo.
+- **Login** (`polla-auth.controller.ts`): el jugador con el pasador deshabilitado recibe 403 "Tu pasador está deshabilitado".
+- **`GET /user/search`**: con `scope=writable` (cargar a nombre de otro) excluye deshabilitados y jugadores de pasadores deshabilitados. Sin scope (filtros) los incluye y cada opción trae `disabled` y `cashier_disabled`.
+- **`GET /user/by-number/:number`**: el jugador de un pasador deshabilitado da 403.
+- **`GET /user`**: cada usuario trae `cashier_disabled`.
+- **`polla-errors.ts`**: mensaje de `POLLA_CASHIER_DISABLED` (403).
+- **Tests pgTAP:** `200_polla_cashier_disabled` (el jugador, el staff y repetir quedan frenados; el jugador no se marca; vuelve al habilitar; `polla_revoke_player_sessions` cierra solo las de sus jugadores).
+
+### Changed - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+**Qué cambia.** Repetir de cortesía (sin cargo) tickets de una edición finalizada lo hacen dueño, capitalista, superadmin y el Súper, en toda la organización. El admin de grupo ya no. El resto sigue igual: el ticket tiene que ser de una edición finalizada (con ganadores, o desierta al procesar el último día) y se carga en una edición con la carga abierta.
+
+- **Migración `20261115140021_polla_courtesy_staff_roles`**: `polla_create_bet` y `polla_repeat_bets` (mismas firmas) cambian quién carga sin cargo (`POLLA_FREE_BET_FORBIDDEN`): `OWNER`, `CAPITALIST`, `SUPERADMIN` y `ASSISTANT`.
+- **`POST /bet/free-repeat`** (`polla-bet.route.ts`): `requirePollaRole(...POLLA_COURTESY_ROLES)`.
+- **`GET /bet?view=manage&with_courtesies=true`**: la cortesía vigente de cada ticket la reciben superadmin+, el Súper y el admin de grupo (que la sigue viendo aunque ya no repita).
+- **Tests pgTAP:** `110_polla_free_repeat_once` repite con el Súper y prueba los roles (dueño, capitalista y superadmin sí; admin de grupo y pasador, `POLLA_FREE_BET_FORBIDDEN`); `040_polla_bet_payment` repite sin cargo con el Súper.
+
+### Changed - 2026-11-15 (liquidación de grupos: sin ajustes ni pagado)
+
+- **`POST /edition_account/:editionId/group_liquidate`** (`polla-edition-account.route.ts`): ya no recibe `adjustments` ni `paid`; siempre los guarda en 0, así el total del admin es el 100% de la comisión. La base no cambia: `polla_liquidate_group_edition` sigue con la misma firma.
+
+### Changed - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
+
+**Qué cambia.** Los cortes por rol pasan a ser estos ("sorteo" = la hora del primer sorteo del día de inicio):
+
+| Rol | Cargar | Editar números | Repetir | Borrar de a uno |
+| --- | --- | --- | --- | --- |
+| Dueño, capitalista, superadmin | sorteo | sorteo | cierre | siempre |
+| Súper | sorteo | cierre | sorteo | sorteo |
+| Admin de grupo, pasador | cierre | cierre | cierre | cierre |
+| Jugador | cierre | - | cierre | - |
+
+El admin de grupo, que cargaba hasta el sorteo, pasa a cortar en el cierre.
+
+- **Migración `20261115124454_polla_staff_load_until_draw`**:
+  - Funciones nuevas: `polla_edition_draw_start(polla_editions)` (hora del primer sorteo del día de inicio), `polla_edition_load_close(polla_editions)` (cierre de carga, con tope en el primer sorteo), `polla_edit_cutoff(polla_editions, rol)` y `polla_repeat_cutoff(polla_editions, rol)`.
+  - `polla_load_cutoff` (cargar, y borrar para los que no son superadmin+): `OWNER`, `CAPITALIST`, `SUPERADMIN` y `ASSISTANT`, la hora del sorteo; el resto (`ADMIN` incluido), el cierre de carga. Con eso cambian también `polla_can_load`, `polla_loadable_editions` y `polla_create_bet`.
+  - `polla_assert_bet_writable`: editar números usa `polla_edit_cutoff` (superadmin+ hasta el sorteo; el resto, el Súper incluido, hasta el cierre); borrar sigue con `polla_load_cutoff`.
+  - `polla_editions_load_state` (se borra y se vuelve a crear): suma `can_edit`.
+  - `polla_repeat_bets`: agrega el corte de `polla_repeat_cutoff` (`POLLA_LOAD_LIMIT_EXCEEDED`).
+  - `polla_loadable_editions`: cada edición suma `can_repeat` (si el rol todavía repite).
+  - `polla_liquidate_edition_accounts` y `polla_edition_account_list`: la liquidación por edición se sigue habilitando desde el cierre de carga (antes tomaban el corte del dueño, que ahora es la hora del sorteo). Lo que el staff cargue entre el cierre y el sorteo aparece como diferencia al volver a liquidar.
+  - `polla_unpaid_bets_summary` y `polla_delete_unpaid_bets` no cambian: siguen cortando en el cierre.
+- **`GET /edition?loadable=true`** (`polla-edition.repository.ts`, `polla-edition.route.ts`): devuelve `can_repeat` en cada edición.
+- **Acciones de cada jugada** (`polla-bet.route.ts`): `can_edit` sale de `can_edit` de la base (el Súper borra hasta el sorteo, pero edita hasta el cierre); `can_delete`, de `can_load`.
+- **Tests pgTAP:** `130_polla_load_cutoff_all_roles` y `030_polla_create_bet_regression` pasan a la regla nueva; `190_polla_staff_load_until_draw` prueba repetir, `can_repeat` y la liquidación desde el cierre.
+
+### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+**Qué se reemplaza.** La cuenta corriente de Polla deja de liquidarse por rango de días y pasa a liquidarse por edición. Cada edición es estanca: tiene sus movimientos, sus liquidaciones repetibles con aviso de diferencias, la marca de liquidada, la cuenta del grupo, sus gastos y sus reportes. Lo ya liquidado por días queda solo para consultar.
+**Por qué.** Con dos ediciones solapadas (la regular y la especial, los mismos días) la cuenta por días las mezclaba. Por edición, los tickets y los movimientos de una no aparecen en la otra.
+
+- **Migración `20261114140711_polla_edition_accounts`**:
+  - Tablas nuevas, con RLS y permisos solo para `service_role`: `polla_edition_account_movements` (cobros, pagos y reclamos de un pasador en una edición, con borrado lógico), `polla_edition_liquidations` (foto de cada liquidación de un pasador; la fila más nueva de cada par edición/pasador es la vigente) y `polla_group_edition_accounts` (cuenta del grupo por edición).
+  - Tipo `polla_account_movement_type_enum` (`COLLECTION`, `PAYMENT`, `CLAIM`).
+  - `polla_editions` suma `account_by_edition`, `liquidated_at` y `liquidated_by`. `polla_org_expenses` suma `polla_edition_id`.
+  - Funciones del corte: `polla_cashier_last_liquidation`, `polla_edition_has_unliquidated_days` y `polla_edition_account_cutover`. Triggers que validan los movimientos y los gastos por edición (`POLLA_EDITION_NOT_FOUND`, `POLLA_EDITION_ACCOUNT_DISABLED`, `POLLA_ACCOUNT_USER_NOT_CASHIER`).
+  - **La cuenta por días queda solo para consultar** (`polla_current_accounts` y `polla_group_accounts` no cambian más):
+    - `polla_recalculate_accounts_on` pasa a devolver 0: procesar un resultado ya no la toca. Se mantiene la firma porque `polla_process_results_and_accounts` y `polla_define_edition_day` la siguen llamando.
+    - `polla_refresh_current_account_row` no hace nada: cargar o borrar un ticket (`polla_create_bet`, `polla_delete_bet`, `polla_delete_unpaid_bets`) o borrar una edición (`polla_delete_edition`) ya no recalcula la fila del día.
+    - `polla_calculate_current_account`, `polla_recalculate_open_period`, `polla_update_current_account_recompute`, `polla_cascade_current_account_from_date` y `polla_liquidate_group` responden `POLLA_DAILY_ACCOUNT_READ_ONLY`, con las mismas firmas. El bloque `-- ROLLBACK:` dice de qué migración sale la definición anterior de cada una.
+  - **Historial por fechas sin los gastos por edición:** `polla_current_account_daily_totals` y `polla_group_account_preview` suman solo los gastos con `polla_edition_id IS NULL` (un gasto por edición lleva la fecha del día en que se cargó).
+  - Índice `idx_polla_bets_edition_cashier_deducted` (`polla_bets (polla_edition_id, cashier_polla_user_id) WHERE deducted_on IS NOT NULL`): la cuenta por edición encuentra las borradas de la edición sin recorrer las de todas.
+- **Migración `20261114141228_polla_edition_account_functions`**: `polla_edition_account_base`, `polla_edition_account_rows` (cálculo en vivo desde tickets y movimientos), `polla_liquidate_edition_accounts` (guarda la foto por pasador y avisa las diferencias con la liquidación anterior; calcula la cuenta una sola vez por llamada, así un ticket que cambia en el medio no deja el aviso y la foto en desacuerdo), `polla_set_edition_liquidated`, `polla_edition_account_list`, `polla_edition_account_totals` y `polla_user_edition_accounts`. Fórmulas: `pass = bets_pass - deleted_pass + reclamos positivos`; `cashier_commission = ROUND(pass * fee / 100, 2)`; `subtotal = pass - comisión + reclamos negativos`; `total = subtotal - cobros + pagos`. Sin premios, sin deje, sin `bills` y sin saldo anterior.
+- **Migración `20261114150000_polla_group_edition_accounts`**: `polla_group_edition_account_preview` y `polla_liquidate_group_edition`. El subtotal de un pasador queda en el grupo de su liquidación, aunque después cambie de grupo. El % del admin se redondea a 2 decimales antes de calcular la comisión (es lo que se guarda).
+- **Script `api/supabase/scripts/polla_edition_account_cutover_preview.sql`** (solo lectura, fuera de `migrations/`): las ediciones que pasan a liquidarse por edición y, por edición y pasador, el pase ya liquidado por días y el reclamo negativo sugerido. Ver las notas de migración.
+- **Módulo nuevo `api/src/polla/edition-account`**, montado en `/edition_account` (`GET /`, `/mine`, `/totals`, `/group_accounts`, `/:editionId/accounts`, `/:editionId/movements`, `/:editionId/group_previews`; `POST /:editionId/liquidate`, `/:editionId/movements`, `/:editionId/group_liquidate`; `PUT /:editionId/liquidated`, `/movements/:id`; `DELETE /movements/:id`). Solo valida rol y organización y llama a las RPC. Escriben dueño, capitalista y superadmin; el admin de grupo no entra.
+- **Pasador:** ve solo las ediciones donde el staff ya lo liquidó (`/mine`; `/:editionId/accounts` y `/:editionId/movements` devuelven 404 en las otras). No ve ediciones en carga ni sin liquidar.
+- **Gastos (`/expense`)**: `GET` filtra por `polla_edition_id`; `POST` exige `polla_edition_id`; `DELETE` de un gasto por fecha queda prohibido. Los gastos viejos por fecha se ven en el historial y no se borran. El `GET` por fecha (historial) trae solo los gastos por fecha, no los por edición cargados ese día.
+- **`GET /bet?deducted_only=true`**: devuelve solo los tickets borrados con descuento.
+- **`polla-errors.ts`**: `POLLA_EDITION_ACCOUNT_DISABLED`, `POLLA_EDITION_LOAD_OPEN`, `POLLA_EDITION_LIQUIDATION_EMPTY`, `POLLA_ACCOUNT_USER_NOT_CASHIER`, `POLLA_EDITION_LIQUIDATION_SOURCE_INVALID` y `POLLA_DAILY_ACCOUNT_READ_ONLY` (403, "La cuenta por días quedó solo para consultar").
+- **Tests pgTAP:** `170_polla_edition_account_cutover` (también: cargar y borrar tickets o borrar una edición no cambian `polla_current_accounts`, por cantidad y md5; el historial no suma gastos por edición), `175_polla_edition_liquidation` (también: el premio no entra en la cuenta, el `old.total` del aviso y `kept_previous_tickets` con el viejo) y `180_polla_group_edition_account` (también: % redondeado). El `160` queda reservado.
+  - `065_polla_delete_unpaid_bets_staff`: la baja entra en Borradas de la edición y la fila por días no cambia; calcular por días responde `POLLA_DAILY_ACCOUNT_READ_ONLY`.
+  - `070_polla_prizes_out_of_account`: se reescribe. Lo guardado por días (con el premio de un día liquidado antes de R18) no cambia y cada función que escribía por días responde `POLLA_DAILY_ACCOUNT_READ_ONLY`.
+
+**Regla del corte (la migración la aplica una vez).**
+- Quedan **por días** (`account_by_edition = FALSE`, solo consulta) las ediciones con `end_date < polla_today()` y sin días sin liquidar.
+- Pasan **por edición** las ediciones en carga o sorteo, las terminadas con tickets cargados (o borrados con descuento) después de la última liquidación por días de su pasador, y las de pasadores que nunca se liquidaron.
+- No hay exclusión automática de tickets ya liquidados por días: una edición en carga o sorteo pasa entera a por edición aunque parte de sus tickets ya se hayan liquidado por días. Eso se ajusta a mano (decisión del 14/11; ver abajo).
+
+**Notas de migración (cambios que rompen).**
+- **Los cobros, pagos y reclamos ya cargados en días sin liquidar NO se migran.** Hay que volver a cargarlos a mano en cada edición que pasa a liquidarse por edición.
+- **Antes de aplicar**, correr `api/supabase/scripts/polla_edition_account_cutover_preview.sql` (solo lectura; el encabezado dice cómo) en develop y en prod. La parte 1 lista las ediciones que pasan a liquidarse por edición; la parte 2, por edición y pasador, el pase que ya se liquidó por días (`pase_ya_liquidado`), su comisión (`comision_ya_liquidada`) y el `reclamo_sugerido`.
+- **Ajuste a mano con un "Reclamo" negativo:** después de aplicar y **antes de liquidar** cada edición de la parte 2, cargar en Cuenta corriente > Pasadores > la edición > el pasador > Movimientos un "Reclamo" por `reclamo_sugerido` = −(pase ya liquidado − comisión ya liquidada). Va neto de la comisión porque la cuenta por edición calcula la comisión sobre el pase, que un reclamo negativo no baja: con el pase completo, el pasador cobraría dos veces la comisión de esos tickets.
+- **Clientes:** `POST /expense` exige `polla_edition_id` en lugar de `date`.
+
+- **Borrar un grupo mira las ediciones (`polla_delete_group`, redefinida en `20261114150000_polla_group_edition_accounts`)**: ya no mira la cuenta por días (historia congelada). Además de no tener jugadas en ediciones en juego, en cada edición por edición donde el grupo tiene algo: sus pasadores con movimiento tienen que estar liquidados (`POLLA_GROUP_CASHIERS_PENDING`, la misma regla de `pending_cashiers` de la vista previa) y, si hay algo para liquidar (subtotal o gastos distintos de cero), la cuenta del grupo tiene que existir y estar al día; una cuenta desactualizada también bloquea (`POLLA_GROUP_ACCOUNT_OPEN`). Solo examina las ediciones donde el grupo puede tener algo. El `-- ROLLBACK:` de la migración indica restaurar la función desde `20261021233443_polla_group_accounts.sql`. Los mensajes de esos dos errores en `polla-errors.ts` pasan a hablar de ediciones. Tests en `180_polla_group_edition_account.test.sql`.
+
+### Removed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- **Rutas de escritura por días**, sin dejar respondiendo error: `current_account` (calcular, liquidar, masivo y `PUT :id`) y `group_account` (vistas previas y liquidar). Las de lectura siguen para el Historial por fechas.
+- Del repositorio de `polla-current-account` salen los métodos que solo usaban esas rutas.
+
 ### Fixed - 2026-11-12 (R18: un día liquidado no vuelve a sumar premios)
 
 - **Migración `20261112054358_polla_liquidated_days_keep_prizes`**: `polla_calculate_current_account` y `polla_update_current_account_recompute` dejan de sacar los premios de las jugadas para los días ya liquidados. Ahora conservan el `successes` guardado de la fila: los liquidados antes de R18, con su premio; los de después, en 0.

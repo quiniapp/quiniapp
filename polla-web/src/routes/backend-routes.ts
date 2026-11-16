@@ -42,6 +42,7 @@ export const BACKEND_ROUTES = {
     search: `${PRIVATE}/user/search`,
     nextNumber: `${PRIVATE}/user/next-number`,
     resetPassword: (id: string) => `${PRIVATE}/user/${id}/reset-password`,
+    disabled: (id: string) => `${PRIVATE}/user/${id}/disabled`,
   },
   edition: {
     base: `${PRIVATE}/edition`,
@@ -74,16 +75,23 @@ export const BACKEND_ROUTES = {
   },
   currentAccount: {
     base: `${PRIVATE}/current_account`,
-    id: (id: string) => `${PRIVATE}/current_account/${id}`,
-    calculate: `${PRIVATE}/current_account/calculate`,
-    liquidate: `${PRIVATE}/current_account/liquidate`,
-    bulk: `${PRIVATE}/current_account/bulk`,
     totals: `${PRIVATE}/current_account/totals`,
+  },
+  editionAccount: {
+    base: `${PRIVATE}/edition_account`,
+    mine: `${PRIVATE}/edition_account/mine`,
+    totals: `${PRIVATE}/edition_account/totals`,
+    groupAccounts: `${PRIVATE}/edition_account/group_accounts`,
+    movement: (id: string) => `${PRIVATE}/edition_account/movements/${id}`,
+    accounts: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/accounts`,
+    generate: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/generate`,
+    movements: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/movements`,
+    groupPreviews: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/group_previews`,
+    groupLiquidate: (editionId: string) =>
+      `${PRIVATE}/edition_account/${editionId}/group_liquidate`,
   },
   groupAccount: {
     base: `${PRIVATE}/group_account`,
-    previews: `${PRIVATE}/group_account/previews`,
-    liquidate: `${PRIVATE}/group_account/liquidate`,
   },
   expense: {
     base: `${PRIVATE}/expense`,

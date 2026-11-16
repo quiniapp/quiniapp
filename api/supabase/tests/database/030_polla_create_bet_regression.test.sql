@@ -74,9 +74,9 @@ SELECT is(
   'el pasador carga hasta el cierre de la edición'
 );
 SELECT is(
-  (SELECT polla_load_cutoff(e, 'ADMIN') FROM polla_editions e WHERE e.polla_edition_id = (SELECT id FROM ed)),
+  (SELECT polla_load_cutoff(e, 'OWNER') FROM polla_editions e WHERE e.polla_edition_id = (SELECT id FROM ed)),
   (polla_today() + 10) + '18:00'::TIME,
-  'el admin carga hasta el sorteo más temprano de la especial'
+  'el dueño carga hasta el sorteo más temprano de la especial'
 );
 SELECT is(
   (SELECT COUNT(*)::INT FROM polla_loadable_editions('c0000000-0000-0000-0000-000000000005', 'CASHIER') x

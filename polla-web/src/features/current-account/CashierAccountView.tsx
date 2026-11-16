@@ -12,11 +12,13 @@ import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { todayIso } from '@/lib/dates';
 import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/lib/accountPeriod';
+import { owedWord } from '@/lib/editionAccount';
 import { Label } from '@/components/ui/label';
 import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
 import { ReportMode, fmtMoney } from './format';
-import { ModeToggle } from './dialogs/shared';
+import { AccountTabs, ModeToggle } from './dialogs/shared';
+import { CashierEditionAccounts } from './edition/CashierEditionAccounts';
 
 /** Pase jugadas − Borradas = Pase (más los reclamos positivos), base de la comisión. */
 const FIELDS = [
@@ -35,12 +37,12 @@ const FIELDS = [
 ] as const;
 
 /**
- * La liquidación del pasador, como su vista en QuiniApp: lo acumulado desde el
+ * Historial por fechas del pasador: su liquidación por días, como su vista en QuiniApp: lo acumulado desde el
  * día siguiente a su última liquidación hasta la fecha elegida (o en un rango
  * de fechas), los tickets que cargó, los que se borraron, las jugadas que
  * ganaron y el botón para imprimirla.
  */
-export const CashierAccountView = () => {
+const CashierDailyHistory = () => {
   const { user } = useAuth();
   const [mode, setMode] = useState<ReportMode>('day');
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -140,13 +142,35 @@ export const CashierAccountView = () => {
               ))}
             </dl>
             <p className="mt-3 text-right text-lg font-bold tabular-nums">
-              {total > 0 ? 'Debe' : 'Cobra'}: ${fmtMoney(Math.abs(total))}
+              {owedWord(total)}: ${fmtMoney(Math.abs(total))}
             </p>
           </div>
 
           <DayBetsTables from={account.period_from} to={account.date} />
         </>
       )}
+    </div>
+  );
+};
+
+type CashierTab = 'edition' | 'history';
+
+const CASHIER_TABS: { value: CashierTab; label: string }[] = [
+  { value: 'edition', label: 'Por edición' },
+  { value: 'history', label: 'Historial por fechas' },
+];
+
+/**
+ * La cuenta del pasador: las ediciones donde lo liquidaron y, aparte, su
+ * historial por fechas (lo liquidado por días antes del cambio).
+ */
+export const CashierAccountView = () => {
+  const [tab, setTab] = useState<CashierTab>('edition');
+
+  return (
+    <div className="flex flex-col gap-4">
+      <AccountTabs tabs={CASHIER_TABS} value={tab} onChange={setTab} />
+      {tab === 'edition' ? <CashierEditionAccounts /> : <CashierDailyHistory />}
     </div>
   );
 };

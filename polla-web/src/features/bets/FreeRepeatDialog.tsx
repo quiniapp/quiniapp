@@ -4,6 +4,7 @@ import {
   IPollaEditionEntityFront,
   IPollaRepeatResult,
   POLLA_EDITION_STATUS,
+  isPollaEditionRepeatable,
 } from '@helper/polla/types/game.type';
 import { useEditions } from '@/hooks/fetchs/usePollaData';
 import { useFreeRepeatBets } from '@/hooks/mutations/usePollaMutations';
@@ -39,7 +40,7 @@ interface FreeRepeatDialogProps {
 
 /**
  * Repetir sin cargo los tickets elegidos de una edición finalizada en una
- * edición abierta (con el corte del rol). Cada uno se carga a nombre de su
+ * edición abierta (hasta el cierre de carga). Cada uno se carga a nombre de su
  * dueño, a $0: no suma al pase, la comisión ni lo recaudado. Un ticket tiene
  * una sola cortesía (R33): si ya la tiene, se dice dónde está. Al terminar se
  * ve cuántos se cargaron y cuáles no (y por qué).
@@ -57,7 +58,13 @@ export const FreeRepeatDialog = ({
     loadable: true,
     polla_organization_id: organizationId ?? undefined,
   });
-  const loadable = editions?.data ?? [];
+  // La cortesía tiene el corte de repetir del rol (`can_repeat`): dueño,
+  // capitalista y superadmin, hasta el cierre de carga (aunque sigan cargando
+  // hasta el sorteo); el Super, hasta el sorteo.
+  const loadable = (editions?.data ?? []).filter(isPollaEditionRepeatable);
+  // Los tickets elegidos al abrir: al cargarse, la pantalla limpia la selección
+  // (`onDone`) y la descripción tiene que seguir diciendo cuántos eran.
+  const [ticketIds] = useState(betIds);
   const [editionId, setEditionId] = useState('');
   const [result, setResult] = useState<IPollaRepeatResult | null>(null);
   const { mutate: freeRepeat, isPending } = useFreeRepeatBets();
@@ -70,7 +77,7 @@ export const FreeRepeatDialog = ({
       return;
     }
     freeRepeat(
-      { polla_edition_id: target.polla_edition_id, polla_bet_ids: betIds },
+      { polla_edition_id: target.polla_edition_id, polla_bet_ids: ticketIds },
       {
         onSuccess: (data) => {
           setResult(data);
@@ -86,8 +93,8 @@ export const FreeRepeatDialog = ({
         <DialogHeader>
           <DialogTitle>Repetir sin cargo</DialogTitle>
           <DialogDescription>
-            {betIds.length} ticket{betIds.length === 1 ? '' : 's'}, cada uno a nombre de su dueño y
-            sin cargo: no suman al pase, a la comisión ni a lo recaudado.
+            {ticketIds.length} ticket{ticketIds.length === 1 ? '' : 's'}, cada uno a nombre de su
+            dueño y sin cargo: no suman al pase, a la comisión ni a lo recaudado.
           </DialogDescription>
         </DialogHeader>
 

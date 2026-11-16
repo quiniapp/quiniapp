@@ -2,10 +2,12 @@ import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import {
   POLLA_ADMIN_ROLES,
+  POLLA_COURTESY_ROLES,
   POLLA_USER_TYPE,
   POLLA_STAFF_ROLES,
   IPollaSessionUser,
   isPollaAdminRole,
+  isPollaCourtesyRole,
   isPollaLoaderRole,
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
@@ -124,9 +126,14 @@ const isOwnOrImputed = (bet: PollaBetRow, viewer: IPollaSessionUser) =>
   (viewer.user_type === POLLA_USER_TYPE.CASHIER &&
     bet.cashier_polla_user_id === viewer.polla_user_id);
 
-/** Ediciones de las jugadas listadas donde el rol todavía carga (y escribe). */
+/**
+ * Ediciones de las jugadas listadas donde el rol todavía carga (y borra) y
+ * donde todavía edita números: el Súper carga y borra hasta el sorteo, pero
+ * edita hasta el cierre.
+ */
 interface ActionContext {
   openEditions: Set<string>;
+  editableEditions: Set<string>;
 }
 
 const NO_ACTIONS: IPollaBetActions = { can_edit: false, can_delete: false, can_mark_paid: false };
@@ -169,11 +176,11 @@ const manageScope = (user: IPollaSessionUser): Pick<PollaBetFilters, 'cashierId'
 /**
  * Qué puede hacer el usuario con cada jugada ahora. Todos leen todo; cada rol
  * escribe en su alcance y hasta su corte (la base vuelve a controlarlo, R30):
- * superadmin+ edita números hasta el cierre y borra siempre (para corregir);
- * el admin, en su grupo hasta la hora del sorteo; el Super, en toda la
- * organización hasta el cierre; el pasador solo borra lo suyo y lo de sus
- * jugadores hasta el cierre (da de baja lo que no le pagaron, aunque ya se
- * haya liquidado); el jugador nada.
+ * superadmin+ edita números hasta la hora del sorteo y borra siempre (para
+ * corregir); el Super, en toda la organización, borra hasta la hora del
+ * sorteo y edita hasta el cierre; el admin, en su grupo hasta el cierre; el
+ * pasador solo borra lo suyo y lo de sus jugadores hasta el cierre (da de
+ * baja lo que no le pagaron, aunque ya se haya liquidado); el jugador nada.
  */
 const actionsFor = (
   bet: PollaBetRow,
@@ -185,18 +192,19 @@ const actionsFor = (
   if (!alive) return { ...NO_ACTIONS, can_mark_paid };
 
   const open = ctx.openEditions.has(bet.polla_edition_id);
+  const editable = ctx.editableEditions.has(bet.polla_edition_id);
 
   if (isPollaSuperRole(viewer.user_type)) {
-    return { can_edit: open, can_delete: true, can_mark_paid };
+    return { can_edit: editable, can_delete: true, can_mark_paid };
   }
 
   if (viewer.user_type === POLLA_USER_TYPE.ADMIN) {
     const inGroup = bet.polla_group_id === viewer.polla_group_id;
-    return { can_edit: inGroup && open, can_delete: inGroup && open, can_mark_paid };
+    return { can_edit: inGroup && editable, can_delete: inGroup && open, can_mark_paid };
   }
 
   if (viewer.user_type === POLLA_USER_TYPE.ASSISTANT) {
-    return { can_edit: open, can_delete: open, can_mark_paid };
+    return { can_edit: editable, can_delete: open, can_mark_paid };
   }
 
   if (viewer.user_type === POLLA_USER_TYPE.CASHIER) {
@@ -305,7 +313,7 @@ export class PollaBetRouter {
     this.router.post('/repeat', this.repeatHandler);
     this.router.post(
       '/free-repeat',
-      requirePollaRole(...POLLA_ADMIN_ROLES),
+      requirePollaRole(...POLLA_COURTESY_ROLES),
       this.freeRepeatHandler
     );
     this.router.get('/', this.getAllHandler);
@@ -346,17 +354,20 @@ export class PollaBetRouter {
   ): Promise<ActionContext> => {
     // El jugador nunca escribe: no hace falta mirar cortes.
     if (user.user_type === POLLA_USER_TYPE.PLAYER) {
-      return { openEditions: new Set() };
+      return { openEditions: new Set(), editableEditions: new Set() };
     }
 
     const editionIds = [...new Set(bets.map((bet) => bet.polla_edition_id))];
     const states = await this.editionRepository.getLoadStates(editionIds, user.user_type);
 
-    return {
-      openEditions: new Set(
-        states.filter((state) => state.can_load).map((state) => state.polla_edition_id)
-      ),
-    };
+    const openEditions = new Set<string>();
+    const editableEditions = new Set<string>();
+    for (const state of states) {
+      if (state.can_load) openEditions.add(state.polla_edition_id);
+      if (state.can_edit) editableEditions.add(state.polla_edition_id);
+    }
+
+    return { openEditions, editableEditions };
   };
 
   /**
@@ -419,7 +430,8 @@ export class PollaBetRouter {
     // grupo.
     const deductedRange = queryDateRange(req.query.deducted_from, req.query.deducted_to);
     const withDeducted = req.query.with_deducted === 'true';
-    const deletedOnes = Boolean(deductedRange) || withDeducted;
+    const deductedOnly = req.query.deducted_only === 'true';
+    const deletedOnes = Boolean(deductedRange) || withDeducted || deductedOnly;
 
     if (deletedOnes && user.user_type === POLLA_USER_TYPE.PLAYER) {
       throw new ForbiddenError('Los jugadores no ven jugadas borradas');
@@ -454,6 +466,7 @@ export class PollaBetRouter {
       hitRange,
       deductedRange,
       withDeducted,
+      deductedOnly,
       onlyWinners: req.query.winners === 'true',
       winner: queryWinner(req.query.winner),
       hits: queryHits(req.query.hits),
@@ -494,9 +507,12 @@ export class PollaBetRouter {
       ctx ? forViewer(bet, user, ctx) : toPublicBet(bet, user, NO_ACTIONS)
     );
 
-    // La cortesía vigente de cada ticket (R33), para quien puede repetir sin cargo.
+    // La cortesía vigente de cada ticket (R33): para quien repite de cortesía
+    // (superadmin+ y el Súper) y para el admin de grupo, que la sigue viendo.
     const courtesies =
-      isAdmin && managing && req.query.with_courtesies === 'true'
+      (isAdmin || isPollaCourtesyRole(user.user_type)) &&
+      managing &&
+      req.query.with_courtesies === 'true'
         ? await this.repository.getCourtesies(result.data.map((bet) => bet.polla_bet_id))
         : undefined;
 
@@ -647,8 +663,9 @@ export class PollaBetRouter {
   });
 
   /**
-   * Repetir sin cargo (admin+, en su alcance) tickets de ediciones finalizadas
-   * en una edición abierta: $0 en el pase, la comisión y lo recaudado.
+   * Repetir de cortesía (dueño, capitalista, superadmin y Súper, en toda la
+   * organización) tickets de ediciones finalizadas en una edición abierta: $0
+   * en el pase, la comisión y lo recaudado.
    */
   private freeRepeatHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
@@ -721,7 +738,7 @@ export class PollaBetRouter {
       sort: 'recent',
     });
 
-    const ctx: ActionContext = { openEditions: new Set() };
+    const ctx: ActionContext = { openEditions: new Set(), editableEditions: new Set() };
     const data = result.data.map((bet) => forViewer(bet, user, ctx));
 
     res.status(200).json({ data: { winners: { ...result, data } } });

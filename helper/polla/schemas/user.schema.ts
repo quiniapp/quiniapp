@@ -106,6 +106,9 @@ export const updatePollaUserSchema = z.object({
   password: password.optional(),
 });
 
+/** Habilitar o deshabilitar desde la lista de usuarios. */
+export const setPollaUserDisabledSchema = z.object({ disabled: z.boolean() });
+
 /** Blanqueo de contraseña: la que pone el superior queda definitiva. */
 export const resetPollaPasswordSchema = z.object({ password });
 

@@ -23,7 +23,9 @@ VALUES ('d0000000-0000-0000-0000-0000000004f1', 'PLAYER', 'Jugador pago', 1,
 
 INSERT INTO polla_users (polla_user_id, user_type, name, polla_organization_id, polla_group_id) VALUES
   ('d0000000-0000-0000-0000-0000000004a1', 'ADMIN', 'Admin pago',
-   'd0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-0000000004e1');
+   'd0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-0000000004e1'),
+  -- Repite de cortesía (el admin de grupo ya no, 20261115140021).
+  ('d0000000-0000-0000-0000-0000000004a5', 'ASSISTANT', 'Súper pago', 'd0000000-0000-0000-0000-000000000004', NULL);
 
 INSERT INTO polla_lotteries (polla_lottery_id, polla_organization_id, name)
 VALUES ('d0000000-0000-0000-0000-0000000004b1', 'd0000000-0000-0000-0000-000000000004', 'Nacional pago');
@@ -153,7 +155,7 @@ SELECT (polla_create_edition(
 
 CREATE TEMP TABLE free_repeat AS
 SELECT polla_repeat_bets(
-  'd0000000-0000-0000-0000-0000000004a1',
+  'd0000000-0000-0000-0000-0000000004a5',
   (SELECT id FROM ed2),
   ARRAY[(SELECT polla_bet_id FROM owed)],
   TRUE,

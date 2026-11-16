@@ -1,10 +1,17 @@
 import {
   IPollaBetEntityFront,
-  IPollaGroupAccountEntityFront,
+  IPollaEditionLiquidationResult,
+  IPollaGroupEditionAccountEntity,
   IPollaProcessResult,
   IPollaRepeatResult,
   POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
+import {
+  IGenerateEditionLiquidationPayload,
+  IPollaAccountMovementPayload,
+  IPollaAccountMovementUpdatePayload,
+  ILiquidatePollaGroupEditionPayload,
+} from '@helper/polla/schemas/game.schema';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
 
@@ -141,6 +148,14 @@ export const useUpdateUser = () =>
       invalidate: ['polla-users', 'polla-user', 'polla-user-search'],
       successMessage: 'Usuario actualizado',
     }
+  );
+
+/** Habilitar o deshabilitar desde la lista (al deshabilitar se cierran sus sesiones). */
+export const useSetUserDisabled = () =>
+  useApiMutation<unknown, { id: string; disabled: boolean }>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.user.disabled(id),
+    { invalidate: ['polla-users', 'polla-user', 'polla-user-search'] }
   );
 
 export const useDeleteUser = () =>
@@ -326,88 +341,73 @@ export const useDefineEditionDay = () =>
     }
   );
 
-// --------------------------------------------------------- cuenta corriente
-
-/** `range_from`: liquidación por rango (si no, cada pasador desde su última liquidación). */
-export const useCalculateCurrentAccounts = () =>
-  useApiMutation<unknown, { date: string; range_from?: string; polla_organization_id?: string }>(
-    'post',
-    BACKEND_ROUTES.currentAccount.calculate,
-    { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta corriente actualizada' }
-  );
-
-/** Liquida en `date` a los pasadores de un grupo (`POLLA_LIQUIDATION_NO_GROUP`: sin grupo). */
-export const useLiquidateCurrentAccounts = () =>
-  useApiMutation<
-    unknown,
-    {
-      date: string;
-      range_from?: string;
-      polla_group_id: string;
-      polla_organization_id?: string;
-    }
-  >('post', BACKEND_ROUTES.currentAccount.liquidate, {
-    invalidate: ['polla-current-accounts'],
-    successMessage: 'Cuentas liquidadas',
-  });
-
-export const useUpdateCurrentAccount = () =>
-  useApiMutation<unknown, { id: string } & Record<string, unknown>>(
-    'put',
-    ({ id }) => BACKEND_ROUTES.currentAccount.id(id),
-    { invalidate: ['polla-current-accounts'], successMessage: 'Cuenta actualizada' }
-  );
-
-export const useBulkUpdateCurrentAccounts = () =>
-  useApiMutation<
-    unknown,
-    {
-      date: string;
-      polla_organization_id?: string;
-      updates: { polla_current_account_id: string; props: Record<string, number> }[];
-    }
-  >('put', BACKEND_ROUTES.currentAccount.bulk, {
-    // Siempre va seguido de "liquidar día", que es el que avisa.
-    invalidate: ['polla-current-accounts'],
-  });
-
-// ------------------------------------------------------- cuenta del grupo
-
-export const useLiquidateGroup = () =>
-  useApiMutation<
-    IPollaGroupAccountEntityFront,
-    {
-      polla_group_id: string;
-      date: string;
-      admin_percentage: number;
-      adjustments?: number;
-      paid?: number;
-    }
-  >('post', BACKEND_ROUTES.groupAccount.liquidate, {
-    invalidate: ['polla-group-accounts'],
-    successMessage: 'Grupo liquidado',
-  });
-
 // ------------------------------------------------------------------ gastos
 
 export const useCreateExpense = () =>
   useApiMutation<
     unknown,
     {
-      date: string;
+      polla_edition_id: string;
       name: string;
       amount: number;
       polla_group_id?: string | null;
       polla_organization_id?: string;
     }
-  >('post', BACKEND_ROUTES.expense.base, { invalidate: ['polla-expenses'] });
+  >('post', BACKEND_ROUTES.expense.base, { invalidate: ['polla-expenses', 'edition-account'] });
 
 export const useDeleteExpense = () =>
   useApiMutation<unknown, { id: string; polla_organization_id?: string }>(
     'delete',
     ({ id, polla_organization_id: org }) =>
       `${BACKEND_ROUTES.expense.id(id)}${org ? `?polla_organization_id=${org}` : ''}`,
-    { invalidate: ['polla-expenses'] }
+    { invalidate: ['polla-expenses', 'edition-account'] }
   );
 
 export { catalogKeys };
+
+// ------------------------------------------------ cuenta por edición
+
+const EDITION_ACCOUNT_KEYS = ['edition-account'];
+
+/**
+ * "Generar liquidación": carga lo que se suma hoy, liquida a los tildados y
+ * marca la edición. Sin `ticket_source` avisa las diferencias (sin escribir
+ * nada); con `NEW` u `OLD` genera igual.
+ */
+export const useGenerateEditionLiquidation = () =>
+  useApiMutation<
+    IPollaEditionLiquidationResult,
+    { editionId: string } & IGenerateEditionLiquidationPayload
+  >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.generate(editionId), {
+    invalidate: EDITION_ACCOUNT_KEYS,
+  });
+
+export const useCreateAccountMovement = () =>
+  useApiMutation<unknown, { editionId: string } & IPollaAccountMovementPayload>(
+    'post',
+    ({ editionId }) => BACKEND_ROUTES.editionAccount.movements(editionId),
+    { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento cargado' }
+  );
+
+export const useUpdateAccountMovement = () =>
+  useApiMutation<unknown, { id: string } & IPollaAccountMovementUpdatePayload>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.editionAccount.movement(id),
+    { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento actualizado' }
+  );
+
+export const useDeleteAccountMovement = () =>
+  useApiMutation<unknown, { id: string }>(
+    'delete',
+    ({ id }) => BACKEND_ROUTES.editionAccount.movement(id),
+    { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento eliminado' }
+  );
+
+export const useLiquidateGroupEdition = () =>
+  useApiMutation<
+    IPollaGroupEditionAccountEntity,
+    { editionId: string } & ILiquidatePollaGroupEditionPayload
+  >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.groupLiquidate(editionId), {
+    invalidate: EDITION_ACCOUNT_KEYS,
+    successMessage: 'Grupo liquidado',
+  });

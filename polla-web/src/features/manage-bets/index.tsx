@@ -18,6 +18,7 @@ import {
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
   isPollaAdminRole,
+  isPollaCourtesyRole,
   isPollaLoaderRole,
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
@@ -94,6 +95,8 @@ export const ManageBetsPage = () => {
 
   const canManage = Boolean(role && isPollaAdminRole(role));
   const isSuper = Boolean(role && isPollaSuperRole(role));
+  // Repiten de cortesía dueño, capitalista, superadmin y el Super.
+  const canCourtesy = Boolean(role && isPollaCourtesyRole(role));
   // Admin+ y el Super editan, imprimen y filtran por cualquier pasador o
   // jugador de su alcance; superadmin+ y el Super ven toda la organización.
   const canLoad = Boolean(role && isPollaLoaderRole(role));
@@ -198,9 +201,12 @@ export const ManageBetsPage = () => {
   const searching = POLLA_TICKET_SEARCH.test(debouncedSearch);
   const nameSearch = !searching && debouncedSearch ? debouncedSearch : undefined;
 
-  // Repetir sin cargo: superadmin+ y el admin, con la edición ya finalizada.
-  const canFreeRepeat =
-    canManage && !searching && selectedEdition?.status === POLLA_EDITION_STATUS.FINISHED;
+  // Con la edición ya finalizada: repiten de cortesía superadmin+ y el Super
+  // (toda la organización); en qué edición está la cortesía de cada ticket lo
+  // ven ellos y el admin de grupo, que ya no repite.
+  const finishedView = !searching && selectedEdition?.status === POLLA_EDITION_STATUS.FINISHED;
+  const canFreeRepeat = canCourtesy && finishedView;
+  const showCourtesies = (canCourtesy || canManage) && finishedView;
 
   const betsParams = {
     view: 'manage',
@@ -210,7 +216,7 @@ export const ManageBetsPage = () => {
     ...(searching ? {} : userFilter),
     ...(searching ? {} : resultFilter),
     ...(searching ? {} : loadFilter),
-    with_courtesies: canFreeRepeat ? 'true' : undefined,
+    with_courtesies: showCourtesies ? 'true' : undefined,
     sort,
   };
   const betsEnabled = Boolean(editionId) || searching;
@@ -415,16 +421,13 @@ export const ManageBetsPage = () => {
     ])
   );
   /**
-   * El admin repite solo los de su grupo; superadmin+, cualquiera. Una
-   * cortesía no se repite de cortesía y un ticket que ya tiene la suya no se
-   * vuelve a repetir (R33).
+   * Superadmin+ y el Super repiten cualquiera de la organización (al Super le
+   * llega la versión pública de cada jugada, que alcanza). Una cortesía no se
+   * repite de cortesía y un ticket que ya tiene la suya no se vuelve a repetir
+   * (R33).
    */
   const canSelect = (row: IPollaBetListItem) =>
-    canFreeRepeat &&
-    !isPublicPollaBet(row) &&
-    (isSuper || row.polla_group_id === ownGroupId) &&
-    !row.is_free &&
-    !courtesies[row.polla_bet_id];
+    canFreeRepeat && !row.is_free && !courtesies[row.polla_bet_id];
   const selectableRows = rows.filter(canSelect);
 
   // Editar y borrar lo decide la API para cada jugada (`can_edit`/`can_delete`):

@@ -46,17 +46,40 @@ export class PollaAuthRepository {
     return data as IPollaUserEntityBack | null;
   }
 
+  /**
+   * Usuario de la sesión, o `null` si no puede operar: borrado, deshabilitado
+   * o jugador de un pasador deshabilitado (queda frenado como si lo estuviera
+   * él, sin marcarlo).
+   */
   async getSessionUserById(pollaUserId: string): Promise<IPollaSessionUser | null> {
     const { data, error } = await supabase
       .from('polla_users')
-      .select(SESSION_USER_COLUMNS)
+      // Embebido por columna: el pasador del jugador (muchos a uno).
+      .select(`${SESSION_USER_COLUMNS}, parent:parent_polla_user_id(disabled)`)
       .eq('polla_user_id', pollaUserId)
       .eq('disabled', false)
       .is('deleted_at', null)
       .maybeSingle();
 
     throwIfPollaError(error);
-    return data as IPollaSessionUser | null;
+    if (!data) return null;
+
+    const { parent, ...user } = data as unknown as IPollaSessionUser & {
+      parent: { disabled: boolean } | null;
+    };
+    return parent?.disabled ? null : user;
+  }
+
+  /** Si el usuario (por ejemplo, el pasador de un jugador) está deshabilitado. */
+  async isUserDisabled(pollaUserId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('polla_users')
+      .select('disabled')
+      .eq('polla_user_id', pollaUserId)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    return Boolean(data?.disabled);
   }
 
   // ------------------------------------------------------------- sesiones
@@ -125,6 +148,15 @@ export class PollaAuthRepository {
       .update({ is_active: false, revoked_at: new Date().toISOString() })
       .eq('polla_user_id', pollaUserId)
       .eq('is_active', true);
+
+    throwIfPollaError(error);
+  }
+
+  /** Cierra las sesiones activas de los jugadores del pasador. */
+  async revokePlayerSessions(cashierId: string): Promise<void> {
+    const { error } = await supabase.rpc('polla_revoke_player_sessions', {
+      p_cashier_id: cashierId,
+    });
 
     throwIfPollaError(error);
   }

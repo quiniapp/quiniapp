@@ -4,6 +4,44 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 ("Generar liquidación" por edición)
+
+- **`generateEditionLiquidationSchema`** e **`IGenerateEditionLiquidationPayload`** (`helper/polla/schemas/game.schema.ts`):
+  - `entries` lleva al menos un pasador y no admite repetidos;
+  - `collection` y `payment` son opcionales y ≥ 0; `claim` es opcional y con signo;
+  - `ticket_source` es opcional.
+
+### Added - 2026-11-15 (habilitar y deshabilitar usuarios)
+
+- **`setPollaUserDisabledSchema`** (`helper/polla/schemas/user.schema.ts`): `{ disabled }` para `PUT /user/:id/disabled`.
+- **`IPollaUserOption`** (`helper/polla/types/user.type.ts`): `disabled` y `cashier_disabled` (jugador con el pasador deshabilitado). Solo aparecen en los buscadores que filtran.
+- **`IPollaUserEntityFront`**: `cashier_disabled` opcional (lo trae la lista de usuarios).
+
+### Added - 2026-11-15 (cortesía: dueño, capitalista, superadmin y Súper)
+
+- **`POLLA_COURTESY_ROLES` e `isPollaCourtesyRole`** (`helper/polla/types/user.type.ts`): quién repite de cortesía (superadmin+ y el Súper). Se corrigen los comentarios de `POLLA_SUPER_ROLES`, `POLLA_ADMIN_ROLES` y `POLLA_LOADER_ROLES`, y el de `repeatPollaBetsSchema`.
+
+### Changed - 2026-11-15 (liquidación de grupos: sin ajustes ni pagado)
+
+- **`liquidatePollaGroupEditionSchema`** (`helper/polla/schemas/game.schema.ts`): solo `polla_group_id` y `admin_percentage`; se sacan `adjustments` y `paid`.
+
+### Added - 2026-11-15 (R30: dueño, capitalista, superadmin y Súper cargan hasta el sorteo)
+
+- **`IPollaEditionEntityFront.can_repeat`** (`helper/polla/types/game.type.ts`): si el usuario todavía repite en una edición de Cargar jugada (el Súper, hasta el sorteo; el resto, hasta el cierre). Se corrige el comentario de `my_load_cutoff` (ya no es `null` para superadmin+).
+- **`isPollaEditionRepeatable(edition)`**: `false` solo si `can_repeat` es `false`; sin el dato (caché vieja), `true`.
+
+### Changed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- **Tipos nuevos (`helper/polla/types/game.type.ts`)**: enum `POLLA_ACCOUNT_MOVEMENT_TYPE` (`COLLECTION`, `PAYMENT`, `CLAIM`) y `POLLA_ACCOUNT_MOVEMENT_LABEL` ("Cobro", "Pago", "Reclamo"). Interfaces `IPollaEditionAccountAmounts`, `IPollaEditionLiquidationRef`, `IPollaEditionAccountRow`, `IPollaEditionAccountMovement`, `IPollaEditionLiquidationAmounts`, `IPollaEditionLiquidationDifference`, `IPollaEditionLiquidationEntity`, `IPollaEditionLiquidationResult`, `IPollaEditionAccountListItem`, `IPollaEditionAccountTotals`, `IPollaUserEditionAccount`, `IPollaGroupEditionAccountEntity` e `IPollaGroupEditionAccountPreview`.
+- **Schemas nuevos (`helper/polla/schemas/game.schema.ts`)**: `pollaAccountMovementSchema`, `pollaAccountMovementUpdateSchema`, `liquidateEditionAccountsSchema`, `setEditionLiquidatedSchema` y `liquidatePollaGroupEditionSchema`, con sus tipos de payload.
+- **Cambio que rompe:** `newPollaOrgExpenseSchema` ahora exige `polla_edition_id` en lugar de `date`. Los clientes que crean gastos tienen que mandar la edición.
+
+- **`POLLA_ACCOUNT_RECALC_MAX_DAYS`** (`config/session.config.ts`): se corrige el comentario, que seguía describiendo el botón "Actualizar" ya eliminado. La constante sigue en uso como máximo de días de los filtros de fechas.
+
+### Removed - 2026-11-14 (la cuenta corriente se liquida por edición)
+
+- Schemas y tipos sin uso de la escritura por días: `pollaCurrentAccountUpdateSchema`, `pollaCurrentAccountBulkUpdateSchema`, `liquidatePollaGroupSchema`, `IPollaCurrentAccountUpdatePayload`, `ILiquidatePollaGroupPayload`, `IPollaGroupPendingCashier` e `IPollaGroupAccountPreview`.
+
 ### Added - 2026-11-11 (R28: orden de las quinielas)
 
 - **Tipos y schemas:**
