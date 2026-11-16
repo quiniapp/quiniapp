@@ -4,6 +4,12 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (aviso cuando falla una consulta)
+
+- **`App.tsx`**: `QueryCache.onError` muestra un toast con el motivo cada vez que falla una consulta (después del reintento), en toda la app. No avisa la sesión vencida (401), que ya la maneja el `apiClient`. El id del toast evita apilar el mismo aviso.
+- **`lib/queryErrors.ts`** (nuevo): `queryErrorMessage`, que da el motivo de la API, "No se pudo conectar con el servidor" sin respuesta, o `null` si es un 401.
+- **`ErrorState`** (`components/PageHeader.tsx`): "No se pudo cargar." con el botón Reintentar, para usar en lugar del texto de "vacío" cuando la consulta falló.
+
 ### Changed - 2026-11-15 ("Generar liquidación" por edición)
 
 - **Cuenta corriente → Pasadores → detalle de la edición** (`features/current-account/edition/EditionAccountDetail.tsx`):
