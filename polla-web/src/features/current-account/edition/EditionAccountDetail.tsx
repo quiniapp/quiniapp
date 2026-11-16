@@ -189,14 +189,19 @@ export const EditionAccountDetail = ({
           className="sm:w-[260px]"
         />
 
-        <Button
-          type="button"
-          disabled={rows.length === 0}
-          title={rows.length === 0 ? 'No hay pasadores con este filtro' : undefined}
-          onClick={() => setGenerating(true)}
-        >
-          Generar liquidación
-        </Button>
+        <div className="flex flex-col gap-1">
+          <Button
+            type="button"
+            disabled={rows.length === 0 || item.load_open}
+            title={rows.length === 0 ? 'No hay pasadores con este filtro' : undefined}
+            onClick={() => setGenerating(true)}
+          >
+            Generar liquidación
+          </Button>
+          {item.load_open && (
+            <span className="text-xs text-muted-foreground">La carga todavía no cerró</span>
+          )}
+        </div>
       </div>
 
       {isError && !data ? (

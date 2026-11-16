@@ -6,6 +6,7 @@ import { AccountTabs } from './dialogs/shared';
 import { EditionAccountsView } from './edition/EditionAccountsView';
 import { GroupEditionAccounts } from './edition/GroupEditionAccounts';
 import { DailyHistoryView } from './history/DailyHistoryView';
+import { RefreshAccountButton } from './RefreshAccountButton';
 
 type AccountTab = 'cashiers' | 'groups' | 'history';
 
@@ -25,10 +26,24 @@ export const CurrentAccountPage = () => {
   const { role } = useAuth();
   const [tab, setTab] = useState<AccountTab>('cashiers');
 
-  if (role === POLLA_USER_TYPE.CASHIER) return <CashierAccountView />;
+  const refreshRow = (
+    <div className="flex justify-end">
+      <RefreshAccountButton />
+    </div>
+  );
+
+  if (role === POLLA_USER_TYPE.CASHIER) {
+    return (
+      <div className="flex flex-col gap-4">
+        {refreshRow}
+        <CashierAccountView />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
+      {refreshRow}
       <AccountTabs tabs={ACCOUNT_TABS} value={tab} onChange={setTab} />
       {tab === 'cashiers' && <EditionAccountsView />}
       {tab === 'groups' && <GroupEditionAccounts />}

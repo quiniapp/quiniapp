@@ -331,6 +331,33 @@ export const liquidatePollaGroupEditionSchema = z.object({
   admin_percentage: z.number().min(0).max(100),
 });
 
+// ------------------------------------------ historial por fecha (por días)
+
+/**
+ * Hasta 2 decimales. Se mira el texto del número: `0.29 * 100` da
+ * `28.999999999999996` en coma flotante y una cuenta lo rechazaría.
+ */
+const hasAtMostTwoDecimals = (value: number) => /^-?\d+(\.\d{1,2})?$/.test(String(value));
+
+const dayPaymentAmount = z
+  .number({ required_error: 'Falta el monto', invalid_type_error: 'Falta el monto' })
+  .min(0, 'El monto no puede ser negativo')
+  // El máximo de NUMERIC(12,2). Va antes que los decimales: `1e21` se escribe
+  // "1e+21" y, si no, el primer error sería el de los decimales.
+  .max(9999999999.99, 'El monto es demasiado grande')
+  .refine(hasAtMostTwoDecimals, 'El monto tiene hasta 2 decimales');
+
+/**
+ * Editar los cobros y pagos de un día del historial (`PUT /current_account/:id`).
+ * Son los montos del día, no los acumulados del período.
+ */
+export const pollaCurrentAccountPaymentsSchema = z.object({
+  collections: dayPaymentAmount,
+  paid: dayPaymentAmount,
+});
+
+export type IPollaCurrentAccountPaymentsPayload = z.infer<typeof pollaCurrentAccountPaymentsSchema>;
+
 export type IPollaAccountMovementPayload = z.infer<typeof pollaAccountMovementSchema>;
 export type IPollaAccountMovementUpdatePayload = z.infer<typeof pollaAccountMovementUpdateSchema>;
 export type ILiquidateEditionAccountsPayload = z.infer<typeof liquidateEditionAccountsSchema>;

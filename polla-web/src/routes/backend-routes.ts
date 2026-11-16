@@ -76,6 +76,7 @@ export const BACKEND_ROUTES = {
   currentAccount: {
     base: `${PRIVATE}/current_account`,
     totals: `${PRIVATE}/current_account/totals`,
+    byId: (id: string) => `${PRIVATE}/current_account/${id}`,
   },
   editionAccount: {
     base: `${PRIVATE}/edition_account`,

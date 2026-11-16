@@ -33,10 +33,10 @@ const toMovement = ({ creator, ...movement }: MovementRow): IPollaEditionAccount
  * (`polla_edition_account_*`); acá solo se llaman y se mapean.
  */
 export class PollaEditionAccountRepository {
-  /** Ediciones con la carga cortada y su resumen; el sorteo lo arma la ruta. */
   /**
-   * Ediciones con la carga cerrada, de la más nueva a la más vieja. Cada fila
-   * trae `total_count` (cuántas hay con esos filtros, sin la página).
+   * Ediciones con la carga cerrada o que ya empezaron (con `load_open`), de la
+   * más nueva a la más vieja. Cada fila trae `total_count` (cuántas hay con esos
+   * filtros, sin la página).
    */
   async list(p: {
     organizationId: string;
@@ -142,7 +142,10 @@ export class PollaEditionAccountRepository {
     return data as IPollaEditionLiquidationResult;
   }
 
-  /** Marca o desmarca la edición como liquidada y devuelve la edición. */
+  /**
+   * Marca o desmarca la edición como liquidada y devuelve la edición. Con la
+   * carga abierta no se marca (`POLLA_EDITION_LOAD_OPEN`); desmarcar anda siempre.
+   */
   async setLiquidated(p: {
     organizationId: string;
     editionId: string;

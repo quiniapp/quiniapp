@@ -39,8 +39,8 @@ import {
 import {
   editionAccountView,
   editionFileTag,
-  editionsInRange,
   hasEditionMovement,
+  reportEditionsInRange,
 } from '@/lib/editionAccount';
 import { todayIso } from '@/lib/dates';
 import {
@@ -110,7 +110,8 @@ interface EditionReportDialogProps {
 /**
  * Los reportes de la cuenta corriente por edición. "Una edición" usa la
  * abierta en el detalle; "Varias ediciones" lista con casillas las que
- * empiezan entre Desde y Hasta y arma un renglón por edición.
+ * empiezan entre Desde y Hasta, sin las de carga abierta, y arma un renglón
+ * por edición.
  */
 export const EditionReportDialog = ({
   kind,
@@ -158,7 +159,11 @@ export const EditionReportDialog = ({
   // También en Exportar liquidación: opcional, "Todos los grupos" por defecto.
   const hasGroup = groups.length > 0;
 
-  const inRange = useMemo(() => editionsInRange(list?.data ?? [], from, to), [list, from, to]);
+  // Sin las de carga abierta: ni en la lista ni en lo que se exporta.
+  const inRange = useMemo(
+    () => reportEditionsInRange(list?.data ?? [], from, to),
+    [list, from, to]
+  );
   const checked = inRange.filter((entry) => !unchecked.has(entry.edition.polla_edition_id));
   const toggle = (id: string, on: boolean) =>
     setUnchecked((prev) => {

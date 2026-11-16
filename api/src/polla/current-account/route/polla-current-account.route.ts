@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { BadRequestError, ForbiddenError } from '@helper/errors';
 import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { POLLA_ACCOUNT_RECALC_MAX_DAYS } from '@helper/polla/config/session.config';
+import { pollaCurrentAccountPaymentsSchema } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaCurrentAccountRepository } from '../repository/polla-current-account.repository';
 import { buildPaginated, parsePagination } from '../../helper/pagination';
@@ -9,9 +10,15 @@ import { resolveOptionalOrganizationId, resolveOrganizationId } from '../../help
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const queryString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
+
+const paramUuid = (value: string, label: string): string => {
+  if (!UUID.test(value)) throw new BadRequestError(`${label} inválido`);
+  return value;
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -45,10 +52,11 @@ export class PollaCurrentAccountRouter {
   }
 
   /**
-   * Solo consulta (el historial por fechas): la cuenta se lleva y se liquida
-   * por edición en `/edition_account`. La ven dueño, capitalista y superadmin
+   * El historial por fechas: la cuenta se lleva y se liquida por edición en
+   * `/edition_account`. La ven dueño, capitalista y superadmin
    * (`POLLA_ACCOUNT_ROLES`); el pasador solo la suya. El admin y el jugador no
-   * tienen acceso.
+   * tienen acceso. Lo único que se edita son los cobros y pagos de un día, y
+   * solo `POLLA_ACCOUNT_ROLES`.
    */
   private setupRoutes() {
     const readGuard = requirePollaRole(...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER);
@@ -56,6 +64,7 @@ export class PollaCurrentAccountRouter {
     this.router.get('/totals', readGuard, this.getTotalsHandler);
     this.router.get('/', readGuard, this.getAllHandler);
     this.router.get('/:id', readGuard, this.getByIdHandler);
+    this.router.put('/:id', requirePollaRole(...POLLA_ACCOUNT_ROLES), this.editPaymentsHandler);
   }
 
   private getAllHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -153,5 +162,25 @@ export class PollaCurrentAccountRouter {
     }
 
     res.status(200).json({ data: { current_account: account } });
+  });
+
+  /**
+   * Cobros y pagos de un día del historial (los del día, no los acumulados del
+   * período), liquidado o no. La diferencia se suma al saldo de ese día y de
+   * los días siguientes del pasador; nada más cambia.
+   */
+  private editPaymentsHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const currentAccountId = paramUuid(req.params.id, 'Día');
+    const { collections, paid } = pollaCurrentAccountPaymentsSchema.parse(req.body);
+
+    const account = await this.repository.editPayments({
+      organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+      currentAccountId,
+      collections,
+      paid,
+    });
+
+    res.status(200).json({ data: { account } });
   });
 }

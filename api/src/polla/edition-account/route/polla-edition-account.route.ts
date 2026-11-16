@@ -162,7 +162,8 @@ export class PollaEditionAccountRouter {
   };
 
   /**
-   * Ediciones con la carga cerrada, paginadas. `status=pending` las que faltan
+   * Ediciones con la carga cerrada o que ya empezaron, paginadas; cada ítem trae
+   * `load_open` (pasa tal cual desde la base). `status=pending` las que faltan
    * marcar; `status=done`, las liquidaciones realizadas; sin `status`, todas.
    * `from`/`to` acotan el inicio. `counts=false` no calcula la cuenta (para los
    * selectores de edición).

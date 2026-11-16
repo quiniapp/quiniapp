@@ -1,7 +1,7 @@
 -- Pendientes de la cuenta por edición (20261115204744, 205500, 205800, 210000):
 -- lista con filtros, páginas y contadores; pasador eliminado que sigue en lo
--- histórico; todos los grupos en una consulta; movimientos solo con la carga
--- cerrada.
+-- histórico; todos los grupos en una consulta; movimientos (desde 20261116074720
+-- también con la carga abierta).
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
@@ -116,7 +116,7 @@ SELECT is((pg_temp.item('nueva')->>'owed_to_cashiers')::NUMERIC, 310::NUMERIC,
 SELECT is((SELECT array_agg(j->>'polla_edition_id') FROM pg_temp.list(TRUE) j),
   ARRAY[pg_temp.ed('nueva')::TEXT], 'liquidaciones realizadas: solo las marcadas');
 SELECT is((SELECT array_agg(j->>'polla_edition_id') FROM pg_temp.list(FALSE) j),
-  ARRAY[pg_temp.ed('vieja')::TEXT], 'a liquidar: las demás con la carga cerrada (no la abierta)');
+  ARRAY[pg_temp.ed('vieja')::TEXT], 'a liquidar: las demás con la carga cerrada (no la abierta que empieza mañana)');
 SELECT is((SELECT array_agg(j->>'polla_edition_id') FROM pg_temp.list() j),
   ARRAY[pg_temp.ed('nueva')::TEXT, pg_temp.ed('vieja')::TEXT], 'todas, de la más nueva a la más vieja');
 SELECT is((SELECT array_agg(j->>'polla_edition_id') FROM pg_temp.list(p_limit => 1, p_offset => 1) j),
@@ -181,25 +181,25 @@ SELECT throws_ok(
 
 -- ---------------------------------------- movimientos y cierre de carga
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$INSERT INTO polla_edition_account_movements (polla_organization_id, polla_edition_id, polla_user_id, type, amount)
     VALUES ('a9000000-0000-0000-0000-000000000220', pg_temp.ed('abierta'), pg_temp.cashier(1), 'COLLECTION', 50)$$,
-  'P0001', 'POLLA_EDITION_LOAD_OPEN', 'con la carga abierta no se cargan movimientos');
+  'con la carga abierta también se cargan movimientos (20261116074720)');
 SELECT lives_ok(
   $$INSERT INTO polla_edition_account_movements (polla_organization_id, polla_edition_id, polla_user_id, type, amount, note)
     VALUES ('a9000000-0000-0000-0000-000000000220', pg_temp.ed('vieja'), pg_temp.cashier(1), 'COLLECTION', 50, 'm220')$$,
   'con la carga cerrada sí');
 
--- Si la carga se vuelve a abrir (se extiende la edición), editar no; dar de baja sí.
+-- Si la carga se vuelve a abrir (se extiende la edición), editar y dar de baja andan.
 UPDATE polla_editions
 SET start_date = polla_today() + 3, end_date = polla_today() + 8, load_limit_date = polla_today() + 1
 WHERE polla_edition_id = pg_temp.ed('vieja');
-SELECT throws_ok(
+SELECT lives_ok(
   $$UPDATE polla_edition_account_movements SET amount = 60 WHERE note = 'm220'$$,
-  'P0001', 'POLLA_EDITION_LOAD_OPEN', 'con la carga abierta no se edita');
+  'con la carga abierta también se edita');
 SELECT lives_ok(
   $$UPDATE polla_edition_account_movements SET deleted_at = NOW() WHERE note = 'm220'$$,
-  'pero se da de baja');
+  'y se da de baja');
 
 SELECT * FROM finish();
 ROLLBACK;
