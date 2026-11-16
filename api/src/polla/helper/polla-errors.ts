@@ -48,6 +48,7 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
   POLLA_TICKET_NUMBER_COLLISION: () =>
     new ConflictError('No se pudo generar un número de ticket, reintentá'),
   POLLA_CURRENT_ACCOUNT_NOT_FOUND: () => new NotFoundError('Cuenta corriente'),
+  POLLA_CURRENT_ACCOUNT_AMOUNT_INVALID: () => new BadRequestError('Monto inválido'),
   POLLA_USER_OTHER_GROUP: () => new ForbiddenError('El usuario o la jugada es de otro grupo'),
   POLLA_PARENT_OTHER_GROUP: () =>
     new BadRequestError('El jugador solo puede pasar a otro pasador de su mismo grupo'),

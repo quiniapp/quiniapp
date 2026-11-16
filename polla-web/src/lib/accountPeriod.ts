@@ -26,6 +26,35 @@ export const periodView = ({
   return { ...row, ...amounts, period_from: from };
 };
 
+/**
+ * Cobros y pagos que se editan en el historial: los del día de la fila, no los
+ * acumulados del período que muestra la tabla (`periodView`). Precargar el
+ * acumulado y guardarlo duplicaría la plata de los otros días.
+ */
+export const dayPayments = (
+  row: IPollaCurrentAccountPeriodRow
+): { collections: number; paid: number } => ({
+  collections: Number(row.collections),
+  paid: Number(row.paid),
+});
+
+const cents = (value: number | string) => Math.round(Number(value) * 100);
+
+/**
+ * Saldo del día después de editar sus cobros y pagos, con la misma diferencia
+ * que la base (`polla_edit_current_account_payments`): `total − (cobros nuevos −
+ * cobros del día) + (pagos nuevos − pagos del día)`. Se cuenta en centavos para
+ * no arrastrar errores de coma flotante.
+ */
+export const dayBalanceAfter = (
+  row: IPollaCurrentAccountPeriodRow,
+  next: { collections: number; paid: number }
+): number =>
+  (cents(row.total) -
+    (cents(next.collections) - cents(row.collections)) +
+    (cents(next.paid) - cents(row.paid))) /
+  100;
+
 /** "06/10 al 12/10", o solo "12/10" si el período es de un día. */
 export const periodLabel = (from: string, to: string, format = 'DD/MM') =>
   from === to

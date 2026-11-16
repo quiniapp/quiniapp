@@ -4,6 +4,31 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
+
+- **Historial por fechas** (`features/current-account/history/DailyHistoryView.tsx`): en modo "Día" y para `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin), cada fila de la tabla y cada tarjeta del celular tiene un botón "Editar" (lápiz). En modo rango no aparece, porque las filas son acumulados.
+- **`EditDayPaymentsDialog`** (`features/current-account/history/EditDayPaymentsDialog.tsx`): "Cobros del día" y "Pagos del día".
+  - Precarga los montos **del día** (`dayPayments`), no los acumulados del período que muestra la tabla: precargar el acumulado y guardarlo duplicaría la plata de los otros días. Por eso recibe la fila cruda y no `periodView(row)`.
+  - Si el día está liquidado avisa "Este día ya está liquidado", y siempre aclara "El saldo de los días siguientes de este pasador se recalcula."
+  - Valida con `pollaCurrentAccountPaymentsSchema` antes de mandar; al guardar refresca el historial y muestra "Cobros y pagos actualizados".
+  - Debajo de los montos muestra "Saldo del día: $antes → $después" y lo actualiza mientras se escribe. Con un monto inválido o vacío, el después queda en "—".
+- **`dayPayments`** (`lib/accountPeriod.ts`, junto a `periodView`): cobros y pagos del día de una fila del historial.
+- **`dayBalanceAfter`** (`lib/accountPeriod.ts`): saldo del día con los cobros y pagos nuevos, con la misma diferencia que la base (`total − (cobros nuevos − cobros del día) + (pagos nuevos − pagos del día)`), en centavos.
+- **`useEditCurrentAccountPayments`** (`hooks/mutations/usePollaMutations.ts`): `PUT /current_account/:id`, invalida `polla-current-accounts`. Ruta nueva `BACKEND_ROUTES.currentAccount.byId`.
+- **Test `__tests__/current-account/history-edit.test.ts`**: el esquema (0, decimales como 0,29, negativos, 3 decimales, vacíos, NaN y el máximo), `dayPayments` (usa el día y no el período) y `dayBalanceAfter` (cobro nuevo, pago nuevo y cobro editado).
+
+### Changed - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
+
+- **Pollas a liquidar** (`features/current-account/edition/EditionAccountsView.tsx`): una polla que ya empezó aparece aunque la carga siga abierta, con el badge "Carga abierta" en su tarjeta (`EditionCard`). Así los cobros y pagos se cargan desde el primer día.
+- **Detalle de la edición** (`EditionAccountDetail.tsx`): con la carga abierta, "Generar liquidación" queda deshabilitado y debajo dice "La carga todavía no cerró". Los exportes y los movimientos siguen igual.
+- **Grupos** (`GroupEditionAccounts.tsx`): con la carga abierta, "Liquidar grupo" queda deshabilitado, con el mismo aviso. En el selector de edición, las de carga abierta dicen "· Carga abierta"; sigue arrancando en la más nueva.
+- La base rechaza las dos liquidaciones con la carga abierta: la web no es el único control.
+- **Reportes de "Varias ediciones"** (`EditionReportDialog.tsx`, `reportEditionsInRange` en `lib/editionAccount.ts`): las ediciones con la carga abierta no aparecen en la lista ni se exportan (liquidación, cobros y pagos, subtotales, diario y resumen), porque su cuenta todavía se mueve. "Una edición" sigue exportando la del detalle aunque tenga la carga abierta. Test en `__tests__/current-account/edition-account.test.ts`.
+
+### Added - 2026-11-16
+
+- Botón Actualizar en Cuenta corriente (`features/current-account/RefreshAccountButton.tsx`, `refresh.ts`): recarga las consultas de la cuenta que están en pantalla (pasadores, grupos, historial y la vista del pasador). Gira y se deshabilita mientras carga.
+
 ### Changed - 2026-11-15 (exportar liquidación en ZIP por carpetas)
 
 - **Exportar liquidación** (`EditionReportDialog.tsx` en "Una edición" y "Varias ediciones", `DailyHistoryView.tsx`): en lugar de un PDF suelto por pasador, baja un solo ZIP (`exportLiquidationSlipsZip` en `liquidationSlipPDF.ts`). Reemplaza las descargas separadas de R01.
