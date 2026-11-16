@@ -4,6 +4,29 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (rendimiento SQL — Fase 0: scripts de medición)
+
+**Qué cambia.** Nada en runtime: scripts para medir antes de tocar índices o queries (plan en `docs/plan-rendimiento-sql.md`, mediciones en `docs/rendimiento-sql-baseline.md`).
+
+- **`api/supabase/scripts/perf_baseline.sql`** (solo lectura, para prod o develop vía psql). Abre la sesión con `default_transaction_read_only = on` y `statement_timeout = 60s`. Releva:
+  - configuración del planner;
+  - tamaño, actividad (seq vs idx, HOT updates, vacuum) y uso de cada índice de `bets`, `bets_archive`, `tickets`, `tickets_archive` y `polla_bets`;
+  - definiciones reales de esos índices;
+  - top 20 de `pg_stat_statements` por tiempo total y por tiempo medio;
+  - NULL en `created_at` / `bet_order`, que bloquearían el keyset;
+  - volumen por organización y día;
+  - formatos de `ticket_number` de Polla, para validar la futura columna `ticket_stamp`.
+- **`api/supabase/scripts/seed_perf.sql`** (solo local; exige `-v confirm_local=yes`).
+  - Genera 1M `bets`, 200k `tickets`, ~1M `bets_archive`, ~204k `tickets_archive` y 300k `polla_bets` en organizaciones `perf-org-*` / `perf-polla-*`.
+  - Incluye empates de `created_at` a propósito, para probar desempates de keyset.
+  - Es idempotente: borra lo sembrado antes, incluidas las tablas de Polla que la UI pudo haber llenado.
+  - Termina con `ANALYZE`.
+- **`api/supabase/scripts/perf_explain_local.sql`** (solo local).
+  - Corre `EXPLAIN (ANALYZE, BUFFERS)` de las queries calientes: `GET /bet` y `GET /ticket` (página 1, página profunda, count, archivo, ticket), feed de Polla con cursores profundos (OR actual, acceso redundante y row values) y "Revisar ticket".
+  - Para el interior de las RPC (agrupadas, totales, cuentas por edición, ventas) usa `auto_explain`.
+  - Es el gate de aceptación de cada fase.
+- **Verificado:** Supabase CLI v2.65.7 corre cada archivo de migración como pipeline. `CREATE INDEX CONCURRENTLY` funciona solo como única sentencia del archivo; con dos o más sentencias falla (SQLSTATE 25001) y deja estado parcial. Documentado en `CLAUDE.md` (*SQL Performance*) y en el baseline.
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 **Qué cambia.** En el historial por fechas se pueden corregir los cobros y pagos de un día de un pasador, liquidado o no. La diferencia se arrastra al saldo de todos sus días siguientes. Los reclamos no se editan: cambiarían el pase, el subtotal y la comisión ya liquidados (un reclamo nuevo va en la cuenta por edición).

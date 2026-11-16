@@ -142,6 +142,71 @@ $$;
 - **Rollback safety**: Migration history allows safe rollbacks and auditing
 - **Team coordination**: Other developers depend on stable migration files
 
+## SQL Performance (indexes & queries)
+
+**Apply these rules whenever you write or review a query, an RPC, a migration that touches indexes, or a paginated endpoint.** Full reference (Winand, *SQL Performance Explained*): `docs/rendimiento-sql-conceptos.md` (`§n` refers to its sections). Active plan and measurements: `docs/plan-rendimiento-sql.md`, `docs/rendimiento-sql-baseline.md`.
+
+### Principle
+- Indexing is a development task: design indexes from **how the app accesses the data**.
+- A "slow index" is never broken: it walks too many leaf nodes or fetches too many table rows. Fix the index or the query, don't "rebuild" it. Hardware does not fix a bad index.
+
+### WHERE clauses
+- No functions, casts, math or implicit type conversions on indexed columns (`DATE(col)`, `col::text`, `a + 1 = 10`). Rewrite, or create an expression index on the exact same expression (`IMMUTABLE` functions only).
+- Dates: half-open ranges (`col >= :d AND col < :d + 1`). Never compare dates as strings.
+- **No "smart logic" `(p_x IS NULL OR col = p_x)`** in RPCs over hot tables (`bets`, `tickets`, `*_archive`, `polla_bets`): the plan must serve every case and ends up entering by the wrong index. Use plpgsql dynamic SQL that adds only the received filters: `EXECUTE format('… %I …', tbl) USING p1, p2` (identifiers via `%I`, values **always** via `USING`).
+- `LIKE`/`ilike`: only the part before the first wildcard is an access predicate. No leading `%` over large scopes → dedicated column (generated `STORED`) + equality; `pg_trgm` + GIN only if measured.
+- Partial indexes are used only if the query repeats the index predicate (e.g. `deleted_at IS NULL`).
+
+### Index design
+- Column order: **equality columns → range column → ORDER BY columns → unique tiebreaker**. A range column in the middle turns the rest into filter predicates.
+- Choose the order that serves the most queries, not "most selective first". One concatenated index beats several single-column ones (and index merges).
+- Mixed `ASC`/`DESC` in `ORDER BY` → define the index with the same mixed order.
+- Before adding an index, list the table's existing ones (`pg_indexes`) and check prefixes: unify instead of piling up. Every index slows `INSERT` and prevents HOT updates on its columns; don't repeat frequently-updated columns (`hits`, statuses) in several indexes.
+- Covering indexes (`INCLUDE`) / index-only scans: only for critical queries where `EXPLAIN` shows table access dominates.
+- `ANALYZE` the table after creating expression indexes or bulk loads.
+- **Large tables** (`bets`, `bets_archive`, `tickets`, `tickets_archive`, `polla_bets`): use `CREATE INDEX CONCURRENTLY IF NOT EXISTS` as the **only statement of its migration file** (the Supabase CLI runs each file as a pipeline: two or more statements with `CONCURRENTLY` fail and leave partial state), or create it by hand with psql before `db push` and keep a plain `IF NOT EXISTS` in the migration. Afterwards check `pg_index.indisvalid`.
+
+### Pagination, partial results and totals
+- Always `LIMIT` in the database; never fetch everything and slice in the app.
+- Lists that grow (infinite scroll, feeds) use **keyset**, not `OFFSET`. Deterministic order with a unique tiebreaker (`…, id`), and an index = equality columns + ORDER BY columns + tiebreaker.
+  - SQL/RPC: row values `(a, id) < ($1, $2)` (same direction for every column).
+  - PostgREST (no row values): redundant access predicate + OR tiebreak, e.g. `.lte('a', A).or('a.lt.A,and(a.eq.A,id.lt.ID)')`. If `EXPLAIN` still shows a large `Rows Removed by Filter`, move the list to an RPC with row values.
+  - Cursor: opaque base64url, validated (invalid → 400), shared helper `api/src/utils/keyset.ts` (reference implementation today: `api/src/polla/bet/repository/polla-bet.repository.ts`). Keep timestamps as the raw DB string (microseconds), never through `Date`.
+  - `hasMore`: fetch `limit + 1` rows, don't count.
+- **Totals contract:** totals shown next to a paginated list (amounts, prizes, "N de M", counts) always cover the **whole filtered set**, are computed server-side **only on the first request** (no cursor / page 1), never depend on the cursor, and keep their current semantics. `count: 'exact'` only when the UI reads it, and only on the first request.
+- `OFFSET` only for small, bounded lists; leave a comment saying why.
+
+### Joins, round-trips and columns
+- No N+1: no per-row queries or `Promise.all(ids.map(rpc))`; write one RPC that takes arrays or joins in the database.
+- No `select('*')` or `(*)` embeds in listings: list the columns actually used (less I/O, enables index-only scans, smaller hash joins).
+- Nested loops need an index on the inner join columns; hash joins benefit from indexes on independent filters, not on the join columns.
+
+### Writes
+- `UPDATE` only the columns that changed (unchanged indexed columns still cost, and kill HOT updates).
+- Bulk loads: consider dropping and recreating indexes.
+
+### Verify (mandatory for index changes and hot queries)
+- `EXPLAIN (ANALYZE, BUFFERS)`; wrap DML in `BEGIN; … ROLLBACK;`; for parameterized queries use `PREPARE` / `EXPLAIN EXECUTE`. Locally, RPC internals show up via `auto_explain` (`SET auto_explain.log_min_duration = 0; SET auto_explain.log_nested_statements = on; SET auto_explain.log_analyze = on; SET client_min_messages = log;`).
+- Red flags: `Seq Scan` on a large table; `Sort` under `Limit` (missing aligned index); `Filter` with high `Rows Removed by Filter` (those columns should be access predicates); estimated vs actual rows far apart (statistics → `ANALYZE` / `CREATE STATISTICS`); deep-page buffers ≫ page 1.
+- Measure with volume (`api/supabase/scripts/seed_perf.sql` + `perf_explain_local.sql`, local only) and think 10x/100x, never "it works with 50 rows". Production is inspected read-only (`perf_baseline.sql`, `npx supabase inspect db …`).
+
+### Review checklist (SQL in PRs)
+1. Bind parameters everywhere (no string-built values)?
+2. Functions, casts, math or type conversions on columns in WHERE/JOIN?
+3. Dates filtered with half-open ranges?
+4. Smart logic `(p IS NULL OR col = p)`? → dynamic SQL.
+5. `LIKE '%…'`? → another strategy.
+6. Is there an index whose prefix covers the equality columns, followed by the range column?
+7. In the plan, which conditions are access and which are filter? High `Rows Removed by Filter`?
+8. Estimated vs actual rows match?
+9. Avoidable `Sort` (index aligned with ORDER BY, incl. mixed ASC/DESC)?
+10. Top-N with `LIMIT`? Deep `OFFSET` → keyset?
+11. Joins done in the database (no N+1)? Join columns indexed for nested loops?
+12. Unnecessary `select('*')` / `(*)` embeds?
+13. Is an index-only scan worth it for this critical query?
+14. How many indexes does the table already have? Can the new one replace others?
+15. How does it scale with 10x/100x the data?
+
 ## Documentation & Change Management
 
 ### CHANGELOGs
