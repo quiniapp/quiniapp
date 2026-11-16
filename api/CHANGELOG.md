@@ -4,6 +4,14 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-15 (tests de la lista, grupos, pasador eliminado y movimientos)
+
+- **Test pgTAP `220_polla_edition_account_list_and_groups`** (24 pruebas):
+  - **Lista:** contadores sin los liquidados en cero, Debe/Cobra separados, filtros (realizadas, a liquidar y rango), páginas con `total_count`, sin contadores y la llamada vieja.
+  - **Pasador eliminado:** con liquidación aparece; donde no tuvo nada, no.
+  - **Grupos:** todos los grupos ordenados, iguales a pedirlos de a uno, con su pendiente y su base; también una edición que no existe.
+  - **Movimientos:** con la carga abierta no se cargan ni se editan, pero se dan de baja.
+
 ### Changed - 2026-11-15 (lista de ediciones paginada y Grupos en una consulta)
 
 - **Migración `20261115204744_polla_edition_account_list_paged`**: `polla_edition_account_list` pasa a `(p_organization_id, p_liquidated, p_from, p_to, p_with_counts, p_limit, p_offset)`. Es `DROP` y `CREATE`; la llamada con solo la organización sigue andando.
