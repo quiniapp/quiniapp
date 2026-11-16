@@ -309,12 +309,25 @@ export const useOrgExpenses = (
 
 // ------------------------------------------------ cuenta por edición
 
-/** Ediciones con la carga cortada y por edición, con sus conteos. */
+/**
+ * Una página de ediciones con la carga cortada (de la más nueva a la más
+ * vieja). Filtros: `status` (`pending` | `done`), `from`/`to` (inicio),
+ * `counts: false` (sin contadores, para los selectores) y `limit` (hasta 200).
+ */
 export const useEditionAccountList = (params: QueryParams = {}) =>
-  useApiQuery<IPollaEditionAccountListItem[]>(
+  useApiQuery<PollaPage<IPollaEditionAccountListItem>>(
     ['edition-account', 'list'],
     BACKEND_ROUTES.editionAccount.base,
     params
+  );
+
+/** "Liquidaciones realizadas": de a 20, con scroll infinito. */
+export const useDoneEditionAccounts = (params: QueryParams = {}) =>
+  useApiInfiniteQuery<IPollaEditionAccountListItem>(
+    ['edition-account', 'list', 'done'],
+    BACKEND_ROUTES.editionAccount.base,
+    { ...params, status: 'done' },
+    { limit: 20 }
   );
 
 /** La cuenta en vivo de cada pasador de la edición. */

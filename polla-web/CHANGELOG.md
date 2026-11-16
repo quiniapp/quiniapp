@@ -4,6 +4,25 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (lista de ediciones, Grupos y exportes)
+
+- **Cuenta corriente → Pasadores** (`EditionAccountsView.tsx`):
+  - "Pollas a liquidar" se trae en una página (hasta 200).
+  - "Liquidaciones realizadas" va con scroll infinito, de a 20 (`useDoneEditionAccounts`, `InfiniteList`).
+  - Cada lista muestra "No se pudo cargar." con Reintentar si falla.
+  - La tarjeta dice "X de Y pasadores liquidados", contando solo a quienes tienen movimiento, y el Debe separado: "Debe $X · Cobra $Y" (`owedSummary` en `format.ts`).
+  - Al generar la liquidación, el detalle sigue abierto aunque la edición pase de una lista a la otra.
+- **`useEditionAccountList`**: devuelve una página (`PollaPage`) y acepta `status`, `from`, `to`, `counts` y `limit`.
+- **Grupos** (`GroupEditionAccounts.tsx`):
+  - El selector de edición pide la lista sin contadores (las 200 más nuevas).
+  - Los grupos llegan en una consulta.
+  - La lista, los grupos y el historial muestran "No se pudo cargar." con Reintentar.
+- **Reportes** (`EditionReportDialog.tsx`):
+  - "Varias ediciones" pide al servidor las que empiezan en el rango, sin contadores.
+  - Exportar liquidación tiene el filtro de grupo, opcional y con "Todos los grupos" por defecto, para una y para varias ediciones.
+  - Con más de 60 ediciones, `fetchEditionTotals` parte el pedido en tandas de 60 (`chunk` en `lib/utils.ts`), en vez de pedir que elijas menos.
+- **Tests** (`__tests__/current-account/edition-list.test.ts`): `owedSummary`, `queryErrorMessage` y `chunk`.
+
 ### Added - 2026-11-15 (aviso cuando falla una consulta)
 
 - **`App.tsx`**: `QueryCache.onError` muestra un toast con el motivo cada vez que falla una consulta (después del reintento), en toda la app. No avisa la sesión vencida (401), que ya la maneja el `apiClient`. El id del toast evita apilar el mismo aviso.

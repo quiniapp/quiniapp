@@ -16,7 +16,7 @@ import {
 } from '@/hooks/fetchs/usePollaData';
 import { useLiquidateGroupEdition } from '@/hooks/mutations/usePollaMutations';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { EmptyState } from '@/components/PageHeader';
+import { EmptyState, ErrorState } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -293,9 +293,10 @@ const GroupEditionHistory = ({
   organizationId: string | null;
   previews: IPollaGroupEditionAccountPreview[];
 }) => {
-  const { data: accounts = [], isFetching } = useGroupEditionAccounts({
+  const accountsQuery = useGroupEditionAccounts({
     polla_edition_id: editionId,
   });
+  const { data: accounts = [], isFetching } = accountsQuery;
   const [confirming, setConfirming] = useState<IPollaGroupEditionAccountEntity | null>(null);
 
   const outdatedGroups = useMemo(
@@ -311,6 +312,9 @@ const GroupEditionHistory = ({
     else void printTicket(account, organizationId, title);
   };
 
+  if (accountsQuery.isError && !accountsQuery.data) {
+    return <ErrorState onRetry={() => void accountsQuery.refetch()} />;
+  }
   if (accounts.length === 0) {
     return (
       <EmptyState message={isFetching ? 'Cargando…' : 'Todavía no hay liquidaciones de grupo'} />
@@ -415,9 +419,13 @@ const GroupEditionHistory = ({
 export const GroupEditionAccounts = () => {
   const { organizationId } = useAuth();
   const catalogs = useDrawCatalogs(organizationId);
-  const { data: list } = useEditionAccountList({
+  // Para el selector alcanzan las 200 más nuevas, sin contadores.
+  const listQuery = useEditionAccountList({
     polla_organization_id: organizationId ?? undefined,
+    counts: false,
+    limit: 200,
   });
+  const list = listQuery.data?.data;
   const [editionId, setEditionId] = useState<string | null>(null);
   const [liquidating, setLiquidating] = useState<IPollaGroupEditionAccountPreview | null>(null);
 
@@ -431,8 +439,10 @@ export const GroupEditionAccounts = () => {
   const selected = editions.find((item) => item.edition.polla_edition_id === editionId);
   const title = selected ? pollaEditionTitle(selected.edition, catalogs) : '';
 
-  const { data: previews = [], isFetching } = useGroupEditionPreviews(editionId);
+  const previewsQuery = useGroupEditionPreviews(editionId);
+  const { data: previews = [], isFetching } = previewsQuery;
 
+  if (listQuery.isError && !list) return <ErrorState onRetry={() => void listQuery.refetch()} />;
   if (!list) return <EmptyState message="Cargando…" />;
   if (editions.length === 0) return <EmptyState message="No hay ediciones." />;
 
@@ -457,7 +467,9 @@ export const GroupEditionAccounts = () => {
 
       {editionId && (
         <>
-          {previews.length === 0 ? (
+          {previewsQuery.isError && !previewsQuery.data ? (
+            <ErrorState onRetry={() => void previewsQuery.refetch()} />
+          ) : previews.length === 0 ? (
             <EmptyState message={isFetching ? 'Cargando…' : 'No hay grupos'} />
           ) : (
             <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">

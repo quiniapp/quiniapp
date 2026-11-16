@@ -5,11 +5,9 @@ import {
   IPollaEditionAccountListItem,
   IPollaEditionEntityBack,
   IPollaEditionEntityFront,
-  IPollaGroupEditionAccountPreview,
   IPollaUserEditionAccount,
   POLLA_ACCOUNT_MOVEMENT_TYPE,
 } from '@helper/polla/types/game.type';
-import { IPollaGroupEntityBack } from '@helper/polla/types/catalog.type';
 import {
   generateEditionLiquidationSchema,
   liquidateEditionAccountsSchema,
@@ -21,15 +19,19 @@ import {
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaEditionAccountRepository } from '../repository/polla-edition-account.repository';
 import { PollaEditionRepository } from '../../edition/repository/polla-edition.repository';
-import { PollaCatalogRepository } from '../../catalog/repository/polla-catalog.repository';
-import { parsePagination } from '../../helper/pagination';
+import { buildPaginated, parsePagination } from '../../helper/pagination';
 import { resolveOrganizationId } from '../../helper/scope';
 import { getPollaSession, requirePollaRole } from '../../middleware/polla-auth.middleware';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Tope de ediciones por consulta de totales. */
+/** Tope de ediciones por consulta de totales (la web parte el pedido en tandas de este tamaño). */
 const MAX_TOTALS_EDITIONS = 60;
+
+/** Ediciones por consulta al traerlas por id. */
+const EDITIONS_PER_FETCH = 100;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const queryString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
@@ -37,6 +39,12 @@ const queryString = (value: unknown): string | null =>
 const queryUuid = (value: unknown, label: string): string | null => {
   const raw = queryString(value);
   if (raw && !UUID.test(raw)) throw new BadRequestError(`${label} inválido`);
+  return raw;
+};
+
+const queryDate = (value: unknown, label: string): string | null => {
+  const raw = queryString(value);
+  if (raw && !ISO_DATE.test(raw)) throw new BadRequestError(`${label} inválido`);
   return raw;
 };
 
@@ -83,13 +91,6 @@ export class PollaEditionAccountRouter {
 
   private editionRepository = new PollaEditionRepository();
 
-  private groupRepository = new PollaCatalogRepository({
-    table: 'polla_groups',
-    idColumn: 'polla_group_id',
-    orgScoped: true,
-    orderBy: { column: 'name', ascending: true },
-  });
-
   constructor() {
     this.router = Router();
     this.setupRoutes();
@@ -120,14 +121,17 @@ export class PollaEditionAccountRouter {
   /** Ediciones por `polla_edition_id`, tal como las ve el front. */
   private loadEditions = async (organizationId: string, ids: string[], showTotals: boolean) => {
     const byId = new Map<string, IPollaEditionEntityFront>();
-    if (ids.length === 0) return byId;
 
-    const page = await this.editionRepository.getAll(
-      { organizationId, ids },
-      { page: 1, limit: ids.length, from: 0, to: ids.length - 1, withCount: false }
-    );
-    for (const edition of page.data as IPollaEditionEntityBack[]) {
-      byId.set(edition.polla_edition_id, toFrontEdition(edition, showTotals));
+    // De a tandas: el filtro por ids viaja en la URL de PostgREST.
+    for (let start = 0; start < ids.length; start += EDITIONS_PER_FETCH) {
+      const chunk = ids.slice(start, start + EDITIONS_PER_FETCH);
+      const page = await this.editionRepository.getAll(
+        { organizationId, ids: chunk },
+        { page: 1, limit: chunk.length, from: 0, to: chunk.length - 1, withCount: false }
+      );
+      for (const edition of page.data as IPollaEditionEntityBack[]) {
+        byId.set(edition.polla_edition_id, toFrontEdition(edition, showTotals));
+      }
     }
     return byId;
   };
@@ -157,11 +161,31 @@ export class PollaEditionAccountRouter {
     }
   };
 
+  /**
+   * Ediciones con la carga cerrada, paginadas. `status=pending` las que faltan
+   * marcar; `status=done`, las liquidaciones realizadas; sin `status`, todas.
+   * `from`/`to` acotan el inicio. `counts=false` no calcula la cuenta (para los
+   * selectores de edición).
+   */
   private listHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
+    const pagination = parsePagination(req.query as Record<string, unknown>);
 
-    const rows = await this.repository.list(organizationId);
+    const status = queryString(req.query.status);
+    if (status && status !== 'pending' && status !== 'done') {
+      throw new BadRequestError('status inválido');
+    }
+
+    const rows = await this.repository.list({
+      organizationId,
+      liquidated: status ? status === 'done' : null,
+      from: queryDate(req.query.from, 'from'),
+      to: queryDate(req.query.to, 'to'),
+      withCounts: req.query.counts !== 'false',
+      limit: pagination.limit,
+      offset: pagination.from,
+    });
     const editions = await this.loadEditions(
       organizationId,
       rows.map((row) => row.polla_edition_id),
@@ -169,12 +193,15 @@ export class PollaEditionAccountRouter {
     );
 
     const data: IPollaEditionAccountListItem[] = [];
-    for (const { polla_edition_id: id, ...row } of rows) {
+    for (const { polla_edition_id: id, total_count: _total, ...row } of rows) {
+      void _total;
       const edition = editions.get(id);
       if (edition) data.push({ ...row, edition });
     }
 
-    res.status(200).json({ data: { editions: data } });
+    // Una página más allá del final viene vacía: el total solo se sabe con filas.
+    const totalCount = rows.length > 0 ? Number(rows[0].total_count) : pagination.from;
+    res.status(200).json({ data: { editions: buildPaginated(data, pagination, totalCount) } });
   });
 
   private mineHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -359,15 +386,8 @@ export class PollaEditionAccountRouter {
     const organizationId = resolveOrganizationId(user, req.query.polla_organization_id);
     const editionId = paramUuid(req.params.editionId, 'Edición');
 
-    const groups = await this.groupRepository.getAll(
-      { organizationId },
-      parsePagination({ page: 1, limit: 100 })
-    );
-    const groupIds = (groups.data as IPollaGroupEntityBack[]).map((group) => group.polla_group_id);
-
-    const previews: IPollaGroupEditionAccountPreview[] = await Promise.all(
-      groupIds.map((groupId) => this.repository.groupPreview(organizationId, groupId, editionId))
-    );
+    // Todos los grupos en una consulta (la cuenta de la edición se calcula una vez).
+    const previews = await this.repository.groupPreviews(organizationId, editionId);
 
     res.status(200).json({ data: { previews } });
   });
