@@ -14,7 +14,7 @@ import { todayIso } from '@/lib/dates';
 import { accountRangeFrom, oldestRangeFrom, periodLabel, periodView } from '@/lib/accountPeriod';
 import { owedWord } from '@/lib/editionAccount';
 import { Label } from '@/components/ui/label';
-import { downloadLiquidationSlipsPDF } from '@/functions/current-account/liquidationSlipPDF';
+import { downloadLiquidationSlipPDF } from '@/functions/current-account/liquidationSlipPDF';
 import { DayBetsTables } from './DayBetsTables';
 import { ReportMode, fmtMoney } from './format';
 import { AccountTabs, ModeToggle } from './dialogs/shared';
@@ -63,9 +63,9 @@ const CashierDailyHistory = () => {
     if (!account || !user) return;
     setPrinting(true);
     try {
-      await downloadLiquidationSlipsPDF({
-        accounts: [account],
-        cashierCodeOf: (of) => pollaCashierCode(groupNumber, of.user_number),
+      await downloadLiquidationSlipPDF({
+        account,
+        cashierCode: pollaCashierCode(groupNumber, account.user_number),
       });
     } catch {
       toast.error('No se pudo generar la liquidación');

@@ -1,13 +1,17 @@
 import dayjs from 'dayjs';
 import { AccountPeriodView, periodLabel } from '@/lib/accountPeriod';
 import { owedWord } from '@/lib/editionAccount';
+import {
+  liquidationZipEntries,
+  liquidationZipPdfName,
+  zipFiles,
+  type ZipGroup,
+} from '@/lib/liquidationZip';
+import { shareFile } from '../printPdf';
 import { PdfDoc, addFooterPageNumbers, getPDFDeps, lastTableY } from './pdf-shared';
 
 const amount = (n?: number | null) =>
   Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-/** Pausa entre descargas: el navegador puede descartar las que salen juntas. */
-const DOWNLOAD_GAP_MS = 300;
 
 /**
  * Los montos que imprime la hoja de un pasador (los acumulados de su período).
@@ -153,26 +157,56 @@ async function buildLiquidationSlipPDF(account: AccountPeriodView, headerLabel?:
   return doc;
 }
 
+export interface LiquidationSlipSheet {
+  account: AccountPeriodView;
+  /** `{grupo}-{número}` del nombre de archivo. */
+  cashierCode: string;
+  group?: ZipGroup;
+  /** Varias ediciones: carpeta de la edición dentro del ZIP. */
+  edition?: { key: string; folder: string };
+  /** Cuenta por edición: la cabecera derecha dice `Edición ${headerLabel}`. */
+  headerLabel?: string;
+}
+
 /**
  * Liquidación de cada pasador, como `printLiquidationCashier` de QuiniApp: lo
  * acumulado en su período (desde el día siguiente a la última liquidación).
- * Sin deje ni premios (R18: los premios están en Premios). Se descarga un PDF
- * por pasador (descargas separadas, igual que "Exportar liquidación" de
- * QuiniApp), solo de los que se eligieron. `cashierCodeOf` da el
- * `{grupo}-{número}` del nombre de archivo.
+ * Sin deje ni premios (R18: los premios están en Premios). Un PDF por pasador,
+ * solo de los elegidos, todos en un ZIP con carpetas por grupo (y por edición
+ * si hay varias). En el celular se comparte; si no, se descarga. Devuelve
+ * false si no hay hojas (no arma un ZIP vacío).
  */
-export async function downloadLiquidationSlipsPDF(params: {
-  accounts: AccountPeriodView[];
-  cashierCodeOf: (account: AccountPeriodView) => string;
-  /** Cuenta por edición: la cabecera derecha dice `Edición ${headerLabel}`. */
-  headerLabel?: string;
-  /** Cuenta por edición: va en el nombre del archivo en lugar de la fecha. */
-  fileTag?: string;
+export async function exportLiquidationSlipsZip(params: {
+  sheets: LiquidationSlipSheet[];
+  zipName: string;
 }) {
-  for (const [index, account] of params.accounts.entries()) {
-    if (index > 0) await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_GAP_MS));
+  if (params.sheets.length === 0) return false;
 
-    const doc = await buildLiquidationSlipPDF(account, params.headerLabel);
-    doc.save(liquidationFileName(account, params.cashierCodeOf(account), params.fileTag));
+  const entries = liquidationZipEntries(
+    params.sheets.map((sheet) => ({
+      ...sheet,
+      fileName: liquidationZipPdfName(sheet.cashierCode, sheet.account.user_name),
+    }))
+  );
+
+  const files: { path: string; data: Uint8Array }[] = [];
+  for (const [index, { path, item }] of entries.entries()) {
+    // Cede el hilo para que se pinte "Exportando…" en exportes grandes.
+    if (index > 0) await new Promise((resolve) => setTimeout(resolve, 0));
+    const doc = await buildLiquidationSlipPDF(item.account, item.headerLabel);
+    files.push({ path, data: new Uint8Array(doc.output('arraybuffer')) });
   }
+
+  const blob = await zipFiles(files);
+  await shareFile(blob, params.zipName, 'Liquidaciones de la Polla', 'application/zip');
+  return true;
+}
+
+/** Un solo pasador: baja el PDF suelto. */
+export async function downloadLiquidationSlipPDF(params: {
+  account: AccountPeriodView;
+  cashierCode: string;
+}) {
+  const doc = await buildLiquidationSlipPDF(params.account);
+  doc.save(liquidationFileName(params.account, params.cashierCode));
 }
