@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
+
+- **`IPollaEditionAccountListItem.load_open`** (`helper/polla/types/game.type.ts`): `true` si la carga de la edición todavía no cerró. Con la carga abierta se cargan cobros y pagos, pero no se liquida.
+
 ### Changed - 2026-11-15 (lista de ediciones paginada)
 
 - **`IPollaEditionAccountListItem`** (`helper/polla/types/game.type.ts`):

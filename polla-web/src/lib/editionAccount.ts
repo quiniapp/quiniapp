@@ -67,6 +67,17 @@ export const editionFileTag = (title: string) =>
 export const editionsInRange = (items: IPollaEditionAccountListItem[], from: string, to: string) =>
   items.filter((item) => item.edition.start_date >= from && item.edition.start_date <= to);
 
+/**
+ * Las del rango que entran en los reportes de "Varias ediciones": sin las que
+ * tienen la carga abierta, porque su cuenta todavía se mueve. Una sola se
+ * sigue exportando desde su detalle ("Una edición").
+ */
+export const reportEditionsInRange = (
+  items: IPollaEditionAccountListItem[],
+  from: string,
+  to: string
+) => editionsInRange(items, from, to).filter((item) => !item.load_open);
+
 /** Comisión del admin: `GREATEST(base, 0) × % / 100` redondeada a 2, con el % también a 2 decimales (igual que la función SQL). */
 export const groupCommission = (base: number, percentage: number): number =>
   Math.round(Math.max(base, 0) * (Math.round(percentage * 100) / 100)) / 100;

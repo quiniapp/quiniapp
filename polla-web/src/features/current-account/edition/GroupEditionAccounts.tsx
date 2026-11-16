@@ -198,11 +198,13 @@ const GroupCard = ({
   preview,
   editionId,
   organizationId,
+  loadOpen,
   onLiquidate,
 }: {
   preview: IPollaGroupEditionAccountPreview;
   editionId: string;
   organizationId: string | null;
+  loadOpen: boolean;
   onLiquidate: () => void;
 }) => {
   const { account, pending_cashiers: pending } = preview;
@@ -219,11 +221,18 @@ const GroupCard = ({
             </Badge>
           )}
         </div>
-        <Button type="button" size="sm" disabled={pending.length > 0} onClick={onLiquidate}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending.length > 0 || loadOpen}
+          onClick={onLiquidate}
+        >
           <Wallet />
           Liquidar grupo
         </Button>
       </div>
+
+      {loadOpen && <p className="text-xs text-muted-foreground">La carga todavía no cerró</p>}
 
       {outdated && <OutdatedNotice />}
 
@@ -431,7 +440,8 @@ export const GroupEditionAccounts = () => {
 
   const editions = useMemo(() => list ?? [], [list]);
 
-  // Arranca en la primera edición de la lista.
+  // Arranca en la primera edición de la lista (la más nueva), aunque tenga la
+  // carga abierta: en el selector se marca con "· Carga abierta".
   useEffect(() => {
     if (!editionId && editions.length > 0) setEditionId(editions[0].edition.polla_edition_id);
   }, [editionId, editions]);
@@ -459,6 +469,7 @@ export const GroupEditionAccounts = () => {
               <SelectItem key={item.edition.polla_edition_id} value={item.edition.polla_edition_id}>
                 {pollaEditionTitle(item.edition, catalogs)} ·{' '}
                 {dayjs(item.edition.start_date).format('DD/MM/YYYY')}
+                {item.load_open && ' · Carga abierta'}
               </SelectItem>
             ))}
           </SelectContent>
@@ -479,6 +490,7 @@ export const GroupEditionAccounts = () => {
                   preview={preview}
                   editionId={editionId}
                   organizationId={organizationId}
+                  loadOpen={selected?.load_open ?? false}
                   onLiquidate={() => setLiquidating(preview)}
                 />
               ))}

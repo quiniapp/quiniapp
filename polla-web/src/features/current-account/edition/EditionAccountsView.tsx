@@ -7,6 +7,7 @@ import { useDoneEditionAccounts, useEditionAccountList } from '@/hooks/fetchs/us
 import { flattenPages } from '@/hooks/useApi';
 import { EmptyState, ErrorState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
+import { Badge } from '@/components/ui/badge';
 import { owedSummary } from '../format';
 import { EditionAccountDetail } from './EditionAccountDetail';
 
@@ -29,7 +30,10 @@ const EditionCard = ({
     onClick={onSelect}
     className="flex w-full flex-col gap-1 rounded-md border bg-card p-3 text-left transition-colors hover:bg-accent"
   >
-    <span className="font-medium">{title}</span>
+    <span className="flex flex-wrap items-center gap-2">
+      <span className="font-medium">{title}</span>
+      {item.load_open && <Badge variant="outline">Carga abierta</Badge>}
+    </span>
     <span className="text-xs text-muted-foreground">
       {fmtDate(item.edition.start_date)} al {fmtDate(item.edition.end_date)}
     </span>

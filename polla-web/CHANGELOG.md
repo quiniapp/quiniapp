@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
+
+- **Pollas a liquidar** (`features/current-account/edition/EditionAccountsView.tsx`): una polla que ya empezó aparece aunque la carga siga abierta, con el badge "Carga abierta" en su tarjeta (`EditionCard`). Así los cobros y pagos se cargan desde el primer día.
+- **Detalle de la edición** (`EditionAccountDetail.tsx`): con la carga abierta, "Generar liquidación" queda deshabilitado y debajo dice "La carga todavía no cerró". Los exportes y los movimientos siguen igual.
+- **Grupos** (`GroupEditionAccounts.tsx`): con la carga abierta, "Liquidar grupo" queda deshabilitado, con el mismo aviso. En el selector de edición, las de carga abierta dicen "· Carga abierta"; sigue arrancando en la más nueva.
+- La base rechaza las dos liquidaciones con la carga abierta: la web no es el único control.
+- **Reportes de "Varias ediciones"** (`EditionReportDialog.tsx`, `reportEditionsInRange` en `lib/editionAccount.ts`): las ediciones con la carga abierta no aparecen en la lista ni se exportan (liquidación, cobros y pagos, subtotales, diario y resumen), porque su cuenta todavía se mueve. "Una edición" sigue exportando la del detalle aunque tenga la carga abierta. Test en `__tests__/current-account/edition-account.test.ts`.
+
 ### Added - 2026-11-16
 
 - Botón Actualizar en Cuenta corriente (`features/current-account/RefreshAccountButton.tsx`, `refresh.ts`): recarga las consultas de la cuenta que están en pantalla (pasadores, grupos, historial y la vista del pasador). Gira y se deshabilita mientras carga.

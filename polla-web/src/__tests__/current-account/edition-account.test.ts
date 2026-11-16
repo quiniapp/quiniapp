@@ -11,6 +11,7 @@ import {
   editionsInRange,
   groupCommission,
   hasEditionMovement,
+  reportEditionsInRange,
 } from '@/lib/editionAccount';
 import { liquidationFileName } from '@/functions/current-account/liquidationSlipPDF';
 
@@ -98,6 +99,18 @@ describe('ediciones de un rango', () => {
     expect(
       editionsInRange(list, '2026-11-01', '2026-11-30').map((e) => e.edition.polla_edition_id)
     ).toEqual(['nov-1', 'nov-2']));
+  it('los reportes de varias ediciones dejan afuera las de carga abierta', () => {
+    const withOpen = [
+      ...list,
+      { ...item('nov-abierta', '2026-11-15'), load_open: true },
+      { ...item('nov-cerrada', '2026-11-16'), load_open: false },
+    ];
+    expect(
+      reportEditionsInRange(withOpen, '2026-11-01', '2026-11-30').map(
+        (e) => e.edition.polla_edition_id
+      )
+    ).toEqual(['nov-1', 'nov-2', 'nov-cerrada']);
+  });
 });
 
 describe('groupCommission', () => {

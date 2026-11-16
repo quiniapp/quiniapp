@@ -945,6 +945,8 @@ export interface IPollaEditionAccountListItem {
   owed_by_cashiers: number | null;
   /** Lo que hay que pagarles (suma de los Cobra), en positivo. */
   owed_to_cashiers: number | null;
+  /** La carga todavía no cerró: se cargan cobros y pagos, pero no se liquida. */
+  load_open: boolean;
 }
 
 /** Qué ediciones lista `GET /edition_account`: a liquidar o liquidaciones realizadas. */

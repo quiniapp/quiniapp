@@ -4,6 +4,27 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
+
+**Qué cambia.** Una polla que ya empezó aparece en "Pollas a liquidar" aunque la carga siga abierta, para ir cargando cobros y pagos desde el primer día. Liquidarla (pasadores o grupo) o marcarla como liquidada sigue bloqueado hasta que la carga cierre.
+
+- **Migración `20261116074720_polla_edition_account_open_load`** (mismas firmas, `CREATE OR REPLACE`):
+  - **`polla_edition_account_list`**: además de las de carga cerrada, entran las que tienen `start_date <= polla_today()`. Las de carga abierta que todavía no empezaron siguen afuera. Cada fila trae `load_open` (`polla_now() < polla_edition_load_close(e)`). Mantiene su `REVOKE` y `GRANT`.
+  - **`polla_validate_edition_account_movement`**: se saca el control de `20261115210000`. Los cobros, pagos y reclamos se cargan y se editan también con la carga abierta.
+  - **`polla_liquidate_group_edition`**: lee la edición (`POLLA_EDITION_NOT_FOUND` si no es de la organización o está borrada) y con la carga abierta tira `POLLA_EDITION_LOAD_OPEN`. Mantiene su `REVOKE` y `GRANT`. "Generar liquidación" ya fallaba con la carga abierta (`polla_liquidate_edition_accounts`), y como corre en una transacción no deja los movimientos que inserta antes.
+  - **`polla_set_edition_liquidated`** (`PUT /edition_account/:editionId/liquidated`): marcar la edición como liquidada con la carga abierta tira `POLLA_EDITION_LOAD_OPEN` (400 "La carga de esta edición todavía no cerró"). Desmarcarla anda siempre. Mantiene su `REVOKE` y `GRANT`.
+  - Rollback: volver a crear las definiciones de `20261115204744`, `20261115210000`, `20261114150000` y `20261114141228` (`polla_set_edition_liquidated`).
+- **`GET /edition_account`**: cada ítem trae `load_open`. `listHandler` pasa la fila tal cual, así que solo se actualizan los comentarios de la ruta y del repositorio.
+- El error `POLLA_EDITION_LOAD_OPEN` ya respondía 400 "La carga de esta edición todavía no cerró".
+- **Test pgTAP `230_polla_edition_account_open_load`** (15 pruebas):
+  - la lista trae la polla con la carga cerrada y la que empieza hoy, pero no la que empieza mañana;
+  - `load_open` en `true` y en `false`;
+  - un cobro se carga con la carga abierta;
+  - "Generar liquidación" falla con `POLLA_EDITION_LOAD_OPEN`. No hay assert de "no deja movimientos": `throws_ok` corre en una subtransacción y no podría fallar; eso lo garantiza la transacción única del RPC y lo prueba el E2E;
+  - liquidar el grupo falla con `POLLA_EDITION_LOAD_OPEN`, y con `POLLA_EDITION_NOT_FOUND` si la edición no existe o está borrada;
+  - marcar como liquidada falla con la carga abierta y anda con la carga cerrada; desmarcar anda en las dos.
+- **Test pgTAP `220_polla_edition_account_list_and_groups`**: cargar y editar movimientos con la carga abierta pasan de `throws_ok` a `lives_ok`, porque la base ya no los rechaza (darlos de baja ya era `lives_ok`).
+
 ### Added - 2026-11-15 (tests de la lista, grupos, pasador eliminado y movimientos)
 
 - **Test pgTAP `220_polla_edition_account_list_and_groups`** (24 pruebas):
