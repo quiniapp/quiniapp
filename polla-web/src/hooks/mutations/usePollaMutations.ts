@@ -1,5 +1,6 @@
 import {
   IPollaBetEntityFront,
+  IPollaCurrentAccountEntityFront,
   IPollaEditionLiquidationResult,
   IPollaGroupEditionAccountEntity,
   IPollaProcessResult,
@@ -10,6 +11,7 @@ import {
   IGenerateEditionLiquidationPayload,
   IPollaAccountMovementPayload,
   IPollaAccountMovementUpdatePayload,
+  IPollaCurrentAccountPaymentsPayload,
   ILiquidatePollaGroupEditionPayload,
 } from '@helper/polla/schemas/game.schema';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
@@ -410,4 +412,19 @@ export const useLiquidateGroupEdition = () =>
   >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.groupLiquidate(editionId), {
     invalidate: EDITION_ACCOUNT_KEYS,
     successMessage: 'Grupo liquidado',
+  });
+
+// ------------------------------------------------- historial por fecha
+
+/**
+ * Cobros y pagos de un día del historial: la API suma la diferencia al saldo
+ * de ese día y de los siguientes del pasador.
+ */
+export const useEditCurrentAccountPayments = () =>
+  useApiMutation<
+    IPollaCurrentAccountEntityFront,
+    { id: string } & IPollaCurrentAccountPaymentsPayload
+  >('put', ({ id }) => BACKEND_ROUTES.currentAccount.byId(id), {
+    invalidate: ['polla-current-accounts'],
+    successMessage: 'Cobros y pagos actualizados',
   });

@@ -89,6 +89,27 @@ export class PollaCurrentAccountRepository {
     return data as IPollaCurrentAccountEntityBack;
   }
 
+  /**
+   * Cambia los cobros y pagos de un día (liquidado o no) y suma la diferencia
+   * al saldo de ese día y de los siguientes del pasador. Nada más cambia.
+   */
+  async editPayments(p: {
+    organizationId: string;
+    currentAccountId: string;
+    collections: number;
+    paid: number;
+  }): Promise<IPollaCurrentAccountEntityBack> {
+    const { data, error } = await supabase.rpc('polla_edit_current_account_payments', {
+      p_organization_id: p.organizationId,
+      p_current_account_id: p.currentAccountId,
+      p_collections: p.collections,
+      p_paid: p.paid,
+    });
+
+    throwIfPollaError(error);
+    return data as IPollaCurrentAccountEntityBack;
+  }
+
   /** Totales por día (pie de la tabla, cobros y pagos, resumen y subtotales). */
   async getDailyTotals(params: {
     organizationId: string;

@@ -1,12 +1,17 @@
 import { ComponentProps, ReactNode, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { BarChart2, CreditCard, FileDown, FileText, List } from 'lucide-react';
+import { BarChart2, CreditCard, FileDown, FileText, List, Pencil } from 'lucide-react';
 import {
   IPollaCurrentAccountPeriodRow,
   POLLA_LIQUIDATION_NO_GROUP,
 } from '@helper/polla/types/game.type';
-import { IPollaUserOption, POLLA_USER_TYPE, pollaCashierCode } from '@helper/polla/types/user.type';
+import {
+  IPollaUserOption,
+  POLLA_ACCOUNT_ROLES,
+  POLLA_USER_TYPE,
+  pollaCashierCode,
+} from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useCurrentAccountsOfDay } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
@@ -50,6 +55,7 @@ import { ReportDialog, ReportKind } from '../dialogs/ReportDialogs';
 import { ExportLiquidationsDialog } from '../dialogs/ExportLiquidationsDialog';
 import { ModeToggle } from '../dialogs/shared';
 import { GroupAccountHistory } from '../GroupAccounts';
+import { EditDayPaymentsDialog } from './EditDayPaymentsDialog';
 
 /** Pase jugadas − Borradas = Pase (más los reclamos positivos), base de la comisión. */
 const MONEY_COLUMNS = [
@@ -76,14 +82,15 @@ const ActionButton = ({
   </Button>
 );
 /**
- * Historial por fechas (solo lectura): lo liquidado por días antes del cambio
- * a liquidar por edición. Filtros, planilla con total general y los exportes
- * por fecha; debajo, el historial de liquidaciones de grupos. Por día, cada
- * pasador se muestra acumulado desde el día siguiente a su última liquidación
- * hasta la fecha elegida; por rango, lo de esos días.
+ * Historial por fechas: lo liquidado por días antes del cambio a liquidar por
+ * edición. Filtros, planilla con total general y los exportes por fecha;
+ * debajo, el historial de liquidaciones de grupos. Por día, cada pasador se
+ * muestra acumulado desde el día siguiente a su última liquidación hasta la
+ * fecha elegida; por rango, lo de esos días. Lo único que se edita son los
+ * cobros y pagos de un día (modo un día, `POLLA_ACCOUNT_ROLES`).
  */
 export const DailyHistoryView = () => {
-  const { organizationId } = useAuth();
+  const { organizationId, role } = useAuth();
 
   const [mode, setMode] = useState<ReportMode>('day');
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -93,8 +100,11 @@ export const DailyHistoryView = () => {
   const [report, setReport] = useState<ReportKind | null>(null);
   const [printing, setPrinting] = useState(false);
   const [exportingSlips, setExportingSlips] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;
+  // Por rango las filas son acumulados: se edita solo en modo un día.
+  const canEdit = mode === 'day' && Boolean(role && POLLA_ACCOUNT_ROLES.includes(role));
 
   // "Sin grupo" no es un filtro de la API: se acota acá abajo.
   const noGroup = groupId === POLLA_LIQUIDATION_NO_GROUP;
@@ -115,6 +125,10 @@ export const DailyHistoryView = () => {
   // Lo que se muestra y se exporta: los montos acumulados del período.
   const views = useMemo(() => rows.map(periodView), [rows]);
   const totals = useMemo(() => computeAccountTotals(views), [views]);
+  // El diálogo recibe la fila cruda (montos del día), nunca la del período.
+  const editingRow = editingId
+    ? rows.find((row) => row.polla_current_account_id === editingId)
+    : undefined;
 
   const { data: groups } = useGroups({ polla_organization_id: organizationId ?? undefined });
   const groupList = useMemo(() => groups?.data ?? [], [groups]);
@@ -127,6 +141,19 @@ export const DailyHistoryView = () => {
     row.polla_group_id ? groupById.get(row.polla_group_id) : undefined;
   /** `2-5`: el número de pasador se repite entre grupos. */
   const cashierCode = (row: AccountRow) => pollaCashierCode(groupOf(row)?.number, row.user_number);
+
+  const editButton = (row: AccountPeriodView) => (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      aria-label={`Editar cobros y pagos de ${row.user_name}`}
+      onClick={() => setEditingId(row.polla_current_account_id)}
+    >
+      <Pencil />
+      Editar
+    </Button>
+  );
 
   const handleExportDaily = async () => {
     if (!rows.length) {
@@ -282,7 +309,10 @@ export const DailyHistoryView = () => {
                       {periodLabel(row.period_from, row.date)}
                     </span>
                   </span>
-                  {row.is_liquidated && <Badge variant="success">Liquidado</Badge>}
+                  <span className="flex shrink-0 items-center gap-1">
+                    {row.is_liquidated && <Badge variant="success">Liquidado</Badge>}
+                    {canEdit && editButton(row)}
+                  </span>
                 </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   {MONEY_COLUMNS.map(([key, label]) => (
@@ -323,6 +353,11 @@ export const DailyHistoryView = () => {
                     </TableHead>
                   ))}
                   <TableHead>Grupo</TableHead>
+                  {canEdit && (
+                    <TableHead>
+                      <span className="sr-only">Editar</span>
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -353,6 +388,7 @@ export const DailyHistoryView = () => {
                     <TableCell className="whitespace-nowrap">
                       {groupOf(row) ? groupLabel(groupOf(row)) : ''}
                     </TableCell>
+                    {canEdit && <TableCell className="text-right">{editButton(row)}</TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -365,6 +401,7 @@ export const DailyHistoryView = () => {
                     </TableCell>
                   ))}
                   <TableCell />
+                  {canEdit && <TableCell />}
                 </TableRow>
               </TableFooter>
             </Table>
@@ -379,6 +416,13 @@ export const DailyHistoryView = () => {
           exporting={printing}
           onExport={handleExportLiquidations}
           onClose={() => setExportingSlips(false)}
+        />
+      )}
+      {canEdit && editingRow && (
+        <EditDayPaymentsDialog
+          row={editingRow}
+          title={`${cashierCode(editingRow) ? `${cashierCode(editingRow)} · ` : ''}${editingRow.user_name}`}
+          onClose={() => setEditingId(null)}
         />
       )}
       <div className="mt-8 flex flex-col gap-2">

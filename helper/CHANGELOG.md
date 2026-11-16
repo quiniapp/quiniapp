@@ -4,6 +4,12 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
+
+- **`pollaCurrentAccountPaymentsSchema`** e **`IPollaCurrentAccountPaymentsPayload`** (`helper/polla/schemas/game.schema.ts`): `{ collections, paid }` para `PUT /current_account/:id`. Los dos son obligatorios, ≥ 0 ("El monto no puede ser negativo"), hasta 9.999.999.999,99, el máximo de `NUMERIC(12,2)` ("El monto es demasiado grande"), y con hasta 2 decimales ("El monto tiene hasta 2 decimales").
+  - El máximo se controla antes que los decimales: `1e21` se escribe `"1e+21"` y, si no, el primer error sería el de los decimales.
+  - Los decimales se miran en el texto del número (`hasAtMostTwoDecimals`), no con `Math.round(v * 100) === v * 100`: en coma flotante `0.29 * 100` da `28.999999999999996` y esa cuenta rechazaría montos válidos como 0,29 o 1,13.
+
 ### Added - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
 
 - **`IPollaEditionAccountListItem.load_open`** (`helper/polla/types/game.type.ts`): `true` si la carga de la edición todavía no cerró. Con la carga abierta se cargan cobros y pagos, pero no se liquida.

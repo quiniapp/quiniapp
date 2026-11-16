@@ -4,6 +4,29 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
+
+**Qué cambia.** En el historial por fechas se pueden corregir los cobros y pagos de un día de un pasador, liquidado o no. La diferencia se arrastra al saldo de todos sus días siguientes. Los reclamos no se editan: cambiarían el pase, el subtotal y la comisión ya liquidados (un reclamo nuevo va en la cuenta por edición).
+
+- **Migración `20261116081045_polla_edit_current_account_payments`**: función nueva `polla_edit_current_account_payments(p_organization_id, p_current_account_id, p_collections, p_paid) RETURNS polla_current_accounts`, en una sola transacción:
+  - bloquea (`FOR UPDATE`) el día y los días siguientes del pasador, en orden de fecha;
+  - `delta = (cobros viejos − cobros nuevos) + (pagos nuevos − pagos viejos)`;
+  - el día editado guarda los cobros y pagos nuevos y `total + delta`; cada día siguiente, `previous_balance + delta` y `total + delta`; todos con `edited_at = NOW()`. Sin diferencia, los días siguientes no se tocan;
+  - nada más cambia: pase, borradas, premios, reclamos, comisión, subtotal, ganancia, arrastre, deje e `is_liquidated`. Las liquidaciones de grupos por fecha tampoco (salen de los subtotales);
+  - errores: `POLLA_CURRENT_ACCOUNT_AMOUNT_INVALID` (monto vacío, negativo, con más de 2 decimales o fuera de `NUMERIC(12,2)`) y `POLLA_CURRENT_ACCOUNT_NOT_FOUND` (el día no existe o es de otra organización);
+  - `REVOKE` a `PUBLIC`, `anon` y `authenticated`; `GRANT EXECUTE` a `service_role`.
+  - Rollback: `DROP FUNCTION polla_edit_current_account_payments(UUID, UUID, NUMERIC, NUMERIC);`.
+- **`PUT /current_account/:id`** (`polla-current-account.route.ts`, `editPaymentsHandler`): body `{ collections, paid }` validado con `pollaCurrentAccountPaymentsSchema` (400 si falla), id validado como UUID, organización de la sesión y guard `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin; el pasador y el admin reciben 403). Responde `200 { data: { account } }` con la fila editada.
+- **`PollaCurrentAccountRepository.editPayments`**: llama al RPC con `throwIfPollaError`.
+- **Error `POLLA_CURRENT_ACCOUNT_AMOUNT_INVALID`** (`polla-errors.ts`): 400 "Monto inválido".
+- **Test pgTAP `240_polla_edit_current_account_payments`** (26 pruebas):
+  - editar un día propaga la diferencia a los días siguientes, liquidados y sin liquidar;
+  - el resto de las columnas e `is_liquidated` no cambian, y `edited_at` se actualiza;
+  - otro pasador y otra organización quedan iguales;
+  - el último día del pasador y un día del medio (cobros y pagos a la vez);
+  - sin diferencia no se tocan los días siguientes;
+  - montos negativos, vacíos o con 3 decimales dan `POLLA_CURRENT_ACCOUNT_AMOUNT_INVALID`; un día de otra organización o inexistente, `POLLA_CURRENT_ACCOUNT_NOT_FOUND`.
+
 ### Changed - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
 
 **Qué cambia.** Una polla que ya empezó aparece en "Pollas a liquidar" aunque la carga siga abierta, para ir cargando cobros y pagos desde el primer día. Liquidarla (pasadores o grupo) o marcarla como liquidada sigue bloqueado hasta que la carga cierre.

@@ -4,6 +4,19 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
+
+- **Historial por fechas** (`features/current-account/history/DailyHistoryView.tsx`): en modo "Día" y para `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin), cada fila de la tabla y cada tarjeta del celular tiene un botón "Editar" (lápiz). En modo rango no aparece, porque las filas son acumulados.
+- **`EditDayPaymentsDialog`** (`features/current-account/history/EditDayPaymentsDialog.tsx`): "Cobros del día" y "Pagos del día".
+  - Precarga los montos **del día** (`dayPayments`), no los acumulados del período que muestra la tabla: precargar el acumulado y guardarlo duplicaría la plata de los otros días. Por eso recibe la fila cruda y no `periodView(row)`.
+  - Si el día está liquidado avisa "Este día ya está liquidado", y siempre aclara "El saldo de los días siguientes de este pasador se recalcula."
+  - Valida con `pollaCurrentAccountPaymentsSchema` antes de mandar; al guardar refresca el historial y muestra "Cobros y pagos actualizados".
+  - Debajo de los montos muestra "Saldo del día: $antes → $después" y lo actualiza mientras se escribe. Con un monto inválido o vacío, el después queda en "—".
+- **`dayPayments`** (`lib/accountPeriod.ts`, junto a `periodView`): cobros y pagos del día de una fila del historial.
+- **`dayBalanceAfter`** (`lib/accountPeriod.ts`): saldo del día con los cobros y pagos nuevos, con la misma diferencia que la base (`total − (cobros nuevos − cobros del día) + (pagos nuevos − pagos del día)`), en centavos.
+- **`useEditCurrentAccountPayments`** (`hooks/mutations/usePollaMutations.ts`): `PUT /current_account/:id`, invalida `polla-current-accounts`. Ruta nueva `BACKEND_ROUTES.currentAccount.byId`.
+- **Test `__tests__/current-account/history-edit.test.ts`**: el esquema (0, decimales como 0,29, negativos, 3 decimales, vacíos, NaN y el máximo), `dayPayments` (usa el día y no el período) y `dayBalanceAfter` (cobro nuevo, pago nuevo y cobro editado).
+
 ### Changed - 2026-11-16 (pollas con la carga abierta en Pollas a liquidar)
 
 - **Pollas a liquidar** (`features/current-account/edition/EditionAccountsView.tsx`): una polla que ya empezó aparece aunque la carga siga abierta, con el badge "Carga abierta" en su tarjeta (`EditionCard`). Así los cobros y pagos se cargan desde el primer día.
