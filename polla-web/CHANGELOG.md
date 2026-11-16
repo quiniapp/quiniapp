@@ -4,6 +4,20 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (modal al borrar grupo o usuario)
+
+- **Grupos** (`features/groups/index.tsx`): borrar un grupo pide confirmación con un `ConfirmDialog` en lugar del aviso del navegador. Explica que:
+  - se borran también su admin, sus pasadores y sus jugadores, y se les cierra la sesión;
+  - solo se puede sin jugadas en ediciones en juego y con todo liquidado;
+  - lo liquidado queda en el historial;
+  - no se puede deshacer.
+- **Usuarios** (`features/users/index.tsx`): borrar un usuario usa un `ConfirmDialog` en lugar de "¿Eliminar a X?". Explica:
+  - que no va a poder entrar ni jugar y deja de aparecer en listas y buscadores;
+  - si es pasador, que sus jugadores no se borran pero sin pasador no van a poder cargar;
+  - si es admin, que su grupo queda sin admin;
+  - que sus tickets y su cuenta quedan en el historial;
+  - que no se puede deshacer, y que si es por un tiempo conviene deshabilitarlo.
+
 ### Added - 2026-11-15 (avisos en la cuenta del pasador)
 
 - **Historial por fechas del pasador** (`CashierAccountView.tsx`): la descripción avisa que son liquidaciones por días anteriores al cambio, solo para consultar, y que ahora lo liquidan por edición. Es el mismo aviso que ve el staff.
