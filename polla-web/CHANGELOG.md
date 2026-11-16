@@ -4,6 +4,17 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-15 (cuenta por edición en el celular)
+
+- **Detalle de la edición** (`EditionAccountDetail.tsx`):
+  - En el celular, una tarjeta por pasador, con pase, comisión, reclamos, subtotal, cobros, pagos, Debe y el estado. Tocarla abre sus movimientos.
+  - Abajo va el total general. En la computadora sigue la tabla.
+  - Si falla la consulta, "No se pudo cargar." con Reintentar.
+  - `RowStatus` junta "Liquidado" y el aviso de cambios.
+- **Generar liquidación** (`GenerateEditionLiquidationDialog.tsx`):
+  - En el celular, una tarjeta por pasador: casilla, Debe recalculado, pase, comisión y subtotal, y las celdas de reclamos, cobros y pagos con lo que tenía.
+  - La celda se comparte con la tabla (`amountInput`).
+
 ### Changed - 2026-11-15 (lista de ediciones, Grupos y exportes)
 
 - **Cuenta corriente → Pasadores** (`EditionAccountsView.tsx`):
