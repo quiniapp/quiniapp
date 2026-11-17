@@ -1,19 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { IBetEntityFront } from '@helper/types/bet.type.ts';
-import { fetchWithAuth } from '@/lib/fetchWithAuth';
+import { ALL_PAGES_SIZE, fetchAllPages } from '@/lib/fetchAllPages';
+import { fetchPaginatedBets } from './useInfiniteBets';
 
+/** Filtros del listado de jugadas en modo lista (no agrupado). */
 export interface FetchBetsProps {
   lottery_id?: string | null;
   schedule_id?: string | null;
   date: string | null;
   cashier_id?: string | null;
-  grouped?: string | null;
   winners?: string | null; // 'true' | 'false'
   tern?: string | null;
   quatern?: string | null;
   ticket_number?: string | null;
-  limit?: number;
   group_id?: string | null;
   min_amount?: number | null;
 }
@@ -26,57 +25,23 @@ export const betsKey = (p: FetchBetsProps) =>
     p.cashier_id ?? '',
     p.schedule_id ?? '',
     p.lottery_id ?? '',
-    p.grouped ?? '',
     p.winners ?? '',
     p.quatern ?? '',
     p.tern ?? '',
     p.ticket_number ?? '',
-    p.limit ?? '',
     p.group_id ?? '',
     p.min_amount ?? '',
   ] as const;
 
-// ⬇️ Exportá el fetch para usarlo fuera del hook
-export async function fetchBets({
-  date,
-  schedule_id,
-  lottery_id,
-  cashier_id,
-  grouped,
-  winners,
-  quatern,
-  tern,
-  ticket_number,
-  limit,
-  group_id,
-  min_amount,
-}: FetchBetsProps): Promise<IBetEntityFront[]> {
-  if (!date) return [];
-
-  const params = new URLSearchParams({ date });
-  if (schedule_id) params.append('schedule_id', schedule_id);
-  if (lottery_id) params.append('lottery_id', lottery_id);
-  if (cashier_id) params.append('cashier_id', cashier_id);
-  if (grouped) params.append('grouped', grouped);
-  if (winners) params.append('winners', winners);
-  if (quatern) params.append('quatern', quatern);
-  if (tern) params.append('tern', tern);
-  if (ticket_number) params.append('ticket_number', ticket_number);
-  if (limit) params.append('limit', limit.toString());
-  if (group_id) params.append('group_id', group_id);
-  if (min_amount != null && min_amount > 0) params.append('min_amount', min_amount.toString());
-
-  const url = `${BACKEND_ROUTES.bet.base}?${params.toString()}`;
-  const res = await fetchWithAuth(url, {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (!res.ok) throw new Error('Error fetching bets');
-
-  // ajustá a tu shape real
-  const json = await res.json();
-  // Con paginación, la estructura es: json.data.bets.data
-  return json?.data?.bets?.data ?? [];
+/**
+ * Todas las jugadas del filtro (recorre las páginas hasta el final): la cuenta
+ * corriente y el PDF de liquidación necesitan el total, no la primera página.
+ */
+export async function fetchBets(props: FetchBetsProps): Promise<IBetEntityFront[]> {
+  if (!props.date) return [];
+  return fetchAllPages((cursor) =>
+    fetchPaginatedBets({ ...props, grouped: null, limit: ALL_PAGES_SIZE }, cursor)
+  );
 }
 
 export const useBets = (p: FetchBetsProps) => {

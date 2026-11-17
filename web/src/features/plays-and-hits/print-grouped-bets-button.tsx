@@ -13,27 +13,23 @@ import { useUsers } from '@/hooks/fetchs/users/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
 import { printGroupedBetsPDF } from '@/functions/printGroupedBetsPDF';
 import type { IBetEntityFront } from '@helper/types/bet.type';
-
-// Supabase corta cada respuesta en max_rows (1000): se pide de a 900 hasta
-// traer todas las jugadas que matchean los filtros.
-const PRINT_PAGE_SIZE = 900;
+import { ALL_PAGES_SIZE, fetchAllPages } from '@/lib/fetchAllPages';
 
 async function fetchAllBets(filters: FetchInfiniteBetsProps): Promise<IBetEntityFront[]> {
-  const bets: IBetEntityFront[] = [];
-  const seen = new Set<string>();
+  const props = { ...filters, limit: ALL_PAGES_SIZE };
 
+  // Modo lista: keyset, sigue el cursor hasta el final (sin repetidos aunque
+  // entren jugadas mientras se imprime).
+  if (filters.grouped !== 'true') {
+    return fetchAllPages((cursor) => fetchPaginatedBets(props, cursor));
+  }
+
+  // Modo agrupado: offset (el agrupado no devuelve count en páginas 2+).
+  const bets: IBetEntityFront[] = [];
   for (let page = 1; ; page++) {
-    const { data } = await fetchPaginatedBets({ ...filters, limit: PRINT_PAGE_SIZE }, page);
-    for (const bet of data) {
-      // Paginado por offset: si entran jugadas mientras se imprime, una fila puede repetirse.
-      if (bet.bet_id) {
-        if (seen.has(bet.bet_id)) continue;
-        seen.add(bet.bet_id);
-      }
-      bets.push(bet);
-    }
-    // Página incompleta = última (el modo agrupado no devuelve count en páginas 2+).
-    if (data.length < PRINT_PAGE_SIZE) return bets;
+    const { data, pagination } = await fetchPaginatedBets(props, page);
+    bets.push(...data);
+    if (!pagination.hasMore || data.length < ALL_PAGES_SIZE) return bets;
   }
 }
 
@@ -109,11 +105,7 @@ const PrintGroupedBetsButton = () => {
       size="sm"
       className="gap-2"
     >
-      {isPrinting ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <Printer className="w-4 h-4" />
-      )}
+      {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
       Imprimir
     </Button>
   );

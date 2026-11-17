@@ -2,8 +2,37 @@ import { supabase } from '@database/db.connection';
 import { TicketSums } from '@helper/request/bet.request';
 import { BET_TYPE, IBetEntityBack } from '@helper/types/bet.type';
 import { getTableName } from '../../archive/helper/archive-helper';
+import {
+  CURSOR_INT,
+  CURSOR_TIMESTAMP,
+  CURSOR_UUID,
+  decodeCursor,
+  keysetPage,
+} from '../../utils/keyset';
+
+/**
+ * Columnas del listado: las que lee `parseBet`, más `created_at` y `bet_order`
+ * para el cursor. Las tablas de terminal y la cuenta corriente leen `lottery` y
+ * `schedule` sin `?.`: los embebidos se achican a lo que usan `parseLottery` y
+ * `parseSchedule`, pero no se quitan.
+ */
+const BET_LIST_COLUMNS =
+  'bet_id, bet_type, ticket_id, user_id, number, amount, place, with, position, date, winner, ' +
+  'paid, lottery_id, schedule_id, prize, hits, cashier_name, ticket_number, created_at, bet_order, ' +
+  'lotteries(lottery_id, name, order, active), schedules(schedule_id, name, time, active)';
+
+/** Orden del listado: `created_at DESC, bet_order ASC, bet_id ASC` (desempate único). */
+const BET_CURSOR = [CURSOR_TIMESTAMP, CURSOR_INT, CURSOR_UUID];
+
+type BetListRow = IBetEntityBack & { bet_order: number };
 
 export class BetRepository {
+  /**
+   * Listado de jugadas con paginación keyset, alineado con
+   * `idx_bets_org_date_feed (organization_id, date, created_at DESC, bet_order, bet_id)`.
+   * `cursor` vacío = primera página. No cuenta filas: `hasMore` sale de pedir
+   * `limit + 1`.
+   */
   async getAllBets({
     organization_ids,
     group_user_ids,
@@ -15,7 +44,7 @@ export class BetRepository {
     quatern,
     tern,
     ticket_number,
-    page = 1,
+    cursor = '',
     limit = 100,
   }: {
     organization_ids: string[];
@@ -28,37 +57,24 @@ export class BetRepository {
     quatern?: boolean;
     tern?: boolean;
     ticket_number?: string;
-    page?: number;
+    cursor?: string;
     limit?: number;
-  }) {
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    // Determine which table to query based on date
+  }): Promise<{ data: BetListRow[]; hasMore: boolean; next_cursor: string | null }> {
     const tableName = getTableName(date, 'bets');
 
-    let query = supabase
-      .from(tableName)
-      .select('*, lotteries(*), schedules(*)', { count: 'exact' })
-      .in('organization_id', organization_ids)
-      .eq('date', date)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .order('bet_order', { ascending: true })
-      .range(from, to);
+    let query = supabase.from(tableName).select(BET_LIST_COLUMNS);
 
-    if (ticket_number) {
-      const ticketsTable = getTableName(date, 'tickets');
-      const { data: ticket, error: errorTicketNumber } = await supabase
-        .from(ticketsTable)
-        .select('ticket_id')
-        .eq('ticket_number', ticket_number)
-        .in('organization_id', organization_ids)
-        .maybeSingle();
-      if (errorTicketNumber) throw errorTicketNumber;
-      query = query.eq('ticket_id', ticket?.ticket_id);
-    }
+    // La organización va por igualdad: con `in` (`= ANY(array)`) el índice no
+    // entrega el orden y la base ordena el día completo.
+    query =
+      organization_ids.length === 1
+        ? query.eq('organization_id', organization_ids[0])
+        : query.in('organization_id', organization_ids);
 
+    query = query.eq('date', date).is('deleted_at', null);
+
+    // bets.ticket_number está indexado: no hace falta buscar antes el ticket_id.
+    if (ticket_number) query = query.eq('ticket_number', ticket_number);
     if (quatern) query = query.eq('bet_type', BET_TYPE.QUATERN);
     if (tern) query = query.eq('bet_type', BET_TYPE.TERN);
     if (schedule_id) query = query.eq('schedule_id', schedule_id);
@@ -67,10 +83,32 @@ export class BetRepository {
     if (lottery_id) query = query.eq('lottery_id', lottery_id);
     if (group_user_ids?.length) query = query.in('user_id', group_user_ids);
 
-    const { data, error, count } = await query;
+    if (cursor) {
+      const [createdAt, betOrder, betId] = decodeCursor(cursor, BET_CURSOR);
+      // PostgREST no tiene row values: el `lte` redundante acota el rango del
+      // índice y el OR desempata dentro del mismo created_at.
+      query = query
+        .lte('created_at', createdAt)
+        .or(
+          `created_at.lt.${createdAt},` +
+            `and(created_at.eq.${createdAt},bet_order.gt.${betOrder}),` +
+            `and(created_at.eq.${createdAt},bet_order.eq.${betOrder},bet_id.gt.${betId})`
+        );
+    }
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .order('bet_order', { ascending: true })
+      .order('bet_id', { ascending: true })
+      .limit(limit + 1);
 
     if (error) throw error;
-    return { data, count: count ?? 0 };
+
+    return keysetPage((data ?? []) as unknown as BetListRow[], limit, (bet) => [
+      bet.created_at,
+      bet.bet_order,
+      bet.bet_id,
+    ]);
   }
 
   async getAllBetsGrouped({

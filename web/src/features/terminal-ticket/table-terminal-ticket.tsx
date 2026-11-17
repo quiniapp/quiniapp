@@ -59,7 +59,6 @@ const TableTerminalTicket = ({
   // Contenedor que scrollea
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-
   const { setTriggerRef, triggerIndex } = useInfiniteScroll({
     fetchNextPage,
     hasNextPage,
@@ -135,7 +134,10 @@ const TableTerminalTicket = ({
         </div>
       </div>
 
-      <p className="text-xs">Cantidad de Tickets: {tickets.length}</p>
+      {/* Total del filtro (count de la primera request), no solo lo cargado. */}
+      <p className="text-xs">
+        Cantidad de Tickets: {data?.pages[0]?.pagination.totalCount ?? tickets.length}
+      </p>
     </>
   );
 };

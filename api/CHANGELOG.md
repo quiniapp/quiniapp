@@ -4,6 +4,79 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-16 (rendimiento SQL — Fase 1: keyset en jugadas y tickets)
+
+**Qué cambia.** `GET /bet` (modo lista) y `GET /ticket` pasan de offset + `count: 'exact'` en cada página a **paginación keyset** con índices alineados. Medido en local (122k jugadas por organización y día): la página 1 de jugadas baja de 390 ms a 0,8 ms y una página profunda de 448 ms (sort en disco) a 0,3 ms. Plan y mediciones: `docs/plan-rendimiento-sql.md`, `docs/rendimiento-sql-baseline.md`.
+
+#### Migraciones (una por archivo: `CREATE INDEX CONCURRENTLY` tiene que ser la única sentencia)
+- `20261116213606_perf_idx_bets_org_date_feed.sql`: `bets (organization_id, date, created_at DESC, bet_order, bet_id) WHERE deleted_at IS NULL`.
+- `20261116213607_perf_idx_bets_archive_org_date_feed.sql`: el mismo sobre `bets_archive`. Hasta ahora ningún índice del archivo empezaba por organización.
+- `20261116213608_perf_idx_tickets_org_date_feed.sql`: `tickets (organization_id, date, created_at DESC, ticket_id DESC) WHERE deleted_at IS NULL`.
+- `20261116213609_perf_idx_tickets_archive_org_date_feed.sql`: el mismo sobre `tickets_archive`.
+- Reemplazan a `idx_bets_org_date_active` y a `idx_tickets_date_org_active`, que se dropean en la Fase 6 después de medir en prod.
+- Después del push, verificar `SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;`.
+
+#### API
+- **`api/src/utils/keyset.ts`** (nuevo): helper compartido de cursores.
+  - `encodeCursor` / `decodeCursor`: base64url opaco con validación de cada parte; un cursor inválido responde 400.
+  - `keysetPage`: hace `limit + 1` → `hasMore` + `next_cursor`.
+  - `parsePageSize`: tope `MAX_PAGE_SIZE = 900`, porque PostgREST corta en `max_rows` = 1000.
+  - `parsePageNumber`: guard de NaN.
+  - Tests en `keyset.test.ts` (`node:test`).
+  - Polla (`polla-bet.repository.ts`) pasa a usar este helper sin cambio de comportamiento.
+- **`BetRepository.getAllBets`**:
+  - Recibe `cursor` en vez de `page`. Orden `created_at DESC, bet_order ASC, bet_id ASC`, con desempate único: en prod hay hasta 1.254 jugadas con el mismo `created_at`.
+  - Filtro `lte` redundante + `or` para el desempate. Sin count.
+  - Organización por `eq`: con `in` (`= ANY`) el índice no entrega el orden.
+  - Select explícito (columnas de `parseBet` + `lotteries`/`schedules` achicados).
+  - `ticket_number` se filtra directo sobre `bets`, sin la consulta previa a `tickets`.
+- **`BetController.getAllBets`** (modo lista):
+  - Respuesta `pagination: { pageSize, hasMore, next_cursor }`.
+  - Los totales del día (`aggregates`) se calculan solo en la primera request (sin cursor), en paralelo con la página y con la misma semántica (filtros base).
+  - Con `ticket_number` ya no se llama a `getAmountsByTicket`: nadie leía esos agregados y el detalle del ticket usa `GET /bet/amounts`.
+  - El modo agrupado sigue con `page`.
+- **`GET /bet`**: acepta `cursor`, topea `limit` y un cursor inválido responde 400 (los `AppError` pasan al middleware de errores).
+- **`TicketRepository.getAll` / `TicketController.getAll` / `GET /ticket`**:
+  - Keyset con orden `created_at DESC, ticket_id DESC` y select explícito.
+  - `count: 'exact'` solo en la primera request, como `pagination.totalCount`, que alimenta "Cantidad de Tickets".
+  - El parámetro `page` ya no se usa.
+
+#### Verificación
+- `api/scripts/verify-keyset.ts` (solo local; aborta si `SUPABASE_URL` no es localhost) recorre con cursor sobre el dataset de `seed_perf.sql`:
+  - jugadas del día, por pasador, por ticket y en un día archivado;
+  - tickets;
+  - el feed de Polla en sus dos órdenes.
+- Comprueba:
+  - orden estricto;
+  - recorrido = `COUNT(*)`;
+  - totales = suma recorrida;
+  - `totalCount` = `COUNT(*)`;
+  - cursor manipulado → 400.
+
+### Added - 2026-11-16 (rendimiento SQL — Fase 0: scripts de medición)
+
+**Qué cambia.** Nada en runtime: scripts para medir antes de tocar índices o queries (plan en `docs/plan-rendimiento-sql.md`, mediciones en `docs/rendimiento-sql-baseline.md`).
+
+- **`api/supabase/scripts/perf_baseline.sql`** (solo lectura, para prod o develop vía psql). Abre la sesión con `default_transaction_read_only = on` y `statement_timeout = 60s`. Releva:
+  - configuración del planner;
+  - tamaño, actividad (seq vs idx, HOT updates, vacuum) y uso de cada índice de `bets`, `bets_archive`, `tickets`, `tickets_archive` y `polla_bets`;
+  - definiciones reales de esos índices;
+  - top 20 de `pg_stat_statements` por tiempo total y por tiempo medio;
+  - NULL en `created_at` / `bet_order`, que bloquearían el keyset;
+  - volumen por organización y día;
+  - formatos de `ticket_number` de Polla, para validar la futura columna `ticket_stamp`.
+- **`api/supabase/scripts/perf_stats_snapshot.sql`** (solo lectura) y **`perf_stats_diff.ts`** (local, solo lee archivos). La primera saca una foto CSV de los contadores acumulados (`pg_stat_statements`, `pg_stat_user_indexes`, `pg_stat_user_tables`). La segunda compara dos fotos (T0/T1) y muestra el estado **actual** sin resetear estadísticas: en prod acumulan desde 2025-09-16 y mezclan problemas ya resueltos.
+- **`api/supabase/scripts/seed_perf.sql`** (solo local; exige `-v confirm_local=yes`).
+  - Genera 1M `bets`, 200k `tickets`, ~1M `bets_archive`, ~204k `tickets_archive` y 300k `polla_bets` en organizaciones `perf-org-*` / `perf-polla-*`.
+  - Incluye empates de `created_at` a propósito, para probar desempates de keyset.
+  - Es idempotente: borra lo sembrado antes, incluidas las tablas de Polla que la UI pudo haber llenado.
+  - Termina con `ANALYZE`.
+- **`api/supabase/scripts/perf_explain_local.sql`** (solo local).
+  - Corre `EXPLAIN (ANALYZE, BUFFERS)` de las queries calientes: `GET /bet` y `GET /ticket` (página 1, página profunda, count, archivo, ticket), feed de Polla con cursores profundos (OR actual, acceso redundante y row values) y "Revisar ticket".
+  - Para el interior de las RPC (agrupadas, totales, cuentas por edición, ventas) usa `auto_explain`.
+  - Es el gate de aceptación de cada fase.
+- **Verificado:** Supabase CLI v2.65.7 corre cada archivo de migración como pipeline. `CREATE INDEX CONCURRENTLY` funciona solo como única sentencia del archivo; con dos o más sentencias falla (SQLSTATE 25001) y deja estado parcial. Documentado en `CLAUDE.md` (*SQL Performance*) y en el baseline.
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 **Qué cambia.** En el historial por fechas se pueden corregir los cobros y pagos de un día de un pasador, liquidado o no. La diferencia se arrastra al saldo de todos sus días siguientes. Los reclamos no se editan: cambiarían el pase, el subtotal y la comisión ya liquidados (un reclamo nuevo va en la cuenta por edición).
