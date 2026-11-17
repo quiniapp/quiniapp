@@ -11,6 +11,7 @@
 | Complemento CLI (v2.65.x) | prod | `npx supabase inspect db outliers\|calls\|index-stats\|table-stats\|traffic-profile\|vacuum-stats\|bloat --db-url "<pooler URI>"` |
 | Dataset con volumen | **local** | `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v confirm_local=yes -f api/supabase/scripts/seed_perf.sql` |
 | Planes de las queries calientes | local | `psql … -v confirm_local=yes -f api/supabase/scripts/perf_explain_local.sql > explain-local.txt` |
+| **Estado actual** (delta entre dos fotos, sin resetear estadísticas) | prod, T0 y T1 con ≥24 h hábiles en el medio | `psql "<pooler URI>" -f api/supabase/scripts/perf_stats_snapshot.sql > stats-T0.csv` (después, `stats-T1.csv`) y `npx tsx api/supabase/scripts/perf_stats_diff.ts stats-T0.csv stats-T1.csv` |
 
 Criterio de aceptación por query (gate de cada fase): sin `Sort` bajo `Limit` cuando hay índice alineado; `Rows Removed by Filter` ≈ 0 en el acceso principal; buffers de página profunda ≈ página 1.
 
@@ -73,27 +74,84 @@ Revalidar si se actualiza la CLI (hay una v3).
 - **Fase 2:** las agrupadas son lo más caro medido (~590 ms por página 1). El SQL dinámico con la organización como acceso, más una sola pasada por página y otra para los totales, es la palanca.
 - **Fase 3:** el predicado redundante ayuda (Q8c), pero los row values (Q8d) son 15× mejores. Evaluar la RPC `polla_bets_feed` en lugar de quedarse solo con la condición redundante. "Revisar ticket" necesita `ticket_stamp`.
 
-## Baseline de prod
+## Baseline de prod — 2026-11-16
 
-> Pendiente: lo corre el responsable con `perf_baseline.sql` y pega la salida acá (o un resumen con los puntos clave).
+**Entorno:** PostgreSQL 17.6 (aarch64). `shared_buffers` 256 MB, `effective_cache_size` 768 MB, `work_mem` 3,5 MB, `random_page_cost` 1.1, `jit` off, `plan_cache_mode` auto.
 
-### Fecha de la corrida / `stats_reset`
+> **Ojo al leer estos números.** `pg_stat_statements` y `pg_stat_user_*` **acumulan desde 2025-09-16** (14 meses, nunca se resetearon). Mezclan problemas ya resueltos con los actuales; por ejemplo, `idx_bets_ticket_number` recién se creó el 2026-04-04 (`20260404120000`). Para decidir con el estado actual: dos fotos con `perf_stats_snapshot.sql` y la comparación con `perf_stats_diff.ts` (ver "Cómo medir").
 
 ### Tamaño y actividad de tablas (secciones 1–2)
 
+| Tabla | Filas | Tabla + índices | Índices | Nota |
+|---|---|---|---|---|
+| `bets_archive` | 3,28M | 1075 MB + 393 MB | 7 | 4 veces `shared_buffers`: todo lo que la recorre va a disco. Recibe 31–44k filas por día del archivado |
+| `bets` | 93k | 26 MB + 27 MB | 10 | Históricamente: 9,3M inserts, 11,1M updates (22,8 % HOT), 10,2M deletes (el archivado vacía la tabla) |
+| `tickets_archive` | 53k | 12 MB + 10 MB | 5 | |
+| `tickets` | 1,5k | 0,4 MB + 1,4 MB | **13** | 13 índices para ~1,5k filas vivas; cada carga de ticket los mantiene todos |
+| `polla_bets` | 316 | 0,3 MB + 0,5 MB | 16 | Volumen mínimo |
+
+**Señal a seguir:** `bets` acumula **18.802 seq scans con 16,1 mil millones de tuplas leídas** (~857k por scan). Algo recorre la tabla entera. Puede ser histórico (`get_ticket_sums` antes del índice); el delta lo confirma o lo descarta.
+
 ### Uso de índices (sección 3) — candidatos a drop
 
-### Top queries por tiempo total y medio (secciones 6–7)
+- **Confirmados para la Fase 6:**
+  - `idx_tickets_total_prize`: 0 scans en 14 meses.
+  - `idx_bets_ticket_id` (437k scans): es prefijo de `idx_bets_ticket_order` (121k), así que el planner pasa a usar este.
+- **Candidatos nuevos** (validar con el delta):
+  - `idx_tickets_winner_user_deleted_created`: 1 scan.
+  - `idx_tickets_winner_deleted_created`: 2 scans.
+  - `idx_bets_archive_schedule_date_org_active`: 4 scans y 41 MB, y encarece cada lote de `archive_data_by_date`.
+- **A revisar:**
+  - `idx_tickets_deleted_by`: 2 scans. Mantenerlo si respalda una FK.
+  - `idx_bets_archive_user_id` (182 scans) e `idx_bets_archive_lottery_id` (208): verificar si respaldan FKs.
+- **`idx_bets_date`** (145k scans, 3,28 mil millones de tuplas leídas) es la puerta de entrada de la lógica inteligente de las agrupadas (Fase 2) y del archivado. Se decide después de la Fase 2.
+- **`polla_bets`** tiene 4 índices con 0 scans, pero con 344 filas el planner prefiere el seq scan. **No sirve para decidir drops en Polla.**
+
+### Top queries (secciones 6–7, acumulado de 14 meses, agrupado por familia)
+
+| Familia | Calls | Total | Media | Nota | Fase |
+|---|---|---|---|---|---|
+| `get_ticket_sums` (4 entradas) | 34.040 | **5,7 h** | 606 ms | ~150M bloques leídos de disco. La definición actual con `idx_bets_ticket_number` (abril 2026) debería tardar <1 ms; el costo es casi seguro histórico. **Confirmar con el delta** | 1 (quitar la llamada sobrante) y 5 (RPC única) |
+| `create_ticket_with_bets` (3) | 126.782 | 1,5 h | 43 ms (la actual: 32 ms, ~5k buffers por ticket) | Escritura más frecuente; mantiene 10 índices de `bets` + 13 de `tickets` | 6 (bajar índices) |
+| `archive_data_by_date` (2) | 13.516 | 1,2 h | 315 ms por lote | Cron. Inserta en `bets_archive` (7 índices) y borra de `bets` (10) | **Nuevo** |
+| Agrupadas + totales: `get_grouped_bets_for_parse` (44k, 35 ms), variante de 6 parámetros (5,7k, 103 ms), `get_grouped_bets_count` (36k, 20 ms), `get_bets_total_*` (105k, 12 ms) | 190k | 1,15 h | — | Lógica inteligente | 1 y 2 |
+| `generate_winners*` (5) | 3.385 | 0,9 h | ~985 ms (máx. 18,4 s) | ~120k buffers por llamada; la ve el usuario al cargar resultados. **No está en el plan** | **Nuevo** |
+| `GET /bet` PostgREST (`bets.*, lotteries(*), schedules(*)`, 4 variantes) | 50.686 | 0,86 h | 28–424 ms | Offset + sort | 1 |
+| `GET /bet` sobre `bets_archive` (2) | 112 | 51 s | 368–558 ms | Sin índice que empiece por organización | 1 |
+| `get_archive_stats` + count exacto de todo `bets_archive` (fallback de `archive.service.ts`) | 433 | 0,35 h | **~2,9 s** | Panel de archivo (admin); recorre las tablas enteras | 5 (barato: `reltuples` o contadores) |
+| `auth_audit_log` insert | 201.597 | 0,15 h | 2,75 ms | OK | — |
 
 ### Calidad de datos para keyset (sección 8)
 
-Si hay `created_at` o `bet_order` en NULL, hay que decidirlo antes de la Fase 1.
+`created_at` y `bet_order` en NULL: **0** en las 6 combinaciones. La Fase 1 queda desbloqueada sin backfill.
+
+Agregar `NOT NULL` en el esquema es opcional: `SET NOT NULL` recorre la tabla con lock exclusivo; en `bets_archive` hay que hacerlo fuera de horario.
 
 ### Volumen por organización/día y archivo (secciones 9–10)
 
-### Polla: formatos de ticket (secciones 12–13)
+- **Jugadas:** la organización más grande tiene ~27k jugadas y ~360 tickets por día, unas 75 jugadas por ticket. Con páginas de 50 son hasta ~540 páginas de jugadas y ~8 de tickets.
+- **Empates de `created_at`:** hasta **1.254 jugadas con el mismo `created_at`** en una organización y día, porque un ticket entero se inserta con el mismo `now()`. El desempate `(bet_order, bet_id)` del keyset es imprescindible.
+- **Tickets:** ≤364 por día y organización. El keyset de tickets aporta poco en rendimiento; el valor de la Fase 1 ahí es el fix de "Cantidad de Tickets", que con 364 tickets hoy muestra solo los cargados. El count de tickets es barato.
+- **Archivo:** 31–44k jugadas por día, de 3–4 organizaciones.
 
-Si hay formatos "OTRO" o inconsistencias, hay que revisarlo antes de la Fase 3.
+### Polla: formatos de ticket (secciones 11–13)
+
+- **Volumen:** 4 ediciones, la más grande con 111 jugadas.
+- **Formatos:**
+  - `<grupo>-<17>-<pasador>-<jugador>`: 241;
+  - `<17>-<pasador>`: 103;
+  - **0** con otro formato y **0** inconsistentes, así que la columna generada `ticket_stamp` es válida.
+- **Prioridad:** el rendimiento de Polla no es un problema hoy, así que las Fases 3 y 4 bajan de prioridad. Excepción: agregar `ticket_stamp` ahora es casi gratis (reescribe 344 filas); con volumen, la reescritura necesita una ventana.
+
+### Lectura para el plan
+
+1. **Fase 1 sigue como está.** Los datos están bien para keyset, y `GET /bet` + totales suman ~1 h acumulada.
+2. **Antes de reordenar el resto, hace falta el delta** (T0 ahora, T1 después de ≥24 h hábiles). En particular, para saber:
+   - si `get_ticket_sums` todavía pesa;
+   - quién hace los seq scans de `bets`;
+   - cuánto cuestan **hoy** `generate_winners*` y `archive_data_by_date`.
+3. **Fuera del plan original:** `generate_winners_and_calculate_accounts` (~1 s por llamada, la ve el usuario) y `archive_data_by_date`. Si el delta los confirma, se suman como fase nueva (investigar los planes internos con `auto_explain` en local).
+4. **Fase 6:** suma los candidatos de arriba, siempre validados con el `idx_scan` del delta.
 
 ## Mediciones después de cada fase
 

@@ -7,14 +7,16 @@
 
 | Fase | Rama | Estado |
 |---|---|---|
-| 0 Reglas en CLAUDE.md + baseline | `perf/sql-0-baseline` | En curso: reglas, scripts y baseline local listos; falta el baseline de prod |
+| 0 Reglas en CLAUDE.md + baseline | `perf/sql-0-baseline` | Lista: reglas, scripts, baseline local y de prod. Falta el delta de `pg_stat_statements` (T0/T1) para reordenar las Fases 2–7 |
 | 1 Keyset jugadas/tickets QuiniApp + totales rotos | `perf/sql-1-keyset-quiniapp` | Pendiente |
 | 2 RPC agrupadas y totales | `perf/sql-2-grouped-rpc` | Pendiente |
-| 3 Polla: ticket y keyset | `perf/sql-3-polla-ticket-keyset` | Pendiente |
-| 4 Polla: listados con offset | `perf/sql-4-polla-offset` | Pendiente |
+| 3 Polla: ticket y keyset | `perf/sql-3-polla-ticket-keyset` | Pendiente (baja prioridad: en prod `polla_bets` tiene ~340 filas) |
+| 4 Polla: listados con offset | `perf/sql-4-polla-offset` | Pendiente (baja prioridad, ídem) |
 | 5 Round-trips | `perf/sql-5-round-trips` | Pendiente |
 | 6 Limpieza de índices y RPC viejas | `perf/sql-6-cleanup` | Pendiente (≥1 semana después del deploy a prod) |
 | 7 Bugs detectados + fix de CLAUDE.md | `fix/sql-7-pendientes` | Pendiente |
+
+**Candidatos fuera del plan original** (del baseline de prod; se suman como fase nueva si el delta los confirma): `generate_winners_and_calculate_accounts` (~1 s por llamada, máx. 18 s, la ve el usuario al cargar resultados) y `archive_data_by_date` (costo de mantener los índices de `bets_archive`). Detalle en `docs/rendimiento-sql-baseline.md`.
 
 ## Hallazgos (relevamiento de código; verificados contra HEAD `4fc63db`)
 

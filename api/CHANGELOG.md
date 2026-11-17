@@ -16,6 +16,7 @@ All notable changes to the API workspace are documented in this file.
   - NULL en `created_at` / `bet_order`, que bloquearían el keyset;
   - volumen por organización y día;
   - formatos de `ticket_number` de Polla, para validar la futura columna `ticket_stamp`.
+- **`api/supabase/scripts/perf_stats_snapshot.sql`** (solo lectura) y **`perf_stats_diff.ts`** (local, solo lee archivos). La primera saca una foto CSV de los contadores acumulados (`pg_stat_statements`, `pg_stat_user_indexes`, `pg_stat_user_tables`). La segunda compara dos fotos (T0/T1) y muestra el estado **actual** sin resetear estadísticas: en prod acumulan desde 2025-09-16 y mezclan problemas ya resueltos.
 - **`api/supabase/scripts/seed_perf.sql`** (solo local; exige `-v confirm_local=yes`).
   - Genera 1M `bets`, 200k `tickets`, ~1M `bets_archive`, ~204k `tickets_archive` y 300k `polla_bets` en organizaciones `perf-org-*` / `perf-polla-*`.
   - Incluye empates de `created_at` a propósito, para probar desempates de keyset.

@@ -151,3 +151,4 @@ helper/**/*.d.ts
 
 # Salidas de perf_baseline.sql contra prod (no versionar)
 baseline-prod*.txt
+stats-T*.csv
