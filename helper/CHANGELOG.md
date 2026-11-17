@@ -4,6 +4,14 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-16 (rendimiento SQL — Fase 1: tipos de paginación keyset)
+
+- **`helper/request/pagination.request.ts`**:
+  - **`IKeysetPagination` / `IKeysetPaginatedResponse<T>`**: `pageSize`, `hasMore`, `next_cursor` y `totalCount?`, que solo viene en la primera request. Los usa `GET /ticket`.
+  - **`IBetsPagination`**: paginación de `GET /bet`. El modo lista usa `next_cursor`; el agrupado, `currentPage` / `totalCount` / `totalPages`.
+  - **`IPaginatedBetsResponse<T>`** pasa a usar `IBetsPagination` y ya no extiende `IPaginatedResponse`. Sus `aggregates` quedan en `totalAmount` / `totalPrize`: `totalCount` / `totalWinnersCount` solo los llenaba la búsqueda por ticket y nadie los leía.
+  - `IPaginatedResponse<T>` (offset) no cambia: lo sigue usando Polla.
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 - **`pollaCurrentAccountPaymentsSchema`** e **`IPollaCurrentAccountPaymentsPayload`** (`helper/polla/schemas/game.schema.ts`): `{ collections, paid }` para `PUT /current_account/:id`. Los dos son obligatorios, ≥ 0 ("El monto no puede ser negativo"), hasta 9.999.999.999,99, el máximo de `NUMERIC(12,2)` ("El monto es demasiado grande"), y con hasta 2 decimales ("El monto tiene hasta 2 decimales").

@@ -8,7 +8,7 @@
 | Fase | Rama | Estado |
 |---|---|---|
 | 0 Reglas en CLAUDE.md + baseline | `perf/sql-0-baseline` | Lista: reglas, scripts, baseline local y de prod. Falta el delta de `pg_stat_statements` (T0/T1) para reordenar las Fases 2–7 |
-| 1 Keyset jugadas/tickets QuiniApp + totales rotos | `perf/sql-1-keyset-quiniapp` | Pendiente |
+| 1 Keyset jugadas/tickets QuiniApp + totales rotos | `perf/sql-1-keyset-quiniapp` | Lista en la rama (apilada sobre la Fase 0). Migraciones aplicadas solo en local; falta el PR y el push a develop |
 | 2 RPC agrupadas y totales | `perf/sql-2-grouped-rpc` | Pendiente |
 | 3 Polla: ticket y keyset | `perf/sql-3-polla-ticket-keyset` | Pendiente (baja prioridad: en prod `polla_bets` tiene ~340 filas) |
 | 4 Polla: listados con offset | `perf/sql-4-polla-offset` | Pendiente (baja prioridad, ídem) |

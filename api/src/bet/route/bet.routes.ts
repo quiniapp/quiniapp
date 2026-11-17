@@ -1,10 +1,12 @@
-import { Request, RequestHandler, Response, Router } from 'express';
+import { NextFunction, Request, RequestHandler, Response, Router } from 'express';
+import { AppError } from '@helper/errors';
 import { BetController } from '../controller/bet.controller';
 import { APIResponse } from '@helper/response/api_response.response';
 import { ERROR_MESSAGE, ERROR_TYPE } from '@helper/types/errors.type';
 import { USER_TYPE } from '@helper/types/user.type';
 import { TicketSums } from '@helper/request/bet.request';
 import { UserRepository } from '../../user/repository/user.repository';
+import { parsePageNumber, parsePageSize } from '../../utils/keyset';
 
 export class BetRouter {
   public router: Router;
@@ -103,7 +105,7 @@ export class BetRouter {
     return { organization_ids, group_user_ids, effectiveCashierId };
   }
 
-  private getAllBets: RequestHandler = async (req: Request, res: Response) => {
+  private getAllBets: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const {
       date,
       schedule_id,
@@ -115,6 +117,7 @@ export class BetRouter {
       quatern,
       ticket_number,
       page,
+      cursor,
       limit,
       group_id,
       min_amount,
@@ -144,8 +147,9 @@ export class BetRouter {
         tern: tern === 'true' ? true : false,
         quatern: quatern === 'true' ? true : false,
         ticket_number: typeof ticket_number === 'string' ? ticket_number : undefined,
-        page: typeof page === 'string' ? parseInt(page, 10) : 1,
-        limit: typeof limit === 'string' ? Math.max(1, parseInt(limit, 10) || 100) : 100,
+        page: parsePageNumber(page),
+        cursor: typeof cursor === 'string' ? cursor : '',
+        limit: parsePageSize(limit, 100),
         min_amount: typeof min_amount === 'string' ? Math.max(0, parseFloat(min_amount) || 0) : 0,
         organization_ids,
         group_user_ids,
@@ -158,6 +162,11 @@ export class BetRouter {
       res.status(200).json(response);
       return;
     } catch (error) {
+      // Errores operacionales (p. ej. cursor inválido → 400) van al middleware.
+      if (error instanceof AppError) {
+        next(error);
+        return;
+      }
       console.error(error);
       if (error instanceof Error) {
         let statusCode = 500;

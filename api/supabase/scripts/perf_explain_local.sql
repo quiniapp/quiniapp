@@ -29,7 +29,9 @@
 -- Parámetros tomados del dataset sembrado.
 SELECT organization_id AS org FROM organizations WHERE name = 'perf-org-1' \gset
 SELECT user_id AS cashier FROM users WHERE organization_id = :'org' AND number = 7 \gset
-SELECT current_date AS day, current_date - 10 AS arch_day \gset
+-- Días del dataset (no current_date: el seed queda fijo en la fecha en que se corrió).
+SELECT max(date) AS day FROM bets WHERE organization_id = :'org' \gset
+SELECT max(date) AS arch_day FROM bets_archive WHERE organization_id = :'org' \gset
 SELECT ticket_number AS tnum FROM tickets
 WHERE organization_id = :'org' AND date = :'day' AND deleted_at IS NULL
 ORDER BY created_at DESC, ticket_id DESC OFFSET 5000 LIMIT 1 \gset
@@ -72,6 +74,38 @@ LEFT JOIN LATERAL (SELECT * FROM schedules s WHERE s.schedule_id = b.schedule_id
 WHERE b.organization_id = :'org' AND b.date = :'day' AND b.deleted_at IS NULL
 ORDER BY b.created_at DESC, b.bet_order ASC
 LIMIT 50 OFFSET 9950;
+
+\echo '# Q1k GET /bet keyset (Fase 1) — página 1: idx_bets_org_date_feed, sin Sort'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT b.bet_id, b.amount, b.created_at, b.bet_order, l.name AS lottery, s.name AS schedule
+FROM bets b
+LEFT JOIN LATERAL (SELECT lottery_id, name, "order", active FROM lotteries l WHERE l.lottery_id = b.lottery_id) l ON TRUE
+LEFT JOIN LATERAL (SELECT schedule_id, name, time, active FROM schedules s WHERE s.schedule_id = b.schedule_id) s ON TRUE
+WHERE b.organization_id = :'org' AND b.date = :'day' AND b.deleted_at IS NULL
+ORDER BY b.created_at DESC, b.bet_order ASC, b.bet_id ASC
+LIMIT 51;
+
+SELECT created_at AS kc, bet_order AS ko, bet_id AS kid FROM bets
+WHERE organization_id = :'org' AND date = :'day' AND deleted_at IS NULL
+ORDER BY created_at DESC, bet_order, bet_id OFFSET 9950 LIMIT 1 \gset
+
+\echo '# Q2k GET /bet keyset (Fase 1) — cursor en la fila 9.950: lte redundante + OR'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT b.bet_id, b.amount
+FROM bets b
+WHERE b.organization_id = :'org' AND b.date = :'day' AND b.deleted_at IS NULL
+  AND b.created_at <= :'kc'
+  AND (b.created_at < :'kc' OR (b.created_at = :'kc' AND b.bet_order > :ko)
+       OR (b.created_at = :'kc' AND b.bet_order = :ko AND b.bet_id > :'kid'))
+ORDER BY b.created_at DESC, b.bet_order ASC, b.bet_id ASC
+LIMIT 51;
+
+\echo '# Q2x Contraejemplo: organización con = ANY(array) (lo que genera .in()) — vuelve a ordenar'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT b.bet_id FROM bets b
+WHERE b.organization_id = ANY (ARRAY[:'org']::uuid[]) AND b.date = :'day' AND b.deleted_at IS NULL
+ORDER BY b.created_at DESC, b.bet_order ASC, b.bet_id ASC
+LIMIT 51;
 
 \echo '# Q3  GET /bet — filtro por pasador, página 1'
 EXPLAIN (ANALYZE, BUFFERS)
@@ -125,6 +159,20 @@ SELECT b.* FROM bets_archive b
 WHERE b.organization_id = :'org' AND b.date = :'arch_day' AND b.deleted_at IS NULL
 ORDER BY b.created_at DESC, b.bet_order ASC
 LIMIT 50 OFFSET 0;
+
+\echo '# Q6k GET /bet keyset en día archivado (Fase 1): idx_bets_archive_org_date_feed'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT b.bet_id FROM bets_archive b
+WHERE b.organization_id = :'org' AND b.date = :'arch_day' AND b.deleted_at IS NULL
+ORDER BY b.created_at DESC, b.bet_order ASC, b.bet_id ASC
+LIMIT 51;
+
+\echo '# Q5k GET /ticket keyset (Fase 1) — página 1: idx_tickets_org_date_feed'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT ticket_id, created_at FROM tickets
+WHERE organization_id = :'org' AND date = :'day' AND deleted_at IS NULL
+ORDER BY created_at DESC, ticket_id DESC
+LIMIT 51;
 
 \echo '# Q6b GET /ticket en día archivado — página 1'
 EXPLAIN (ANALYZE, BUFFERS)

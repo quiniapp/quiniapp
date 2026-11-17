@@ -171,6 +171,7 @@ $$;
 - Lists that grow (infinite scroll, feeds) use **keyset**, not `OFFSET`. Deterministic order with a unique tiebreaker (`…, id`), and an index = equality columns + ORDER BY columns + tiebreaker.
   - SQL/RPC: row values `(a, id) < ($1, $2)` (same direction for every column).
   - PostgREST (no row values): redundant access predicate + OR tiebreak, e.g. `.lte('a', A).or('a.lt.A,and(a.eq.A,id.lt.ID)')`. If `EXPLAIN` still shows a large `Rows Removed by Filter`, move the list to an RPC with row values.
+  - Filter the index's equality columns with `.eq()`, not `.in()` with a single value: `= ANY(array)` stops the index from delivering the order and the database sorts the whole range again (measured: 0.1 ms → 40 ms).
   - Cursor: opaque base64url, validated (invalid → 400), shared helper `api/src/utils/keyset.ts` (reference implementation today: `api/src/polla/bet/repository/polla-bet.repository.ts`). Keep timestamps as the raw DB string (microseconds), never through `Date`.
   - `hasMore`: fetch `limit + 1` rows, don't count.
 - **Totals contract:** totals shown next to a paginated list (amounts, prizes, "N de M", counts) always cover the **whole filtered set**, are computed server-side **only on the first request** (no cursor / page 1), never depend on the cursor, and keep their current semantics. `count: 'exact'` only when the UI reads it, and only on the first request.

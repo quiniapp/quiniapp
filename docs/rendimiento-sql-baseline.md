@@ -157,3 +157,11 @@ Agregar `NOT NULL` en el esquema es opcional: `SET NOT NULL` recorre la tabla co
 
 | Fase | Fecha | Query | Antes | Después | Nota |
 |---|---|---|---|---|---|
+| 1 | 2026-11-16 | Q1 `GET /bet` página 1 | 390 ms: Sort de 122k filas bajo Limit | **0,13 ms** keyset (Q1k): `idx_bets_org_date_feed`, sin Sort, 55 buffers | La query vieja con offset también deja de ordenar (0,8 ms): el índice cubre su ORDER BY |
+| 1 | 2026-11-16 | Q2 `GET /bet` página profunda (fila 9.950) | 448 ms: sort en disco, 11,5k bloques temporales | **0,08 ms** keyset (Q2k): 26 buffers, 6 filas descartadas | Con offset, la misma profundidad tarda 92 ms (lee 10k filas) |
+| 1 | 2026-11-16 | Q5 `GET /ticket` página 1 / profunda | 9,5 / 19,6 ms | **0,07 ms** (Q5k, index only scan) | El count de la primera request sigue (2 ms) para "Cantidad de Tickets" |
+| 1 | 2026-11-16 | Q6 `GET /bet` en día archivado | 20 ms: 25.630 filas descartadas | **0,1 ms** (Q6k, index only scan sobre `idx_bets_archive_org_date_feed`) | |
+| 1 | 2026-11-16 | Q4 `GET /bet?ticket_number` | 2 round-trips | 1 round-trip (Q4b, 0,2 ms) | |
+| 1 | 2026-11-16 | Q2x organización con `= ANY(array)` (`.in()`) | — | 40 ms, vuelve el Sort (PG15 local) | Por eso el repositorio filtra la organización con `.eq()` |
+| 1 | 2026-11-16 | HTTP local `GET /bet` (lista) | — | Página 1 con totales: 65 ms. Página 2: 17 ms | `verify-keyset.ts`: 122.590 jugadas en 137 páginas sin duplicados ni saltos |
+| 1 | 2026-11-16 | Página 1 de agrupadas (HTTP local) | ≈590 ms (4 RPC) | 375 ms, sin cambio | Objetivo de la Fase 2 |

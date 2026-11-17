@@ -4,6 +4,55 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-16 (rendimiento SQL — Fase 1: keyset en jugadas y tickets)
+
+**Qué cambia.** `GET /bet` (modo lista) y `GET /ticket` pasan de offset + `count: 'exact'` en cada página a **paginación keyset** con índices alineados. Medido en local (122k jugadas por organización y día): la página 1 de jugadas baja de 390 ms a 0,8 ms y una página profunda de 448 ms (sort en disco) a 0,3 ms. Plan y mediciones: `docs/plan-rendimiento-sql.md`, `docs/rendimiento-sql-baseline.md`.
+
+#### Migraciones (una por archivo: `CREATE INDEX CONCURRENTLY` tiene que ser la única sentencia)
+- `20261116213606_perf_idx_bets_org_date_feed.sql`: `bets (organization_id, date, created_at DESC, bet_order, bet_id) WHERE deleted_at IS NULL`.
+- `20261116213607_perf_idx_bets_archive_org_date_feed.sql`: el mismo sobre `bets_archive`. Hasta ahora ningún índice del archivo empezaba por organización.
+- `20261116213608_perf_idx_tickets_org_date_feed.sql`: `tickets (organization_id, date, created_at DESC, ticket_id DESC) WHERE deleted_at IS NULL`.
+- `20261116213609_perf_idx_tickets_archive_org_date_feed.sql`: el mismo sobre `tickets_archive`.
+- Reemplazan a `idx_bets_org_date_active` y a `idx_tickets_date_org_active`, que se dropean en la Fase 6 después de medir en prod.
+- Después del push, verificar `SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;`.
+
+#### API
+- **`api/src/utils/keyset.ts`** (nuevo): helper compartido de cursores.
+  - `encodeCursor` / `decodeCursor`: base64url opaco con validación de cada parte; un cursor inválido responde 400.
+  - `keysetPage`: hace `limit + 1` → `hasMore` + `next_cursor`.
+  - `parsePageSize`: tope `MAX_PAGE_SIZE = 900`, porque PostgREST corta en `max_rows` = 1000.
+  - `parsePageNumber`: guard de NaN.
+  - Tests en `keyset.test.ts` (`node:test`).
+  - Polla (`polla-bet.repository.ts`) pasa a usar este helper sin cambio de comportamiento.
+- **`BetRepository.getAllBets`**:
+  - Recibe `cursor` en vez de `page`. Orden `created_at DESC, bet_order ASC, bet_id ASC`, con desempate único: en prod hay hasta 1.254 jugadas con el mismo `created_at`.
+  - Filtro `lte` redundante + `or` para el desempate. Sin count.
+  - Organización por `eq`: con `in` (`= ANY`) el índice no entrega el orden.
+  - Select explícito (columnas de `parseBet` + `lotteries`/`schedules` achicados).
+  - `ticket_number` se filtra directo sobre `bets`, sin la consulta previa a `tickets`.
+- **`BetController.getAllBets`** (modo lista):
+  - Respuesta `pagination: { pageSize, hasMore, next_cursor }`.
+  - Los totales del día (`aggregates`) se calculan solo en la primera request (sin cursor), en paralelo con la página y con la misma semántica (filtros base).
+  - Con `ticket_number` ya no se llama a `getAmountsByTicket`: nadie leía esos agregados y el detalle del ticket usa `GET /bet/amounts`.
+  - El modo agrupado sigue con `page`.
+- **`GET /bet`**: acepta `cursor`, topea `limit` y un cursor inválido responde 400 (los `AppError` pasan al middleware de errores).
+- **`TicketRepository.getAll` / `TicketController.getAll` / `GET /ticket`**:
+  - Keyset con orden `created_at DESC, ticket_id DESC` y select explícito.
+  - `count: 'exact'` solo en la primera request, como `pagination.totalCount`, que alimenta "Cantidad de Tickets".
+  - El parámetro `page` ya no se usa.
+
+#### Verificación
+- `api/scripts/verify-keyset.ts` (solo local; aborta si `SUPABASE_URL` no es localhost) recorre con cursor sobre el dataset de `seed_perf.sql`:
+  - jugadas del día, por pasador, por ticket y en un día archivado;
+  - tickets;
+  - el feed de Polla en sus dos órdenes.
+- Comprueba:
+  - orden estricto;
+  - recorrido = `COUNT(*)`;
+  - totales = suma recorrida;
+  - `totalCount` = `COUNT(*)`;
+  - cursor manipulado → 400.
+
 ### Added - 2026-11-16 (rendimiento SQL — Fase 0: scripts de medición)
 
 **Qué cambia.** Nada en runtime: scripts para medir antes de tocar índices o queries (plan en `docs/plan-rendimiento-sql.md`, mediciones en `docs/rendimiento-sql-baseline.md`).
