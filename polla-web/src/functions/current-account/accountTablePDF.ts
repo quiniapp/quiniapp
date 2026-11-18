@@ -32,8 +32,8 @@ const newDoc = async () => {
 
 /**
  * Planilla a una fecha, una fila por pasador con lo acumulado desde su última
- * liquidación (o en el rango que arranca en `from`). Es "Exportar diario" y,
- * con un grupo, el resumen de un día de ese grupo.
+ * liquidación (o en el rango que arranca en `from`). Es "Exportar diario"
+ * (el parte diario) y, con un grupo, el resumen de un día de ese grupo.
  */
 export async function downloadDailyAccountsPDF(params: {
   date: string;
@@ -46,11 +46,15 @@ export async function downloadDailyAccountsPDF(params: {
   periodText?: string;
   /** Cuenta por edición: va en el nombre del archivo en lugar de la fecha. */
   fileTag?: string;
+  /** Nombre completo del archivo (el parte diario, `pollaDailyReportName`). */
+  fileName?: string;
 }) {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
-  const title = params.title ?? 'Liquidación';
+  const title = params.title ?? 'Parte diario';
   const dateStr = dayjs(params.date).format('DD/MM/YYYY');
-  const fileName = `polla_${title.replace(/\s+/g, '_')}${slug(params.groupName)}_${params.fileTag ?? dayjs(params.date).format('DD-MM-YYYY')}`;
+  const fileName =
+    params.fileName ??
+    `polla_${title.replace(/\s+/g, '_')}${slug(params.groupName)}_${params.fileTag ?? dayjs(params.date).format('DD-MM-YYYY')}`;
 
   doc.setProperties({ title: fileName });
   doc.setFontSize(14);
@@ -123,15 +127,20 @@ export async function downloadDailySummaryPDF(params: {
   to: string;
   totals: SummaryTotalsRow[];
   groupName?: string;
+  /** El parte diario de varias ediciones cambia el título y el nombre. */
+  title?: string;
+  fileName?: string;
 }) {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
   const fromFile = dayjs(params.from).format('DD-MM-YYYY');
   const toFile = dayjs(params.to).format('DD-MM-YYYY');
-  const fileName = `polla_Resumen_Cuenta_Corriente${slug(params.groupName)}_${fromFile}_${toFile}`;
+  const fileName =
+    params.fileName ??
+    `polla_Resumen_Cuenta_Corriente${slug(params.groupName)}_${fromFile}_${toFile}`;
 
   doc.setProperties({ title: fileName });
   doc.setFontSize(14);
-  doc.text('Resumen Cuenta Corriente', 14, 14);
+  doc.text(params.title ?? 'Resumen Cuenta Corriente', 14, 14);
   doc.setFontSize(10);
   doc.text(
     `Período: ${dayjs(params.from).format('DD/MM/YYYY')} al ${dayjs(params.to).format('DD/MM/YYYY')}`,

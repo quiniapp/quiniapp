@@ -14,11 +14,14 @@ async function getPDFDeps() {
   return { jsPDF, autoTable };
 }
 
-export async function printUserSlipPDF(opts: {
+type UserSlipOptions = {
   account: ICurrentAccountEntityFront;
   date?: string | null;
   bets?: IBetEntityFront[];
-}) {
+};
+
+/** Hoja de liquidación de un pasador (el PDF armado, sin guardar). */
+export async function buildUserSlipPDF(opts: UserSlipOptions) {
   const { jsPDF, autoTable } = await getPDFDeps();
   const { account } = opts;
   const bets = opts.bets ?? [];
@@ -60,11 +63,7 @@ export async function printUserSlipPDF(opts: {
       `Saldo: ${money(account.previous_balance)}`,
       `Cobre: ${money(account.collections)}`,
     ],
-    [
-      `Pague: ${money(account.paid)}`,
-      account?.leave ? `Deje: ${account.leave}` : '',
-      '',
-    ],
+    [`Pague: ${money(account.paid)}`, account?.leave ? `Deje: ${account.leave}` : '', ''],
     [
       `Comision: ${money(account.cashier_commission)}`,
       `Deja: ${money(account.revenue)}`,
@@ -96,7 +95,7 @@ export async function printUserSlipPDF(opts: {
     [
       `Deja: ${money(account.revenue)}`,
       `Subtotal: ${money(account.subtotal)}`,
-      `${account.total>0? 'Debe': 'Cobra'}: ${money(Math.abs(account.total))}`, // si preferís otro cálculo, reemplazá por el valor correcto
+      `${account.total > 0 ? 'Debe' : 'Cobra'}: ${money(Math.abs(account.total))}`, // si preferís otro cálculo, reemplazá por el valor correcto
     ],
   ];
 
@@ -177,6 +176,13 @@ export async function printUserSlipPDF(opts: {
     );
   }
 
+  return { doc, dateStr };
+}
+
+/** Un solo pasador: baja el PDF suelto (vista del pasador). */
+export async function printUserSlipPDF(opts: UserSlipOptions) {
+  const { doc, dateStr } = await buildUserSlipPDF(opts);
+  const { account } = opts;
   const dateFile = dateStr.replace(/\//g, '-');
   doc.save(`Exportar_Liquidacion_${dateFile}_${account.user_name}-${account.user_number}.pdf`);
 }

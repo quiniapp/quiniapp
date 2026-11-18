@@ -3,6 +3,7 @@ import {
   IPollaCurrentAccountPeriodRow,
   IPollaEditionAccountRow,
   IPollaEditionAccountTotals,
+  IPollaGroupEditionAccountEntity,
   IPollaOrgExpenseEntityFront,
 } from '@helper/polla/types/game.type';
 import { IPollaOrganizationEntityFront } from '@helper/polla/types/catalog.type';
@@ -80,3 +81,12 @@ export const fetchOrganizationName = async (organizationId: string | null) => {
     return '';
   }
 };
+
+/**
+ * Parte diario de grupos por rango: las liquidaciones de grupo hechas entre
+ * `from` y `to` (fechas de liquidación, `YYYY-MM-DD`, hasta 62 días).
+ */
+export const fetchGroupAccountsRange = (from: string, to: string, organizationId: string | null) =>
+  apiClient.get<IPollaGroupEditionAccountEntity[]>(BACKEND_ROUTES.editionAccount.groupAccounts, {
+    params: cleanParams({ from, to, polla_organization_id: organizationId }),
+  });

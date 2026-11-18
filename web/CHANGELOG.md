@@ -4,6 +4,18 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-17 (liquidaciones en ZIP y nombre del parte diario)
+
+- **Exportar liquidación** (`features/current-account/handlers/exportLiquidacion.ts`): baja un ZIP en lugar de un PDF por pasador.
+  - El ZIP y su carpeta raíz se llaman `quiniela_liquidaciones_DD-MM-YYYY`.
+  - Adentro va una carpeta por grupo, `Leo DD-MM-YYYY/6 Laura DD-MM-YYYY.pdf`, y `Sin grupo DD-MM-YYYY/` para los demás. Los grupos son sub-organizaciones sin número: la carpeta lleva solo el nombre. Si ningún pasador tiene grupo, los PDF van en la raíz.
+  - En el celular abre el menú de compartir; en la computadora se descarga.
+  - Los grupos salen de `useGroups`, que ahora usa la página (`features/current-account/index.tsx`).
+- **`web/src/lib/liquidationZip.ts`** (nuevo): nombres, rutas (con `@helper/functions/liquidationZip`) y `zipFiles` con **fflate** (dependencia nueva, ^0.8.2, la misma de polla-web, cargada con `import()`).
+- **`printLiquidationCashier.ts`**: `buildUserSlipPDF` arma la hoja y la devuelve; `printUserSlipPDF` la sigue bajando suelta en la vista del pasador, con el mismo nombre.
+- **Exportar diario** (`functions/exportDiarioPDF.ts`): el archivo pasa a llamarse `Quiniela parte diario DD-MM-YYYY` y el título del PDF, "Parte diario".
+- Sin cambios: Exportar diario y Exportar liquidación siguen sin aplicar el filtro de grupo de la página (`handlers/shared.ts`).
+
 ### Changed - 2026-11-16 (rendimiento SQL — Fase 1: keyset en jugadas y tickets)
 
 **Qué cambia.** Los listados de jugadas (modo lista) y de tickets paginan con cursor (`next_cursor`), siguiendo el cambio de la API. Se arreglan los totales que hoy salían mal por la paginación.

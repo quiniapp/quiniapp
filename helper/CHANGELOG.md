@@ -4,6 +4,25 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (parte diario de grupos por rango)
+
+- **`POLLA_GROUP_REPORT_MAX_DAYS`** (`helper/polla/config/session.config.ts`): 62 días como máximo en el parte diario de grupos por rango.
+
+### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
+
+- **`pollaAdminPercentage`** (`helper/polla/schemas/user.schema.ts`): número de 0 a 100, nullable y opcional ("El porcentaje va de 0 a 100"). Lo usan `groupAdmin` (alta del grupo y "Asignar admin") y `updatePollaUserSchema`.
+- **`IPollaUserEntityBack.admin_percentage`** y **`IPollaGroupWithAdmin.admin.admin_percentage`**.
+- **`liquidatePollaGroupEditionSchema.admin_percentage`** pasa a ser opcional y nullable: si el admin tiene su %, la base usa ese.
+- **`liquidatePollaGroupEditionsSchema`** e **`ILiquidatePollaGroupEditionsPayload`**: `{ groups }`, de 1 a `POLLA_GROUP_BATCH_MAX` (200), sin repetidos ("Hay un grupo repetido").
+
+### Added - 2026-11-17 (ZIP de liquidaciones compartido)
+
+- **`helper/functions/liquidationZip.ts`** (nuevo, puro y sin dependencias): las rutas del ZIP de liquidaciones que usan Polla y QuiniApp.
+  - `zipFolderName`: saca `\/:*?"<>|` y los puntos o espacios del final.
+  - `groupFoldersIfAny`: si alguna hoja tiene grupo, las demás van a la carpeta de sin grupo; si ninguna tiene, no hay carpetas de grupo.
+  - `liquidationZipEntries(items, root?)`: arma `raíz/[edición/][grupo/]archivo`, ordenado por edición y grupo, sin repetidos.
+  - `zipRootFolder`: el nombre del ZIP sin `.zip`.
+
 ### Added - 2026-11-16 (rendimiento SQL — Fase 1: tipos de paginación keyset)
 
 - **`helper/request/pagination.request.ts`**:

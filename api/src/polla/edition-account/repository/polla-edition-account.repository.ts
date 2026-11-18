@@ -1,5 +1,5 @@
 import { supabase } from '@database/db.connection';
-import { NotFoundError } from '@helper/errors';
+import { BadRequestError, NotFoundError } from '@helper/errors';
 import {
   IPollaEditionAccountListItem,
   IPollaEditionAccountMovement,
@@ -19,6 +19,13 @@ import { throwIfPollaError } from '../../helper/polla-errors';
 
 const MOVEMENT_COLUMNS =
   '*, creator:polla_users!polla_edition_account_movements_created_by_fkey(name)';
+
+/** Columnas de `polla_group_edition_accounts` (todas las de `IPollaGroupEditionAccountEntity`). */
+const GROUP_EDITION_ACCOUNT_COLUMNS =
+  'polla_group_edition_account_id, polla_organization_id, polla_group_id, polla_edition_id, group_name, cashiers_subtotal, expenses, base, admin_percentage, admin_commission, adjustments, paid, total, created_by, created_at, edited_at';
+
+/** Tope de filas del parte diario de grupos por rango (grupos × ediciones del rango). */
+const GROUP_REPORT_MAX_ROWS = 5000;
 
 type MovementRow = IPollaEditionAccountMovement & { creator?: { name: string } | null };
 
@@ -328,7 +335,8 @@ export class PollaEditionAccountRepository {
     organizationId: string;
     groupId: string;
     editionId: string;
-    percentage: number;
+    /** null: el del admin (si no tiene, la base lo rechaza). */
+    percentage: number | null;
     adjustments: number;
     paid: number;
     actorId: string;
@@ -347,19 +355,61 @@ export class PollaEditionAccountRepository {
     return data as IPollaGroupEditionAccountEntity;
   }
 
-  /** Cuentas de grupo ya liquidadas, filtradas por edición y/o grupo. */
+  /** Varios grupos en una transacción: si uno falla, no se liquida ninguno. */
+  async liquidateGroups(p: {
+    organizationId: string;
+    editionId: string;
+    groups: { polla_group_id: string; admin_percentage?: number | null }[];
+    actorId: string;
+  }): Promise<IPollaGroupEditionAccountEntity[]> {
+    const { data, error } = await supabase.rpc('polla_liquidate_group_editions', {
+      p_organization_id: p.organizationId,
+      p_edition_id: p.editionId,
+      p_entries: p.groups.map((g) => ({
+        polla_group_id: g.polla_group_id,
+        admin_percentage: g.admin_percentage ?? null,
+      })),
+      p_actor_id: p.actorId,
+    });
+
+    throwIfPollaError(error);
+    return (data ?? []) as IPollaGroupEditionAccountEntity[];
+  }
+
+  /**
+   * Cuentas de grupo ya liquidadas, filtradas por edición y/o grupo. Con
+   * `liquidated` (parte diario por rango), las liquidadas en
+   * `[from, to)` por `edited_at`, en orden de liquidación y con tope.
+   */
   async groupAccounts(f: {
     organizationId: string;
     editionId?: string | null;
     groupId?: string | null;
+    liquidated?: { from: string; to: string } | null;
   }): Promise<IPollaGroupEditionAccountEntity[]> {
     let query = supabase
       .from('polla_group_edition_accounts')
-      .select('*')
+      .select(GROUP_EDITION_ACCOUNT_COLUMNS)
       .eq('polla_organization_id', f.organizationId);
 
     if (f.editionId) query = query.eq('polla_edition_id', f.editionId);
     if (f.groupId) query = query.eq('polla_group_id', f.groupId);
+
+    if (f.liquidated) {
+      // idx_polla_group_edition_accounts_org_edited: organización y el rango.
+      const { data, error } = await query
+        .gte('edited_at', f.liquidated.from)
+        .lt('edited_at', f.liquidated.to)
+        .order('edited_at', { ascending: true })
+        .order('polla_group_edition_account_id', { ascending: true })
+        .limit(GROUP_REPORT_MAX_ROWS + 1);
+
+      throwIfPollaError(error);
+      if ((data ?? []).length > GROUP_REPORT_MAX_ROWS) {
+        throw new BadRequestError('Hay demasiadas liquidaciones en ese rango: achicalo');
+      }
+      return (data ?? []) as IPollaGroupEditionAccountEntity[];
+    }
 
     const { data, error } = await query.order('group_name', { ascending: true });
 

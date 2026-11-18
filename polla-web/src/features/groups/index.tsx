@@ -12,8 +12,10 @@ import {
   useAssignGroupAdmin,
   useCreateGroup,
   useDeleteGroup,
+  useUpdateAdminPercentage,
   useUpdateGroup,
 } from '@/hooks/mutations/usePollaMutations';
+import { parseAmount } from '@/lib/editionAccount';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState, PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -51,9 +53,14 @@ const emptyAdmin = {
   password: '',
   email: '',
   phone: '',
+  admin_percentage: '',
 };
 
 type AdminForm = typeof emptyAdmin;
+
+/** "10" o "12,5" → número; vacío → null (se carga a mano al liquidar); inválido → NaN. */
+const percentageValue = (raw: string): number | null =>
+  raw.trim() === '' ? null : (parseAmount(raw) ?? Number.NaN);
 
 const adminPayload = (form: AdminForm): NewGroupAdmin => ({
   name: form.name.trim(),
@@ -62,7 +69,18 @@ const adminPayload = (form: AdminForm): NewGroupAdmin => ({
   password: form.password,
   email: form.email.trim() || null,
   phone: form.phone ? Number(form.phone) : null,
+  admin_percentage: percentageValue(form.admin_percentage),
 });
+
+/** `10%` o "A mano" si el admin no tiene su % (se carga al liquidar). */
+const percentageLabel = (value: number | null | undefined) =>
+  value === null || value === undefined ? 'A mano' : `${Number(value)}%`;
+
+const PercentageHint = () => (
+  <p className="text-xs text-muted-foreground">
+    Se usa al liquidar el grupo. Vacío: se carga a mano en cada liquidación.
+  </p>
+);
 
 /** Datos del admin: los mismos que el capitalista de una organización. */
 const AdminFields = ({
@@ -109,6 +127,18 @@ const AdminFields = ({
           inputMode="tel"
           onChange={(e) => onChange({ ...form, phone: e.target.value.replace(/\D/g, '') })}
         />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`${idPrefix}-admin_percentage`}>% de ganancia del admin</Label>
+        <Input
+          {...field('admin_percentage')}
+          inputMode="decimal"
+          placeholder="Ej: 10"
+          onChange={(e) =>
+            onChange({ ...form, admin_percentage: e.target.value.replace(/[^\d.,]/g, '') })
+          }
+        />
+        <PercentageHint />
       </div>
     </div>
   );
@@ -177,24 +207,51 @@ const CreateGroupDialog = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const RenameGroupDialog = ({
+/** Nombre del grupo y % de ganancia de su admin (si tiene admin). */
+const EditGroupDialog = ({
   group,
   onClose,
 }: {
   group: IPollaGroupWithAdmin;
   onClose: () => void;
 }) => {
+  const { admin } = group;
+  const initialPercentage =
+    admin?.admin_percentage === null || admin?.admin_percentage === undefined
+      ? ''
+      : String(Number(admin.admin_percentage));
   const [name, setName] = useState(group.name);
-  const { mutate: updateGroup, isPending } = useUpdateGroup();
+  const [percentage, setPercentage] = useState(initialPercentage);
+  const { mutateAsync: updateGroup, isPending: savingGroup } = useUpdateGroup();
+  const { mutateAsync: updatePercentage, isPending: savingPercentage } = useUpdateAdminPercentage();
+  const isPending = savingGroup || savingPercentage;
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
       toast.error('Poné un nombre');
       return;
     }
-    updateGroup({ id: group.polla_group_id, name: trimmed }, { onSuccess: onClose });
+    const value = percentageValue(percentage);
+    if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100)) {
+      toast.error('El porcentaje va de 0 a 100');
+      return;
+    }
+
+    try {
+      if (trimmed !== group.name) await updateGroup({ id: group.polla_group_id, name: trimmed });
+      if (admin && percentage.trim() !== initialPercentage) {
+        await updatePercentage({
+          id: admin.polla_user_id,
+          name: admin.name,
+          admin_percentage: value,
+        });
+      }
+      onClose();
+    } catch {
+      // El aviso lo muestra la mutación.
+    }
   };
 
   return (
@@ -213,6 +270,19 @@ const RenameGroupDialog = ({
               onChange={(e) => setName(e.target.value)}
             />
           </div>
+          {admin && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="group-admin-percentage">% de ganancia del admin</Label>
+              <Input
+                id="group-admin-percentage"
+                inputMode="decimal"
+                placeholder="A mano"
+                value={percentage}
+                onChange={(e) => setPercentage(e.target.value.replace(/[^\d.,]/g, ''))}
+              />
+              <PercentageHint />
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
@@ -355,6 +425,7 @@ export const GroupsPage = () => {
                 <TableHead className="w-12 text-right">Nº</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Admin</TableHead>
+                <TableHead className="text-right">% admin</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -375,6 +446,9 @@ export const GroupsPage = () => {
                         Asignar admin
                       </Button>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {group.admin ? percentageLabel(group.admin.admin_percentage) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -409,7 +483,7 @@ export const GroupsPage = () => {
 
       {dialog?.kind === 'create' && <CreateGroupDialog onClose={() => setDialog(null)} />}
       {dialog?.kind === 'rename' && (
-        <RenameGroupDialog group={dialog.group} onClose={() => setDialog(null)} />
+        <EditGroupDialog group={dialog.group} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === 'admin' && (
         <AssignAdminDialog group={dialog.group} onClose={() => setDialog(null)} />

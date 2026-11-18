@@ -94,6 +94,8 @@ export class PollaGroupRouter {
               name: admin.name,
               last_name: admin.last_name,
               username: admin.username,
+              admin_percentage:
+                admin.admin_percentage === null ? null : Number(admin.admin_percentage),
             }
           : null,
       };
