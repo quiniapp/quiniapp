@@ -13,6 +13,7 @@ import {
   IPollaAccountMovementUpdatePayload,
   IPollaCurrentAccountPaymentsPayload,
   ILiquidatePollaGroupEditionPayload,
+  ILiquidatePollaGroupEditionsPayload,
 } from '@helper/polla/schemas/game.schema';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
@@ -68,6 +69,8 @@ export interface NewGroupAdmin {
   password: string;
   email?: string | null;
   phone?: number | null;
+  /** % de ganancia al liquidar el grupo; sin valor se carga a mano. */
+  admin_percentage?: number | null;
 }
 
 /** El grupo nace con su admin, como la organización con su capitalista. */
@@ -94,6 +97,20 @@ export const useUpdateGroup = () =>
     'put',
     ({ id }) => BACKEND_ROUTES.group.id(id),
     { invalidate: ['polla-groups'], successMessage: 'Grupo actualizado' }
+  );
+
+/**
+ * % de ganancia del admin de un grupo (`PUT /user/:id`, que pide el nombre).
+ * Refresca Grupos y la cuenta corriente, que lo usa al liquidar.
+ */
+export const useUpdateAdminPercentage = () =>
+  useApiMutation<unknown, { id: string; name: string; admin_percentage: number | null }>(
+    'put',
+    ({ id }) => BACKEND_ROUTES.user.id(id),
+    {
+      invalidate: ['polla-groups', 'polla-users', 'polla-user'],
+      successMessage: 'Porcentaje del admin actualizado',
+    }
   );
 
 export const useDeleteGroup = () =>
@@ -412,6 +429,16 @@ export const useLiquidateGroupEdition = () =>
   >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.groupLiquidate(editionId), {
     invalidate: EDITION_ACCOUNT_KEYS,
     successMessage: 'Grupo liquidado',
+  });
+
+/** "Liquidar seleccionados": varios grupos juntos, todo o nada. */
+export const useLiquidateGroupEditions = () =>
+  useApiMutation<
+    IPollaGroupEditionAccountEntity[],
+    { editionId: string } & ILiquidatePollaGroupEditionsPayload
+  >('post', ({ editionId }) => BACKEND_ROUTES.editionAccount.groupLiquidateMany(editionId), {
+    invalidate: EDITION_ACCOUNT_KEYS,
+    successMessage: 'Grupos liquidados',
   });
 
 // ------------------------------------------------- historial por fecha

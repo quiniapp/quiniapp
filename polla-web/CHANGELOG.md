@@ -4,6 +4,29 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-17 (% del admin, liquidar varios grupos y grupos en tabla)
+
+- **% de ganancia del admin** (`features/groups/index.tsx`):
+  - campo opcional al crear el grupo con su admin y al asignar un admin nuevo;
+  - columna "% admin" en la lista (`10%` o "A mano");
+  - "Editar grupo" cambia el nombre y el % del admin (`useUpdateAdminPercentage`, `PUT /user/:id`).
+  - También se edita en "Editar usuario" de un admin (`EditUserDialog.tsx`), solo para superadmin, capitalista y dueño.
+- **Liquidar un grupo** (`GroupEditionAccounts.tsx`, `LiquidateGroupDialog`): si el admin tiene %, el input viene con ese valor y deshabilitado, con la leyenda "Configurado en el admin del grupo"; si no, se escribe a mano como antes.
+- **Liquidar varios grupos:**
+  - casilla por grupo y "Seleccionar todos", que tilda los que se pueden liquidar y están sin liquidar o desactualizados (`groupsToSelectAll`). Los liquidados al día se tildan a mano;
+  - "Liquidar seleccionados (N)" abre `LiquidateGroupsDialog`: una fila por grupo con su % (fijo o a mano), Admin y Capitalista, más los totales;
+  - se liquidan todos juntos (`useLiquidateGroupEditions`) y sale un PDF con un ticket por grupo (`printGroupEditionLiquidationTickets` en `functions/current-account/groupLiquidationTicket.ts`).
+- **Pestaña Grupos:**
+  - en la computadora es una tabla (casilla, Grupo, % admin, Deja pasadores, Gastos, Total, Admin, Capitalista, Estado y acciones). Los gastos del grupo se cargan en un diálogo;
+  - en el celular siguen las tarjetas, con casilla;
+  - arriba, y en cada tarjeta, se ve la edición elegida: `Edición <título> · DD/MM/YYYY al DD/MM/YYYY[ · Carga abierta]`.
+- **Helpers** (`lib/editionAccount.ts`): `groupLiquidatable`, `groupsToSelectAll` y `groupLiquidationPercentage` (el % del admin fijo o, si no tiene, el de la última liquidación a mano).
+- **Test** `__tests__/current-account/group-batch.test.ts`: los helpers y los schemas del %.
+
+### Fixed - 2026-11-17
+
+- **Pestaña Grupos:** al cambiar de edición se veían un momento los grupos de la anterior (la consulta conserva los datos viejos mientras carga). Ahora se muestran solo los de la edición elegida (`polla_edition_id`), para no tildar ni liquidar sobre otra.
+
 ### Changed - 2026-11-17 (nombres del parte diario y ZIP con carpeta raíz y fechas)
 
 Pedido del cliente del 17/11: los nombres llevan siempre fecha y el ZIP se descomprime en una sola carpeta.

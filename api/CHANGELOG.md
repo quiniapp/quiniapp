@@ -4,6 +4,25 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
+
+- **Migración `20261117233719_polla_admin_percentage.sql`:**
+  - `polla_users.admin_percentage NUMERIC(5,2)`: el % de ganancia del admin de grupo. Lo tiene solo un ADMIN, de 0 a 100 (`polla_users_admin_percentage_check`). NULL quiere decir que se carga a mano al liquidar; los admins que ya existían quedan así.
+  - `polla_create_group_with_admin` lee `p_admin->>'admin_percentage'`.
+  - `polla_liquidate_group_edition`: si el admin activo del grupo tiene %, usa ese e ignora el que manda el cliente; si no, exige uno válido (`POLLA_GROUP_PERCENTAGE_INVALID`). El control se hace antes de redondear, así un valor fuera de rango no desborda.
+  - `polla_liquidate_group_editions(org, edition, entries JSONB, actor)` (nueva): liquida varios grupos por número de grupo, en una transacción.
+    - Si uno falla, se deshace todo y el error dice qué grupo: `POLLA_GROUP_BATCH[Grupo N - Nombre] <error>`.
+    - Otros errores: `POLLA_GROUP_BATCH_EMPTY`, `POLLA_GROUP_BATCH_DUPLICATED`, y `POLLA_GROUP_NOT_FOUND` si el grupo es de otra organización.
+- **`POST /edition_account/:editionId/group_liquidate_many`** (`POLLA_ACCOUNT_ROLES`), con body `{ groups: [{ polla_group_id, admin_percentage? }] }`. Repository: `liquidateGroups`.
+- **`POST /edition_account/:editionId/group_liquidate`**: `admin_percentage` pasa a ser opcional.
+- **`PUT /user/:id`** acepta `admin_percentage`, solo para un ADMIN (si no, 400) y solo si lo cambia superadmin, capitalista o dueño (si no, 403). El admin no se cambia su propio %.
+- **Grupos:**
+  - `GET /group` devuelve `admin.admin_percentage`;
+  - el alta del grupo y "Asignar admin" (con admin nuevo) guardan el %.
+  - `PUBLIC_COLUMNS` de usuarios suma la columna.
+- **`mapPollaError`** (`helper/polla-errors.ts`): traduce `POLLA_GROUP_BATCH[...]` con el error de adentro y le antepone el grupo.
+- **pgTAP `250_polla_admin_percentage.test.sql`** (16 pruebas): el CHECK, el alta con y sin %, que el % del admin gane, que sin % haya que mandarlo, el lote, el lote que falla sin liquidar ninguno, vacío, repetidos y grupo inexistente.
+
 ### Changed - 2026-11-16 (rendimiento SQL — Fase 1: keyset en jugadas y tickets)
 
 **Qué cambia.** `GET /bet` (modo lista) y `GET /ticket` pasan de offset + `count: 'exact'` en cada página a **paginación keyset** con índices alineados. Medido en local (122k jugadas por organización y día): la página 1 de jugadas baja de 390 ms a 0,8 ms y una página profunda de 448 ms (sort en disco) a 0,3 ms. Plan y mediciones: `docs/plan-rendimiento-sql.md`, `docs/rendimiento-sql-baseline.md`.

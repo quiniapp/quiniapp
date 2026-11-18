@@ -328,7 +328,26 @@ export const generateEditionLiquidationSchema = z.object({
  */
 export const liquidatePollaGroupEditionSchema = z.object({
   polla_group_id: z.string().uuid(),
-  admin_percentage: z.number().min(0).max(100),
+  /**
+   * Solo cuenta si el admin del grupo no tiene su % configurado
+   * (`polla_users.admin_percentage`): si lo tiene, la base usa ese.
+   */
+  admin_percentage: z.number().min(0).max(100).nullable().optional(),
+});
+
+/** Máximo de grupos en "Liquidar seleccionados". */
+export const POLLA_GROUP_BATCH_MAX = 200;
+
+/** Liquidar varios grupos juntos en una edición (todo o nada). */
+export const liquidatePollaGroupEditionsSchema = z.object({
+  groups: z
+    .array(liquidatePollaGroupEditionSchema)
+    .min(1, 'Elegí al menos un grupo')
+    .max(POLLA_GROUP_BATCH_MAX)
+    .refine(
+      (groups) => new Set(groups.map((g) => g.polla_group_id)).size === groups.length,
+      'Hay un grupo repetido'
+    ),
 });
 
 // ------------------------------------------ historial por fecha (por días)
@@ -364,6 +383,7 @@ export type ILiquidateEditionAccountsPayload = z.infer<typeof liquidateEditionAc
 export type ISetEditionLiquidatedPayload = z.infer<typeof setEditionLiquidatedSchema>;
 export type IGenerateEditionLiquidationPayload = z.infer<typeof generateEditionLiquidationSchema>;
 export type ILiquidatePollaGroupEditionPayload = z.infer<typeof liquidatePollaGroupEditionSchema>;
+export type ILiquidatePollaGroupEditionsPayload = z.infer<typeof liquidatePollaGroupEditionsSchema>;
 
 export type INewPollaEditionPayload = z.infer<typeof newPollaEditionSchema>;
 export type INewPollaResultPayload = z.infer<typeof newPollaResultSchema>;

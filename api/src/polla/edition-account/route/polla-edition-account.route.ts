@@ -12,6 +12,7 @@ import {
   generateEditionLiquidationSchema,
   liquidateEditionAccountsSchema,
   liquidatePollaGroupEditionSchema,
+  liquidatePollaGroupEditionsSchema,
   pollaAccountMovementSchema,
   pollaAccountMovementUpdateSchema,
   setEditionLiquidatedSchema,
@@ -116,6 +117,11 @@ export class PollaEditionAccountRouter {
     this.router.post('/:editionId/movements', accountGuard, this.createMovementHandler);
     this.router.get('/:editionId/group_previews', accountGuard, this.groupPreviewsHandler);
     this.router.post('/:editionId/group_liquidate', accountGuard, this.groupLiquidateHandler);
+    this.router.post(
+      '/:editionId/group_liquidate_many',
+      accountGuard,
+      this.groupLiquidateManyHandler
+    );
   }
 
   /** Ediciones por `polla_edition_id`, tal como las ve el front. */
@@ -401,7 +407,8 @@ export class PollaEditionAccountRouter {
       organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
       groupId: payload.polla_group_id,
       editionId: paramUuid(req.params.editionId, 'Edición'),
-      percentage: payload.admin_percentage,
+      // Si el admin tiene su % configurado, la base usa ese.
+      percentage: payload.admin_percentage ?? null,
       // Sin ajustes ni pagado: el total del admin es el 100% de la comisión.
       adjustments: 0,
       paid: 0,
@@ -409,5 +416,20 @@ export class PollaEditionAccountRouter {
     });
 
     res.status(200).json({ data: { group_account: groupAccount } });
+  });
+
+  /** Varios grupos juntos ("Liquidar seleccionados"): todo o nada. */
+  private groupLiquidateManyHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const { groups } = liquidatePollaGroupEditionsSchema.parse(req.body);
+
+    const groupAccounts = await this.repository.liquidateGroups({
+      organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+      editionId: paramUuid(req.params.editionId, 'Edición'),
+      groups,
+      actorId: user.polla_user_id,
+    });
+
+    res.status(200).json({ data: { group_accounts: groupAccounts } });
   });
 }

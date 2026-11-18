@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError, ConflictError, ForbiddenError } from '@helper/errors';
 import {
+  POLLA_SUPER_ROLES,
   POLLA_USER_TYPE,
   POLLA_USER_HIERARCHY,
   IPollaSessionUser,
@@ -398,10 +399,22 @@ export class PollaUserRouter {
       fee,
       is_street: street,
       password,
+      admin_percentage: adminPercentage,
       ...rest
     } = payload;
     void _feePlus;
     void _group;
+
+    // El % de ganancia es del admin de grupo y lo fijan los que liquidan el
+    // grupo (superadmin, capitalista y dueño): el admin no se lo cambia.
+    if (adminPercentage !== undefined) {
+      if (target.user_type !== POLLA_USER_TYPE.ADMIN) {
+        throw new BadRequestError('Solo el admin de grupo tiene porcentaje de ganancia');
+      }
+      if (!POLLA_SUPER_ROLES.includes(user.user_type)) {
+        throw new ForbiddenError('No podés cambiar el porcentaje del admin');
+      }
+    }
 
     const changesParent =
       target.user_type === POLLA_USER_TYPE.PLAYER &&
@@ -457,6 +470,7 @@ export class PollaUserRouter {
     // jugador solo lo cambia un ADMIN+, a otro del mismo grupo (la base lo
     // vuelve a controlar).
     if (target.user_type === POLLA_USER_TYPE.CASHIER && fee !== undefined) changes.fee = fee;
+    if (adminPercentage !== undefined) changes.admin_percentage = adminPercentage;
     if (changesParent) {
       await this.assertParentInScope(user, parentId!);
       changes.parent_polla_user_id = parentId;

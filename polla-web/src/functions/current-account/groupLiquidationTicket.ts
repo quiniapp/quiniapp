@@ -32,24 +32,38 @@ const centerLine = (text: string) =>
 
 const DIVIDER = '- '.repeat(CHARS / 2);
 
-/** Arma el PDF de 58 mm con esas líneas y abre el diálogo de impresión. */
-async function printTicketLines(lines: string[], title: string) {
+const pageHeight = (lines: string[]) => Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
+
+/**
+ * Arma el PDF de 58 mm (una página por ticket) y abre el diálogo de
+ * impresión: así cada grupo sale cortado aparte.
+ */
+async function printTicketPages(pages: string[][], title: string) {
+  if (pages.length === 0) return;
   const { jsPDF } = await import('jspdf');
-  const docHeight = Math.max(80, lines.length * LINE_H + MARGIN * 2 + 4);
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAPER_W, docHeight] });
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [PAPER_W, pageHeight(pages[0])],
+  });
 
   doc.setProperties({ title });
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(FONT_SIZE);
-
-  let y = MARGIN + 4;
-  for (const line of lines) {
-    doc.text(line, MARGIN, y);
-    y += LINE_H;
-  }
+  pages.forEach((lines, index) => {
+    if (index > 0) doc.addPage([PAPER_W, pageHeight(lines)], 'portrait');
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(FONT_SIZE);
+    let y = MARGIN + 4;
+    for (const line of lines) {
+      doc.text(line, MARGIN, y);
+      y += LINE_H;
+    }
+  });
 
   openPDFPrintDialog(doc, title);
 }
+
+/** Un solo ticket. */
+const printTicketLines = (lines: string[], title: string) => printTicketPages([lines], title);
 
 export type GroupEditionTicketAccount = Pick<
   IPollaGroupEditionAccountEntity,
@@ -103,6 +117,28 @@ export async function printGroupEditionLiquidationTicket(params: {
   const lines = groupEditionTicketLines({ ...params, time: dayjs().format('HH:mm') });
   const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${periodText.trim().replace(/\s+/g, '_')}`;
   await printTicketLines(lines, title);
+}
+
+/**
+ * "Liquidar seleccionados": los tickets de varios grupos de la edición en un
+ * solo PDF, una página por grupo.
+ */
+export async function printGroupEditionLiquidationTickets(params: {
+  accounts: GroupEditionTicketAccount[];
+  orgName: string;
+  periodText: string;
+}) {
+  const { accounts, orgName, periodText } = params;
+  if (accounts.length === 1) {
+    await printGroupEditionLiquidationTicket({ account: accounts[0], orgName, periodText });
+    return;
+  }
+  const time = dayjs().format('HH:mm');
+  const pages = accounts.map((account) =>
+    groupEditionTicketLines({ account, orgName, periodText, time })
+  );
+  const title = `polla_Liquidacion_grupos_${periodText.trim().replace(/\s+/g, '_')}`;
+  await printTicketPages(pages, title);
 }
 
 /** Ticket de una liquidación de grupo del Historial por fechas (con arrastre y saldo). */

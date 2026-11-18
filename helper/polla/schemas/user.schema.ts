@@ -14,6 +14,17 @@ const baseUser = {
   disabled: z.boolean().optional(),
 };
 
+/**
+ * % de ganancia del admin de grupo en la liquidación del grupo. Sin valor
+ * (null), se carga a mano al liquidar.
+ */
+export const pollaAdminPercentage = z
+  .number({ invalid_type_error: 'El porcentaje tiene que ser un número' })
+  .min(0, 'El porcentaje va de 0 a 100')
+  .max(100, 'El porcentaje va de 0 a 100')
+  .nullable()
+  .optional();
+
 export const newPollaUserSchema = z
   .object({
     ...baseUser,
@@ -104,6 +115,8 @@ export const updatePollaUserSchema = z.object({
    */
   is_street: z.boolean().optional(),
   password: password.optional(),
+  /** Solo para un ADMIN, y lo fijan superadmin, capitalista y dueño. */
+  admin_percentage: pollaAdminPercentage,
 });
 
 /** Habilitar o deshabilitar desde la lista de usuarios. */
@@ -134,6 +147,7 @@ const groupAdmin = z.object({
   password,
   email: baseUser.email,
   phone: baseUser.phone,
+  admin_percentage: pollaAdminPercentage,
 });
 
 /** Alta de un grupo con su admin: se crean juntos, como la organización. */

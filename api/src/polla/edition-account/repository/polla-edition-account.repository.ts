@@ -328,7 +328,8 @@ export class PollaEditionAccountRepository {
     organizationId: string;
     groupId: string;
     editionId: string;
-    percentage: number;
+    /** null: el del admin (si no tiene, la base lo rechaza). */
+    percentage: number | null;
     adjustments: number;
     paid: number;
     actorId: string;
@@ -345,6 +346,27 @@ export class PollaEditionAccountRepository {
 
     throwIfPollaError(error);
     return data as IPollaGroupEditionAccountEntity;
+  }
+
+  /** Varios grupos en una transacción: si uno falla, no se liquida ninguno. */
+  async liquidateGroups(p: {
+    organizationId: string;
+    editionId: string;
+    groups: { polla_group_id: string; admin_percentage?: number | null }[];
+    actorId: string;
+  }): Promise<IPollaGroupEditionAccountEntity[]> {
+    const { data, error } = await supabase.rpc('polla_liquidate_group_editions', {
+      p_organization_id: p.organizationId,
+      p_edition_id: p.editionId,
+      p_entries: p.groups.map((g) => ({
+        polla_group_id: g.polla_group_id,
+        admin_percentage: g.admin_percentage ?? null,
+      })),
+      p_actor_id: p.actorId,
+    });
+
+    throwIfPollaError(error);
+    return (data ?? []) as IPollaGroupEditionAccountEntity[];
   }
 
   /** Cuentas de grupo ya liquidadas, filtradas por edición y/o grupo. */

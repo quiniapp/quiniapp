@@ -90,6 +90,8 @@ export const BACKEND_ROUTES = {
     groupPreviews: (editionId: string) => `${PRIVATE}/edition_account/${editionId}/group_previews`,
     groupLiquidate: (editionId: string) =>
       `${PRIVATE}/edition_account/${editionId}/group_liquidate`,
+    groupLiquidateMany: (editionId: string) =>
+      `${PRIVATE}/edition_account/${editionId}/group_liquidate_many`,
   },
   groupAccount: {
     base: `${PRIVATE}/group_account`,

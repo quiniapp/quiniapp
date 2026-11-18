@@ -133,6 +133,45 @@ export const groupAccountOutdated = (
   );
 };
 
+/** Se puede liquidar: la carga cerró y no le quedan pasadores sin liquidar. */
+export const groupLiquidatable = (
+  preview: Pick<IPollaGroupEditionAccountPreview, 'pending_cashiers'>,
+  loadOpen: boolean
+): boolean => !loadOpen && preview.pending_cashiers.length === 0;
+
+/**
+ * Los que tilda "Seleccionar todos": los que se pueden liquidar y están sin
+ * liquidar o desactualizados. Los ya liquidados al día se tildan a mano
+ * (reliquidar cambia la fecha de la liquidación, que es la del parte diario).
+ */
+export const groupsToSelectAll = (
+  previews: Pick<
+    IPollaGroupEditionAccountPreview,
+    'polla_group_id' | 'pending_cashiers' | 'cashiers_subtotal' | 'expenses' | 'account'
+  >[],
+  loadOpen: boolean
+): string[] =>
+  previews
+    .filter(
+      (preview) =>
+        groupLiquidatable(preview, loadOpen) && (!preview.account || groupAccountOutdated(preview))
+    )
+    .map((preview) => preview.polla_group_id);
+
+/**
+ * El % con que se liquida un grupo: el del admin, fijo, si lo tiene; si no,
+ * a mano, arrancando por el de su última liquidación (o vacío).
+ */
+export const groupLiquidationPercentage = (
+  adminPercentage: number | string | null | undefined,
+  account: Pick<IPollaGroupEditionAccountPreview, 'account'>['account']
+): { value: string; locked: boolean } => {
+  if (adminPercentage !== null && adminPercentage !== undefined) {
+    return { value: String(Number(adminPercentage)), locked: true };
+  }
+  return { value: account ? String(Number(account.admin_percentage)) : '', locked: false };
+};
+
 /** Monto escrito a mano: acepta coma decimal; vacío o inválido → `null`. */
 export const parseAmount = (raw: string): number | null => {
   const value = Number(raw.replace(',', '.'));

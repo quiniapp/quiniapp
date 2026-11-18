@@ -4,6 +4,13 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
+
+- **`pollaAdminPercentage`** (`helper/polla/schemas/user.schema.ts`): número de 0 a 100, nullable y opcional ("El porcentaje va de 0 a 100"). Lo usan `groupAdmin` (alta del grupo y "Asignar admin") y `updatePollaUserSchema`.
+- **`IPollaUserEntityBack.admin_percentage`** y **`IPollaGroupWithAdmin.admin.admin_percentage`**.
+- **`liquidatePollaGroupEditionSchema.admin_percentage`** pasa a ser opcional y nullable: si el admin tiene su %, la base usa ese.
+- **`liquidatePollaGroupEditionsSchema`** e **`ILiquidatePollaGroupEditionsPayload`**: `{ groups }`, de 1 a `POLLA_GROUP_BATCH_MAX` (200), sin repetidos ("Hay un grupo repetido").
+
 ### Added - 2026-11-17 (ZIP de liquidaciones compartido)
 
 - **`helper/functions/liquidationZip.ts`** (nuevo, puro y sin dependencias): las rutas del ZIP de liquidaciones que usan Polla y QuiniApp.
