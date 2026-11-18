@@ -4,6 +4,20 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-18 (rendimiento SQL — Fase 1b: generate_winners solo escribe lo que cambia)
+
+**Qué cambia.** Cargar resultados (`generate_winners_and_calculate_accounts`) deja de reescribir todas las jugadas y tickets del turno: solo actualiza las filas cuyo premio, aciertos o estado de ganador cambian. Mismo resultado.
+
+- **Por qué.** En prod (delta de 24 h de `pg_stat_statements`) cada carga de resultados tardaba ~311 ms y tocaba ~50k buffers. Las jugadas se insertan con `prize 0`, `hits 0` y `winner false`, así que el `UPDATE` era un no-op para casi todas. Igual creaba una versión nueva de cada fila y, como la mayoría de esos updates no son HOT, una entrada en cada índice de `bets`.
+- **Migración `20261118054824_perf_generate_winners_skip_unchanged.sql`** (`CREATE OR REPLACE` de `generate_winners`, misma firma, conserva grants y `search_path`):
+  - `UPDATE bets` / `UPDATE tickets` solo donde los valores son distintos (`IS DISTINCT FROM`);
+  - los totales por ticket y turno se calculan desde todas las jugadas del turno (`calculated_payouts`), no desde el `RETURNING` del `UPDATE`;
+  - el JSON devuelto (`affected_tickets`, `winner_tickets`) cuenta lo mismo que antes.
+- **Verificación:**
+  - pgTAP `260_generate_winners_skip_unchanged.test.sql` (19 tests): premios por jugada y por ticket sumando turnos, conteos del JSON, re-run sin reescrituras (ctid igual) y corrección de resultados que da vuelta ganadoras;
+  - en local, checksums iguales a la versión anterior en jugadas, tickets, `ticket_prizes_by_turn` y cuentas corrientes;
+  - con 24,5k jugadas por turno, la primera carga baja de 27,6 s a 3,8 s y el re-run de 12 s a 3,2 s, con 1,2k bloques modificados en lugar de 73k.
+
 ### Added - 2026-11-18 (parte diario de grupos por rango)
 
 - **`GET /edition_account/group_accounts?from=YYYY-MM-DD&to=YYYY-MM-DD`**: las liquidaciones de grupo de la organización hechas en ese rango.

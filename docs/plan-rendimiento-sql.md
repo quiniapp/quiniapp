@@ -7,16 +7,29 @@
 
 | Fase | Rama | Estado |
 |---|---|---|
-| 0 Reglas en CLAUDE.md + baseline | `perf/sql-0-baseline` | Lista: reglas, scripts, baseline local y de prod. Falta el delta de `pg_stat_statements` (T0/T1) para reordenar las Fases 2–7 |
-| 1 Keyset jugadas/tickets QuiniApp + totales rotos | `perf/sql-1-keyset-quiniapp` | Lista en la rama (apilada sobre la Fase 0). Migraciones aplicadas solo en local; falta el PR y el push a develop |
-| 2 RPC agrupadas y totales | `perf/sql-2-grouped-rpc` | Pendiente |
+| 0 Reglas en CLAUDE.md + baseline | `perf/sql-0-baseline` | Mergeada en develop (#562). Delta de prod de 24 h hecho (ver baseline) |
+| 1 Keyset jugadas/tickets QuiniApp + totales rotos | `perf/sql-1-keyset-quiniapp` | Mergeada en develop (#562), migraciones aplicadas en develop. Falta prod |
+| 1b `generate_winners` solo escribe lo que cambia (nueva) | `perf/sql-1b-generate-winners` | En curso |
+| 1c Victorias rápidas: `get_archive_stats` + índices de `tickets` sin uso (nueva) | `perf/sql-1c-quick-wins` | Pendiente |
+| 2 RPC agrupadas y totales | `perf/sql-2-grouped-rpc` | Pendiente (en prod no es lenta: ~40 ms la página 1; el valor es el orden determinista y la escala) |
 | 3 Polla: ticket y keyset | `perf/sql-3-polla-ticket-keyset` | Pendiente (baja prioridad: en prod `polla_bets` tiene ~340 filas) |
 | 4 Polla: listados con offset | `perf/sql-4-polla-offset` | Pendiente (baja prioridad, ídem) |
-| 5 Round-trips | `perf/sql-5-round-trips` | Pendiente |
+| 5 Round-trips | `perf/sql-5-round-trips` | Pendiente (baja prioridad: `get_ticket_sums` ya no aparece en prod) |
 | 6 Limpieza de índices y RPC viejas | `perf/sql-6-cleanup` | Pendiente (≥1 semana después del deploy a prod) |
 | 7 Bugs detectados + fix de CLAUDE.md | `fix/sql-7-pendientes` | Pendiente |
 
-**Candidatos fuera del plan original** (del baseline de prod; se suman como fase nueva si el delta los confirma): `generate_winners_and_calculate_accounts` (~1 s por llamada, máx. 18 s, la ve el usuario al cargar resultados) y `archive_data_by_date` (costo de mantener los índices de `bets_archive`). Detalle en `docs/rendimiento-sql-baseline.md`.
+**Orden de ejecución** (2026-11-18, según el delta de 24 h de prod; detalle en `docs/rendimiento-sql-baseline.md`):
+
+1. 1 a prod.
+2. **1b**: lo único que el usuario espera y donde la base hace un trabajo claramente evitable.
+3. **1c**: dos arreglos chicos y de bajo riesgo.
+4. **2**.
+5. **7**: bugs que ve el usuario.
+6. **3** y **4**: Polla, que hoy tiene volumen mínimo.
+7. **5**.
+8. **6**: al menos una semana después de la Fase 1 en prod.
+
+`archive_data_by_date` (cron nocturno, ~25 % del tiempo de base del día) no se toca: lo que lo encarece son los índices de `bets_archive`, y los que tienen poco uso respaldan FKs con `ON DELETE SET NULL`.
 
 ## Hallazgos (relevamiento de código; verificados contra HEAD `4fc63db`)
 
@@ -232,6 +245,36 @@ Antes, verificar que `bet_order` y `created_at` no tengan NULL en prod (sección
   - el modo lista de `print-grouped-bets-button.tsx`.
 - **Invalidaciones:** revisar las de esas keys. Confirmar con Context7 que TanStack v5 recalcula los cursores al refetchear. Para acotar el costo, recortar a la primera página como hace `useRefreshCursorQuery` (`polla-web/src/hooks/useApi.ts`).
 
+## Fase 1b — `generate_winners` solo escribe lo que cambia (`perf/sql-1b-generate-winners`)
+
+- **Medido en prod** (delta de 24 h): `generate_winners_and_calculate_accounts`, 27 llamadas, ~311 ms y ~50k buffers por llamada; la espera el usuario al cargar resultados.
+- **Causa:** el `UPDATE bets … FROM calculated_payouts` reescribía todas las jugadas del turno aunque no cambiaran. Las jugadas se insertan con `prize 0`, `hits 0` y `winner false`, así que casi todo eran no-ops. Cada una creaba una versión nueva de la fila y, como el HOT es de ~25 %, una entrada en cada índice de `bets`. Lo mismo pasaba con `tickets`.
+- **Migración `20261118054824_perf_generate_winners_skip_unchanged.sql`:**
+  - `UPDATE` solo donde `prize`, `hits` o `winner` cambian (`IS DISTINCT FROM`), y lo mismo en `tickets`;
+  - `per_ticket_turn` se calcula desde `calculated_payouts` en lugar del `RETURNING`;
+  - el JSON devuelto cuenta lo mismo que antes.
+- **Verificación:**
+  - checksums iguales a la versión anterior (jugadas, tickets, `ticket_prizes_by_turn` y cuentas corrientes) con dos turnos y un re-run;
+  - pgTAP `260_generate_winners_skip_unchanged`, que incluye "el re-run no reescribe filas" (ctid igual) y la corrección de resultados.
+- **Local, 24,5k jugadas por turno:**
+
+  | Escenario | Antes | Después |
+  |---|---|---|
+  | Primera carga | 27,6 s | 3,8 s |
+  | Re-run | 12 s | 3,2 s |
+  | Bloques escritos en el re-run | 73k | 1,2k |
+
+## Fase 1c — Victorias rápidas (`perf/sql-1c-quick-wins`)
+
+- **`get_archive_stats`** (panel de archivo): 4,2 s por llamada en prod porque recorre las tablas enteras. Pasa a `pg_class.reltuples` / `pg_stat_user_tables.n_live_tup` o a contadores. El fallback de `archive.service.ts` hace `count: 'exact'` de `bets_archive` completo: se va con el mismo cambio.
+- **Drop de índices de `tickets` sin uso:**
+  - `idx_tickets_total_prize`
+  - `idx_tickets_winner_deleted_created`
+  - `idx_tickets_winner_user_deleted_created`
+  - `idx_tickets_date_deleted_winner_created`
+
+  Tienen 0 usos en el delta de 24 h y prácticamente ninguno en 14 meses, y no dependen de la Fase 1. Cada carga de ticket los mantiene. `idx_tickets_deleted_by` se queda porque respalda una FK.
+
 ## Fase 2 — RPC agrupadas y totales (`perf/sql-2-grouped-rpc`)
 
 - **`get_grouped_bets_page` / `_archive`:**
@@ -280,8 +323,8 @@ Antes, verificar que `bet_order` y `created_at` no tengan NULL en prod (sección
 
 - `current-account.controller.ts:211-214`: una RPC que recibe `uuid[]` en vez de una llamada por organización.
 - `current-account.route.ts:447-451` (`PUT /bulk`): una RPC batch en jsonb que devuelve las filas actualizadas.
-- `getAmountsByTicket`: una sola RPC que resuelve la tabla y las sumas.
-- Borrar `getWinnerBets` y `useTotals.ts`.
+- `getAmountsByTicket`: una sola RPC que resuelve la tabla y las sumas (baja prioridad: en el delta de prod `get_ticket_sums` ya no aparece; su costo era histórico, de antes del índice de abril de 2026).
+- Borrar `getWinnerBets` (`useTotals.ts` ya se borró en la Fase 1).
 - **Condicionales al top de la Fase 0:**
   - `getAllTicketNumber`;
   - SQL dinámico en `polla_daily_sales`, `polla_current_account_period_rows` y `polla_edition_account_base`, con pgTAP de igualdad de sumas.
@@ -293,10 +336,9 @@ Antes, verificar que `bet_order` y `created_at` no tengan NULL en prod (sección
   - `idx_bets_org_date_active`
   - `idx_bets_ticket_id`
   - `idx_tickets_date_org_active`
-  - `idx_tickets_date_deleted_winner_created`
   - `idx_tickets_organization_id`
-  - `idx_tickets_total_prize`
   - `idx_polla_bets_edition_hits`
+  - (`idx_tickets_date_deleted_winner_created` e `idx_tickets_total_prize` pasan a la Fase 1c: no dependen de la Fase 1)
 - `idx_bets_date` / `idx_tickets_date`: dropearlos solo si `archive_data_by_date` y generate_winners no los usan.
 - Dropear `get_grouped_bets_for_parse`, `get_grouped_bets_count`, `get_bets_total_amount` y `get_bets_total_prize`, con sus `_archive`.
 
@@ -323,7 +365,7 @@ Antes, verificar que `bet_order` y `created_at` no tengan NULL en prod (sección
    - Ventas, premios y cuentas por edición sin cambios.
 7. **Post-deploy:** comparar `pg_stat_statements` / `idx_scan` a la semana.
 
-## Fase 7 — Bugs detectados + fix de CLAUDE.md (`fix/sql-7-pendientes`, después de la Fase 6)
+## Fase 7 — Bugs detectados + fix de CLAUDE.md (`fix/sql-7-pendientes`, antes de Polla; ver "Orden de ejecución")
 
 Son bugs que aparecieron durante el relevamiento y no son de rendimiento. Cada ítem lleva su entrada en el CHANGELOG del workspace.
 
