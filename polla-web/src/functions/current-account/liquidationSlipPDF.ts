@@ -5,6 +5,7 @@ import {
   liquidationZipEntries,
   liquidationZipPdfName,
   zipFiles,
+  zipRootFolder,
   type ZipGroup,
 } from '@/lib/liquidationZip';
 import { shareFile } from '../printPdf';
@@ -162,6 +163,8 @@ export interface LiquidationSlipSheet {
   /** `{grupo}-{número}` del nombre de archivo. */
   cashierCode: string;
   group?: ZipGroup;
+  /** `YYYY-MM-DD` de la liquidación: va en la carpeta del grupo y en el PDF. */
+  date: string;
   /** Varias ediciones: carpeta de la edición dentro del ZIP. */
   edition?: { key: string; folder: string };
   /** Cuenta por edición: la cabecera derecha dice `Edición ${headerLabel}`. */
@@ -172,9 +175,10 @@ export interface LiquidationSlipSheet {
  * Liquidación de cada pasador, como `printLiquidationCashier` de QuiniApp: lo
  * acumulado en su período (desde el día siguiente a la última liquidación).
  * Sin deje ni premios (R18: los premios están en Premios). Un PDF por pasador,
- * solo de los elegidos, todos en un ZIP con carpetas por grupo (y por edición
- * si hay varias). En el celular se comparte; si no, se descarga. Devuelve
- * false si no hay hojas (no arma un ZIP vacío).
+ * solo de los elegidos, todos en un ZIP con una carpeta raíz del mismo nombre
+ * y adentro carpetas por grupo (y por edición si hay varias). En el celular se
+ * comparte; si no, se descarga. Devuelve false si no hay hojas (no arma un ZIP
+ * vacío).
  */
 export async function exportLiquidationSlipsZip(params: {
   sheets: LiquidationSlipSheet[];
@@ -185,8 +189,9 @@ export async function exportLiquidationSlipsZip(params: {
   const entries = liquidationZipEntries(
     params.sheets.map((sheet) => ({
       ...sheet,
-      fileName: liquidationZipPdfName(sheet.cashierCode, sheet.account.user_name),
-    }))
+      fileName: liquidationZipPdfName(sheet.cashierCode, sheet.account.user_name, sheet.date),
+    })),
+    zipRootFolder(params.zipName)
   );
 
   const files: { path: string; data: Uint8Array }[] = [];

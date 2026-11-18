@@ -4,6 +4,14 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-17 (ZIP de liquidaciones compartido)
+
+- **`helper/functions/liquidationZip.ts`** (nuevo, puro y sin dependencias): las rutas del ZIP de liquidaciones que usan Polla y QuiniApp.
+  - `zipFolderName`: saca `\/:*?"<>|` y los puntos o espacios del final.
+  - `groupFoldersIfAny`: si alguna hoja tiene grupo, las demás van a la carpeta de sin grupo; si ninguna tiene, no hay carpetas de grupo.
+  - `liquidationZipEntries(items, root?)`: arma `raíz/[edición/][grupo/]archivo`, ordenado por edición y grupo, sin repetidos.
+  - `zipRootFolder`: el nombre del ZIP sin `.zip`.
+
 ### Added - 2026-11-16 (rendimiento SQL — Fase 1: tipos de paginación keyset)
 
 - **`helper/request/pagination.request.ts`**:

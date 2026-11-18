@@ -4,6 +4,25 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-17 (nombres del parte diario y ZIP con carpeta raíz y fechas)
+
+Pedido del cliente del 17/11: los nombres llevan siempre fecha y el ZIP se descomprime en una sola carpeta.
+
+- **Exportar diario** pasa a llamarse "parte diario". El título del PDF cambia de "Liquidación" a "Parte diario".
+  - Una edición: `Polla semanal parte diario DD-MM-YYYY` si es regular, `Polla plus parte diario DD-MM-YYYY` si es especial (`isPollaSpecialEdition`).
+  - Varias ediciones: `Polla parte diario DD-MM-YYYY al DD-MM-YYYY`.
+  - Historial por fechas: `Polla parte diario DD-MM-YYYY`, o el rango.
+  - Con filtro de grupo se suma `Grupo N - Nombre` antes de la fecha.
+  - Nombres en `lib/exportNames.ts` (`pollaDailyReportName`, `groupFileLabel`). `downloadDailyAccountsPDF` y `downloadDailySummaryPDF` (`functions/current-account/accountTablePDF.ts`) aceptan `fileName`, y el segundo también `title`.
+- **Fecha de una edición** (`editionLiquidationDate` en `lib/editionAccount.ts`): la de su última liquidación de pasadores; si no hay, la marca de liquidada; si tampoco, hoy.
+- **ZIP de liquidaciones** (`lib/liquidationZip.ts`, `functions/current-account/liquidationSlipPDF.ts`):
+  - El ZIP y su carpeta raíz se llaman igual: `polla_liquidaciones_DD-MM-YYYY` (`polla_plus_liquidaciones_…` en las especiales), `…_DD-MM-YYYY_al_DD-MM-YYYY` en un rango, con `_Grupo_N` o `_Sin_grupo` si hay filtro.
+  - Adentro: `Grupo 1 - Leo DD-MM-YYYY/1-6 Laura DD-MM-YYYY.pdf` y `Sin grupo DD-MM-YYYY/`. Si ninguna hoja tiene grupo, los PDF van directo en la raíz.
+  - La fecha es la de la liquidación de cada edición (en el historial, el día elegido o el "Hasta").
+  - En "Varias ediciones" la carpeta de edición sigue siendo `AAAA-MM-DD <título>`, pero el título se corta en 24 caracteres (antes 40): con la raíz y las fechas, la ruta tiene que entrar en los 260 de Windows.
+  - `LiquidationSlipSheet` suma `date`. Las rutas salen de `@helper/functions/liquidationZip`, compartido con QuiniApp.
+- **Tests:** `__tests__/current-account/liquidation-zip.test.ts` (raíz, fechas, sin grupos, peor largo de ruta ≤ 185), `export-names.test.ts` (nombres y fecha de liquidación) y `__tests__/helper/quiniela-liquidation-zip.test.ts` (el ZIP de QuiniApp).
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 - **Historial por fechas** (`features/current-account/history/DailyHistoryView.tsx`): en modo "Día" y para `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin), cada fila de la tabla y cada tarjeta del celular tiene un botón "Editar" (lápiz). En modo rango no aparece, porque las filas son acumulados.

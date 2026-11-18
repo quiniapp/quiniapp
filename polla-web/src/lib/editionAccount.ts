@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import {
   IPollaEditionAccountAmounts,
   IPollaEditionAccountListItem,
@@ -6,6 +7,7 @@ import {
   IPollaGroupEditionAccountPreview,
 } from '@helper/polla/types/game.type';
 import { AccountPeriodView } from '@/lib/accountPeriod';
+import { todayIso } from '@/lib/dates';
 
 /**
  * Cuenta por edición: helpers puros. La fila de edición se mapea a la forma de
@@ -62,6 +64,24 @@ export const editionFileTag = (title: string) =>
     .trim()
     .replace(/[\s\\/:*?"<>|]+/g, '_')
     .replace(/^_+|_+$/g, '')}`;
+
+/**
+ * Fecha (`YYYY-MM-DD`, hora local) de la liquidación de una edición para los
+ * nombres de archivo: la última liquidación de sus pasadores; si no hay
+ * ninguna, la marca de liquidada (`fallback`); si tampoco, hoy.
+ */
+export const editionLiquidationDate = (
+  rows: Pick<IPollaEditionAccountRow, 'liquidation'>[],
+  fallback?: string | null
+): string => {
+  const latest = rows.reduce<string | null>((max, row) => {
+    const at = row.liquidation?.created_at;
+    if (!at) return max;
+    return max === null || dayjs(at).isAfter(dayjs(max)) ? at : max;
+  }, null);
+  const at = latest ?? fallback;
+  return at ? dayjs(at).format('YYYY-MM-DD') : todayIso();
+};
 
 /** Ediciones que empiezan en el rango (inclusivo en las dos puntas); `start_date` es `YYYY-MM-DD`. */
 export const editionsInRange = (items: IPollaEditionAccountListItem[], from: string, to: string) =>

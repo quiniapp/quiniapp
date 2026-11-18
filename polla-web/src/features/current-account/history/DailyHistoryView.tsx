@@ -48,6 +48,7 @@ import {
 import { downloadDailyAccountsPDF } from '@/functions/current-account/accountTablePDF';
 import { exportLiquidationSlipsZip } from '@/functions/current-account/liquidationSlipPDF';
 import { liquidationZipName } from '@/lib/liquidationZip';
+import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
 import { groupLabel } from '@/lib/pollaGroups';
 import { ReportMode, fmtMoney } from '../format';
@@ -162,11 +163,22 @@ export const DailyHistoryView = () => {
     }
     setPrinting(true);
     try {
+      const groupName = groupId
+        ? noGroup
+          ? 'Sin grupo'
+          : groupById.get(groupId)?.name
+        : undefined;
       await downloadDailyAccountsPDF({
         date,
         from: rangeFrom,
         rows: views,
-        groupName: groupId ? (noGroup ? 'Sin grupo' : groupById.get(groupId)?.name) : undefined,
+        groupName,
+        // Sin edición: "Polla parte diario <día>" o "<desde> al <hasta>".
+        fileName: pollaDailyReportName({
+          date: rangeFrom ?? date,
+          to: rangeFrom ? date : undefined,
+          group: noGroup ? groupName : groupFileLabel(groupId ? groupById.get(groupId) : null),
+        }),
       });
     } catch {
       toast.error('No se pudo generar el PDF');
@@ -189,10 +201,12 @@ export const DailyHistoryView = () => {
     try {
       const selectedGroup = groupId ? groupById.get(groupId) : undefined;
       await exportLiquidationSlipsZip({
+        // Lo liquidado por días lleva el día elegido (en rango, el "Hasta").
         sheets: accounts.map((account) => ({
           account,
           cashierCode: cashierCode(account),
           group: groupOf(account),
+          date,
         })),
         zipName: liquidationZipName(
           rangeFrom ? { kind: 'range', from: rangeFrom, to: date } : { kind: 'day', date },

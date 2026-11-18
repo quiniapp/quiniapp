@@ -5,6 +5,7 @@ import { IPollaGroupEntityFront } from '@helper/polla/types/catalog.type';
 import {
   IPollaEditionAccountListItem,
   IPollaEditionAccountRow,
+  isPollaSpecialEdition,
   pollaEditionTitle,
 } from '@helper/polla/types/game.type';
 import { useDrawCatalogs } from '@/hooks/fetchs/useCatalogs';
@@ -39,9 +40,11 @@ import {
 import {
   editionAccountView,
   editionFileTag,
+  editionLiquidationDate,
   hasEditionMovement,
   reportEditionsInRange,
 } from '@/lib/editionAccount';
+import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
 import { todayIso } from '@/lib/dates';
 import {
   fetchEditionAccounts,
@@ -151,6 +154,8 @@ export const EditionReportDialog = ({
   // Filtro de grupo para el nombre del ZIP (solo si el grupo elegido está en el catálogo).
   const selectedGroup = effectiveGroupId ? groupById.get(effectiveGroupId) : undefined;
   const zipGroupFilter = selectedGroup ? { number: selectedGroup.number } : undefined;
+  // "Polla semanal" o "Polla plus" en el nombre del parte diario y del ZIP.
+  const special = isPollaSpecialEdition(edition);
   const copy = COPY[kind];
   const many = scope === 'many';
   const editionId = edition.polla_edition_id;
@@ -181,16 +186,17 @@ export const EditionReportDialog = ({
     const sheets: LiquidationSlipSheet[] = [];
     for (const entry of checked) {
       const entryTitle = titleOf(entry);
-      const rows = (
-        await fetchEditionAccounts(entry.edition.polla_edition_id, {
-          polla_group_id: effectiveGroupId,
-        })
-      ).filter(hasEditionMovement);
-      for (const row of rows) {
+      const accounts = await fetchEditionAccounts(entry.edition.polla_edition_id, {
+        polla_group_id: effectiveGroupId,
+      });
+      // Cada edición con la fecha de su liquidación.
+      const date = editionLiquidationDate(accounts, entry.liquidated_at);
+      for (const row of accounts.filter(hasEditionMovement)) {
         sheets.push({
           account: editionAccountView(row, entry.edition),
           cashierCode: cashierCode(row),
           group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
+          date,
           edition: {
             key: entry.edition.polla_edition_id,
             folder: editionZipFolder(entry.edition.start_date, entryTitle),
@@ -232,6 +238,15 @@ export const EditionReportDialog = ({
         groupName,
         periodText: title,
         fileTag,
+        // El parte diario lleva la fecha de la liquidación de la edición.
+        fileName:
+          kind === 'daily'
+            ? pollaDailyReportName({
+                special,
+                date: editionLiquidationDate(accounts, item.liquidated_at),
+                group: groupFileLabel(selectedGroup ?? (groupName ? { name: groupName } : null)),
+              })
+            : undefined,
       });
       return true;
     }
@@ -299,7 +314,20 @@ export const EditionReportDialog = ({
     }
 
     if (kind === 'daily' || kind === 'summary') {
-      await downloadDailySummaryPDF({ from, to, totals, groupName });
+      await downloadDailySummaryPDF({
+        from,
+        to,
+        totals,
+        groupName,
+        ...(kind === 'daily' && {
+          title: 'Parte diario',
+          fileName: pollaDailyReportName({
+            date: from,
+            to,
+            group: groupFileLabel(selectedGroup ?? (groupName ? { name: groupName } : null)),
+          }),
+        }),
+      });
       return true;
     }
     const orgName = await fetchOrganizationName(organizationId);
@@ -341,14 +369,17 @@ export const EditionReportDialog = ({
   const handleExportPicked = async (selected: IPollaEditionAccountRow[]) => {
     try {
       setPrinting(true);
+      // La fecha de la liquidación sale de todos los pasadores de la edición.
+      const date = editionLiquidationDate(picking ?? selected, item.liquidated_at);
       await exportLiquidationSlipsZip({
         sheets: selected.map((row) => ({
           account: editionAccountView(row, edition),
           cashierCode: cashierCode(row),
           group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
+          date,
           headerLabel: title,
         })),
-        zipName: liquidationZipName({ kind: 'edition', title }, zipGroupFilter),
+        zipName: liquidationZipName({ kind: 'edition', date, special }, zipGroupFilter),
       });
       onClose();
     } catch (error) {
