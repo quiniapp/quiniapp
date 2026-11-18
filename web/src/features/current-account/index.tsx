@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { exportDiario } from './handlers/exportDiario';
 import { exportLiquidacion } from './handlers/exportLiquidacion';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
+import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 
 const CurrentAccountContent = () => {
   const queryClient = useQueryClient();
@@ -27,7 +28,9 @@ const CurrentAccountContent = () => {
   const [dailySummaryKey, setDailySummaryKey] = useState(0);
   const [openSubtotals, setOpenSubtotals] = useState<boolean>(false);
   const [subtotalsKey, setSubtotalsKey] = useState(0);
-  const { role } = useAuth();
+  const { role, organizationId } = useAuth();
+  // Las carpetas por grupo del ZIP de liquidaciones.
+  const { data: groups } = useGroups(organizationId, role);
   const [searchParams] = useSearchParams();
   const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
   const [printing, setPrinting] = useState(false);
@@ -48,7 +51,8 @@ const CurrentAccountContent = () => {
   const handleGenerateLiquidation = () => {
     setOpen(true);
   };
-  const handlePrintLiquidationCashier = () => exportLiquidacion(queryClient, date, setPrinting);
+  const handlePrintLiquidationCashier = () =>
+    exportLiquidacion(queryClient, date, setPrinting, groups ?? []);
   const handlePrintDiaryLiquidation = () => exportDiario(queryClient, date, setPrinting);
 
   if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable />;
@@ -61,16 +65,45 @@ const CurrentAccountContent = () => {
               <Button onClick={handlePrintDiaryLiquidation} disabled={printing} className="gap-2">
                 <FileText className="h-4 w-4" /> Exportar Diario
               </Button>
-              <Button variant="outline" onClick={handlePrintLiquidationCashier} disabled={printing} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePrintLiquidationCashier}
+                disabled={printing}
+                className="gap-2"
+              >
                 <FileDown className="h-4 w-4" /> Exportar Liquidación
               </Button>
-              <Button variant={'outline'} onClick={() => { setPrintTotalsKey((k) => k + 1); setOpenPrintTotals(true); }} disabled={printing} className="gap-2">
+              <Button
+                variant={'outline'}
+                onClick={() => {
+                  setPrintTotalsKey((k) => k + 1);
+                  setOpenPrintTotals(true);
+                }}
+                disabled={printing}
+                className="gap-2"
+              >
                 <CreditCard className="h-4 w-4" /> Exportar Cobros y Pagos
               </Button>
-              <Button variant={'outline'} onClick={() => { setDailySummaryKey((k) => k + 1); setOpenDailySummary(true); }} disabled={printing} className="gap-2">
+              <Button
+                variant={'outline'}
+                onClick={() => {
+                  setDailySummaryKey((k) => k + 1);
+                  setOpenDailySummary(true);
+                }}
+                disabled={printing}
+                className="gap-2"
+              >
                 <BarChart2 className="h-4 w-4" /> Resumen Cuenta Corriente
               </Button>
-              <Button variant={'outline'} onClick={() => { setSubtotalsKey((k) => k + 1); setOpenSubtotals(true); }} disabled={printing} className="gap-2">
+              <Button
+                variant={'outline'}
+                onClick={() => {
+                  setSubtotalsKey((k) => k + 1);
+                  setOpenSubtotals(true);
+                }}
+                disabled={printing}
+                className="gap-2"
+              >
                 <List className="h-4 w-4" /> Exportar Subtotales
               </Button>
               {role !== USER_TYPE.ADMIN && (
@@ -79,7 +112,11 @@ const CurrentAccountContent = () => {
                 </Button>
               )}
             </div>
-            <Button variant={'outline'} onClick={handleUpdateCurrentAccount} className="gap-2 w-full">
+            <Button
+              variant={'outline'}
+              onClick={handleUpdateCurrentAccount}
+              className="gap-2 w-full"
+            >
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
           </Box>
@@ -126,14 +163,10 @@ const GenerateLiquitationModal = React.lazy(
   () => import('../../components/modals/GenerateLiquitationModal')
 );
 
-const PrintTotalsModal = React.lazy(
-  () => import('../../components/modals/PrintTotalsModal')
-);
+const PrintTotalsModal = React.lazy(() => import('../../components/modals/PrintTotalsModal'));
 
 const PrintDailySummaryModal = React.lazy(
   () => import('../../components/modals/PrintDailySummaryModal')
 );
 
-const PrintSubtotalsModal = React.lazy(
-  () => import('../../components/modals/PrintSubtotalsModal')
-);
+const PrintSubtotalsModal = React.lazy(() => import('../../components/modals/PrintSubtotalsModal'));
