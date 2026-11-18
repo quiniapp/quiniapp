@@ -33,13 +33,28 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+/** Ticket elegido en Administrar jugadas para repetir con cargo. */
+export interface PickedBet {
+  polla_bet_id: string;
+  ticket_number: string;
+  numbers: string[];
+  load_date: string;
+  /** A nombre de quién está (jugador, cliente o pasador). */
+  holder: string;
+}
+
 interface RepeatBetDialogProps {
   open: boolean;
   /**
    * `ticket`: por número de ticket, uno por vez (pasador y admin+).
    * `mine`: los tickets de la última edición en que jugó (jugador).
+   * `picked`: los tildados en Administrar jugadas, todos juntos.
    */
-  mode: 'ticket' | 'mine';
+  mode: 'ticket' | 'mine' | 'picked';
+  /** Modo `picked`: los tickets elegidos. */
+  picked?: PickedBet[];
+  /** Al terminar de repetir (aunque se haya salteado alguno). */
+  onRepeated?: () => void;
   /**
    * Se elige Efectivo o Debe para lo que se repite (R04). El jugador no elige:
    * lo suyo queda en Debe.
@@ -67,6 +82,8 @@ const HOLDER_LABEL = { CASHIER: 'Pasador', PLAYER: 'Jugador' } as const;
 export const RepeatBetDialog = ({
   open,
   mode,
+  picked = [],
+  onRepeated,
   choosePayment,
   prints = true,
   onClose,
@@ -153,6 +170,17 @@ export const RepeatBetDialog = ({
     submit([...selected], onClose);
   };
 
+  const handleRepeatPicked = () => {
+    if (picked.length === 0) return;
+    submit(
+      picked.map((item) => item.polla_bet_id),
+      () => {
+        onRepeated?.();
+        onClose();
+      }
+    );
+  };
+
   const toggle = (id: string, checked: boolean) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -165,20 +193,29 @@ export const RepeatBetDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-[560px]">
+      {/* min-w-0 en los hijos: un título de edición largo no estira la grilla del diálogo. */}
+      <DialogContent className="max-h-[90vh] max-w-[95vw] grid-cols-1 overflow-y-auto sm:max-w-[560px] [&>*]:min-w-0">
         <DialogHeader>
-          <DialogTitle>{mode === 'mine' ? 'Repetir mis tickets' : 'Repetir ticket'}</DialogTitle>
+          <DialogTitle>
+            {mode === 'mine'
+              ? 'Repetir mis tickets'
+              : mode === 'picked'
+                ? `Repetir ${picked.length} ${picked.length === 1 ? 'ticket' : 'tickets'} con cargo`
+                : 'Repetir ticket'}
+          </DialogTitle>
           <DialogDescription>
             {mode === 'mine'
               ? 'Tus tickets de la última edición en que jugaste. Elegí cuáles y la edición, y se cargan.'
-              : 'Buscá el ticket, revisá los números y confirmá: se carga a nombre de su dueño.'}
+              : mode === 'picked'
+                ? 'Se cargan en la edición elegida, cada uno a nombre de su dueño. Los que no se puedan repetir se avisan.'
+                : 'Buscá el ticket, revisá los números y confirmá: se carga a nombre de su dueño.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-2">
           <Label>Edición donde se carga</Label>
           <Select value={editionId} onValueChange={setEditionId}>
-            <SelectTrigger>
+            <SelectTrigger className="min-w-0 [&>span]:truncate">
               <SelectValue placeholder="Elegí una edición" />
             </SelectTrigger>
             <SelectContent>
@@ -264,6 +301,23 @@ export const RepeatBetDialog = ({
           </>
         )}
 
+        {mode === 'picked' && (
+          <ul
+            className="flex max-h-64 flex-col gap-2 overflow-y-auto"
+            aria-label="Tickets a repetir"
+          >
+            {picked.map((item) => (
+              <li key={item.polla_bet_id} className="flex flex-col gap-1 rounded-md border p-2">
+                <span className="text-xs text-muted-foreground">
+                  {item.ticket_number} · {dayjs(item.load_date).format('DD/MM')} ·{' '}
+                  <span className="font-medium text-foreground">{item.holder}</span>
+                </span>
+                <BetNumbers numbers={item.numbers} />
+              </li>
+            ))}
+          </ul>
+        )}
+
         {mode === 'mine' && (
           <div className="flex flex-col gap-2">
             {mine.isFetching && <p className="text-sm text-muted-foreground">Cargando…</p>}
@@ -296,7 +350,19 @@ export const RepeatBetDialog = ({
           <Button type="button" variant="outline" onClick={onClose}>
             {mode === 'ticket' ? 'Listo' : 'Cancelar'}
           </Button>
-          {mode === 'ticket' ? (
+          {mode === 'picked' ? (
+            <Button
+              type="button"
+              onClick={handleRepeatPicked}
+              disabled={picked.length === 0 || !editionId || isPending}
+            >
+              {isPending
+                ? 'Cargando…'
+                : `Cargar ${picked.length} ticket${picked.length === 1 ? '' : 's'}${
+                    prints ? ' e imprimir' : ''
+                  }`}
+            </Button>
+          ) : mode === 'ticket' ? (
             <Button
               type="button"
               onClick={handleRepeatTicket}

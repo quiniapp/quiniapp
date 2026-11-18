@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { BadgeDollarSign, Gift, Pencil, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { BadgeDollarSign, Gift, Pencil, Printer, RefreshCw, Repeat2, Trash2 } from 'lucide-react';
 import {
   IPollaBetCourtesy,
   IPollaBetListItem,
@@ -10,6 +10,7 @@ import {
   POLLA_HITS_FILTER,
   POLLA_PAYMENT_STATUS,
   POLLA_TICKET_SEARCH,
+  isPollaEditionRepeatable,
   isPublicPollaBet,
   pollaTicketCashierCode,
 } from '@helper/polla/types/game.type';
@@ -23,7 +24,7 @@ import {
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useBets, useRefreshBets, useUser } from '@/hooks/fetchs/usePollaData';
+import { useBets, useEditions, useRefreshBets, useUser } from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
   unpaidQuery,
@@ -55,6 +56,8 @@ import { BetsList } from '@/features/bets/BetsList';
 import { EditBetDialog, EditableBet } from '@/features/bets/EditBetDialog';
 import { EditionPicker } from '@/features/bets/EditionPicker';
 import { FreeRepeatDialog } from '@/features/bets/FreeRepeatDialog';
+import { usePollaTicketPrinter } from '@/features/bets/usePollaTicketPrinter';
+import { PickedBet, RepeatBetDialog } from '@/features/make-bet/RepeatBetDialog';
 import { LoadDateFilter } from '@/features/bets/LoadDateFilter';
 import { ResultFilters, WinnerFilter } from '@/features/bets/ResultFilters';
 import { ShareTicketsPdfButton } from '@/features/bets/ShareTicketsPdfButton';
@@ -241,9 +244,22 @@ export const ManageBetsPage = () => {
     }
   };
 
-  // Tickets elegidos para repetir sin cargo (de la edición finalizada).
+  // Repetir con cargo (punto 7 del 17/11): en las ediciones donde el rol
+  // repite ahora (carga abierta y su corte de repetir), igual que "Repetir
+  // ticket" de Cargar jugada pero con los tickets tildados acá.
+  const { data: loadableEditions } = useEditions({
+    status: POLLA_EDITION_STATUS.ACTIVE,
+    loadable: true,
+    polla_organization_id: organizationId ?? undefined,
+  });
+  const repeatEditions = (loadableEditions?.data ?? []).filter(isPollaEditionRepeatable);
+  const canRepeatPaid = repeatEditions.length > 0;
+  const { printTickets, editionLabel: repeatEditionLabel, prints } = usePollaTicketPrinter();
+
+  // Tickets elegidos para repetir: con cargo, o sin cargo (de la edición finalizada).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [freeRepeatOpen, setFreeRepeatOpen] = useState(false);
+  const [paidRepeatOpen, setPaidRepeatOpen] = useState(false);
   useEffect(() => setSelected(new Set()), [editionId]);
   const toggleSelected = (id: string, checked: boolean) =>
     setSelected((prev) => {
@@ -426,9 +442,21 @@ export const ManageBetsPage = () => {
    * repite de cortesía y un ticket que ya tiene la suya no se vuelve a repetir
    * (R33).
    */
-  const canSelect = (row: IPollaBetListItem) =>
+  const canFreeSelect = (row: IPollaBetListItem) =>
     canFreeRepeat && !row.is_free && !courtesies[row.polla_bet_id];
+  // Con cargo se puede repetir cualquier ticket (la base saltea los que no).
+  const canSelect = (row: IPollaBetListItem) => canRepeatPaid || canFreeSelect(row);
   const selectableRows = rows.filter(canSelect);
+  const selectedRows = rows.filter((row) => selected.has(row.polla_bet_id));
+  const freeSelectedIds = selectedRows.filter(canFreeSelect).map((row) => row.polla_bet_id);
+  const pickedBets: PickedBet[] = selectedRows.map((row) => ({
+    polla_bet_id: row.polla_bet_id,
+    ticket_number: row.ticket_number,
+    numbers: row.numbers,
+    load_date: row.load_date,
+    holder: isPublicPollaBet(row) ? row.cashier_name : row.user_name,
+  }));
+  const selectionEnabled = canRepeatPaid || canFreeRepeat;
 
   // Editar y borrar lo decide la API para cada jugada (`can_edit`/`can_delete`):
   // superadmin+ siempre, el admin en su grupo y el Super en la organización
@@ -694,11 +722,12 @@ export const ManageBetsPage = () => {
         </div>
       )}
 
-      {canFreeRepeat && (
+      {selectionEnabled && (
         <div className="mb-3 flex flex-col gap-2 rounded-md border bg-card p-3 text-sm text-card-foreground sm:flex-row sm:items-center">
           <p className="min-w-0 flex-1 text-muted-foreground">
-            Edición finalizada: elegí tickets (por ejemplo, con los filtros de aciertos) para
-            repetirlos sin cargo en una edición nueva.
+            {canFreeRepeat
+              ? 'Edición finalizada: elegí tickets (por ejemplo, con los filtros de aciertos) para repetirlos con o sin cargo en una edición nueva.'
+              : 'Elegí tickets para repetirlos con cargo en una edición con la carga abierta.'}
             {selected.size > 0 && (
               <strong className="text-foreground">{` ${selected.size} elegidos.`}</strong>
             )}
@@ -721,15 +750,34 @@ export const ManageBetsPage = () => {
                 ? 'Quitar todos'
                 : `Elegir los ${selectableRows.length} de la lista`}
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={selected.size === 0}
-              onClick={() => setFreeRepeatOpen(true)}
-            >
-              <Gift />
-              Repetir sin cargo
-            </Button>
+            {canRepeatPaid && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={selected.size === 0}
+                onClick={() => setPaidRepeatOpen(true)}
+              >
+                <Repeat2 />
+                Repetir con cargo ({selected.size})
+              </Button>
+            )}
+            {canFreeRepeat && (
+              <Button
+                type="button"
+                size="sm"
+                variant={canRepeatPaid ? 'outline' : 'default'}
+                disabled={freeSelectedIds.length === 0}
+                title={
+                  freeSelectedIds.length < selected.size
+                    ? 'Las cortesías y los tickets que ya tienen la suya no se repiten sin cargo'
+                    : undefined
+                }
+                onClick={() => setFreeRepeatOpen(true)}
+              >
+                <Gift />
+                Repetir sin cargo ({freeSelectedIds.length})
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -745,18 +793,33 @@ export const ManageBetsPage = () => {
         renderActions={renderActions}
         canCopyTicket
         editionStatusOf={editionStatusOf}
-        selection={canFreeRepeat ? { canSelect, selected, onToggle: toggleSelected } : undefined}
+        selection={selectionEnabled ? { canSelect, selected, onToggle: toggleSelected } : undefined}
       />
 
       {canLoad && <EditBetDialog bet={editing} onClose={() => setEditing(null)} />}
       {freeRepeatOpen && (
         <FreeRepeatDialog
-          betIds={[...selected]}
+          betIds={freeSelectedIds}
           organizationId={organizationId}
           editionLabel={labelFor}
           courtesyEditionName={courtesyEditionName}
           onClose={() => setFreeRepeatOpen(false)}
           onDone={() => setSelected(new Set())}
+        />
+      )}
+      {paidRepeatOpen && (
+        <RepeatBetDialog
+          open={paidRepeatOpen}
+          mode="picked"
+          picked={pickedBets}
+          choosePayment
+          prints={prints}
+          editions={repeatEditions}
+          editionLabel={repeatEditionLabel}
+          defaultEditionId={repeatEditions.length === 1 ? repeatEditions[0].polla_edition_id : ''}
+          onCreated={printTickets}
+          onRepeated={() => setSelected(new Set())}
+          onClose={() => setPaidRepeatOpen(false)}
         />
       )}
     </div>

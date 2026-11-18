@@ -4,6 +4,20 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (repetir varios tickets con cargo)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): se tildan tickets y "Repetir con cargo (N)" los carga todos juntos en la edición elegida, con Efectivo o Debe (R04).
+  - Aparece para los roles que repiten cuando hay alguna edición con la carga abierta y su corte de repetir (`useEditions` con `loadable`, filtradas por `isPollaEditionRepeatable`), igual que "Repetir ticket" de Cargar jugada.
+  - Con cargo se puede tildar cualquier ticket: la base saltea los que no se pueden repetir y se avisan uno por uno.
+  - "Repetir sin cargo" (edición finalizada) sigue igual, pero toma solo los tildados que califican y dice cuántos son ("Repetir sin cargo (M)").
+  - Al terminar se limpia la selección.
+- **`RepeatBetDialog`** (`features/make-bet/RepeatBetDialog.tsx`): modo nuevo `picked`, con la lista de los tickets elegidos y "Cargar N tickets e imprimir". "Repetir ticket" de a uno en Cargar jugada no cambia.
+- **`usePollaTicketPrinter`** (`features/bets/usePollaTicketPrinter.ts`): la impresión de los tickets recién cargados (un PDF; el Súper solo ve un aviso, R12) y la etiqueta de la edición destino salen de Cargar jugada para usarlas también en Administrar.
+
+### Fixed - 2026-11-18
+
+- **`RepeatBetDialog`**: con un título de edición largo, el diálogo se desbordaba a la derecha y cortaba el botón de cargar. Ahora el selector trunca el texto.
+
 ### Added - 2026-11-18 (parte diario de grupos)
 
 - **"Parte diario"** en la pestaña Grupos (`GroupEditionAccounts.tsx`): PDF de la edición elegida (`downloadGroupDailyReportPDF` en `functions/current-account/groupDailyReportPDF.ts`).
