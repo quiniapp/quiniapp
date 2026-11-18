@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { BadRequestError, NotFoundError } from '@helper/errors';
 import { POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE } from '@helper/polla/types/user.type';
+import { POLLA_GROUP_REPORT_MAX_DAYS } from '@helper/polla/config/session.config';
 import {
   IPollaEditionAccountListItem,
   IPollaEditionEntityBack,
@@ -52,6 +53,38 @@ const queryDate = (value: unknown, label: string): string | null => {
 const paramUuid = (value: string, label: string): string => {
   if (!UUID.test(value)) throw new BadRequestError(`${label} inválido`);
   return value;
+};
+
+/** Argentina no tiene horario de verano: los días de liquidación van en UTC-3. */
+const AR_OFFSET = '-03:00';
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Hoy en Argentina (`YYYY-MM-DD`), como `polla_today()`. */
+const argentinaToday = () =>
+  new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+/**
+ * Rango del parte diario de grupos: `from` y `to` juntos, Desde ≤ Hasta ≤ hoy y
+ * hasta `POLLA_GROUP_REPORT_MAX_DAYS` días. Devuelve los bordes semiabiertos en
+ * hora de Argentina: `[from 00:00, to + 1 00:00)`.
+ */
+const queryLiquidatedRange = (fromValue: unknown, toValue: unknown) => {
+  const from = queryDate(fromValue, 'from');
+  const to = queryDate(toValue, 'to');
+  if (!from && !to) return null;
+  if (!from || !to) throw new BadRequestError('Faltan las fechas desde y hasta');
+  if (from > to) {
+    throw new BadRequestError('La fecha desde tiene que ser anterior a la fecha hasta');
+  }
+  if (to > argentinaToday()) {
+    throw new BadRequestError('La fecha hasta no puede ser posterior a hoy');
+  }
+  const start = Date.parse(`${from}T00:00:00${AR_OFFSET}`);
+  const end = Date.parse(`${to}T00:00:00${AR_OFFSET}`) + DAY_MS;
+  if ((end - start) / DAY_MS > POLLA_GROUP_REPORT_MAX_DAYS) {
+    throw new BadRequestError(`El rango no puede pasar de ${POLLA_GROUP_REPORT_MAX_DAYS} días`);
+  }
+  return { from: new Date(start).toISOString(), to: new Date(end).toISOString() };
 };
 
 /** `polla_edition_ids=a,b,c`: lista de UUID sin repetir, de hasta 60. */
@@ -250,6 +283,8 @@ export class PollaEditionAccountRouter {
       organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
       editionId: queryUuid(req.query.polla_edition_id, 'polla_edition_id'),
       groupId: queryUuid(req.query.polla_group_id, 'polla_group_id'),
+      // Parte diario de grupos por rango: por fecha de liquidación.
+      liquidated: queryLiquidatedRange(req.query.from, req.query.to),
     });
 
     res.status(200).json({ data: { group_accounts: groupAccounts } });

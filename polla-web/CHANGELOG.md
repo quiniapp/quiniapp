@@ -4,6 +4,20 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (parte diario de grupos)
+
+- **"Parte diario"** en la pestaña Grupos (`GroupEditionAccounts.tsx`): PDF de la edición elegida (`downloadGroupDailyReportPDF` en `functions/current-account/groupDailyReportPDF.ts`).
+  - Columnas Grupo, Total y $ Admin, con la fila Total y abajo el **Total capitalista**.
+  - Encabezado con la edición y la fecha de liquidación (la última de sus grupos).
+  - Entran solo los grupos liquidados, con lo guardado al liquidar. Los que tienen algo y no se liquidaron salen en un aviso ("Sin liquidar"), igual que los desactualizados. Los pasadores sin grupo no entran.
+  - Nombre: `Polla semanal parte diario grupos DD-MM-YYYY`, o `Polla plus …` si es especial.
+- **"Parte diario por rango"**: Desde y Hasta (hasta hoy, como máximo 62 días, Desde ≤ Hasta), por fecha de liquidación (`fetchGroupAccountsRange`).
+  - Una fila por edición (Fecha liq., Edición, Total, $ Admin, Capitalista) con TOTAL.
+  - Abajo, el "Resumen por grupo" con el Total capitalista.
+  - Nombre: `Polla parte diario grupos DD-MM-YYYY al DD-MM-YYYY`.
+- Los montos salen con hasta 2 decimales: lo del admin y del capitalista se paga al centavo.
+- **Lógica pura** en `lib/groupDailyReport.ts`: `groupReportRows`, `groupReportTotals`, `groupReportDate`, `groupRangeByEdition`, `unliquidatedGroupNames` y `outdatedGroupNames`. Test en `__tests__/current-account/group-daily-report.test.ts`.
+
 ### Added - 2026-11-17 (% del admin, liquidar varios grupos y grupos en tabla)
 
 - **% de ganancia del admin** (`features/groups/index.tsx`):

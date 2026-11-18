@@ -1,13 +1,15 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { AlertTriangle, Printer, Receipt, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarRange, FileText, Printer, Receipt, Wallet } from 'lucide-react';
 import {
   IPollaEditionAccountListItem,
   IPollaGroupEditionAccountEntity,
   IPollaGroupEditionAccountPreview,
+  isPollaSpecialEdition,
   pollaEditionTitle,
 } from '@helper/polla/types/game.type';
+import { POLLA_GROUP_REPORT_MAX_DAYS } from '@helper/polla/config/session.config';
 import { useAuth } from '@/providers/AuthContext';
 import { useDrawCatalogs } from '@/hooks/fetchs/useCatalogs';
 import {
@@ -63,7 +65,23 @@ import {
   parseAmount,
 } from '@/lib/editionAccount';
 import { cn } from '@/lib/utils';
-import { fetchOrganizationName } from '../fetchers';
+import { todayIso } from '@/lib/dates';
+import { pollaDailyReportName } from '@/lib/exportNames';
+import {
+  GroupRef,
+  groupRangeByEdition,
+  groupReportDate,
+  groupReportRows,
+  groupReportTotals,
+  outdatedGroupNames,
+  unliquidatedGroupNames,
+} from '@/lib/groupDailyReport';
+import {
+  downloadGroupDailyReportPDF,
+  downloadGroupRangeReportPDF,
+} from '@/functions/current-account/groupDailyReportPDF';
+import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
+import { DateField } from '../dialogs/shared';
 import { fmtMoney } from '../format';
 import { EditionExpensesEditor } from './EditionExpensesEditor';
 import { useCashierCode } from './useCashierCode';
@@ -815,6 +833,102 @@ const GroupEditionHistory = ({
 };
 
 /**
+ * Parte diario de grupos por rango: Desde y Hasta (hasta hoy, como máximo 62
+ * días) por fecha de liquidación. Una fila por edición y el resumen por grupo.
+ */
+const GroupRangeReportDialog = ({
+  groupById,
+  titleOf,
+  organizationId,
+  onClose,
+}: {
+  groupById: Map<string, GroupRef>;
+  titleOf: (editionId: string) => string;
+  organizationId: string | null;
+  onClose: () => void;
+}) => {
+  const today = todayIso();
+  const [from, setFrom] = useState(() => dayjs().startOf('month').format('YYYY-MM-DD'));
+  const [to, setTo] = useState(today);
+  const [busy, setBusy] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!from || !to) {
+      toast.error('Elegí las dos fechas');
+      return;
+    }
+    if (from > to) {
+      toast.error('La fecha desde tiene que ser anterior a la fecha hasta');
+      return;
+    }
+    if (to > today) {
+      toast.error('La fecha hasta no puede ser posterior a hoy');
+      return;
+    }
+    if (dayjs(to).diff(dayjs(from), 'day') + 1 > POLLA_GROUP_REPORT_MAX_DAYS) {
+      toast.error(`El rango no puede pasar de ${POLLA_GROUP_REPORT_MAX_DAYS} días`);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const accounts = await fetchGroupAccountsRange(from, to, organizationId);
+      if (accounts.length === 0) {
+        toast.error('No hay grupos liquidados en ese rango');
+        return;
+      }
+      const groups = groupReportRows(accounts, groupById);
+      await downloadGroupRangeReportPDF({
+        from,
+        to,
+        editions: groupRangeByEdition(accounts).map((row) => ({
+          ...row,
+          title: titleOf(row.editionId),
+        })),
+        groups,
+        totals: groupReportTotals(groups),
+        fileName: pollaDailyReportName({ date: from, to, groups: true }),
+      });
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error('No se pudo generar el parte diario');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-w-[95vw] sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>Parte diario de grupos por rango</DialogTitle>
+          <DialogDescription>
+            Suma los partes diarios de las ediciones con grupos liquidados entre las dos fechas (por
+            fecha de liquidación): una fila por edición y el resumen por grupo.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <DateField id="group-range-from" label="Desde" value={from} onChange={setFrom} />
+            <DateField id="group-range-to" label="Hasta" value={to} onChange={setTo} />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? 'Generando…' : 'Generar PDF'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/**
  * Pestaña "Grupos" de la cuenta corriente: la cuenta de cada grupo en una
  * edición (lo que dejaron sus pasadores menos los gastos del grupo) y su
  * liquidación con el % del admin (el configurado en el admin o, si no tiene,
@@ -837,8 +951,20 @@ export const GroupEditionAccounts = () => {
   const [batchOpen, setBatchOpen] = useState(false);
   const [expensesOf, setExpensesOf] = useState<IPollaGroupEditionAccountPreview | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const editions = useMemo(() => list ?? [], [list]);
+  /** Título de cada edición de la lista, para el parte por rango. */
+  const titleOf = useMemo(() => {
+    const titles = new Map(
+      editions.map((item) => [
+        item.edition.polla_edition_id,
+        pollaEditionTitle(item.edition, catalogs),
+      ])
+    );
+    return (id: string) => titles.get(id) ?? 'Edición';
+  }, [editions, catalogs]);
 
   // Arranca en la primera edición de la lista (la más nueva), aunque tenga la
   // carga abierta: en el selector se marca con "· Carga abierta".
@@ -884,6 +1010,42 @@ export const GroupEditionAccounts = () => {
     });
   const toggleAll = (checked: boolean) => setSelected(new Set(checked ? toSelectAll : []));
 
+  /**
+   * Parte diario de grupos de la edición elegida: solo los grupos liquidados,
+   * con lo guardado al liquidar; los que faltan van como aviso.
+   */
+  const handleExportDaily = async () => {
+    if (!current) return;
+    const accounts = previews.flatMap((preview) => (preview.account ? [preview.account] : []));
+    if (accounts.length === 0) {
+      toast.error('Todavía no hay grupos liquidados en esta edición');
+      return;
+    }
+    setExporting(true);
+    try {
+      const rows = groupReportRows(accounts, groupById);
+      const date = groupReportDate(accounts) ?? todayIso();
+      await downloadGroupDailyReportPDF({
+        editionTitle: title,
+        date,
+        rows,
+        totals: groupReportTotals(rows),
+        unliquidated: unliquidatedGroupNames(previews),
+        outdated: outdatedGroupNames(previews),
+        fileName: pollaDailyReportName({
+          special: isPollaSpecialEdition(current.edition),
+          date,
+          groups: true,
+        }),
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error('No se pudo generar el parte diario');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (listQuery.isError && !list) return <ErrorState onRetry={() => void listQuery.refetch()} />;
   if (!list) return <EmptyState message="Cargando…" />;
   if (editions.length === 0) return <EmptyState message="No hay ediciones." />;
@@ -899,22 +1061,42 @@ export const GroupEditionAccounts = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1 sm:w-[360px]">
-        <Label>Edición</Label>
-        <Select value={editionId ?? ''} onValueChange={setEditionId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Elegí una edición" />
-          </SelectTrigger>
-          <SelectContent>
-            {editions.map((item) => (
-              <SelectItem key={item.edition.polla_edition_id} value={item.edition.polla_edition_id}>
-                {pollaEditionTitle(item.edition, catalogs)} ·{' '}
-                {dayjs(item.edition.start_date).format('DD/MM/YYYY')}
-                {item.load_open && ' · Carga abierta'}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex w-full flex-col gap-1 sm:w-[360px]">
+          <Label>Edición</Label>
+          <Select value={editionId ?? ''} onValueChange={setEditionId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Elegí una edición" />
+            </SelectTrigger>
+            <SelectContent>
+              {editions.map((item) => (
+                <SelectItem
+                  key={item.edition.polla_edition_id}
+                  value={item.edition.polla_edition_id}
+                >
+                  {pollaEditionTitle(item.edition, catalogs)} ·{' '}
+                  {dayjs(item.edition.start_date).format('DD/MM/YYYY')}
+                  {item.load_open && ' · Carga abierta'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!current || exporting}
+            onClick={() => void handleExportDaily()}
+          >
+            <FileText />
+            {exporting ? 'Generando…' : 'Parte diario'}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setRangeOpen(true)}>
+            <CalendarRange />
+            Parte diario por rango
+          </Button>
+        </div>
       </div>
 
       {editionId && (
@@ -1028,6 +1210,14 @@ export const GroupEditionAccounts = () => {
           title={title}
           onClose={() => setBatchOpen(false)}
           onDone={() => setSelected(new Set())}
+        />
+      )}
+      {rangeOpen && (
+        <GroupRangeReportDialog
+          groupById={groupById}
+          titleOf={titleOf}
+          organizationId={organizationId}
+          onClose={() => setRangeOpen(false)}
         />
       )}
       {expensesOf && editionId && (

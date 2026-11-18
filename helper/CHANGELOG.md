@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (parte diario de grupos por rango)
+
+- **`POLLA_GROUP_REPORT_MAX_DAYS`** (`helper/polla/config/session.config.ts`): 62 días como máximo en el parte diario de grupos por rango.
+
 ### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
 
 - **`pollaAdminPercentage`** (`helper/polla/schemas/user.schema.ts`): número de 0 a 100, nullable y opcional ("El porcentaje va de 0 a 100"). Lo usan `groupAdmin` (alta del grupo y "Asignar admin") y `updatePollaUserSchema`.

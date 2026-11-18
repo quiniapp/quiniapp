@@ -41,3 +41,6 @@ export const POLLA_EXPORT_PAGE_SIZE = 1000;
 
 /** Máximo de días de un rango de fechas en los listados de la cuenta por días (solo consulta). */
 export const POLLA_ACCOUNT_RECALC_MAX_DAYS = 62;
+
+/** Máximo de días del parte diario de grupos por rango (por fecha de liquidación). */
+export const POLLA_GROUP_REPORT_MAX_DAYS = 62;

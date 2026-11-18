@@ -4,6 +4,16 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (parte diario de grupos por rango)
+
+- **`GET /edition_account/group_accounts?from=YYYY-MM-DD&to=YYYY-MM-DD`**: las liquidaciones de grupo de la organización hechas en ese rango.
+  - Filtra por fecha de liquidación (`edited_at`), con bordes semiabiertos en hora de Argentina: `[from 00:00, to + 1 00:00)`, UTC-3.
+  - Valida que vengan las dos fechas, Desde ≤ Hasta ≤ hoy y hasta `POLLA_GROUP_REPORT_MAX_DAYS` (62) días; si no, 400.
+  - Ordena por `edited_at` y id, con tope de 5000 filas (400 si se pasa).
+  - Sin `from`/`to` sigue igual (por edición o grupo, ordenado por nombre).
+  - Columnas explícitas en lugar de `select('*')`.
+- **Migración `20261117235041_polla_group_edition_accounts_edited_idx.sql`**: índice `(polla_organization_id, edited_at, polla_group_edition_account_id)`. Con `EXPLAIN` es un Index Scan con la organización y el rango como condición de acceso, y sin `Sort`.
+
 ### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
 
 - **Migración `20261117233719_polla_admin_percentage.sql`:**
