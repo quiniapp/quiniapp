@@ -9,8 +9,8 @@
 |---|---|---|
 | 0 Reglas en CLAUDE.md + baseline | `perf/sql-0-baseline` | Mergeada en develop (#562). Delta de prod de 24 h hecho (ver baseline) |
 | 1 Keyset jugadas/tickets QuiniApp + totales rotos | `perf/sql-1-keyset-quiniapp` | Mergeada en develop (#562), migraciones aplicadas en develop. Falta prod |
-| 1b `generate_winners` solo escribe lo que cambia (nueva) | `perf/sql-1b-generate-winners` | En curso |
-| 1c Victorias rápidas: `get_archive_stats` + índices de `tickets` sin uso (nueva) | `perf/sql-1c-quick-wins` | Pendiente |
+| 1b `generate_winners` solo escribe lo que cambia (nueva) | `perf/sql-1b-generate-winners` | Lista en la rama; falta PR y migración en develop |
+| 1c Victorias rápidas: `get_archive_stats` + índices de `tickets` sin uso (nueva) | `perf/sql-1c-quick-wins` | Lista en la rama (apilada sobre la 1b); falta PR y migraciones en develop |
 | 2 RPC agrupadas y totales | `perf/sql-2-grouped-rpc` | Pendiente (en prod no es lenta: ~40 ms la página 1; el valor es el orden determinista y la escala) |
 | 3 Polla: ticket y keyset | `perf/sql-3-polla-ticket-keyset` | Pendiente (baja prioridad: en prod `polla_bets` tiene ~340 filas) |
 | 4 Polla: listados con offset | `perf/sql-4-polla-offset` | Pendiente (baja prioridad, ídem) |
@@ -22,7 +22,7 @@
 
 1. 1 a prod.
 2. **1b**: lo único que el usuario espera y donde la base hace un trabajo claramente evitable.
-3. **1c**: dos arreglos chicos y de bajo riesgo.
+3. **1c**: dos arreglos chicos y de bajo riesgo (`get_archive_stats` es del cron nocturno, no lo espera ningún usuario).
 4. **2**.
 5. **7**: bugs que ve el usuario.
 6. **3** y **4**: Polla, que hoy tiene volumen mínimo.
@@ -266,14 +266,18 @@ Antes, verificar que `bet_order` y `created_at` no tengan NULL en prod (sección
 
 ## Fase 1c — Victorias rápidas (`perf/sql-1c-quick-wins`)
 
-- **`get_archive_stats`** (panel de archivo): 4,2 s por llamada en prod porque recorre las tablas enteras. Pasa a `pg_class.reltuples` / `pg_stat_user_tables.n_live_tup` o a contadores. El fallback de `archive.service.ts` hace `count: 'exact'` de `bets_archive` completo: se va con el mismo cambio.
+- **`get_archive_stats`**: 4,2 s por llamada en prod porque recorría `bets_archive` entera (~1 GB, leída de disco). No lo espera ningún usuario: lo llama el cron de archivado dos veces por noche, solo para el log, y `GET /api/private/archive/stats`.
+  - Migración `20261118061355_perf_get_archive_stats_estimate.sql`: las tablas principales siguen con `COUNT(*)` exacto (son chicas); las de archivo pasan a `pg_stat_user_tables.n_live_tup` (estimación, con `archive_tables.is_estimate`).
+  - El fallback de `archive.service.ts` pasa a `count: 'estimated'` para el archivo, y el log del cron marca esos valores como "(aprox.)".
+  - Local: de 165 ms (conteo exacto de 1M de filas) a 64 ms; la estimación coincide con el conteo.
 - **Drop de índices de `tickets` sin uso:**
   - `idx_tickets_total_prize`
   - `idx_tickets_winner_deleted_created`
   - `idx_tickets_winner_user_deleted_created`
   - `idx_tickets_date_deleted_winner_created`
 
-  Tienen 0 usos en el delta de 24 h y prácticamente ninguno en 14 meses, y no dependen de la Fase 1. Cada carga de ticket los mantiene. `idx_tickets_deleted_by` se queda porque respalda una FK.
+  Tienen 0 usos en el delta de 24 h y prácticamente ninguno en 14 meses, y no dependen de la Fase 1. Cada carga de ticket los mantiene, y tres incluyen columnas que actualiza `generate_winners` (`winner`, `total_prize`), lo que impide updates HOT. `idx_tickets_deleted_by` se queda porque respalda una FK.
+  - Migraciones `20261118061356` a `20261118061359`, una por índice: `DROP INDEX CONCURRENTLY IF EXISTS` como única sentencia.
 
 ## Fase 2 — RPC agrupadas y totales (`perf/sql-2-grouped-rpc`)
 

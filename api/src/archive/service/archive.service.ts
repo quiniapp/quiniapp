@@ -27,6 +27,8 @@ export interface IArchiveStats {
   archive_tables: {
     bets_count: number;
     tickets_count: number;
+    /** Las tablas de archivo se estiman (no se recorren: ~1 GB en prod). */
+    is_estimate?: boolean;
   };
   activity: {
     active_days_count: number;
@@ -186,13 +188,14 @@ export class ArchiveService {
       .from('tickets')
       .select('*', { count: 'exact', head: true });
 
+    // El archivo se estima: un COUNT exacto de bets_archive recorre ~1 GB.
     const { count: betsArchiveCount } = await supabase
       .from('bets_archive')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'estimated', head: true });
 
     const { count: ticketsArchiveCount } = await supabase
       .from('tickets_archive')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'estimated', head: true });
 
     const activeDays = await this.activityDaysRepo.getActiveDaysOnly();
     const lastActiveDay = activeDays.length > 0 ? activeDays[0].date : null;
@@ -208,6 +211,7 @@ export class ArchiveService {
       archive_tables: {
         bets_count: betsArchiveCount || 0,
         tickets_count: ticketsArchiveCount || 0,
+        is_estimate: true,
       },
       activity: {
         active_days_count: activeDays.length,

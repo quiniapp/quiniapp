@@ -4,6 +4,22 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-18 (rendimiento SQL — Fase 1c: get_archive_stats estimado e índices de tickets sin uso)
+
+- **`get_archive_stats`** (migración `20261118061355_perf_get_archive_stats_estimate.sql`):
+  - Por qué: tardaba ~4,2 s en prod porque contaba `bets_archive` completa (~3,3M filas, ~1 GB) leyéndola de disco. Lo llama el cron de archivado dos veces por noche, solo para el log, y `GET /api/private/archive/stats`.
+  - Las tablas principales siguen con conteo exacto; las de archivo pasan a `pg_stat_user_tables.n_live_tup` (estimación). La respuesta agrega `archive_tables.is_estimate: true`.
+  - `CREATE OR REPLACE`: conserva los grants y el `search_path`.
+- **`archive.service.ts`**: el fallback manual cuenta el archivo con `count: 'estimated'`; `IArchiveStats.archive_tables.is_estimate`.
+- **`cron.service.ts`**: el log marca los conteos del archivo como "(aprox.)".
+- **Drop de índices de `tickets` sin uso** (una migración por índice, `DROP INDEX CONCURRENTLY IF EXISTS`):
+  - `idx_tickets_total_prize` (`20261118061356`);
+  - `idx_tickets_winner_deleted_created` (`20261118061357`);
+  - `idx_tickets_winner_user_deleted_created` (`20261118061358`);
+  - `idx_tickets_date_deleted_winner_created` (`20261118061359`).
+
+  Tienen 0 usos en el delta de 24 h de prod y prácticamente ninguno en 14 meses. Cada carga de ticket los mantenía, y los que incluyen `winner` o `total_prize` impedían updates HOT en `generate_winners`.
+
 ### Changed - 2026-11-18 (rendimiento SQL — Fase 1b: generate_winners solo escribe lo que cambia)
 
 **Qué cambia.** Cargar resultados (`generate_winners_and_calculate_accounts`) deja de reescribir todas las jugadas y tickets del turno: solo actualiza las filas cuyo premio, aciertos o estado de ganador cambian. Mismo resultado.
