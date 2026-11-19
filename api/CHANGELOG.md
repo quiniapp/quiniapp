@@ -4,6 +4,13 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **`GET /edition_account/group_mine`** (`polla-edition-account.route.ts`): guard `ADMIN`; devuelve `{ liquidations: [{ edition, account }] }` con las liquidaciones de su grupo por edición, de la más nueva a la más vieja (`start_date`). El grupo (`user.polla_group_id`) y la organización salen solo de la sesión; no lee nada del query.
+- **`GET /group_account/mine`** (`polla-group-account.route.ts`): guard `ADMIN`; la misma respuesta paginada que `GET /group_account`, siempre con el grupo y la organización de la sesión (ignora `polla_group_id` del query).
+- `group_account`: el `router.use` global pasa a guards por ruta (`GET /` sigue con `POLLA_ACCOUNT_ROLES`). El resto de las rutas de `edition_account` siguen cerradas al admin.
+- Sin índice nuevo: `polla_group_edition_accounts_group_edition_uniq` y `polla_group_accounts_group_date_uniq` cubren el filtro por grupo.
+
 ### Changed - 2026-11-18 (rendimiento SQL — Fase 1c: get_archive_stats estimado e índices de tickets sin uso)
 
 - **`get_archive_stats`** (migración `20261118061355_perf_get_archive_stats_estimate.sql`):

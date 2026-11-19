@@ -6,6 +6,7 @@ import {
   IPollaEditionAccountListItem,
   IPollaEditionEntityBack,
   IPollaEditionEntityFront,
+  IPollaGroupEditionLiquidation,
   IPollaUserEditionAccount,
   POLLA_ACCOUNT_MOVEMENT_TYPE,
 } from '@helper/polla/types/game.type';
@@ -115,7 +116,9 @@ const toFrontEdition = (
 /**
  * Cuenta corriente por edición. Ven y liquidan dueño, capitalista y
  * superadmin (`POLLA_ACCOUNT_ROLES`); el pasador solo lee lo suyo (la ruta le
- * fuerza su propio `polla_user_id`). El admin de grupo y el resto no entran.
+ * fuerza su propio `polla_user_id`). El admin de grupo solo entra a
+ * `/group_mine` (las liquidaciones de su grupo, con el grupo y la organización
+ * de la sesión); el resto no entra.
  * Las rutas estáticas van antes de `/:editionId`.
  */
 export class PollaEditionAccountRouter {
@@ -134,9 +137,11 @@ export class PollaEditionAccountRouter {
     const accountGuard = requirePollaRole(...POLLA_ACCOUNT_ROLES);
     const readGuard = requirePollaRole(...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER);
     const cashierGuard = requirePollaRole(POLLA_USER_TYPE.CASHIER);
+    const adminGuard = requirePollaRole(POLLA_USER_TYPE.ADMIN);
 
     this.router.get('/', accountGuard, this.listHandler);
     this.router.get('/mine', cashierGuard, this.mineHandler);
+    this.router.get('/group_mine', adminGuard, this.groupMineHandler);
     this.router.get('/totals', accountGuard, this.totalsHandler);
     this.router.get('/group_accounts', accountGuard, this.groupAccountsHandler);
     this.router.put('/movements/:id', accountGuard, this.updateMovementHandler);
@@ -262,6 +267,33 @@ export class PollaEditionAccountRouter {
     }
 
     res.status(200).json({ data: { editions: data } });
+  });
+
+  /**
+   * Las liquidaciones del grupo del admin, de la más nueva a la más vieja. El
+   * grupo y la organización salen solo de la sesión: nada del query.
+   */
+  private groupMineHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const organizationId = user.polla_organization_id;
+    const groupId = user.polla_group_id;
+    if (!groupId) throw new NotFoundError('Grupo');
+
+    const accounts = await this.repository.groupAccounts({ organizationId, groupId });
+    const editions = await this.loadEditions(
+      organizationId,
+      accounts.map((account) => account.polla_edition_id),
+      false
+    );
+
+    const liquidations: IPollaGroupEditionLiquidation[] = [];
+    for (const account of accounts) {
+      const edition = editions.get(account.polla_edition_id);
+      if (edition) liquidations.push({ edition, account });
+    }
+    liquidations.sort((a, b) => b.edition.start_date.localeCompare(a.edition.start_date));
+
+    res.status(200).json({ data: { liquidations } });
   });
 
   private totalsHandler = asyncHandler(async (req: Request, res: Response) => {

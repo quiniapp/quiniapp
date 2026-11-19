@@ -17,6 +17,7 @@ import {
   IPollaEditionAccountRow,
   IPollaEditionEntityFront,
   IPollaGroupEditionAccountEntity,
+  IPollaGroupEditionLiquidation,
   IPollaGroupEditionAccountPreview,
   IPollaUserEditionAccount,
   IPollaGroupAccountEntityFront,
@@ -279,12 +280,21 @@ export const useCurrentAccountTotals = (params: QueryParams = {}, enabled = true
 
 // ------------------------------------------------------- cuenta del grupo
 
-/** Liquidaciones de grupos (el admin recibe solo las del suyo). */
+/** Liquidaciones de grupos de la organización (solo dueño, capitalista y superadmin; el admin usa `useMyGroupAccounts`). */
 export const useGroupAccounts = (params: QueryParams = {}, enabled = true) =>
   useApiInfiniteQuery<IPollaGroupAccountEntityFront>(
     ['polla-group-accounts'],
     BACKEND_ROUTES.groupAccount.base,
     params,
+    { enabled, limit: 50 }
+  );
+
+/** Las liquidaciones del grupo del admin (el servidor usa el grupo de la sesión). */
+export const useMyGroupAccounts = (enabled = true) =>
+  useApiInfiniteQuery<IPollaGroupAccountEntityFront>(
+    ['polla-group-accounts', 'mine'],
+    BACKEND_ROUTES.groupAccount.mine,
+    {},
     { enabled, limit: 50 }
   );
 
@@ -356,6 +366,15 @@ export const useMyEditionAccounts = (enabled = true) =>
   useApiQuery<IPollaUserEditionAccount[]>(
     ['edition-account', 'mine'],
     BACKEND_ROUTES.editionAccount.mine,
+    {},
+    { enabled }
+  );
+
+/** Las liquidaciones por edición del grupo del admin, la más nueva primero. */
+export const useMyGroupEditionLiquidations = (enabled = true) =>
+  useApiQuery<IPollaGroupEditionLiquidation[]>(
+    ['edition-account', 'group-mine'],
+    BACKEND_ROUTES.editionAccount.groupMine,
     {},
     { enabled }
   );

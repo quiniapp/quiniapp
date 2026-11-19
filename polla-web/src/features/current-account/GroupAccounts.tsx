@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { Printer } from 'lucide-react';
 import { IPollaGroupAccountEntityFront } from '@helper/polla/types/game.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useGroupAccounts } from '@/hooks/fetchs/usePollaData';
+import { useGroupAccounts, useMyGroupAccounts } from '@/hooks/fetchs/usePollaData';
 import { flattenPages } from '@/hooks/useApi';
 import { EmptyState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
@@ -20,10 +20,15 @@ import { printGroupLiquidationTicket } from '@/functions/current-account/groupLi
 import { fetchOrganizationName } from './fetchers';
 import { fmtMoney } from './format';
 
-/** Historial de liquidaciones de grupos por fecha (solo lectura; se pueden reimprimir). */
-export const GroupAccountHistory = () => {
+/**
+ * Historial de liquidaciones de grupos por fecha (solo lectura; se pueden
+ * reimprimir). `mine`: el del grupo del admin.
+ */
+export const GroupAccountHistory = ({ mine = false }: { mine?: boolean }) => {
   const { organizationId } = useAuth();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching } = useGroupAccounts();
+  const all = useGroupAccounts({}, !mine);
+  const own = useMyGroupAccounts(mine);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching } = mine ? own : all;
   const { rows, totalCount } = flattenPages(data?.pages);
 
   const reprint = async (account: IPollaGroupAccountEntityFront) => {

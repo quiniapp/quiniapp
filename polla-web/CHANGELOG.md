@@ -4,6 +4,12 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **Cuenta corriente del admin** (`features/current-account/AdminGroupAccountView.tsx`): "Por edición" (tabla en la computadora, tarjetas en el celular, con Edición, Liquidada y los seis renglones, capitalista incluido) e "Historial por fechas", solo para consultar. Cada fila baja PDF o Imagen (en el celular la imagen va por la hoja de compartir; el botón se deshabilita mientras genera).
+- `useMyGroupEditionLiquidations` y `useMyGroupAccounts` (`usePollaData.ts`), rutas `editionAccount.groupMine` y `groupAccount.mine`; `GroupAccountHistory` recibe `mine`.
+- El menú y la ruta Cuenta corriente aparecen para el rol admin (`CURRENT_ACCOUNT`).
+
 ### Added - 2026-11-18
 
 - **Formato Imagen al exportar liquidaciones**: las liquidaciones de pasadores (Exportar liquidación por edición, una o varias, y en Historial por fechas) y de grupos ("Exportar liquidaciones") tienen un selector "Formato: PDF | Imagen".

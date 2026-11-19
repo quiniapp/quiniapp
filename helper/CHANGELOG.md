@@ -4,6 +4,14 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **`POLLA_PAGE_ROLES.CURRENT_ACCOUNT`** (`helper/polla/config/access.config.ts`) suma `ADMIN`: ve las liquidaciones de su grupo, solo lectura.
+
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **`IPollaGroupEditionLiquidation`** (`helper/polla/types/game.type.ts`): `{ edition, account }`, una liquidación de grupo con su edición.
+
 ### Added - 2026-11-18 (parte diario de grupos por rango)
 
 - **`POLLA_GROUP_REPORT_MAX_DAYS`** (`helper/polla/config/session.config.ts`): 62 días como máximo en el parte diario de grupos por rango.
