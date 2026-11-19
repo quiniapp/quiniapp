@@ -1,5 +1,6 @@
 import { IPollaGroupEditionAccountEntity } from '@helper/polla/types/game.type';
 import { groupSplit } from '@/lib/editionAccount';
+import { groupReportDate } from '@/lib/groupDailyReport';
 
 /**
  * Hoja de liquidación de un grupo en una edición: los renglones que se
@@ -59,4 +60,27 @@ export const groupLiquidationRows = (
     { label: 'Total admin', value: money(split.admin) },
     { label: 'Total capitalista', value: money(split.capitalist) },
   ];
+};
+
+/**
+ * Las hojas de las liquidaciones guardadas, una por grupo. Una sola fecha para
+ * todas: la de la liquidación más nueva (`today` si no hay ninguna).
+ */
+export const groupLiquidationSheets = (
+  accounts: (GroupLiquidationAccount & { polla_group_id: string })[],
+  ctx: {
+    groupNumberOf: (groupId: string) => number | undefined;
+    orgName: string;
+    editionTitle: string;
+    today: string;
+  }
+): GroupLiquidationSheet[] => {
+  const date = groupReportDate(accounts) ?? ctx.today;
+  return accounts.map((account) => ({
+    account,
+    group: { number: ctx.groupNumberOf(account.polla_group_id), name: account.group_name },
+    orgName: ctx.orgName,
+    editionTitle: ctx.editionTitle,
+    date,
+  }));
 };

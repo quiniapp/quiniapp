@@ -149,3 +149,15 @@ export const looseFileNames = (paths: string[]) => {
     return dot === -1 ? `${name} (${n})` : `${name.slice(0, dot)} (${n})${name.slice(dot)}`;
   });
 };
+
+/**
+ * Límites de la hoja de compartir de Android Chrome: más de 10 archivos o más
+ * de 50 MB en total se rechazan con `NotAllowedError` (igual que un share sin
+ * toque), así que ni se intenta: se manda el ZIP.
+ */
+export const MAX_SHARE_FILES = 10;
+export const MAX_SHARE_BYTES = 50 * 1024 * 1024;
+
+/** True si las imágenes no entran sueltas en la hoja de compartir. */
+export const shouldZipImages = (files: { size: number }[]) =>
+  files.length > MAX_SHARE_FILES || files.reduce((sum, f) => sum + f.size, 0) > MAX_SHARE_BYTES;

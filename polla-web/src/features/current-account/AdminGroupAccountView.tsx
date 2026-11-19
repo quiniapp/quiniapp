@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { FileText, Image as ImageIcon } from 'lucide-react';
@@ -21,16 +20,15 @@ import { downloadGroupLiquidationPDF } from '@/functions/current-account/groupLi
 import { renderLiquidationImage } from '@/functions/current-account/liquidationImage';
 import { downloadFiles, shareFiles } from '@/functions/shareFiles';
 import { isMobileDevice } from '@/functions/printPdf';
+import { groupSplit } from '@/lib/editionAccount';
 import { groupLiquidationImageLines } from '@/lib/liquidationImageLines';
 import { groupLiquidationFileName } from '@/lib/liquidationZip';
-import {
-  type GroupLiquidationSheet,
-  groupLiquidationLabel,
-  groupLiquidationRows,
-} from '@/lib/groupLiquidation';
+import { type GroupLiquidationSheet, groupLiquidationLabel } from '@/lib/groupLiquidation';
 import { AccountTabs } from './dialogs/shared';
 import { fetchOrganizationName } from './fetchers';
+import { fmtMoney } from './format';
 import { GroupAccountHistory } from './GroupAccounts';
+import { useOrganizationName } from './useOrganizationName';
 
 type AdminTab = 'edition' | 'history';
 
@@ -42,6 +40,23 @@ const ADMIN_TABS: { value: AdminTab; label: string }[] = [
 const fmtDate = (value: string) => dayjs(value).format('DD/MM/YYYY');
 
 type Format = 'pdf' | 'png';
+
+/**
+ * Los renglones de la página, formateados igual que la tabla de liquidaciones
+ * del dueño (con decimales y gastos en positivo). El PDF y la imagen usan
+ * pesos enteros (`groupLiquidationRows`).
+ */
+const pageRows = (account: IPollaGroupEditionLiquidation['account']) => {
+  const split = groupSplit(account.base, account.admin_commission);
+  return [
+    { label: 'Deja pasadores', value: `$${fmtMoney(account.cashiers_subtotal)}` },
+    { label: 'Gastos', value: `$${fmtMoney(account.expenses)}` },
+    { label: 'Total', value: `$${fmtMoney(account.base)}` },
+    { label: '% admin', value: `${Number(account.admin_percentage)}%` },
+    { label: 'Total admin', value: `$${fmtMoney(split.admin)}` },
+    { label: 'Total capitalista', value: `$${fmtMoney(split.capitalist)}` },
+  ];
+};
 
 /**
  * Las liquidaciones por edición del grupo del admin, solo para consultar, con
@@ -60,11 +75,7 @@ const AdminEditionLiquidations = () => {
   // tiempo entre el toque y el share). Clave: id + edited_at.
   const pendingImages = useRef(new Map<string, File>());
   // El nombre de la organización se trae antes del toque, no dentro del handler.
-  const { data: orgName } = useQuery({
-    queryKey: ['polla-organizations', 'name', organizationId],
-    queryFn: () => fetchOrganizationName(organizationId),
-    staleTime: Infinity,
-  });
+  const { data: orgName } = useOrganizationName(organizationId);
   const setRowBusy = (id: string, on: boolean) =>
     setBusy((prev) => {
       const next = new Set(prev);
@@ -81,12 +92,15 @@ const AdminEditionLiquidations = () => {
     pollaEditionTitle(item.edition, catalogs);
 
   const download = async (item: IPollaGroupEditionLiquidation, format: Format) => {
+    // Para distinguir "no se pudo generar" de "no se pudo compartir" en la imagen.
+    let sharing = false;
     const id = item.account.polla_group_edition_account_id;
     const pendingKey = `${id}:${item.account.edited_at}`;
     setRowBusy(id, true);
     try {
       const pending = format === 'png' ? pendingImages.current.get(pendingKey) : undefined;
       if (pending) {
+        sharing = true;
         if ((await shareFiles([pending])) === 'blocked') toast('Tocá de nuevo para compartir');
         else pendingImages.current.delete(pendingKey);
         return;
@@ -113,6 +127,7 @@ const AdminEditionLiquidations = () => {
         downloadFiles([file]);
         return;
       }
+      sharing = true;
       if ((await shareFiles([file])) === 'blocked') {
         pendingImages.current.set(pendingKey, file);
         toast('Tocá de nuevo para compartir');
@@ -120,7 +135,11 @@ const AdminEditionLiquidations = () => {
     } catch (error) {
       console.error(error);
       toast.error(
-        format === 'pdf' ? 'No se pudo descargar la liquidación' : 'No se pudo generar la imagen'
+        format === 'pdf'
+          ? 'No se pudo descargar la liquidación'
+          : sharing
+            ? 'No se pudo compartir la imagen'
+            : 'No se pudo generar la imagen'
       );
     } finally {
       setRowBusy(id, false);
@@ -135,36 +154,34 @@ const AdminEditionLiquidations = () => {
     const id = item.account.polla_group_edition_account_id;
     const label = `${groupLiquidationLabel({ number: groupNumber, name: item.account.group_name })}, ${titleOf(item)}`;
     return (
-      <div className="flex gap-2">
+      <div className="flex gap-1">
         <Button
           type="button"
-          size="sm"
-          variant="outline"
-          className="gap-1"
+          size="icon"
+          variant="ghost"
+          title="Descargar PDF"
           disabled={busy.has(id)}
           aria-label={`Descargar el PDF de ${label}`}
           onClick={() => void download(item, 'pdf')}
         >
           <FileText />
-          PDF
         </Button>
         <Button
           type="button"
-          size="sm"
-          variant="outline"
-          className="gap-1"
+          size="icon"
+          variant="ghost"
+          title="Bajar imagen"
           disabled={busy.has(id)}
           aria-label={`Bajar la imagen de ${label}`}
           onClick={() => void download(item, 'png')}
         >
           <ImageIcon />
-          Imagen
         </Button>
       </div>
     );
   };
 
-  const labels = groupLiquidationRows(data[0].account).map((row) => row.label);
+  const labels = pageRows(data[0].account).map((row) => row.label);
 
   return (
     <>
@@ -191,7 +208,7 @@ const AdminEditionLiquidations = () => {
                 <TableCell className="whitespace-nowrap tabular-nums">
                   {fmtDate(item.account.edited_at)}
                 </TableCell>
-                {groupLiquidationRows(item.account).map((row) => (
+                {pageRows(item.account).map((row) => (
                   <TableCell key={row.label} className="text-right tabular-nums">
                     {row.value}
                   </TableCell>
@@ -216,7 +233,7 @@ const AdminEditionLiquidations = () => {
               </span>
             </div>
             <dl className="flex flex-col gap-1 text-sm">
-              {groupLiquidationRows(item.account).map((row) => (
+              {pageRows(item.account).map((row) => (
                 <div key={row.label} className="flex justify-between gap-2 border-b pb-1">
                   <dt className="text-muted-foreground">{row.label}</dt>
                   <dd className="tabular-nums">{row.value}</dd>

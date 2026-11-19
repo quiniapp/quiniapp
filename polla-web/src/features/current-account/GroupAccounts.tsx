@@ -5,7 +5,7 @@ import { IPollaGroupAccountEntityFront } from '@helper/polla/types/game.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useGroupAccounts, useMyGroupAccounts } from '@/hooks/fetchs/usePollaData';
 import { flattenPages } from '@/hooks/useApi';
-import { EmptyState } from '@/components/PageHeader';
+import { EmptyState, ErrorState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,8 @@ export const GroupAccountHistory = ({ mine = false }: { mine?: boolean }) => {
   const { organizationId } = useAuth();
   const all = useGroupAccounts({}, !mine);
   const own = useMyGroupAccounts(mine);
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching } = mine ? own : all;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching, isError, refetch } =
+    mine ? own : all;
   const { rows, totalCount } = flattenPages(data?.pages);
 
   const reprint = async (account: IPollaGroupAccountEntityFront) => {
@@ -41,6 +42,8 @@ export const GroupAccountHistory = ({ mine = false }: { mine?: boolean }) => {
       toast.error('No se pudo imprimir el ticket');
     }
   };
+
+  if (isError && !data) return <ErrorState onRetry={() => void refetch()} />;
 
   if (rows.length === 0) {
     return (

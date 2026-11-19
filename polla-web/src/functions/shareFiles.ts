@@ -1,14 +1,19 @@
-export type ShareResult = 'shared' | 'cancelled' | 'blocked' | 'downloaded';
+export type ShareResult = 'shared' | 'cancelled' | 'blocked' | 'downloaded' | 'failed';
 
 /**
  * Abre la hoja de compartir del sistema con los archivos; si el navegador no puede
- * compartirlos, los descarga.
+ * compartirlos, los descarga. Con `fallbackDownload: false` no descarga nunca: si no
+ * se pudo compartir devuelve `'failed'` (para quien tiene un plan B mejor que bajar
+ * varios archivos sueltos, que los navegadores del celular bloquean).
  *
  * Solo se mandan `files`: en iOS, si se agrega `text`, WhatsApp descarta los archivos.
  * Hay que llamarla con los archivos ya generados: Safari rechaza el share
  * (`NotAllowedError`) si pasa mucho tiempo entre el toque del usuario y la llamada.
  */
-export async function shareFiles(files: File[]): Promise<ShareResult> {
+export async function shareFiles(
+  files: File[],
+  { fallbackDownload = true }: { fallbackDownload?: boolean } = {}
+): Promise<ShareResult> {
   if (navigator.canShare?.({ files })) {
     try {
       await navigator.share({ files });
@@ -19,6 +24,7 @@ export async function shareFiles(files: File[]): Promise<ShareResult> {
       // cualquier otro error: caemos a la descarga
     }
   }
+  if (!fallbackDownload) return 'failed';
   downloadFiles(files);
   return 'downloaded';
 }

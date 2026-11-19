@@ -92,12 +92,13 @@ import {
   downloadGroupDailyReportPDF,
   downloadGroupRangeReportPDF,
 } from '@/functions/current-account/groupDailyReportPDF';
-import { type GroupLiquidationSheet, groupLiquidationLabel } from '@/lib/groupLiquidation';
+import { groupLiquidationLabel, groupLiquidationSheets } from '@/lib/groupLiquidation';
 import { groupLiquidationZipName } from '@/lib/liquidationZip';
 import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
 import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
 import { exportActionLabel, useLiquidationDelivery } from '../dialogs/LiquidationFormat';
 import { DateField } from '../dialogs/shared';
+import { useOrganizationName } from '../useOrganizationName';
 import { fmtMoney } from '../format';
 import { EditionExpensesEditor } from './EditionExpensesEditor';
 import { useCashierCode } from './useCashierCode';
@@ -131,31 +132,27 @@ const editionCaption = (item: IPollaEditionAccountListItem, title: string) =>
     item.edition.end_date
   ).format('DD/MM/YYYY')}${item.load_open ? ' · Carga abierta' : ''}`;
 
-/**
- * Las hojas A4 de las liquidaciones guardadas, una por grupo. Una sola fecha
- * para todas: la de la liquidación más nueva.
- */
-const sheetsOf = (
-  accounts: IPollaGroupEditionAccountEntity[],
-  ctx: { groupById: Map<string, GroupRef>; orgName: string; title: string }
-): GroupLiquidationSheet[] => {
-  const date = groupReportDate(accounts) ?? todayIso();
-  return accounts.map((account) => ({
-    account,
-    group: { number: ctx.groupById.get(account.polla_group_id)?.number, name: account.group_name },
-    orgName: ctx.orgName,
-    editionTitle: ctx.title,
-    date,
-  }));
-};
-
 interface SheetsContext {
   groupById: Map<string, GroupRef>;
   organizationId: string | null;
+  /** El nombre ya cargado (`useOrganizationName`); sin él se pide al exportar. */
+  orgName?: string;
   title: string;
   /** Edición especial: el ZIP lleva el prefijo `polla_plus_`. */
   special: boolean;
 }
+
+/** Las hojas de las liquidaciones, con el nombre de la organización ya cargado si se puede. */
+const sheetsOf = async (
+  accounts: IPollaGroupEditionAccountEntity[],
+  ctx: Omit<SheetsContext, 'special'>
+) =>
+  groupLiquidationSheets(accounts, {
+    groupNumberOf: (groupId) => ctx.groupById.get(groupId)?.number,
+    orgName: ctx.orgName ?? (await fetchOrganizationName(ctx.organizationId)),
+    editionTitle: ctx.title,
+    today: todayIso(),
+  });
 
 /** Un archivo por grupo (aunque sea uno solo), listo para entregar. */
 const prepareZip = async (
@@ -163,11 +160,7 @@ const prepareZip = async (
   ctx: SheetsContext,
   format: LiquidationFormat
 ) => {
-  const sheets = sheetsOf(accounts, {
-    groupById: ctx.groupById,
-    orgName: await fetchOrganizationName(ctx.organizationId),
-    title: ctx.title,
-  });
+  const sheets = await sheetsOf(accounts, ctx);
   return prepareGroupLiquidations({
     sheets,
     format,
@@ -203,11 +196,7 @@ const downloadSheet = async (
   ctx: Omit<SheetsContext, 'special'>
 ) => {
   try {
-    const [sheet] = sheetsOf([account], {
-      groupById: ctx.groupById,
-      orgName: await fetchOrganizationName(ctx.organizationId),
-      title: ctx.title,
-    });
+    const [sheet] = await sheetsOf([account], ctx);
     await downloadGroupLiquidationPDF(sheet);
   } catch (error) {
     console.error(error);
@@ -273,6 +262,7 @@ const LiquidateGroupDialog = ({
   onClose: () => void;
 }) => {
   const { organizationId } = useAuth();
+  const { data: orgName } = useOrganizationName(organizationId);
   const initial = groupLiquidationPercentage(adminPercentage, preview.account);
   const [percentage, setPercentage] = useState(initial.value);
   const { mutate: liquidate, isPending } = useLiquidateGroupEdition();
@@ -299,7 +289,7 @@ const LiquidateGroupDialog = ({
       {
         onSuccess: (saved) => {
           onClose();
-          void exportZipOrToast([saved], { groupById, organizationId, title, special });
+          void exportZipOrToast([saved], { groupById, organizationId, orgName, title, special });
         },
       }
     );
@@ -379,6 +369,7 @@ const LiquidateGroupsDialog = ({
   onDone: () => void;
 }) => {
   const { organizationId } = useAuth();
+  const { data: orgName } = useOrganizationName(organizationId);
   const initial = useMemo(
     () =>
       new Map(
@@ -423,7 +414,7 @@ const LiquidateGroupsDialog = ({
         onSuccess: async (saved) => {
           onDone();
           onClose();
-          await exportZipOrToast(saved, { groupById, organizationId, title, special });
+          await exportZipOrToast(saved, { groupById, organizationId, orgName, title, special });
         },
       }
     );
@@ -799,6 +790,7 @@ const GroupEditionHistory = ({
   groupById: Map<string, GroupRef>;
   previews: IPollaGroupEditionAccountPreview[];
 }) => {
+  const { data: orgName } = useOrganizationName(organizationId);
   const accountsQuery = useGroupEditionAccounts({
     polla_edition_id: editionId,
   });
@@ -815,7 +807,7 @@ const GroupEditionHistory = ({
 
   const reprint = (account: IPollaGroupEditionAccountEntity) => {
     if (outdatedGroups.has(account.polla_group_id)) setConfirming(account);
-    else void downloadSheet(account, { groupById, organizationId, title });
+    else void downloadSheet(account, { groupById, organizationId, orgName, title });
   };
 
   if (accountsQuery.isError && !accountsQuery.data) {
@@ -837,7 +829,7 @@ const GroupEditionHistory = ({
           onConfirm={() => {
             const account = confirming;
             setConfirming(null);
-            void downloadSheet(account, { groupById, organizationId, title });
+            void downloadSheet(account, { groupById, organizationId, orgName, title });
           }}
           onCancel={() => setConfirming(null)}
         />
@@ -1022,6 +1014,7 @@ const GroupRangeReportDialog = ({
  */
 export const GroupEditionAccounts = () => {
   const { organizationId } = useAuth();
+  const { data: orgName } = useOrganizationName(organizationId);
   const catalogs = useDrawCatalogs(organizationId);
   const { groupById } = useCashierCode();
   // Para el selector alcanzan las 200 más nuevas, sin contadores.
@@ -1038,12 +1031,18 @@ export const GroupEditionAccounts = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rangeOpen, setRangeOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Aparte de `exporting`: el parte diario no muestra "Generando…" al exportar liquidaciones.
+  const [exportingLiquidations, setExportingLiquidations] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
   const [format, setFormat] = useState<LiquidationFormat>('pdf');
   const delivery = useLiquidationDelivery();
   // Lo ya preparado deja de valer si cambia el formato o se cierra la lista.
   const { reset: resetDelivery } = delivery;
   useEffect(() => resetDelivery(), [format, pickOpen, resetDelivery]);
+  // Al cerrar la lista el formato vuelve a PDF.
+  useEffect(() => {
+    if (!pickOpen) setFormat('pdf');
+  }, [pickOpen]);
 
   const editions = useMemo(() => list ?? [], [list]);
   /** Título de cada edición de la lista, para el parte por rango. */
@@ -1138,8 +1137,12 @@ export const GroupEditionAccounts = () => {
     }
   };
 
+  /** Recién cambió la edición: la lista todavía vacía no quiere decir que no haya liquidados. */
+  const loadingPreviews = isFetching && previews.length === 0;
+
   /** "Exportar liquidaciones": abre la lista para elegir qué grupos van al ZIP. */
   const handleOpenExport = () => {
+    if (loadingPreviews) return;
     if (!previews.some((preview) => preview.account)) {
       toast.error('Todavía no hay grupos liquidados en esta edición');
       return;
@@ -1150,17 +1153,17 @@ export const GroupEditionAccounts = () => {
   /** Entrega las liquidaciones guardadas de los grupos elegidos (ZIP, o imágenes sueltas en el celular). */
   const handleExportLiquidations = async (chosen: IPollaGroupEditionAccountPreview[]) => {
     const accounts = chosen.flatMap((preview) => (preview.account ? [preview.account] : []));
-    setExporting(true);
+    setExportingLiquidations(true);
     try {
       const done = await delivery.run(() =>
-        prepareZip(accounts, { groupById, organizationId, title, special }, format)
+        prepareZip(accounts, { groupById, organizationId, orgName, title, special }, format)
       );
       if (done) setPickOpen(false);
     } catch (error) {
       console.error(error);
       toast.error('No se pudieron exportar las liquidaciones');
     } finally {
-      setExporting(false);
+      setExportingLiquidations(false);
     }
   };
 
@@ -1213,7 +1216,7 @@ export const GroupEditionAccounts = () => {
           <Button
             type="button"
             variant="outline"
-            disabled={!current || exporting}
+            disabled={!current || exporting || loadingPreviews}
             onClick={handleOpenExport}
           >
             <FolderArchive />
@@ -1361,7 +1364,7 @@ export const GroupEditionAccounts = () => {
           listLabel="Grupos"
           actionLabel={exportActionLabel}
           busyLabel="Exportando…"
-          busy={exporting || delivery.busy}
+          busy={exportingLiquidations || delivery.busy}
           format={format}
           onFormatChange={setFormat}
           onSelectionChange={delivery.reset}

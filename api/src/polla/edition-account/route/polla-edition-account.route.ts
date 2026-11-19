@@ -279,7 +279,7 @@ export class PollaEditionAccountRouter {
     const groupId = user.polla_group_id;
     if (!groupId) throw new NotFoundError('Grupo');
 
-    const accounts = await this.repository.groupAccounts({ organizationId, groupId });
+    const accounts = await this.repository.groupAccountsOfGroup({ organizationId, groupId });
     const editions = await this.loadEditions(
       organizationId,
       accounts.map((account) => account.polla_edition_id),

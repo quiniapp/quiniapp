@@ -108,6 +108,10 @@ export const DailyHistoryView = () => {
   // Lo ya preparado deja de valer si cambia el formato o se cierra la lista.
   const { reset: resetDelivery } = delivery;
   useEffect(() => resetDelivery(), [format, exportingSlips, resetDelivery]);
+  // Al cerrar la lista el formato vuelve a PDF.
+  useEffect(() => {
+    if (!exportingSlips) setFormat('pdf');
+  }, [exportingSlips]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;

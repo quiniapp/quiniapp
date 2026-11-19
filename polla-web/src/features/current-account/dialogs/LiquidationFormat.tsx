@@ -51,8 +51,8 @@ export const useLiquidationDelivery = () => {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PreparedLiquidation | null>(null);
 
-  const deliver = useCallback(async (prepared: PreparedLiquidation) => {
-    const result = await deliverLiquidation(prepared);
+  const deliver = useCallback(async (prepared: PreparedLiquidation, retry = false) => {
+    const result = await deliverLiquidation(prepared, { retry });
     if (result === 'done') {
       setPending(null);
       return true;
@@ -82,7 +82,8 @@ export const useLiquidationDelivery = () => {
     if (!pending) return false;
     setBusy(true);
     try {
-      return await deliver(pending);
+      // Ya es un toque nuevo: si vuelve a bloquear, se entrega el ZIP.
+      return await deliver(pending, true);
     } catch (error) {
       console.error(error);
       toast.error('No se pudieron compartir las liquidaciones');

@@ -60,6 +60,8 @@ export class PollaGroupAccountRouter {
   private getMineHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = getPollaSession(req);
     if (!user.polla_group_id) throw new NotFoundError('Grupo');
+    // OFFSET acotado: una fila por liquidación diaria o de período de un solo
+    // grupo (misma paginación que `GET /`).
     const pagination = parsePagination(req.query as Record<string, unknown>);
 
     const result = await this.repository.getAll(

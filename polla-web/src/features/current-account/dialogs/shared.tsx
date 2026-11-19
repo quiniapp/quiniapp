@@ -54,7 +54,7 @@ export const ModeToggle = <T extends string = ReportMode>({
           disabled={disabled}
           onClick={() => onChange(mode)}
           className={cn(
-            'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+            'rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
             value === mode
               ? 'bg-nav-active text-nav-active-foreground'
               : 'text-foreground hover:bg-accent hover:text-accent-foreground'

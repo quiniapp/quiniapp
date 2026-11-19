@@ -4,6 +4,7 @@ import {
   type GroupLiquidationSheet,
   groupLiquidationLabel,
   groupLiquidationRows,
+  groupLiquidationSheets,
 } from '@/lib/groupLiquidation';
 import { groupLiquidationFileName, groupLiquidationZipName } from '@/lib/liquidationZip';
 import { groupLiquidationZipEntries } from '@/functions/current-account/groupLiquidationPDF';
@@ -100,5 +101,44 @@ describe('liquidaciones de grupo', () => {
     };
     const rows = groupLiquidationRows(preview.account!);
     expect(rows.find((row) => row.label === 'Total')?.value).toBe('$115.000');
+  });
+});
+
+describe('groupLiquidationSheets', () => {
+  const acc = (id: string, edited_at: string) => ({ ...account, polla_group_id: id, edited_at });
+  const ctx = {
+    groupNumberOf: (id: string) => (id === 'g1' ? 1 : undefined),
+    orgName: 'Sistema',
+    editionTitle: 'Semana 46',
+    today: '2026-12-01',
+  };
+
+  it('todas las hojas llevan la fecha de la liquidación más nueva', () => {
+    const sheets = groupLiquidationSheets(
+      [
+        acc('g1', '2026-11-14T10:00:00.000000+00:00'),
+        acc('g2', '2026-11-16T12:00:00.000000+00:00'),
+      ],
+      ctx
+    );
+    expect(sheets.map((s) => s.date)).toEqual(['2026-11-16', '2026-11-16']);
+    expect(sheets[0].orgName).toBe('Sistema');
+    expect(sheets[0].editionTitle).toBe('Semana 46');
+  });
+
+  it('un grupo que ya no está en el catálogo queda sin número', () => {
+    const [a, b] = groupLiquidationSheets(
+      [
+        acc('g1', '2026-11-15T10:00:00.000000+00:00'),
+        acc('g9', '2026-11-15T10:00:00.000000+00:00'),
+      ],
+      ctx
+    );
+    expect(a.group.number).toBe(1);
+    expect(b.group).toEqual({ number: undefined, name: 'Leo' });
+  });
+
+  it('sin liquidaciones no hay hojas', () => {
+    expect(groupLiquidationSheets([], ctx)).toEqual([]);
   });
 });
