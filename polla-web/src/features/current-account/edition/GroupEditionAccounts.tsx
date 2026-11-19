@@ -135,7 +135,7 @@ const editionCaption = (item: IPollaEditionAccountListItem, title: string) =>
 interface SheetsContext {
   groupById: Map<string, GroupRef>;
   organizationId: string | null;
-  /** El nombre ya cargado (`useOrganizationName`); sin él se pide al exportar. */
+  /** El nombre ya cargado (`useOrganizationName`); sin él (o vacío) se pide al exportar. */
   orgName?: string;
   title: string;
   /** Edición especial: el ZIP lleva el prefijo `polla_plus_`. */
@@ -149,7 +149,7 @@ const sheetsOf = async (
 ) =>
   groupLiquidationSheets(accounts, {
     groupNumberOf: (groupId) => ctx.groupById.get(groupId)?.number,
-    orgName: ctx.orgName ?? (await fetchOrganizationName(ctx.organizationId)),
+    orgName: ctx.orgName || (await fetchOrganizationName(ctx.organizationId)),
     editionTitle: ctx.title,
     today: todayIso(),
   });
