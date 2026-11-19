@@ -12,6 +12,8 @@ import {
   liquidationZipEntries,
   liquidationZipName,
   liquidationZipPdfName,
+  MAX_SHARE_BYTES,
+  shouldZipImages,
   zipFiles,
   zipFolderName,
 } from '@/lib/liquidationZip';
@@ -234,5 +236,22 @@ describe('zipFiles', () => {
     ]);
     expect(files['raiz/Grupo 3 - Peñarol 15-11-2026/a.pdf']).toEqual(pdf);
     expect(strFromU8(files['raiz/Sin grupo 15-11-2026/b.pdf'])).toBe('hola');
+  });
+});
+
+describe('shouldZipImages: el límite de la hoja de compartir', () => {
+  const blob = (size: number) => ({ size });
+
+  it('hasta 10 archivos y 50 MB se comparten sueltos', () => {
+    expect(shouldZipImages(Array.from({ length: 10 }, () => blob(1000)))).toBe(false);
+    expect(shouldZipImages([blob(MAX_SHARE_BYTES)])).toBe(false);
+  });
+
+  it('más de 10 archivos va directo al ZIP', () => {
+    expect(shouldZipImages(Array.from({ length: 11 }, () => blob(1000)))).toBe(true);
+  });
+
+  it('más de 50 MB en total va directo al ZIP', () => {
+    expect(shouldZipImages([blob(MAX_SHARE_BYTES), blob(1)])).toBe(true);
   });
 });

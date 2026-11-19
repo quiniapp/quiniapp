@@ -3,9 +3,9 @@ import { toast } from 'react-hot-toast';
 import { Printer } from 'lucide-react';
 import { IPollaGroupAccountEntityFront } from '@helper/polla/types/game.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useGroupAccounts } from '@/hooks/fetchs/usePollaData';
+import { useGroupAccounts, useMyGroupAccounts } from '@/hooks/fetchs/usePollaData';
 import { flattenPages } from '@/hooks/useApi';
-import { EmptyState } from '@/components/PageHeader';
+import { EmptyState, ErrorState } from '@/components/PageHeader';
 import { InfiniteList } from '@/components/InfiniteList';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,10 +20,16 @@ import { printGroupLiquidationTicket } from '@/functions/current-account/groupLi
 import { fetchOrganizationName } from './fetchers';
 import { fmtMoney } from './format';
 
-/** Historial de liquidaciones de grupos por fecha (solo lectura; se pueden reimprimir). */
-export const GroupAccountHistory = () => {
+/**
+ * Historial de liquidaciones de grupos por fecha (solo lectura; se pueden
+ * reimprimir). `mine`: el del grupo del admin.
+ */
+export const GroupAccountHistory = ({ mine = false }: { mine?: boolean }) => {
   const { organizationId } = useAuth();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching } = useGroupAccounts();
+  const all = useGroupAccounts({}, !mine);
+  const own = useMyGroupAccounts(mine);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching, isError, refetch } =
+    mine ? own : all;
   const { rows, totalCount } = flattenPages(data?.pages);
 
   const reprint = async (account: IPollaGroupAccountEntityFront) => {
@@ -36,6 +42,8 @@ export const GroupAccountHistory = () => {
       toast.error('No se pudo imprimir el ticket');
     }
   };
+
+  if (isError && !data) return <ErrorState onRetry={() => void refetch()} />;
 
   if (rows.length === 0) {
     return (

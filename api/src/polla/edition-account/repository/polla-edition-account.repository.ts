@@ -26,6 +26,8 @@ const GROUP_EDITION_ACCOUNT_COLUMNS =
 
 /** Tope de filas del parte diario de grupos por rango (grupos × ediciones del rango). */
 const GROUP_REPORT_MAX_ROWS = 5000;
+/** Tope de las liquidaciones de un grupo (una por edición liquidada; `/group_mine`). */
+const GROUP_MINE_MAX_ROWS = 500;
 
 type MovementRow = IPollaEditionAccountMovement & { creator?: { name: string } | null };
 
@@ -371,6 +373,27 @@ export class PollaEditionAccountRepository {
       })),
       p_actor_id: p.actorId,
     });
+
+    throwIfPollaError(error);
+    return (data ?? []) as IPollaGroupEditionAccountEntity[];
+  }
+
+  /**
+   * Las liquidaciones de un grupo en todas sus ediciones, de la más nueva a la
+   * más vieja por `edited_at` y con tope (`GROUP_MINE_MAX_ROWS`).
+   */
+  async groupAccountsOfGroup(f: {
+    organizationId: string;
+    groupId: string;
+  }): Promise<IPollaGroupEditionAccountEntity[]> {
+    const { data, error } = await supabase
+      .from('polla_group_edition_accounts')
+      .select(GROUP_EDITION_ACCOUNT_COLUMNS)
+      .eq('polla_organization_id', f.organizationId)
+      .eq('polla_group_id', f.groupId)
+      .order('edited_at', { ascending: false })
+      .order('polla_group_edition_account_id', { ascending: false })
+      .limit(GROUP_MINE_MAX_ROWS);
 
     throwIfPollaError(error);
     return (data ?? []) as IPollaGroupEditionAccountEntity[];

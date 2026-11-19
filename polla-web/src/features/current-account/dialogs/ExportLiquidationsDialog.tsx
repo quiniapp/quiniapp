@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { POLLA_LIQUIDATION_NO_GROUP } from '@helper/polla/types/game.type';
 import { AccountPeriodView } from '@/lib/accountPeriod';
 import { filterByGroup, pickedVisible } from '@/lib/cashierPick';
-import { hasAccountMovement } from '@/functions/current-account/liquidationSlipPDF';
+import type { LiquidationFormat } from '@/functions/current-account/liquidationDelivery';
+import { hasAccountMovement } from '@/lib/liquidationSlip';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { fmtMoney } from '../format';
+import { LiquidationFormatToggle, exportActionLabel } from './LiquidationFormat';
 
 /**
  * Lista de pasadores para elegir a quiénes aplicar una acción (exportar o
@@ -42,8 +44,13 @@ export const CashierPickDialog = <T,>({
   groups,
   groupIdOf,
   actionLabel,
+  listLabel = 'Pasadores',
   busyLabel,
   busy,
+  format,
+  onFormatChange,
+  onSelectionChange,
+  pendingShare,
   onConfirm,
   onClose,
 }: {
@@ -59,10 +66,19 @@ export const CashierPickDialog = <T,>({
   /** Filtro de grupo: las opciones y el grupo de cada ítem. */
   groups?: { value: string; label: string }[];
   groupIdOf?: (item: T) => string | null;
-  /** Texto del botón con la cantidad elegida. */
-  actionLabel: (count: number) => string;
+  /** Nombre de la lista para lectores de pantalla. */
+  listLabel?: string;
+  /** Texto del botón con la cantidad elegida y el formato (si hay selector). */
+  actionLabel: (count: number, format: LiquidationFormat) => string;
   busyLabel: string;
   busy: boolean;
+  /** Si viene, el selector PDF | Imagen arriba de la lista. */
+  format?: LiquidationFormat;
+  onFormatChange?: (format: LiquidationFormat) => void;
+  /** Cambió lo que se exportaría (tildes o filtro de grupo). */
+  onSelectionChange?: () => void;
+  /** Imágenes ya preparadas que el navegador no dejó compartir: el botón pasa a "Compartir". */
+  pendingShare?: () => void;
   onConfirm: (selected: T[]) => void;
   onClose: () => void;
 }) => {
@@ -95,6 +111,14 @@ export const CashierPickDialog = <T,>({
   const chosen = pickedVisible(visible, selected, idOf);
   const hiddenChosen = selected.size - chosen.length;
 
+  const chosenKey = chosen.map(idOf).join('|');
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) first.current = false;
+    else onSelectionChange?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando cambia la selección
+  }, [chosenKey]);
+
   return (
     <Dialog open onOpenChange={(next) => !next && !busy && onClose()}>
       <DialogContent className="flex max-h-[90vh] max-w-[95vw] flex-col sm:max-w-[520px]">
@@ -102,6 +126,10 @@ export const CashierPickDialog = <T,>({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
+
+        {format && onFormatChange && (
+          <LiquidationFormatToggle value={format} onChange={onFormatChange} disabled={busy} />
+        )}
 
         {groups && (
           <Select
@@ -141,7 +169,7 @@ export const CashierPickDialog = <T,>({
           </p>
         )}
 
-        <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1" aria-label="Pasadores">
+        <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1" aria-label={listLabel}>
           {visible.map((item) => {
             const id = idOf(item);
             const moved = hasMovement(item);
@@ -176,10 +204,14 @@ export const CashierPickDialog = <T,>({
           </Button>
           <Button
             type="button"
-            onClick={() => onConfirm(chosen)}
-            disabled={chosen.length === 0 || busy}
+            onClick={() => (pendingShare ? pendingShare() : onConfirm(chosen))}
+            disabled={(chosen.length === 0 && !pendingShare) || busy}
           >
-            {busy ? busyLabel : actionLabel(chosen.length)}
+            {busy
+              ? busyLabel
+              : pendingShare
+                ? 'Compartir'
+                : actionLabel(chosen.length, format ?? 'pdf')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -187,17 +219,25 @@ export const CashierPickDialog = <T,>({
   );
 };
 
-/** "Exportar liquidación": un ZIP con un PDF por pasador. */
+/** "Exportar liquidación": un ZIP con un PDF (o una imagen) por pasador. */
 export const ExportLiquidationsDialog = ({
   accounts,
   cashierCodeOf,
   exporting,
+  format,
+  onFormatChange,
+  onSelectionChange,
+  pendingShare,
   onExport,
   onClose,
 }: {
   accounts: AccountPeriodView[];
   cashierCodeOf: (account: AccountPeriodView) => string;
   exporting: boolean;
+  format: LiquidationFormat;
+  onFormatChange: (format: LiquidationFormat) => void;
+  onSelectionChange?: () => void;
+  pendingShare?: () => void;
   onExport: (selected: AccountPeriodView[]) => void;
   onClose: () => void;
 }) => {
@@ -209,7 +249,7 @@ export const ExportLiquidationsDialog = ({
   return (
     <CashierPickDialog
       title="Exportar liquidación"
-      description={`Se descarga un ZIP con un PDF por pasador, en carpetas por grupo.${
+      description={`Se descarga un ZIP con un archivo por pasador (PDF o imagen), en carpetas por grupo.${
         withoutMovement > 0
           ? ` ${withoutMovement === 1 ? 'El que no tuvo' : `Los ${withoutMovement} que no tuvieron`} movimiento en el período ${withoutMovement === 1 ? 'viene' : 'vienen'} sin tildar.`
           : ''
@@ -222,9 +262,13 @@ export const ExportLiquidationsDialog = ({
       }}
       totalOf={(account) => account.total}
       hasMovement={hasAccountMovement}
-      actionLabel={(count) => `Exportar ${count} ${count === 1 ? 'PDF' : 'PDFs'}`}
+      actionLabel={exportActionLabel}
       busyLabel="Exportando…"
       busy={exporting}
+      format={format}
+      onFormatChange={onFormatChange}
+      onSelectionChange={onSelectionChange}
+      pendingShare={pendingShare}
       onConfirm={onExport}
       onClose={onClose}
     />

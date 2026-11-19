@@ -1,15 +1,11 @@
 import dayjs from 'dayjs';
-import {
-  IPollaGroupAccountEntityFront,
-  IPollaGroupEditionAccountEntity,
-} from '@helper/polla/types/game.type';
-import { groupSplit } from '@/lib/editionAccount';
+import { IPollaGroupAccountEntityFront } from '@helper/polla/types/game.type';
 import { openPDFPrintDialog } from './pdf-shared';
 
 /**
- * Tickets térmicos de 58 mm de la liquidación de un grupo, con el mismo
- * formato que los de cobros y pagos (`totalsTicket.ts`): el de la cuenta por
- * edición y el del Historial por fechas.
+ * Ticket térmico de 58 mm de la liquidación de un grupo del Historial por fechas, con el mismo
+ * formato que los de cobros y pagos (`totalsTicket.ts`). La liquidación por
+ * edición sale en A4 (`groupLiquidationPDF.ts`).
  */
 
 const PAPER_W = 58;
@@ -64,82 +60,6 @@ async function printTicketPages(pages: string[][], title: string) {
 
 /** Un solo ticket. */
 const printTicketLines = (lines: string[], title: string) => printTicketPages([lines], title);
-
-export type GroupEditionTicketAccount = Pick<
-  IPollaGroupEditionAccountEntity,
-  'group_name' | 'cashiers_subtotal' | 'expenses' | 'base' | 'admin_percentage' | 'admin_commission'
->;
-
-/**
- * Renglones del ticket de la liquidación de un grupo en una edición: el total
- * (lo que dejaron los pasadores menos los gastos) y cuánto es para el admin
- * (el 100% de su comisión) y para el capitalista. Sin ajustes ni pagado.
- */
-export const groupEditionTicketLines = (params: {
-  account: GroupEditionTicketAccount;
-  orgName: string;
-  /** Título de la edición. */
-  periodText: string;
-  /** `HH:mm` de la impresión. */
-  time: string;
-}): string[] => {
-  const { account, orgName, periodText, time } = params;
-  const split = groupSplit(account.base, account.admin_commission);
-  const lines: string[] = [];
-  if (orgName) lines.push(centerLine(orgName.toUpperCase()));
-  lines.push(centerLine(account.group_name.toUpperCase()));
-  lines.push(centerLine('LIQUIDACION DEL GRUPO'));
-  lines.push(centerLine(periodText));
-  lines.push(centerLine(`HORA: ${time}`));
-  lines.push(DIVIDER);
-  lines.push(padLine('Deja pasadores:', money(account.cashiers_subtotal)));
-  // `|| 0`: sin gastos no imprime "$-0".
-  lines.push(padLine('Gastos del grupo:', money(-Number(account.expenses) || 0)));
-  lines.push(padLine('TOTAL:', money(account.base)));
-  lines.push(DIVIDER);
-  lines.push(padLine('% ADMIN:', `${Number(account.admin_percentage)}%`));
-  lines.push(padLine('TOTAL ADMIN:', money(split.admin)));
-  lines.push(padLine('TOTAL CAPITALISTA:', money(split.capitalist)));
-  // Mismo relleno que los demás tickets: vacía el buffer de la impresora.
-  lines.push(DIVIDER);
-  lines.push(DIVIDER);
-  lines.push(DIVIDER);
-  return lines;
-};
-
-/** Ticket de la liquidación de un grupo en una edición. */
-export async function printGroupEditionLiquidationTicket(params: {
-  account: GroupEditionTicketAccount;
-  orgName: string;
-  periodText: string;
-}) {
-  const { account, periodText } = params;
-  const lines = groupEditionTicketLines({ ...params, time: dayjs().format('HH:mm') });
-  const title = `polla_Liquidacion_${account.group_name.trim().replace(/\s+/g, '_')}_${periodText.trim().replace(/\s+/g, '_')}`;
-  await printTicketLines(lines, title);
-}
-
-/**
- * "Liquidar seleccionados": los tickets de varios grupos de la edición en un
- * solo PDF, una página por grupo.
- */
-export async function printGroupEditionLiquidationTickets(params: {
-  accounts: GroupEditionTicketAccount[];
-  orgName: string;
-  periodText: string;
-}) {
-  const { accounts, orgName, periodText } = params;
-  if (accounts.length === 1) {
-    await printGroupEditionLiquidationTicket({ account: accounts[0], orgName, periodText });
-    return;
-  }
-  const time = dayjs().format('HH:mm');
-  const pages = accounts.map((account) =>
-    groupEditionTicketLines({ account, orgName, periodText, time })
-  );
-  const title = `polla_Liquidacion_grupos_${periodText.trim().replace(/\s+/g, '_')}`;
-  await printTicketPages(pages, title);
-}
 
 /** Ticket de una liquidación de grupo del Historial por fechas (con arrastre y saldo). */
 export async function printGroupLiquidationTicket(params: {

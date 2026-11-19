@@ -81,6 +81,7 @@ export const BACKEND_ROUTES = {
   editionAccount: {
     base: `${PRIVATE}/edition_account`,
     mine: `${PRIVATE}/edition_account/mine`,
+    groupMine: `${PRIVATE}/edition_account/group_mine`,
     totals: `${PRIVATE}/edition_account/totals`,
     groupAccounts: `${PRIVATE}/edition_account/group_accounts`,
     movement: (id: string) => `${PRIVATE}/edition_account/movements/${id}`,
@@ -95,6 +96,7 @@ export const BACKEND_ROUTES = {
   },
   groupAccount: {
     base: `${PRIVATE}/group_account`,
+    mine: `${PRIVATE}/group_account/mine`,
   },
   expense: {
     base: `${PRIVATE}/expense`,

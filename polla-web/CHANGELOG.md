@@ -4,6 +4,50 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-18 (ajustes de la revisión de liquidaciones de grupo e imagen)
+
+- **Imágenes en el celular, con salida al ZIP** (`liquidationDelivery.ts`, `shareFiles.ts`, `LiquidationFormat.tsx`, `lib/liquidationZip.ts`): más de `MAX_SHARE_FILES` (10) imágenes o más de `MAX_SHARE_BYTES` (50 MB) van directo al ZIP (`shouldZipImages`, con test), porque Android Chrome rechaza la hoja de compartir con `NotAllowedError`. `shareFiles(files, { fallbackDownload: false })` no baja las imágenes una por una y devuelve `'failed'`; `deliverLiquidation` entrega el ZIP en ese caso. El reintento de `useLiquidationDelivery.retry` (que ya es un toque nuevo) trata un segundo bloqueo como definitivo y entrega el ZIP. El comportamiento por defecto de `shareFiles` no cambia.
+- **Cuenta del admin** (`AdminGroupAccountView.tsx`): la tabla y las tarjetas formatean igual que "Liquidaciones de grupo" del dueño (`$fmtMoney`, gastos en positivo, `groupSplit`); el PDF y la imagen siguen en pesos enteros. Los botones PDF e Imagen de cada fila son solo ícono (con `aria-label` y `title`) para que entren a 1400 px. Si falla al compartir una imagen ya generada dice "No se pudo compartir la imagen".
+- `GroupAccountHistory` muestra `ErrorState` con "Reintentar" si la consulta falla y no hay datos (dueño y `mine`). `ModeToggle` se ve deshabilitado (`disabled:opacity-50 disabled:cursor-not-allowed`).
+- **Formato al reabrir**: `DailyHistoryView` y `GroupEditionAccounts` vuelven a PDF al cerrar la lista (como `EditionReportDialog`).
+- **Exportar liquidaciones** (`GroupEditionAccounts.tsx`): el botón se deshabilita mientras la lista de grupos de la edición carga vacía (antes salía "Todavía no hay grupos liquidados"); el parte diario ya no muestra "Generando…" durante esa exportación (estado `exportingLiquidations` aparte).
+- **Nombre de la organización precargado**: nuevo hook `useOrganizationName(organizationId)` (`features/current-account/useOrganizationName.ts`, misma query que ya usaba la vista del admin) usado al liquidar y exportar; solo si todavía no cargó se pide al exportar.
+- `sheetsOf` pasa a `groupLiquidationSheets` (`lib/groupLiquidation.ts`, pura) con tests: fecha de la liquidación más nueva, grupo fuera del catálogo sin número, sin liquidaciones no hay hojas.
+
+### Changed - 2026-11-18 (cambios de la exportación de liquidaciones que faltaba documentar)
+
+- `CashierPickDialog` (`dialogs/ExportLiquidationsDialog.tsx`) suma las props `format`, `onFormatChange`, `onSelectionChange`, `pendingShare` y `listLabel`; `actionLabel` pasa a `actionLabel(count, format)`.
+- `liquidationSlipAmounts` y `hasAccountMovement` se mueven a `lib/liquidationSlip.ts` (cambia la ruta de import).
+- El botón "Liquidar e imprimir" pasa a "Liquidar y exportar".
+
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **Cuenta corriente del admin** (`features/current-account/AdminGroupAccountView.tsx`): "Por edición" (tabla en la computadora, tarjetas en el celular, con Edición, Liquidada y los seis renglones, capitalista incluido) e "Historial por fechas", solo para consultar. Cada fila baja PDF o Imagen (en el celular la imagen va por la hoja de compartir; el botón se deshabilita mientras genera).
+- `useMyGroupEditionLiquidations` y `useMyGroupAccounts` (`usePollaData.ts`), rutas `editionAccount.groupMine` y `groupAccount.mine`; `GroupAccountHistory` recibe `mine`.
+- El menú y la ruta Cuenta corriente aparecen para el rol admin (`CURRENT_ACCOUNT`).
+
+### Added - 2026-11-18
+
+- **Formato Imagen al exportar liquidaciones**: las liquidaciones de pasadores (Exportar liquidación por edición, una o varias, y en Historial por fechas) y de grupos ("Exportar liquidaciones") tienen un selector "Formato: PDF | Imagen".
+  - En la computadora, un ZIP de PNG con las mismas carpetas que el de PDF.
+  - En el celular, las imágenes salen sueltas por la hoja de compartir (nombre con la carpeta de la edición si se repite). Si el navegador pide un toque nuevo, el botón pasa a "Compartir" y reintenta sin volver a generarlas.
+  - Al liquidar grupos se sigue bajando el ZIP de PDF, sin selector.
+- Nuevos `lib/liquidationImageLines.ts` (renglones de la imagen), `functions/current-account/liquidationImage.ts` (canvas a PNG), `functions/shareFiles.ts` (portado de QuiniApp), `functions/current-account/liquidationDelivery.ts`, `dialogs/LiquidationFormat.tsx` y `looseFileNames` en `lib/liquidationZip.ts`. `exportLiquidationSlipsZip` y `exportGroupLiquidationsZip` pasan a `prepareLiquidationSlips` y `prepareGroupLiquidations` + `deliverLiquidation`.
+
+### Changed - 2026-11-18 (liquidaciones de grupo en ZIP)
+
+- **Liquidar grupos** (`GroupEditionAccounts.tsx`): al liquidar uno o varios grupos se baja un ZIP con un PDF A4 por grupo, en lugar del ticket de 58 mm.
+  - ZIP `polla_liquidaciones_grupos_DD-MM-YYYY.zip` (`polla_plus_…` en una edición especial) con una carpeta raíz del mismo nombre y adentro `Grupo N - Nombre DD-MM-YYYY.pdf`, sin carpetas por grupo.
+  - Una sola fecha para el ZIP, la raíz y los archivos: la de la liquidación más nueva de los grupos exportados.
+  - La hoja deja pasadores, gastos del grupo (en negativo), total, % admin, total admin y total capitalista, siempre desde la liquidación guardada.
+- **"Exportar liquidaciones"** en la pestaña Grupos: elige entre los grupos liquidados (los desactualizados se marcan) y baja el ZIP. `CashierPickDialog` suma la prop `listLabel`.
+- **Imprimir de cada fila** de "Liquidaciones de grupo": baja la hoja A4 suelta (sin ZIP); la confirmación de desactualizada ahora dice "Descargar igual".
+- Nuevos `lib/groupLiquidation.ts`, `functions/current-account/groupLiquidationPDF.ts` y, en `lib/liquidationZip.ts`, `groupLiquidationZipName` y `groupLiquidationFileName`.
+
+### Removed - 2026-11-18
+
+- Ticket de 58 mm de la liquidación de grupo por edición (`groupEditionTicketLines`, `printGroupEditionLiquidationTicket(s)` en `groupLiquidationTicket.ts`). El ticket del Historial por fechas sigue.
+
 ### Added - 2026-11-18 (repetir varios tickets con cargo)
 
 - **Administrar jugadas** (`features/manage-bets/index.tsx`): se tildan tickets y "Repetir con cargo (N)" los carga todos juntos en la edición elegida, con Efectivo o Debe (R04).

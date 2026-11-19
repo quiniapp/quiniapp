@@ -981,6 +981,12 @@ export interface IPollaGroupEditionAccountEntity {
   edited_at: string;
 }
 
+/** Liquidación de un grupo en una edición, con la edición (vista del admin). */
+export interface IPollaGroupEditionLiquidation {
+  edition: IPollaEditionEntityFront;
+  account: IPollaGroupEditionAccountEntity;
+}
+
 export interface IPollaGroupEditionAccountPreview {
   polla_group_id: string;
   group_name: string;

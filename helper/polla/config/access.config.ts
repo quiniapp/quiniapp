@@ -50,8 +50,9 @@ export const POLLA_PAGE_ROLES: Record<PollaPage, readonly POLLA_USER_TYPE[]> = {
   EDITIONS: POLLA_SUPER_ROLES,
   RESULTS: allBut(POLLA_USER_TYPE.ASSISTANT),
   USERS: OPERATION,
-  // Dueño, capitalista y superadmin; el pasador ve la suya.
-  CURRENT_ACCOUNT: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.CASHIER],
+  // Dueño, capitalista y superadmin; el admin ve las liquidaciones de su grupo y
+  // el pasador la suya (solo lectura).
+  CURRENT_ACCOUNT: [...POLLA_ACCOUNT_ROLES, POLLA_USER_TYPE.ADMIN, POLLA_USER_TYPE.CASHIER],
   // Premios (R19, R21): superadmin+ toda la organización; el admin su grupo; el
   // pasador lo imputado a él; el jugador lo suyo. El Súper no.
   PRIZES: [...ADMIN_AND_UP, POLLA_USER_TYPE.CASHIER, POLLA_USER_TYPE.PLAYER],
