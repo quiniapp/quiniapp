@@ -4,6 +4,20 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-18 (liquidaciones de grupo en ZIP)
+
+- **Liquidar grupos** (`GroupEditionAccounts.tsx`): al liquidar uno o varios grupos se baja un ZIP con un PDF A4 por grupo, en lugar del ticket de 58 mm.
+  - ZIP `polla_liquidaciones_grupos_DD-MM-YYYY.zip` (`polla_plus_…` en una edición especial) con una carpeta raíz del mismo nombre y adentro `Grupo N - Nombre DD-MM-YYYY.pdf`, sin carpetas por grupo.
+  - Una sola fecha para el ZIP, la raíz y los archivos: la de la liquidación más nueva de los grupos exportados.
+  - La hoja deja pasadores, gastos del grupo (en negativo), total, % admin, total admin y total capitalista, siempre desde la liquidación guardada.
+- **"Exportar liquidaciones"** en la pestaña Grupos: elige entre los grupos liquidados (los desactualizados se marcan) y baja el ZIP. `CashierPickDialog` suma la prop `listLabel`.
+- **Imprimir de cada fila** de "Liquidaciones de grupo": baja la hoja A4 suelta (sin ZIP); la confirmación de desactualizada ahora dice "Descargar igual".
+- Nuevos `lib/groupLiquidation.ts`, `functions/current-account/groupLiquidationPDF.ts` y, en `lib/liquidationZip.ts`, `groupLiquidationZipName` y `groupLiquidationFileName`.
+
+### Removed - 2026-11-18
+
+- Ticket de 58 mm de la liquidación de grupo por edición (`groupEditionTicketLines`, `printGroupEditionLiquidationTicket(s)` en `groupLiquidationTicket.ts`). El ticket del Historial por fechas sigue.
+
 ### Added - 2026-11-18 (repetir varios tickets con cargo)
 
 - **Administrar jugadas** (`features/manage-bets/index.tsx`): se tildan tickets y "Repetir con cargo (N)" los carga todos juntos en la edición elegida, con Efectivo o Debe (R04).

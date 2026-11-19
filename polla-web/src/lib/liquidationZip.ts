@@ -5,6 +5,7 @@ import {
   zipFolderName,
   zipRootFolder,
 } from '@helper/functions/liquidationZip';
+import { groupLiquidationLabel } from '@/lib/groupLiquidation';
 
 /**
  * Reglas del ZIP de liquidaciones de la Polla: nombres con fecha, carpetas por
@@ -63,6 +64,17 @@ export const groupFolderName = (group: ZipGroup | undefined, date: string) =>
   zipFolderName(
     `${group ? `Grupo ${group.number} - ${group.name}` : NO_GROUP_FOLDER} ${fileDate(date)}`
   );
+
+/** `polla_liquidaciones_grupos_DD-MM-YYYY.zip` (`polla_plus_…` en una edición especial). */
+export const groupLiquidationZipName = (p: { date: string; special?: boolean }) =>
+  `${p.special ? 'polla_plus' : 'polla'}_liquidaciones_grupos_${fileDate(p.date)}.zip`;
+
+/** `Grupo N - Nombre DD-MM-YYYY.ext` (sin el número, `Nombre DD-MM-YYYY.ext`). */
+export const groupLiquidationFileName = (
+  group: { number?: number; name: string },
+  date: string,
+  ext: 'pdf' | 'png'
+) => `${zipFolderName(`${groupLiquidationLabel(group)} ${fileDate(date)}`)}.${ext}`;
 
 /** Nombre del ZIP (y de su carpeta raíz) según el alcance y el filtro de grupo. */
 export const liquidationZipName = (scope: LiquidationZipScope, group?: ZipGroupFilter) => {

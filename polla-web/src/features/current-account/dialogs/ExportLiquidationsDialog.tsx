@@ -42,6 +42,7 @@ export const CashierPickDialog = <T,>({
   groups,
   groupIdOf,
   actionLabel,
+  listLabel = 'Pasadores',
   busyLabel,
   busy,
   onConfirm,
@@ -59,6 +60,8 @@ export const CashierPickDialog = <T,>({
   /** Filtro de grupo: las opciones y el grupo de cada ítem. */
   groups?: { value: string; label: string }[];
   groupIdOf?: (item: T) => string | null;
+  /** Nombre de la lista para lectores de pantalla. */
+  listLabel?: string;
   /** Texto del botón con la cantidad elegida. */
   actionLabel: (count: number) => string;
   busyLabel: string;
@@ -141,7 +144,7 @@ export const CashierPickDialog = <T,>({
           </p>
         )}
 
-        <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1" aria-label="Pasadores">
+        <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1" aria-label={listLabel}>
           {visible.map((item) => {
             const id = idOf(item);
             const moved = hasMovement(item);

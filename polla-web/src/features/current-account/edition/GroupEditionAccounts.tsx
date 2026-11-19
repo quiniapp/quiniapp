@@ -1,7 +1,15 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import { AlertTriangle, CalendarRange, FileText, Printer, Receipt, Wallet } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarRange,
+  FileText,
+  FolderArchive,
+  Printer,
+  Receipt,
+  Wallet,
+} from 'lucide-react';
 import {
   IPollaEditionAccountListItem,
   IPollaGroupEditionAccountEntity,
@@ -52,9 +60,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  printGroupEditionLiquidationTicket,
-  printGroupEditionLiquidationTickets,
-} from '@/functions/current-account/groupLiquidationTicket';
+  GroupLiquidationSheet,
+  downloadGroupLiquidationPDF,
+  exportGroupLiquidationsZip,
+} from '@/functions/current-account/groupLiquidationPDF';
 import {
   groupAccountOutdated,
   groupCommission,
@@ -80,7 +89,10 @@ import {
   downloadGroupDailyReportPDF,
   downloadGroupRangeReportPDF,
 } from '@/functions/current-account/groupDailyReportPDF';
+import { groupLiquidationLabel } from '@/lib/groupLiquidation';
+import { groupLiquidationZipName } from '@/lib/liquidationZip';
 import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
+import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
 import { DateField } from '../dialogs/shared';
 import { fmtMoney } from '../format';
 import { EditionExpensesEditor } from './EditionExpensesEditor';
@@ -115,20 +127,76 @@ const editionCaption = (item: IPollaEditionAccountListItem, title: string) =>
     item.edition.end_date
   ).format('DD/MM/YYYY')}${item.load_open ? ' · Carga abierta' : ''}`;
 
-/** Imprime el ticket del grupo con el título de la edición en lugar del rango de fechas. */
-const printTicket = async (
-  account: IPollaGroupEditionAccountEntity,
-  organizationId: string | null,
-  periodText: string
+/**
+ * Las hojas A4 de las liquidaciones guardadas, una por grupo. Una sola fecha
+ * para todas: la de la liquidación más nueva.
+ */
+const sheetsOf = (
+  accounts: IPollaGroupEditionAccountEntity[],
+  ctx: { groupById: Map<string, GroupRef>; orgName: string; title: string }
+): GroupLiquidationSheet[] => {
+  const date = groupReportDate(accounts) ?? todayIso();
+  return accounts.map((account) => ({
+    account,
+    group: { number: ctx.groupById.get(account.polla_group_id)?.number, name: account.group_name },
+    orgName: ctx.orgName,
+    editionTitle: ctx.title,
+    date,
+  }));
+};
+
+interface SheetsContext {
+  groupById: Map<string, GroupRef>;
+  organizationId: string | null;
+  title: string;
+  /** Edición especial: el ZIP lleva el prefijo `polla_plus_`. */
+  special: boolean;
+}
+
+/** Baja el ZIP con un PDF por grupo (aunque sea uno solo). */
+const exportZip = async (accounts: IPollaGroupEditionAccountEntity[], ctx: SheetsContext) => {
+  const sheets = sheetsOf(accounts, {
+    groupById: ctx.groupById,
+    orgName: await fetchOrganizationName(ctx.organizationId),
+    title: ctx.title,
+  });
+  await exportGroupLiquidationsZip({
+    sheets,
+    zipName: groupLiquidationZipName({
+      date: sheets[0]?.date ?? todayIso(),
+      special: ctx.special,
+    }),
+  });
+};
+
+/** Exporta tras liquidar: si falla, avisa (la liquidación ya quedó guardada). */
+const exportZipOrToast = async (
+  accounts: IPollaGroupEditionAccountEntity[],
+  ctx: SheetsContext
 ) => {
   try {
-    await printGroupEditionLiquidationTicket({
-      account,
-      orgName: await fetchOrganizationName(organizationId),
-      periodText,
+    await exportZip(accounts, ctx);
+  } catch (error) {
+    console.error(error);
+    toast.error('No se pudieron exportar las liquidaciones');
+  }
+};
+
+/** Baja la hoja A4 suelta de un grupo, con el título de la edición. */
+const downloadSheet = async (
+  account: IPollaGroupEditionAccountEntity,
+  ctx: Omit<SheetsContext, 'special'>
+) => {
+  try {
+    const [sheet] = sheetsOf([account], {
+      groupById: ctx.groupById,
+      orgName: await fetchOrganizationName(ctx.organizationId),
+      title: ctx.title,
     });
-  } catch {
-    toast.error('No se pudo imprimir el ticket');
+    await downloadGroupLiquidationPDF(sheet);
+  } catch (error) {
+    console.error(error);
+    toast.error('No se pudo descargar la liquidación');
   }
 };
 
@@ -177,12 +245,16 @@ const LiquidateGroupDialog = ({
   adminPercentage,
   editionId,
   title,
+  special,
+  groupById,
   onClose,
 }: {
   preview: IPollaGroupEditionAccountPreview;
   adminPercentage: number | null;
   editionId: string;
   title: string;
+  special: boolean;
+  groupById: Map<string, GroupRef>;
   onClose: () => void;
 }) => {
   const { organizationId } = useAuth();
@@ -212,7 +284,7 @@ const LiquidateGroupDialog = ({
       {
         onSuccess: (saved) => {
           onClose();
-          void printTicket(saved, organizationId, title);
+          void exportZipOrToast([saved], { groupById, organizationId, title, special });
         },
       }
     );
@@ -258,7 +330,7 @@ const LiquidateGroupDialog = ({
               Cancelar
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Liquidando…' : 'Liquidar e imprimir'}
+              {isPending ? 'Liquidando…' : 'Liquidar y exportar'}
             </Button>
           </DialogFooter>
         </form>
@@ -270,13 +342,15 @@ const LiquidateGroupDialog = ({
 /**
  * "Liquidar seleccionados": una fila por grupo con su % (fijo si el admin lo
  * tiene, si no a mano) y lo que va al admin y al capitalista. Se liquidan
- * todos juntos (si uno falla, ninguno) y sale un PDF con un ticket por grupo.
+ * todos juntos (si uno falla, ninguno) y se baja un ZIP con un PDF por grupo.
  */
 const LiquidateGroupsDialog = ({
   previews,
   adminPercentageOf,
   editionId,
   title,
+  special,
+  groupById,
   onClose,
   onDone,
 }: {
@@ -284,6 +358,8 @@ const LiquidateGroupsDialog = ({
   adminPercentageOf: (groupId: string) => number | null;
   editionId: string;
   title: string;
+  special: boolean;
+  groupById: Map<string, GroupRef>;
   onClose: () => void;
   onDone: () => void;
 }) => {
@@ -332,15 +408,7 @@ const LiquidateGroupsDialog = ({
         onSuccess: async (saved) => {
           onDone();
           onClose();
-          try {
-            await printGroupEditionLiquidationTickets({
-              accounts: saved,
-              orgName: await fetchOrganizationName(organizationId),
-              periodText: title,
-            });
-          } catch {
-            toast.error('No se pudieron imprimir los tickets');
-          }
+          await exportZipOrToast(saved, { groupById, organizationId, title, special });
         },
       }
     );
@@ -354,8 +422,8 @@ const LiquidateGroupsDialog = ({
             Liquidar {previews.length} {previews.length === 1 ? 'grupo' : 'grupos'}
           </DialogTitle>
           <DialogDescription>
-            {title}. Se liquidan todos juntos: si uno no se puede, no se liquida ninguno. Sale un
-            ticket por grupo.
+            {title}. Se liquidan todos juntos: si uno no se puede, no se liquida ninguno. Se
+            descarga un ZIP con un PDF por grupo.
           </DialogDescription>
         </DialogHeader>
 
@@ -425,7 +493,7 @@ const LiquidateGroupsDialog = ({
               Cancelar
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Liquidando…' : 'Liquidar e imprimir'}
+              {isPending ? 'Liquidando…' : 'Liquidar y exportar'}
             </Button>
           </DialogFooter>
         </form>
@@ -707,11 +775,13 @@ const GroupEditionHistory = ({
   editionId,
   title,
   organizationId,
+  groupById,
   previews,
 }: {
   editionId: string;
   title: string;
   organizationId: string | null;
+  groupById: Map<string, GroupRef>;
   previews: IPollaGroupEditionAccountPreview[];
 }) => {
   const accountsQuery = useGroupEditionAccounts({
@@ -730,7 +800,7 @@ const GroupEditionHistory = ({
 
   const reprint = (account: IPollaGroupEditionAccountEntity) => {
     if (outdatedGroups.has(account.polla_group_id)) setConfirming(account);
-    else void printTicket(account, organizationId, title);
+    else void downloadSheet(account, { groupById, organizationId, title });
   };
 
   if (accountsQuery.isError && !accountsQuery.data) {
@@ -747,12 +817,12 @@ const GroupEditionHistory = ({
       {confirming && (
         <ConfirmDialog
           title={OUTDATED_TEXT}
-          description={`La liquidación de ${confirming.group_name} no tiene lo que dejaron hoy sus pasadores o los gastos de la edición. El ticket sale con los valores de la liquidación. Para que salga al día, volvé a liquidar el grupo.`}
-          confirmLabel="Imprimir igual"
+          description={`La liquidación de ${confirming.group_name} no tiene lo que dejaron hoy sus pasadores o los gastos de la edición. La hoja sale con los valores de la liquidación. Para que salga al día, volvé a liquidar el grupo.`}
+          confirmLabel="Descargar igual"
           onConfirm={() => {
             const account = confirming;
             setConfirming(null);
-            void printTicket(account, organizationId, title);
+            void downloadSheet(account, { groupById, organizationId, title });
           }}
           onCancel={() => setConfirming(null)}
         />
@@ -953,6 +1023,7 @@ export const GroupEditionAccounts = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rangeOpen, setRangeOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
 
   const editions = useMemo(() => list ?? [], [list]);
   /** Título de cada edición de la lista, para el parte por rango. */
@@ -978,6 +1049,7 @@ export const GroupEditionAccounts = () => {
   const title = current ? pollaEditionTitle(current.edition, catalogs) : '';
   const caption = current ? editionCaption(current, title) : '';
   const loadOpen = current?.load_open ?? false;
+  const special = current ? isPollaSpecialEdition(current.edition) : false;
 
   const previewsQuery = useGroupEditionPreviews(editionId);
   const { data: previewsData, isFetching } = previewsQuery;
@@ -1046,6 +1118,30 @@ export const GroupEditionAccounts = () => {
     }
   };
 
+  /** "Exportar liquidaciones": abre la lista para elegir qué grupos van al ZIP. */
+  const handleOpenExport = () => {
+    if (!previews.some((preview) => preview.account)) {
+      toast.error('Todavía no hay grupos liquidados en esta edición');
+      return;
+    }
+    setPickOpen(true);
+  };
+
+  /** Baja el ZIP con las liquidaciones guardadas de los grupos elegidos. */
+  const handleExportLiquidations = async (chosen: IPollaGroupEditionAccountPreview[]) => {
+    const accounts = chosen.flatMap((preview) => (preview.account ? [preview.account] : []));
+    setExporting(true);
+    try {
+      await exportZip(accounts, { groupById, organizationId, title, special });
+      setPickOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error('No se pudieron exportar las liquidaciones');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (listQuery.isError && !list) return <ErrorState onRetry={() => void listQuery.refetch()} />;
   if (!list) return <EmptyState message="Cargando…" />;
   if (editions.length === 0) return <EmptyState message="No hay ediciones." />;
@@ -1091,6 +1187,15 @@ export const GroupEditionAccounts = () => {
           >
             <FileText />
             {exporting ? 'Generando…' : 'Parte diario'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!current || exporting}
+            onClick={handleOpenExport}
+          >
+            <FolderArchive />
+            Exportar liquidaciones
           </Button>
           <Button type="button" variant="outline" onClick={() => setRangeOpen(true)}>
             <CalendarRange />
@@ -1187,6 +1292,7 @@ export const GroupEditionAccounts = () => {
               editionId={editionId}
               title={title}
               organizationId={organizationId}
+              groupById={groupById}
               previews={previews}
             />
           </div>
@@ -1199,6 +1305,8 @@ export const GroupEditionAccounts = () => {
           adminPercentage={adminPercentageOf(liquidating.polla_group_id)}
           editionId={editionId}
           title={title}
+          special={special}
+          groupById={groupById}
           onClose={() => setLiquidating(null)}
         />
       )}
@@ -1208,8 +1316,32 @@ export const GroupEditionAccounts = () => {
           adminPercentageOf={adminPercentageOf}
           editionId={editionId}
           title={title}
+          special={special}
+          groupById={groupById}
           onClose={() => setBatchOpen(false)}
           onDone={() => setSelected(new Set())}
+        />
+      )}
+      {pickOpen && (
+        <CashierPickDialog
+          title="Exportar liquidaciones de grupos"
+          description="Se descarga un ZIP con un PDF por grupo, con la fecha en el nombre."
+          items={previews.filter((preview) => preview.account)}
+          idOf={(preview) => preview.polla_group_id}
+          labelOf={(preview) =>
+            `${groupLiquidationLabel({
+              number: groupById.get(preview.polla_group_id)?.number,
+              name: preview.group_name,
+            })}${groupAccountOutdated(preview) ? ' · ⚠ desactualizada' : ''}`
+          }
+          totalOf={(preview) => Number(preview.account?.base ?? 0)}
+          hasMovement={() => true}
+          listLabel="Grupos"
+          actionLabel={(count) => `Exportar ${count} ${count === 1 ? 'PDF' : 'PDFs'}`}
+          busyLabel="Exportando…"
+          busy={exporting}
+          onConfirm={(chosen) => void handleExportLiquidations(chosen)}
+          onClose={() => setPickOpen(false)}
         />
       )}
       {rangeOpen && (
