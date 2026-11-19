@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { AccountPeriodView } from '@/lib/accountPeriod';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
-import {
-  hasAccountMovement,
-  liquidationFileName,
-  liquidationSlipAmounts,
-} from '@/functions/current-account/liquidationSlipPDF';
+import { liquidationFileName } from '@/functions/current-account/liquidationSlipPDF';
+import { hasAccountMovement, liquidationSlipAmounts } from '@/lib/liquidationSlip';
 
 const ZERO = {
   bets_pass: 0,

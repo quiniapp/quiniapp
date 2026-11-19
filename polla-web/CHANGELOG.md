@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-18
+
+- **Formato Imagen al exportar liquidaciones**: las liquidaciones de pasadores (Exportar liquidación por edición, una o varias, y en Historial por fechas) y de grupos ("Exportar liquidaciones") tienen un selector "Formato: PDF | Imagen".
+  - En la computadora, un ZIP de PNG con las mismas carpetas que el de PDF.
+  - En el celular, las imágenes salen sueltas por la hoja de compartir (nombre con la carpeta de la edición si se repite). Si el navegador pide un toque nuevo, el botón pasa a "Compartir" y reintenta sin volver a generarlas.
+  - Al liquidar grupos se sigue bajando el ZIP de PDF, sin selector.
+- Nuevos `lib/liquidationImageLines.ts` (renglones de la imagen), `functions/current-account/liquidationImage.ts` (canvas a PNG), `functions/shareFiles.ts` (portado de QuiniApp), `functions/current-account/liquidationDelivery.ts`, `dialogs/LiquidationFormat.tsx` y `looseFileNames` en `lib/liquidationZip.ts`. `exportLiquidationSlipsZip` y `exportGroupLiquidationsZip` pasan a `prepareLiquidationSlips` y `prepareGroupLiquidations` + `deliverLiquidation`.
+
 ### Changed - 2026-11-18 (liquidaciones de grupo en ZIP)
 
 - **Liquidar grupos** (`GroupEditionAccounts.tsx`): al liquidar uno o varios grupos se baja un ZIP con un PDF A4 por grupo, en lugar del ticket de 58 mm.

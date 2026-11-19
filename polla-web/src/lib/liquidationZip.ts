@@ -126,3 +126,26 @@ export const zipFiles = async (files: { path: string; data: Uint8Array }[]) => {
   const out = zipSync(Object.fromEntries(files.map((f) => [f.path, f.data])), { level: 6 });
   return new Blob([out], { type: 'application/zip' });
 };
+
+/**
+ * Nombres para compartir las imágenes sueltas (sin carpetas): el último
+ * segmento de cada ruta; si se repite, se le antepone la carpeta que sigue a la
+ * raíz (la edición) y, si todavía se repite, ` (n)` antes de la extensión.
+ */
+export const looseFileNames = (paths: string[]) => {
+  const parts = paths.map((path) => path.split('/'));
+  const base = parts.map((segments) => segments[segments.length - 1]);
+  const count = (names: string[], name: string) => names.filter((n) => n === name).length;
+  const named = base.map((name, i) =>
+    count(base, name) > 1 && parts[i].length > 2 ? `${parts[i][1]} ${name}` : name
+  );
+  const seen = new Map<string, number>();
+  return named.map((name) => {
+    if (count(named, name) < 2) return name;
+    const n = (seen.get(name) ?? 0) + 1;
+    seen.set(name, n);
+    if (n === 1) return name;
+    const dot = name.lastIndexOf('.');
+    return dot === -1 ? `${name} (${n})` : `${name.slice(0, dot)} (${n})${name.slice(dot)}`;
+  });
+};

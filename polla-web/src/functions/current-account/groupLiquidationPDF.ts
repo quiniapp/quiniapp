@@ -2,12 +2,15 @@ import dayjs from 'dayjs';
 import { liquidationZipEntries } from '@helper/functions/liquidationZip';
 import type { CellInput } from 'jspdf-autotable';
 import {
-  GroupLiquidationAccount,
+  GroupLiquidationSheet,
   groupLiquidationLabel,
   groupLiquidationRows,
 } from '@/lib/groupLiquidation';
-import { groupLiquidationFileName, zipFiles, zipRootFolder } from '@/lib/liquidationZip';
-import { downloadPdfBlob, shareFile } from '../printPdf';
+import { groupLiquidationImageLines } from '@/lib/liquidationImageLines';
+import { groupLiquidationFileName, zipRootFolder } from '@/lib/liquidationZip';
+import { downloadPdfBlob } from '../printPdf';
+import type { LiquidationFormat, PreparedLiquidation } from './liquidationDelivery';
+import { renderLiquidationImage } from './liquidationImage';
 import { PdfDoc, addFooterPageNumbers, getPDFDeps, gridTableOptions } from './pdf-shared';
 
 /**
@@ -18,15 +21,6 @@ import { PdfDoc, addFooterPageNumbers, getPDFDeps, gridTableOptions } from './pd
 
 const FONT = 11;
 const MARGIN = { left: 14, right: 14 };
-
-export interface GroupLiquidationSheet {
-  account: GroupLiquidationAccount;
-  group: { number?: number; name: string };
-  orgName: string;
-  editionTitle: string;
-  /** `YYYY-MM-DD`: la de la liquidación más nueva de las que se exportan. */
-  date: string;
-}
 
 /** Hoja de un grupo: encabezado con organización y edición, y la tabla de renglones. */
 export async function buildGroupLiquidationPDF(sheet: GroupLiquidationSheet) {
@@ -90,27 +84,33 @@ export const groupLiquidationZipEntries = (
 };
 
 /**
- * ZIP con un PDF por grupo: en el celular se comparte, en la computadora se
- * descarga. Devuelve false si no hay hojas (no arma un ZIP vacío).
+ * Un archivo por grupo (PDF o imagen) con su ruta en el ZIP;
+ * `deliverLiquidation` lo entrega. Devuelve null si no hay hojas (no arma un
+ * ZIP vacío).
  */
-export async function exportGroupLiquidationsZip(params: {
+export async function prepareGroupLiquidations(params: {
   sheets: GroupLiquidationSheet[];
   zipName: string;
-}) {
-  if (params.sheets.length === 0) return false;
+  format: LiquidationFormat;
+}): Promise<PreparedLiquidation | null> {
+  if (params.sheets.length === 0) return null;
 
-  const entries = groupLiquidationZipEntries(params.sheets, params.zipName, 'pdf');
-  const files: { path: string; data: Uint8Array }[] = [];
+  const entries = groupLiquidationZipEntries(
+    params.sheets,
+    params.zipName,
+    params.format === 'image' ? 'png' : 'pdf'
+  );
+  const files: PreparedLiquidation['files'] = [];
   for (const [index, { path, item }] of entries.entries()) {
     // Cede el hilo para que se pinte "Exportando…" en exportes grandes.
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, 0));
-    const doc = await buildGroupLiquidationPDF(item);
-    files.push({ path, data: new Uint8Array(doc.output('arraybuffer')) });
+    const blob =
+      params.format === 'image'
+        ? await renderLiquidationImage(groupLiquidationImageLines(item))
+        : (await buildGroupLiquidationPDF(item)).output('blob');
+    files.push({ path, blob });
   }
-
-  const blob = await zipFiles(files);
-  await shareFile(blob, params.zipName, 'Liquidaciones de grupos', 'application/zip');
-  return true;
+  return { zipName: params.zipName, format: params.format, files };
 }
 
 /** Una sola hoja: baja el PDF suelto, sin ZIP. */

@@ -1,59 +1,20 @@
 import dayjs from 'dayjs';
 import { AccountPeriodView, periodLabel } from '@/lib/accountPeriod';
 import { owedWord } from '@/lib/editionAccount';
+import { cashierLiquidationImageLines } from '@/lib/liquidationImageLines';
+import { liquidationSlipAmounts } from '@/lib/liquidationSlip';
 import {
   liquidationZipEntries,
   liquidationZipPdfName,
-  zipFiles,
   zipRootFolder,
   type ZipGroup,
 } from '@/lib/liquidationZip';
-import { shareFile } from '../printPdf';
+import type { LiquidationFormat, PreparedLiquidation } from './liquidationDelivery';
+import { renderLiquidationImage } from './liquidationImage';
 import { PdfDoc, addFooterPageNumbers, getPDFDeps, lastTableY } from './pdf-shared';
 
 const amount = (n?: number | null) =>
   Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-/**
- * Los montos que imprime la hoja de un pasador (los acumulados de su período).
- * Sin premios: no van en la cuenta corriente (R18), están en Premios.
- */
-export const liquidationSlipAmounts = (account: AccountPeriodView) => ({
-  bets_pass: Number(account.bets_pass ?? 0),
-  deleted_pass: Number(account.deleted_pass ?? 0),
-  pass: Number(account.pass ?? 0),
-  claims: Number(account.claims ?? 0),
-  subtotal: Number(account.subtotal ?? 0),
-  previous_balance: Number(account.previous_balance ?? 0),
-  collections: Number(account.collections ?? 0),
-  paid: Number(account.paid ?? 0),
-  cashier_commission: Number(account.cashier_commission ?? 0),
-  bills: Number(account.bills ?? 0),
-  revenue: Number(account.revenue ?? 0),
-  total: Number(account.total ?? 0),
-});
-
-/** Lo que se mira para decidir si un pasador tuvo movimiento en el período. */
-const MOVEMENT_KEYS = [
-  'bets_pass',
-  'deleted_pass',
-  'pass',
-  'previous_balance',
-  'collections',
-  'paid',
-  // Un reclamo sin pase (o un premio de un período ya liquidado) deja el
-  // total distinto de 0: hay plata que liquidar.
-  'total',
-] as const;
-
-/**
- * Con movimiento: algo en el pase, las borradas, el saldo anterior, los cobros,
- * los pagos o el total. Los que no tienen nada vienen sin tildar al exportar.
- */
-export const hasAccountMovement = (account: AccountPeriodView) => {
-  const amounts = liquidationSlipAmounts(account);
-  return MOVEMENT_KEYS.some((key) => amounts[key] !== 0);
-};
 
 /**
  * `polla_Exportar_Liquidacion_05-11-2026_Pedro-2-5.pdf`: fecha, nombre y el
@@ -174,37 +135,43 @@ export interface LiquidationSlipSheet {
 /**
  * Liquidación de cada pasador, como `printLiquidationCashier` de QuiniApp: lo
  * acumulado en su período (desde el día siguiente a la última liquidación).
- * Sin deje ni premios (R18: los premios están en Premios). Un PDF por pasador,
- * solo de los elegidos, todos en un ZIP con una carpeta raíz del mismo nombre
- * y adentro carpetas por grupo (y por edición si hay varias). En el celular se
- * comparte; si no, se descarga. Devuelve false si no hay hojas (no arma un ZIP
- * vacío).
+ * Sin deje ni premios (R18: los premios están en Premios). Un archivo por
+ * pasador (PDF o imagen), solo de los elegidos, con su ruta en el ZIP: carpeta
+ * raíz del mismo nombre y adentro carpetas por grupo (y por edición si hay
+ * varias). `deliverLiquidation` lo entrega. Devuelve null si no hay hojas (no
+ * arma un ZIP vacío).
  */
-export async function exportLiquidationSlipsZip(params: {
+export async function prepareLiquidationSlips(params: {
   sheets: LiquidationSlipSheet[];
   zipName: string;
-}) {
-  if (params.sheets.length === 0) return false;
+  format: LiquidationFormat;
+}): Promise<PreparedLiquidation | null> {
+  if (params.sheets.length === 0) return null;
 
   const entries = liquidationZipEntries(
-    params.sheets.map((sheet) => ({
-      ...sheet,
-      fileName: liquidationZipPdfName(sheet.cashierCode, sheet.account.user_name, sheet.date),
-    })),
+    params.sheets.map((sheet) => {
+      const pdfName = liquidationZipPdfName(sheet.cashierCode, sheet.account.user_name, sheet.date);
+      return {
+        ...sheet,
+        fileName: params.format === 'image' ? pdfName.replace(/\.pdf$/, '.png') : pdfName,
+      };
+    }),
     zipRootFolder(params.zipName)
   );
 
-  const files: { path: string; data: Uint8Array }[] = [];
+  const files: PreparedLiquidation['files'] = [];
   for (const [index, { path, item }] of entries.entries()) {
     // Cede el hilo para que se pinte "Exportando…" en exportes grandes.
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, 0));
-    const doc = await buildLiquidationSlipPDF(item.account, item.headerLabel);
-    files.push({ path, data: new Uint8Array(doc.output('arraybuffer')) });
+    const blob =
+      params.format === 'image'
+        ? await renderLiquidationImage(
+            cashierLiquidationImageLines({ account: item.account, headerLabel: item.headerLabel })
+          )
+        : (await buildLiquidationSlipPDF(item.account, item.headerLabel)).output('blob');
+    files.push({ path, blob });
   }
-
-  const blob = await zipFiles(files);
-  await shareFile(blob, params.zipName, 'Liquidaciones de la Polla', 'application/zip');
-  return true;
+  return { zipName: params.zipName, format: params.format, files };
 }
 
 /** Un solo pasador: baja el PDF suelto. */

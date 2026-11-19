@@ -60,10 +60,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  GroupLiquidationSheet,
   downloadGroupLiquidationPDF,
-  exportGroupLiquidationsZip,
+  prepareGroupLiquidations,
 } from '@/functions/current-account/groupLiquidationPDF';
+import {
+  type LiquidationFormat,
+  deliverLiquidation,
+} from '@/functions/current-account/liquidationDelivery';
 import {
   groupAccountOutdated,
   groupCommission,
@@ -89,10 +92,11 @@ import {
   downloadGroupDailyReportPDF,
   downloadGroupRangeReportPDF,
 } from '@/functions/current-account/groupDailyReportPDF';
-import { groupLiquidationLabel } from '@/lib/groupLiquidation';
+import { type GroupLiquidationSheet, groupLiquidationLabel } from '@/lib/groupLiquidation';
 import { groupLiquidationZipName } from '@/lib/liquidationZip';
 import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
 import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
+import { exportActionLabel, useLiquidationDelivery } from '../dialogs/LiquidationFormat';
 import { DateField } from '../dialogs/shared';
 import { fmtMoney } from '../format';
 import { EditionExpensesEditor } from './EditionExpensesEditor';
@@ -153,20 +157,31 @@ interface SheetsContext {
   special: boolean;
 }
 
-/** Baja el ZIP con un PDF por grupo (aunque sea uno solo). */
-const exportZip = async (accounts: IPollaGroupEditionAccountEntity[], ctx: SheetsContext) => {
+/** Un archivo por grupo (aunque sea uno solo), listo para entregar. */
+const prepareZip = async (
+  accounts: IPollaGroupEditionAccountEntity[],
+  ctx: SheetsContext,
+  format: LiquidationFormat
+) => {
   const sheets = sheetsOf(accounts, {
     groupById: ctx.groupById,
     orgName: await fetchOrganizationName(ctx.organizationId),
     title: ctx.title,
   });
-  await exportGroupLiquidationsZip({
+  return prepareGroupLiquidations({
     sheets,
+    format,
     zipName: groupLiquidationZipName({
       date: sheets[0]?.date ?? todayIso(),
       special: ctx.special,
     }),
   });
+};
+
+/** Baja el ZIP con un PDF por grupo (al liquidar no hay selector de formato). */
+const exportZip = async (accounts: IPollaGroupEditionAccountEntity[], ctx: SheetsContext) => {
+  const prepared = await prepareZip(accounts, ctx, 'pdf');
+  if (prepared) await deliverLiquidation(prepared);
 };
 
 /** Exporta tras liquidar: si falla, avisa (la liquidación ya quedó guardada). */
@@ -1024,6 +1039,11 @@ export const GroupEditionAccounts = () => {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
+  const [format, setFormat] = useState<LiquidationFormat>('pdf');
+  const delivery = useLiquidationDelivery();
+  // Lo ya preparado deja de valer si cambia el formato o se cierra la lista.
+  const { reset: resetDelivery } = delivery;
+  useEffect(() => resetDelivery(), [format, pickOpen, resetDelivery]);
 
   const editions = useMemo(() => list ?? [], [list]);
   /** Título de cada edición de la lista, para el parte por rango. */
@@ -1127,13 +1147,15 @@ export const GroupEditionAccounts = () => {
     setPickOpen(true);
   };
 
-  /** Baja el ZIP con las liquidaciones guardadas de los grupos elegidos. */
+  /** Entrega las liquidaciones guardadas de los grupos elegidos (ZIP, o imágenes sueltas en el celular). */
   const handleExportLiquidations = async (chosen: IPollaGroupEditionAccountPreview[]) => {
     const accounts = chosen.flatMap((preview) => (preview.account ? [preview.account] : []));
     setExporting(true);
     try {
-      await exportZip(accounts, { groupById, organizationId, title, special });
-      setPickOpen(false);
+      const done = await delivery.run(() =>
+        prepareZip(accounts, { groupById, organizationId, title, special }, format)
+      );
+      if (done) setPickOpen(false);
     } catch (error) {
       console.error(error);
       toast.error('No se pudieron exportar las liquidaciones');
@@ -1325,7 +1347,7 @@ export const GroupEditionAccounts = () => {
       {pickOpen && (
         <CashierPickDialog
           title="Exportar liquidaciones de grupos"
-          description="Se descarga un ZIP con un PDF por grupo, con la fecha en el nombre."
+          description="Se descarga un ZIP con un archivo por grupo (PDF o imagen), con la fecha en el nombre."
           items={previews.filter((preview) => preview.account)}
           idOf={(preview) => preview.polla_group_id}
           labelOf={(preview) =>
@@ -1337,9 +1359,20 @@ export const GroupEditionAccounts = () => {
           totalOf={(preview) => Number(preview.account?.base ?? 0)}
           hasMovement={() => true}
           listLabel="Grupos"
-          actionLabel={(count) => `Exportar ${count} ${count === 1 ? 'PDF' : 'PDFs'}`}
+          actionLabel={exportActionLabel}
           busyLabel="Exportando…"
-          busy={exporting}
+          busy={exporting || delivery.busy}
+          format={format}
+          onFormatChange={setFormat}
+          onSelectionChange={delivery.reset}
+          pendingShare={
+            delivery.pending
+              ? () =>
+                  void delivery.retry().then((done) => {
+                    if (done) setPickOpen(false);
+                  })
+              : undefined
+          }
           onConfirm={(chosen) => void handleExportLiquidations(chosen)}
           onClose={() => setPickOpen(false)}
         />

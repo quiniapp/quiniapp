@@ -23,11 +23,20 @@ const toNumber = (n: number | string | null | undefined) =>
   Number.isFinite(Number(n)) ? Number(n) : 0;
 
 /** `$1.234` (sin decimales); un negativo lleva el signo antes del `$`. */
-const money = (n: number | string | null | undefined) => {
+export const money = (n: number | string | null | undefined) => {
   const value = Math.round(toNumber(n));
   const text = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(Math.abs(value));
   return `${value < 0 ? '-' : ''}$${text}`;
 };
+
+export interface GroupLiquidationSheet {
+  account: GroupLiquidationAccount;
+  group: { number?: number; name: string };
+  orgName: string;
+  editionTitle: string;
+  /** `YYYY-MM-DD`: la de la liquidación más nueva de las que se exportan. */
+  date: string;
+}
 
 /** `Grupo N - Nombre`, o `Nombre` si el grupo ya no tiene número. */
 export const groupLiquidationLabel = (group: { number?: number; name: string }) =>
