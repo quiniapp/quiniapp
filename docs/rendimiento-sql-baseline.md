@@ -153,6 +153,29 @@ Agregar `NOT NULL` en el esquema es opcional: `SET NOT NULL` recorre la tabla co
 3. **Fuera del plan original:** `generate_winners_and_calculate_accounts` (~1 s por llamada, la ve el usuario) y `archive_data_by_date`. Si el delta los confirma, se suman como fase nueva (investigar los planes internos con `auto_explain` en local).
 4. **Fase 6:** suma los candidatos de arriba, siempre validados con el `idx_scan` del delta.
 
+## Delta de prod — 24,2 h (2026-11-17 00:33 → 2026-11-18 00:42 UTC)
+
+Comparación de dos fotos de `perf_stats_snapshot.sql` con `perf_stats_diff.ts`, sin resets en el medio. Es el **estado actual**; la Fase 1 todavía no estaba en prod.
+
+**Conclusión:** prod está tranquilo. Todo el tiempo de base del día suma **75 s**. El costo acumulado en 14 meses era sobre todo histórico.
+
+| # | Qué | Llamadas | Media | Total | % | Nota |
+|---|---|---|---|---|---|---|
+| 1 | `archive_data_by_date` (por lote) | 72 | 264 ms | 19,0 s | 25 | Cron nocturno; nadie lo espera. ~22k buffers por lote: mantiene los índices de `bets_archive` |
+| 2 | `create_ticket_with_bets` | 491 | 23 ms | 11,4 s | 15 | Aceptable; ~4k buffers por ticket |
+| 3 | `generate_winners_and_calculate_accounts` | 27 | **311 ms** | 8,4 s | 11 | Lo espera el usuario. ~50k buffers por llamada → **Fase 1b** |
+| 4 | `get_archive_stats` | 2 | **4,2 s** | 8,3 s | 11 | Cron de archivado (log antes/después), no lo espera ningún usuario; recorre ~1 GB → **Fase 1c** |
+| 5 | `get_bets_total_amount` / `_prize` | 405 + 405 | 12 / 0,6 ms | 5,1 s | 7 | Fase 2 los une |
+| 6 | `GET /bet` PostgREST (offset, 5 variantes) | ~340 | 5–69 ms | ~6 s | 8 | Fase 1 (a prod) |
+| 7 | `get_grouped_bets_for_parse` + `_count` | 131 + 92 | 16 / 13 ms | 3,3 s | 4 | Página 1 de agrupadas ≈ 40 ms en prod |
+
+- **`get_ticket_sums` no aparece.** Lo más caro del acumulado de 14 meses era histórico, de antes de `idx_bets_ticket_number` (abril de 2026).
+- **Seq scans de `bets`:** 27 en el día, que coinciden con las 27 llamadas de `generate_winners`. Con `bets` chica (93k filas), el planner resuelve el `UPDATE … FROM` con hash join + seq scan. No es lo que más pesa: lo que domina son las reescrituras de todas las jugadas del turno (ver la Fase 1b).
+- **Índices sin uso en 24 h:**
+  - en `tickets`: `idx_tickets_total_prize`, `idx_tickets_winner_deleted_created`, `idx_tickets_winner_user_deleted_created`, `idx_tickets_date_deleted_winner_created` → Fase 1c;
+  - `idx_tickets_deleted_by` → se queda, respalda una FK;
+  - en `bets_archive`: `lottery_id`, `user_id`, `schedule_date_org_active` y `ticket_number` → se quedan. Los tres primeros respaldan FKs con `ON DELETE SET NULL` sobre 3,3M filas, y `ticket_number` lo usa la búsqueda de tickets archivados.
+
 ## Mediciones después de cada fase
 
 | Fase | Fecha | Query | Antes | Después | Nota |
@@ -165,3 +188,7 @@ Agregar `NOT NULL` en el esquema es opcional: `SET NOT NULL` recorre la tabla co
 | 1 | 2026-11-16 | Q2x organización con `= ANY(array)` (`.in()`) | — | 40 ms, vuelve el Sort (PG15 local) | Por eso el repositorio filtra la organización con `.eq()` |
 | 1 | 2026-11-16 | HTTP local `GET /bet` (lista) | — | Página 1 con totales: 65 ms. Página 2: 17 ms | `verify-keyset.ts`: 122.590 jugadas en 137 páginas sin duplicados ni saltos |
 | 1 | 2026-11-16 | Página 1 de agrupadas (HTTP local) | ≈590 ms (4 RPC) | 375 ms, sin cambio | Objetivo de la Fase 2 |
+| 1b | 2026-11-18 | `generate_winners_and_calculate_accounts`, primera carga del turno (local, 24,5k jugadas) | 27,6 s; 90k bloques modificados | **3,8 s**; 32k | Mismo resultado (checksums de jugadas, tickets, `ticket_prizes_by_turn` y cuentas) |
+| 1b | 2026-11-18 | Ídem, re-run con los mismos resultados | 12,0 s; 73k bloques modificados | **3,2 s**; 1,2k | El re-run ya no reescribe filas (pgTAP 260) |
+| 1b | 2026-11-18 | Prod (delta de 24 h) | 311 ms, ~50k buffers por llamada | Pendiente: medir con otro delta después del deploy | En local, lo que queda es la reinserción de `ticket_prizes_by_turn` (el seed tiene un ticket por jugada; en prod son ~360 tickets por día y organización) |
+| 1c | 2026-11-18 | `get_archive_stats` (local) | 165 ms: `COUNT(*)` de 1M + 200k filas de archivo | 64 ms: archivo por `n_live_tup` | En prod, 4,2 s → lo que cueste contar `bets` y `tickets` (~93k + ~1,5k filas) |
