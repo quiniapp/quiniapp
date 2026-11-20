@@ -5,6 +5,7 @@ import {
   groupLiquidationLabel,
   groupLiquidationRows,
   groupLiquidationSheets,
+  groupLiquidationTotals,
 } from '@/lib/groupLiquidation';
 import { groupLiquidationFileName, groupLiquidationZipName } from '@/lib/liquidationZip';
 import { groupLiquidationZipEntries } from '@/functions/current-account/groupLiquidationPDF';
@@ -140,5 +141,51 @@ describe('groupLiquidationSheets', () => {
 
   it('sin liquidaciones no hay hojas', () => {
     expect(groupLiquidationSheets([], ctx)).toEqual([]);
+  });
+});
+
+describe('groupLiquidationTotals', () => {
+  it('suma los grupos de la edición', () => {
+    expect(
+      groupLiquidationTotals([
+        { cashiers_subtotal: 120000, expenses: 5000, base: 115000, admin_commission: 23000 },
+        { cashiers_subtotal: 30000, expenses: 0, base: 30000, admin_commission: 4500 },
+      ])
+    ).toEqual({
+      cashiersSubtotal: 150000,
+      expenses: 5000,
+      total: 145000,
+      admin: 27500,
+      capitalist: 117500,
+    });
+  });
+
+  it('suma en centavos y acepta montos en texto (numeric de la API)', () => {
+    const rows = [
+      { cashiers_subtotal: '0.1', expenses: '0', base: '0.1', admin_commission: '0.05' },
+      { cashiers_subtotal: '0.2', expenses: '0', base: '0.2', admin_commission: '0.05' },
+    ] as unknown as Parameters<typeof groupLiquidationTotals>[0];
+    const totals = groupLiquidationTotals(rows);
+    expect(totals).toEqual({
+      cashiersSubtotal: 0.3,
+      expenses: 0,
+      total: 0.3,
+      admin: 0.1,
+      capitalist: 0.2,
+    });
+    // Admin + capitalista cierra con el total (en centavos: en JS 0.1 + 0.2 ≠ 0.3).
+    expect(Math.round(totals.admin * 100) + Math.round(totals.capitalist * 100)).toBe(
+      Math.round(totals.total * 100)
+    );
+  });
+
+  it('sin liquidaciones da todo en cero', () => {
+    expect(groupLiquidationTotals([])).toEqual({
+      cashiersSubtotal: 0,
+      expenses: 0,
+      total: 0,
+      admin: 0,
+      capitalist: 0,
+    });
   });
 });

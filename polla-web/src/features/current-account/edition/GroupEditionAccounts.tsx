@@ -55,6 +55,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -92,7 +93,11 @@ import {
   downloadGroupDailyReportPDF,
   downloadGroupRangeReportPDF,
 } from '@/functions/current-account/groupDailyReportPDF';
-import { groupLiquidationLabel, groupLiquidationSheets } from '@/lib/groupLiquidation';
+import {
+  groupLiquidationLabel,
+  groupLiquidationSheets,
+  groupLiquidationTotals,
+} from '@/lib/groupLiquidation';
 import { groupLiquidationZipName } from '@/lib/liquidationZip';
 import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
 import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
@@ -796,6 +801,8 @@ const GroupEditionHistory = ({
   });
   const { data: accounts = [], isFetching } = accountsQuery;
   const [confirming, setConfirming] = useState<IPollaGroupEditionAccountEntity | null>(null);
+  // Fila "Total general": suma de los grupos liquidados de la edición.
+  const totals = useMemo(() => groupLiquidationTotals(accounts), [accounts]);
 
   const outdatedGroups = useMemo(
     () =>
@@ -904,6 +911,22 @@ const GroupEditionHistory = ({
             );
           })}
         </TableBody>
+        <TableFooter>
+          <TableRow className="font-semibold">
+            <TableCell>Total general</TableCell>
+            <TableCell className="text-right tabular-nums">
+              ${fmtMoney(totals.cashiersSubtotal)}
+            </TableCell>
+            <TableCell className="text-right tabular-nums">${fmtMoney(totals.expenses)}</TableCell>
+            <TableCell className="text-right tabular-nums">${fmtMoney(totals.total)}</TableCell>
+            <TableCell />
+            <TableCell className="text-right tabular-nums">${fmtMoney(totals.admin)}</TableCell>
+            <TableCell className="text-right tabular-nums">
+              ${fmtMoney(totals.capitalist)}
+            </TableCell>
+            <TableCell />
+          </TableRow>
+        </TableFooter>
       </Table>
     </div>
   );
