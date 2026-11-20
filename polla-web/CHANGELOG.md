@@ -4,6 +4,22 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-20 (cobros, pagos y Debe de los grupos)
+
+- **Cobros y Pagos en "Grupos a liquidar"** (`edition/GroupEditionAccounts.tsx`): dos columnas de inputs entre Capitalista y Estado (y las mismas filas en la tarjeta del celular), como en "Generar liquidación" de pasadores: arriba "Tenía $X" y en el input lo que se suma hoy. Por qué: los admins transfieren la parte del capitalista en partes y no había dónde anotarlo.
+  - Lo escrito vive en `GroupEditionAccounts` (un estado por grupo que leen la fila, la tarjeta y los dos diálogos de liquidar), se vacía al cambiar de edición y, para los grupos liquidados, solo cuando la liquidación sale bien.
+  - Vacío vale 0. Un negativo o algo que no es un número marca el input en rojo, deshabilita el Liquidar del grupo y bloquea "Liquidar seleccionados" mientras haya un grupo elegido con un monto inválido. Los inputs quedan deshabilitados donde no se puede liquidar (carga abierta o pasadores sin liquidar).
+  - Columna **Debe**: se recalcula mientras se escribe (Debe guardado − cobro + pago). Sin liquidación previa sale de la parte del capitalista con el % configurado del admin; sin %, "—". Un Debe negativo dice "Cobra $X". Tachado si la liquidación está desactualizada, como Admin y Capitalista.
+  - **Liquidar** y **Liquidar seleccionados** mandan `collection` y `payment` (solo los mayores a 0) y sus diálogos muestran Cobros y Pagos a sumar y cómo queda el Debe (con el total y la comisión de hoy, más lo que el grupo ya tenía). Mientras guardan no se cierran (Escape, clic afuera y Cancelar quedan sin efecto): lo escrito se vacía en el `onSuccess` del diálogo y, si se desmontaba antes, quedaba escrito y un segundo Liquidar volvía a cargar el mismo cobro.
+  - **Estado** suma el badge **Pagado** (verde) cuando el grupo está liquidado, su Debe es 0 y hay algo en la cuenta (`groupPaid`); convive con "Desactualizado".
+  - **Acciones** suma el ícono **Movimientos** cuando el grupo tiene cobros o pagos cargados (en el celular, un botón en la tarjeta).
+- **"Liquidaciones de grupo"** suma las columnas Cobros, Pagos, Debe (o "Cobra $X") y Estado (Pagado, Pendiente, o "—" si no hay nada que saldar), solo para mirar. El "Total general" suma Cobros, Pagos y el Debe neto, y debajo de la tabla va **"Falta cobrar $X"** (solo los Debe positivos).
+- **`edition/GroupMovementsDialog.tsx`** (nuevo, sobre el modelo de `MovementsDialog`): lista los cobros y pagos del grupo en la edición (fecha, tipo y monto), corrige el monto (> 0, sin cambiar el tipo) y borra con `ConfirmDialog`. No da de alta: los movimientos nuevos entran al liquidar.
+- **Cuenta del admin** (`AdminGroupAccountView.tsx`): `pageRows` suma Cobros, Pagos, Debe (o "Cobra $X") y Estado (Pagado/Pendiente), en la tabla y en las tarjetas, solo para leer. El título de la edición baja de renglón para que la tabla siga entrando a 1400 px.
+- Hooks y rutas: `useGroupEditionMovements` (`usePollaData.ts`), `useUpdateGroupMovement` y `useDeleteGroupMovement` (`usePollaMutations.ts`, invalidan `['edition-account']`), `editionAccount.groupMovements` y `editionAccount.groupMovement` (`backend-routes.ts`).
+- Funciones puras en `lib/groupLiquidation.ts` (con tests): `groupOwed`, `groupPaid`, `groupLiquidationPaidMark` y los totales `collections`, `payments`, `owed` (neto) y `missing` (Falta cobrar); y para la pantalla `readGroupMovementInputs`, `groupMovementPayload`, `groupRowOwed`, `groupOwedAfterLiquidation` y `groupPaymentStatus`. `fmtOwed` (`features/current-account/format.ts`) muestra un Debe como `$X` o `Cobra $X`.
+- La hoja de liquidación de grupo (PDF e imagen) suma los renglones Cobros, Pagos y Debe (o Cobra), y la línea **PAGADO** cuando el Debe es 0.
+
 ### Added - 2026-11-19 (totales en Liquidaciones de grupo)
 
 - **Fila "Total general" en "Liquidaciones de grupo"** (`GroupEditionAccounts.tsx`, `GroupEditionHistory`): al pie de la tabla de la edición elegida se suman los grupos liquidados (deja pasadores, gastos, total, total admin y total capitalista). El % admin queda vacío porque no se suma; los grupos desactualizados suman lo que tienen liquidado. "Grupos a liquidar" no lleva totales: ahí el total es el del momento y admin/capitalista solo de los liquidados, y no cerraría.

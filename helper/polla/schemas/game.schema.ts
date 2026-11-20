@@ -333,6 +333,14 @@ export const liquidatePollaGroupEditionSchema = z.object({
    * (`polla_users.admin_percentage`): si lo tiene, la base usa ese.
    */
   admin_percentage: z.number().min(0).max(100).nullable().optional(),
+  /** Cobro y pago que se cargan al liquidar: cada uno > 0 genera un movimiento; vacío o 0, nada. */
+  collection: z.number().min(0).max(9999999999.99).optional(),
+  payment: z.number().min(0).max(9999999999.99).optional(),
+});
+
+/** Editar el monto de un cobro o pago de grupo (siempre > 0). */
+export const updatePollaGroupMovementSchema = z.object({
+  amount: z.number().positive().max(9999999999.99),
 });
 
 /** Máximo de grupos en "Liquidar seleccionados". */
@@ -383,6 +391,7 @@ export type ILiquidateEditionAccountsPayload = z.infer<typeof liquidateEditionAc
 export type ISetEditionLiquidatedPayload = z.infer<typeof setEditionLiquidatedSchema>;
 export type IGenerateEditionLiquidationPayload = z.infer<typeof generateEditionLiquidationSchema>;
 export type ILiquidatePollaGroupEditionPayload = z.infer<typeof liquidatePollaGroupEditionSchema>;
+export type IUpdatePollaGroupMovementPayload = z.infer<typeof updatePollaGroupMovementSchema>;
 export type ILiquidatePollaGroupEditionsPayload = z.infer<typeof liquidatePollaGroupEditionsSchema>;
 
 export type INewPollaEditionPayload = z.infer<typeof newPollaEditionSchema>;

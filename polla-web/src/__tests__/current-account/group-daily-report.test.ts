@@ -127,6 +127,8 @@ describe('avisos del parte', () => {
     created_by: null,
     created_at: '',
     edited_at: '',
+    collections: 0,
+    payments: 0,
   };
 
   it('sin liquidar: solo los que tienen algo; los vacíos no se avisan', () => {

@@ -128,6 +128,10 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new BadRequestError('El porcentaje del admin tiene que estar entre 0 y 100'),
   POLLA_GROUP_BATCH_EMPTY: () => new BadRequestError('Elegí al menos un grupo'),
   POLLA_GROUP_BATCH_DUPLICATED: () => new BadRequestError('Hay un grupo repetido'),
+  POLLA_GROUP_MOVEMENT_INVALID: () =>
+    new BadRequestError('El cobro y el pago del grupo no pueden ser negativos'),
+  polla_group_edition_movements_amount_check: () =>
+    new BadRequestError('El monto del cobro o pago tiene que ser mayor a 0'),
   unique_polla_group_admin_active: () => new ConflictError('Ese grupo ya tiene un admin'),
   unique_polla_username_active: () => new ConflictError('Ese nombre de usuario ya está en uso'),
   unique_polla_cashier_number_active: () =>

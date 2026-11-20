@@ -23,10 +23,15 @@ import { isMobileDevice } from '@/functions/printPdf';
 import { groupSplit } from '@/lib/editionAccount';
 import { groupLiquidationImageLines } from '@/lib/liquidationImageLines';
 import { groupLiquidationFileName } from '@/lib/liquidationZip';
-import { type GroupLiquidationSheet, groupLiquidationLabel } from '@/lib/groupLiquidation';
+import {
+  type GroupLiquidationSheet,
+  groupLiquidationLabel,
+  groupOwed,
+  groupPaymentStatus,
+} from '@/lib/groupLiquidation';
 import { AccountTabs } from './dialogs/shared';
 import { fetchOrganizationName } from './fetchers';
-import { fmtMoney } from './format';
+import { fmtMoney, fmtOwed } from './format';
 import { GroupAccountHistory } from './GroupAccounts';
 import { useOrganizationName } from './useOrganizationName';
 
@@ -44,7 +49,9 @@ type Format = 'pdf' | 'png';
 /**
  * Los renglones de la página, formateados igual que la tabla de liquidaciones
  * del dueño (con decimales y gastos en positivo). El PDF y la imagen usan
- * pesos enteros (`groupLiquidationRows`).
+ * pesos enteros (`groupLiquidationRows`). Cobros, Pagos, Debe y Estado son
+ * solo para mirar: los carga el dueño al liquidar. Las etiquetas son fijas
+ * (son las columnas): un Debe negativo dice "Cobra $X" en el valor.
  */
 const pageRows = (account: IPollaGroupEditionLiquidation['account']) => {
   const split = groupSplit(account.base, account.admin_commission);
@@ -55,6 +62,10 @@ const pageRows = (account: IPollaGroupEditionLiquidation['account']) => {
     { label: '% admin', value: `${Number(account.admin_percentage)}%` },
     { label: 'Total admin', value: `$${fmtMoney(split.admin)}` },
     { label: 'Total capitalista', value: `$${fmtMoney(split.capitalist)}` },
+    { label: 'Cobros', value: `$${fmtMoney(account.collections)}` },
+    { label: 'Pagos', value: `$${fmtMoney(account.payments)}` },
+    { label: 'Debe', value: fmtOwed(groupOwed(account)) },
+    { label: 'Estado', value: groupPaymentStatus(account) ?? '—' },
   ];
 };
 
@@ -202,7 +213,8 @@ const AdminEditionLiquidations = () => {
           <TableBody>
             {data.map((item) => (
               <TableRow key={item.account.polla_group_edition_account_id}>
-                <TableCell className="font-medium">
+                {/* El título largo baja de renglón: con Cobros, Pagos, Debe y Estado no entra a 1400 px. */}
+                <TableCell className="min-w-[180px] whitespace-normal font-medium">
                   {titleOf(item)} · {fmtDate(item.edition.start_date)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap tabular-nums">

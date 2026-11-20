@@ -18,6 +18,8 @@ const sheet: GroupLiquidationSheet = {
     admin_percentage: 20,
     admin_commission: 23000,
     edited_at: '2026-11-15T21:30:00.000000+00:00',
+    collections: 50000,
+    payments: 0,
   },
   group: { number: 1, name: 'Leo' },
   orgName: 'Org',
@@ -59,9 +61,20 @@ describe('liquidaciones en imagen', () => {
       groupLiquidationRows(sheet.account).map((r) => ({
         kind: 'row',
         ...r,
-        strong: ['Total', 'Total admin', 'Total capitalista'].includes(r.label),
+        strong: ['Total', 'Total admin', 'Total capitalista', 'Debe', 'Cobra'].includes(r.label),
       }))
     );
+  });
+
+  it('groupLiquidationImageLines: con Debe 0 trae la línea PAGADO al final; sin eso, no', () => {
+    const paid = groupLiquidationImageLines({
+      ...sheet,
+      account: { ...sheet.account, collections: 92000 },
+    });
+    expect(paid.at(-1)).toEqual({ kind: 'row', label: 'PAGADO', value: '', strong: true });
+    expect(
+      groupLiquidationImageLines(sheet).some((l) => l.kind === 'row' && l.label === 'PAGADO')
+    ).toBe(false);
   });
 
   it('groupLiquidationImageLines: sin organización no hay título de organización', () => {
