@@ -109,7 +109,7 @@ const AdminEditionLiquidations = () => {
       const sheet: GroupLiquidationSheet = {
         account: item.account,
         group: { number: groupNumber, name: item.account.group_name },
-        orgName: orgName ?? (await fetchOrganizationName(organizationId)),
+        orgName: orgName || (await fetchOrganizationName(organizationId)),
         editionTitle: titleOf(item),
         date: dayjs(item.account.edited_at).format('YYYY-MM-DD'),
       };

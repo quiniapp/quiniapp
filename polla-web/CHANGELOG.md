@@ -4,6 +4,15 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-19 (totales en Liquidaciones de grupo)
+
+- **Fila "Total general" en "Liquidaciones de grupo"** (`GroupEditionAccounts.tsx`, `GroupEditionHistory`): al pie de la tabla de la edición elegida se suman los grupos liquidados (deja pasadores, gastos, total, total admin y total capitalista). El % admin queda vacío porque no se suma; los grupos desactualizados suman lo que tienen liquidado. "Grupos a liquidar" no lleva totales: ahí el total es el del momento y admin/capitalista solo de los liquidados, y no cerraría.
+- `groupLiquidationTotals(accounts)` (`lib/groupLiquidation.ts`, pura, con tests): suma en centavos, capitalista = total - comisión (igual que `groupSplit` en cada fila).
+
+### Fixed - 2026-11-19 (nombre de la organización en PDF e imagen)
+
+- **Nombre de la organización** (`useOrganizationName.ts`, `AdminGroupAccountView.tsx`, `GroupEditionAccounts.tsx`): si la primera carga fallaba, `fetchOrganizationName` devolvía `''`, la query lo guardaba con `staleTime: Infinity` y los exportes (`orgName ?? …`) no lo volvían a pedir: los PDF e imágenes de grupo salían sin el nombre hasta recargar la página. Ahora el vacío queda vencido (`staleTime` en 0 sin nombre, se vuelve a pedir al próximo montaje) y los exportes usan `||`, así que con el nombre vacío lo piden de nuevo al exportar.
+
 ### Fixed - 2026-11-18 (ajustes de la revisión de liquidaciones de grupo e imagen)
 
 - **Imágenes en el celular, con salida al ZIP** (`liquidationDelivery.ts`, `shareFiles.ts`, `LiquidationFormat.tsx`, `lib/liquidationZip.ts`): más de `MAX_SHARE_FILES` (10) imágenes o más de `MAX_SHARE_BYTES` (50 MB) van directo al ZIP (`shouldZipImages`, con test), porque Android Chrome rechaza la hoja de compartir con `NotAllowedError`. `shareFiles(files, { fallbackDownload: false })` no baja las imágenes una por una y devuelve `'failed'`; `deliverLiquidation` entrega el ZIP en ese caso. El reintento de `useLiquidationDelivery.retry` (que ya es un toque nuevo) trata un segundo bloqueo como definitivo y entrega el ZIP. El comportamiento por defecto de `shareFiles` no cambia.

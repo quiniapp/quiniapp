@@ -62,6 +62,47 @@ export const groupLiquidationRows = (
   ];
 };
 
+/** Suma de las liquidaciones de los grupos de una edición (la fila "Total general"). */
+export interface GroupLiquidationTotals {
+  cashiersSubtotal: number;
+  expenses: number;
+  total: number;
+  admin: number;
+  capitalist: number;
+}
+
+const cents = (n: number | string | null | undefined) => Math.round(toNumber(n) * 100);
+
+/**
+ * Suma, en centavos, lo que dejaron los pasadores, los gastos, el total y lo
+ * que va al admin y al capitalista de cada liquidación guardada (el mismo
+ * cálculo que `groupSplit` en cada fila: capitalista = total - comisión).
+ */
+export const groupLiquidationTotals = (
+  accounts: Pick<
+    GroupLiquidationAccount,
+    'cashiers_subtotal' | 'expenses' | 'base' | 'admin_commission'
+  >[]
+): GroupLiquidationTotals => {
+  const sum = accounts.reduce(
+    (acc, account) => ({
+      cashiersSubtotal: acc.cashiersSubtotal + cents(account.cashiers_subtotal),
+      expenses: acc.expenses + cents(account.expenses),
+      total: acc.total + cents(account.base),
+      admin: acc.admin + cents(account.admin_commission),
+      capitalist: acc.capitalist + cents(account.base) - cents(account.admin_commission),
+    }),
+    { cashiersSubtotal: 0, expenses: 0, total: 0, admin: 0, capitalist: 0 }
+  );
+  return {
+    cashiersSubtotal: sum.cashiersSubtotal / 100,
+    expenses: sum.expenses / 100,
+    total: sum.total / 100,
+    admin: sum.admin / 100,
+    capitalist: sum.capitalist / 100,
+  };
+};
+
 /**
  * Las hojas de las liquidaciones guardadas, una por grupo. Una sola fecha para
  * todas: la de la liquidación más nueva (`today` si no hay ninguna).
