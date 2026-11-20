@@ -117,12 +117,12 @@ SELECT is((polla_group_edition_account_preview(pg_temp.org(), pg_temp.g1(), pg_t
   'null'::JSONB, 'sin cuenta guardada todavía');
 
 -- --------------------------------------------------------------- liquidar
-SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 0, 0, pg_temp.owner())).admin_commission,
+SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 0, 0, 0, 0, pg_temp.owner())).admin_commission,
   22.00::NUMERIC(12,2), 'comisión del admin: 10% de 220');
 -- 12,345% se guarda 12,35: la comisión es 12,35% de 220 = 27,17 (con 12,345 daría 27,16).
-SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 12.345, 0, 0, pg_temp.owner())).admin_commission,
+SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 12.345, 0, 0, 0, 0, pg_temp.owner())).admin_commission,
   27.17::NUMERIC(12,2), 'el % se redondea a 2 decimales antes de calcular la comisión');
-SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 5, 3, pg_temp.owner())).total,
+SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 5, 3, 0, 0, pg_temp.owner())).total,
   24.00::NUMERIC(12,2), 'total = comisión + ajustes - pagado');
 SELECT is((SELECT count(*) FROM polla_group_edition_accounts
            WHERE polla_group_id = pg_temp.g1() AND polla_edition_id = pg_temp.ed('A')),
@@ -132,7 +132,7 @@ SELECT is((polla_group_edition_account_preview(pg_temp.org(), pg_temp.g1(), pg_t
 
 -- Un gasto grande que supera el subtotal.
 SELECT pg_temp.expense('A', pg_temp.g1(), 400);
-SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 0, 0, pg_temp.owner())).admin_commission,
+SELECT is((polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 0, 0, 0, 0, pg_temp.owner())).admin_commission,
   0::NUMERIC(12,2), 'si los gastos superan, no cobra');
 SELECT is((SELECT total FROM polla_group_edition_accounts
            WHERE polla_group_id = pg_temp.g1() AND polla_edition_id = pg_temp.ed('A')),
@@ -140,19 +140,19 @@ SELECT is((SELECT total FROM polla_group_edition_accounts
 
 -- ------------------------------------------------------------ validaciones
 SELECT throws_ok(
-  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 101, 0, 0, pg_temp.owner())$$,
+  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 101, 0, 0, 0, 0, pg_temp.owner())$$,
   'P0001', 'POLLA_GROUP_PERCENTAGE_INVALID', 'porcentaje fuera de rango');
 SELECT throws_ok(
-  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('C'), 10, 0, 0, pg_temp.owner())$$,
+  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('C'), 10, 0, 0, 0, 0, pg_temp.owner())$$,
   'P0001', 'POLLA_EDITION_ACCOUNT_DISABLED', 'edición que quedó por días');
 SELECT throws_ok(
-  $$SELECT polla_liquidate_group_edition(pg_temp.org(), gen_random_uuid(), pg_temp.ed('A'), 10, 0, 0, pg_temp.owner())$$,
+  $$SELECT polla_liquidate_group_edition(pg_temp.org(), gen_random_uuid(), pg_temp.ed('A'), 10, 0, 0, 0, 0, pg_temp.owner())$$,
   'P0001', 'POLLA_GROUP_NOT_FOUND', 'grupo inexistente');
 
 -- P3 de G1 con un ticket y sin liquidar.
 SELECT pg_temp.bet('A', 3, 'T180-A4');
 SELECT throws_ok(
-  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 0, 0, pg_temp.owner())$$,
+  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g1(), pg_temp.ed('A'), 10, 0, 0, 0, 0, pg_temp.owner())$$,
   'P0001', 'POLLA_GROUP_CASHIERS_PENDING', 'faltan pasadores');
 
 -- P1 se pasa a G2 después de liquidarse: su subtotal sigue en G1.
@@ -187,14 +187,14 @@ SELECT throws_ok(
   'P0001', 'POLLA_GROUP_ACCOUNT_OPEN', 'borrar: pasadores liquidados pero el grupo sin liquidar');
 
 -- Grupo liquidado y después un gasto nuevo: la cuenta quedó vieja.
-SELECT polla_liquidate_group_edition(pg_temp.org(), 'a9000000-0000-0000-0000-00000180e003', pg_temp.ed('B'), 10, 0, 0, pg_temp.owner());
+SELECT polla_liquidate_group_edition(pg_temp.org(), 'a9000000-0000-0000-0000-00000180e003', pg_temp.ed('B'), 10, 0, 0, 0, 0, pg_temp.owner());
 SELECT pg_temp.expense('B', 'a9000000-0000-0000-0000-00000180e003', 15);
 SELECT throws_ok(
   $$SELECT polla_delete_group('a9000000-0000-0000-0000-00000180e003', pg_temp.owner())$$,
   'P0001', 'POLLA_GROUP_ACCOUNT_OPEN', 'borrar: la liquidación del grupo quedó desactualizada');
 
 -- Se liquida de nuevo y queda al día; una fila vieja por días sin liquidar no molesta.
-SELECT polla_liquidate_group_edition(pg_temp.org(), 'a9000000-0000-0000-0000-00000180e003', pg_temp.ed('B'), 10, 0, 0, pg_temp.owner());
+SELECT polla_liquidate_group_edition(pg_temp.org(), 'a9000000-0000-0000-0000-00000180e003', pg_temp.ed('B'), 10, 0, 0, 0, 0, pg_temp.owner());
 INSERT INTO polla_current_accounts (polla_user_id, user_name, user_number, polla_organization_id, polla_group_id, date, subtotal, is_liquidated)
 VALUES (pg_temp.cashier(4), 'Pasador 4', 4, pg_temp.org(), 'a9000000-0000-0000-0000-00000180e003', polla_today() - 30, 500, FALSE);
 SELECT lives_ok(

@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/table';
 import { GroupSelect } from '@/features/current-account/dialogs/shared';
 import { ALL_GROUPS } from '@/features/current-account/format';
-import { EditionPicker } from '@/features/bets/EditionPicker';
+import { EditionPool } from '@/features/bets/EditionPool';
+import { EditionSelect } from '@/features/bets/EditionSelect';
 import { useBetsEdition } from '@/features/bets/useBetsEdition';
 
 const fmtMoney = (value: number) =>
@@ -46,7 +47,10 @@ export const SalesPage = () => {
   const [date, setDate] = useState(todayIso);
   const [groupId, setGroupId] = useState(ALL_GROUPS);
   // La edición va en la URL, como en Jugadas (abre en la activa más reciente).
-  const { editionId, editionList, labelFor, updateEdition } = useBetsEdition();
+  const { editionId, editionSelect, selectedEdition } = useBetsEdition({
+    limit: 10,
+    fetchMore: true,
+  });
 
   const byEdition = view === 'edition';
   const isCashier = role === POLLA_USER_TYPE.CASHIER;
@@ -122,12 +126,11 @@ export const SalesPage = () => {
           </div>
         </div>
 
-        <EditionPicker
-          editions={editionList}
-          value={editionId}
-          onChange={updateEdition}
-          labelFor={labelFor}
-        />
+        <div className="flex min-w-0 flex-col gap-1 sm:min-w-[260px]">
+          <Label>Edición</Label>
+          <EditionSelect {...editionSelect} />
+          <EditionPool edition={selectedEdition} />
+        </div>
 
         {!byEdition && (
           <div className="flex flex-col gap-1 sm:w-[200px]">

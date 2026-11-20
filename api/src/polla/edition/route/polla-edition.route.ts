@@ -27,6 +27,21 @@ const withoutTotals = <T extends IPollaEditionEntityBack>(edition: T) => {
 
 const PERIODS = Object.values(POLLA_EDITION_PERIOD);
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Tope de `ids` por pedido: viajan en la URL (también en la de PostgREST). */
+const MAX_IDS = 60;
+
+/** `ids=a,b,c` → UUID sin repetir, de hasta 60. Sin el parámetro, `undefined`. */
+const parseIds = (raw: unknown): string[] | undefined => {
+  if (typeof raw !== 'string' || raw.trim() === '') return undefined;
+
+  const ids = [...new Set(raw.split(',').map((id) => id.trim()))];
+  if (ids.length > MAX_IDS) throw new BadRequestError(`Se pueden pedir hasta ${MAX_IDS} ediciones`);
+  if (ids.some((id) => !UUID.test(id))) throw new BadRequestError('ids inválido');
+  return ids;
+};
+
 /**
  * `periods=UPCOMING,PLAYING` → la lista validada. Sin filtro si no viene o
  * vienen los tres (es lo mismo que traer todas).
@@ -92,6 +107,28 @@ export class PollaEditionRouter {
           editions: buildPaginated(
             data,
             { ...pagination, page: 1, limit: data.length },
+            data.length
+          ),
+        },
+      });
+      return;
+    }
+
+    // Ediciones puntuales (títulos de las que no están cargadas en un
+    // selector): todas en una página, sin COUNT, y sin los demás filtros.
+    const ids = parseIds(req.query.ids);
+    if (ids) {
+      const result = await this.repository.getAll(
+        { organizationId, ids },
+        { page: 1, limit: ids.length, from: 0, to: ids.length - 1, withCount: false }
+      );
+      const editions = result.data as IPollaEditionEntityBack[];
+      const data = isSuper ? editions : editions.map(withoutTotals);
+      res.status(200).json({
+        data: {
+          editions: buildPaginated(
+            data,
+            { ...pagination, page: 1, limit: ids.length },
             data.length
           ),
         },

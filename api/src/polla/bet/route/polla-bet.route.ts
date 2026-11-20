@@ -233,6 +233,7 @@ const toPublicBet = (
   polla_bet_id: bet.polla_bet_id,
   ticket_number: bet.ticket_number,
   polla_edition_id: bet.polla_edition_id,
+  edition_status: bet.edition_status,
   group_name: bet.group_name,
   group_number: bet.group_number,
   cashier_name: bet.cashier_name,

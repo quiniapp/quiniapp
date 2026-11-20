@@ -13,7 +13,8 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { periodLabel } from '@/lib/accountPeriod';
 import { BetsList } from './BetsList';
-import { EditionPicker } from './EditionPicker';
+import { EditionPool } from './EditionPool';
+import { EditionSelect } from './EditionSelect';
 import { LoadDateFilter } from './LoadDateFilter';
 import { ShareTicketsPdfButton } from './ShareTicketsPdfButton';
 import { WinnersBanner } from './WinnersBanner';
@@ -31,8 +32,11 @@ import { useLoadRangeParam } from './useLoadRangeParam';
 export const BetsPage = () => {
   const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { editionId, editionList, selectedEdition, labelFor, titleFor, editionStatusOf } =
-    useBetsEdition();
+  // Jugadas muestra solo las últimas 5 ediciones, para todos los roles.
+  const { editionId, editionSelect, selectedEdition, titleFor, editionStatusOf } = useBetsEdition({
+    limit: 5,
+    fetchMore: false,
+  });
 
   // El jugador ve lo cargado al entrar; el resto, además, "Actualizar", la
   // fecha de carga y el PDF.
@@ -110,12 +114,11 @@ export const BetsPage = () => {
       {/* Los controles ocupan el ancho completo en mobile y se acomodan en
           línea desde sm: en 320px cualquier ancho fijo desborda. */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <EditionPicker
-          editions={editionList}
-          value={editionId}
-          onChange={(value) => updateParam('polla_edition_id', value)}
-          labelFor={labelFor}
-        />
+        <div className="flex min-w-0 flex-col gap-1 sm:min-w-[260px]">
+          <Label>Edición</Label>
+          <EditionSelect {...editionSelect} />
+          <EditionPool edition={selectedEdition} />
+        </div>
 
         <div className="flex min-w-0 flex-col gap-1">
           <Label htmlFor="bets-search">Buscar</Label>

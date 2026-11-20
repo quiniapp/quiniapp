@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EditionPicker } from '@/features/bets/EditionPicker';
+import { EditionPool } from '@/features/bets/EditionPool';
+import { EditionSelect } from '@/features/bets/EditionSelect';
 import { useBetsEdition } from '@/features/bets/useBetsEdition';
 import { fmtDate, fmtMoney } from '@/features/bets/format';
 import { groupLabel } from '@/lib/pollaGroups';
@@ -63,7 +64,10 @@ const PAID_VIEWS: [PaidView, string][] = [
  */
 export const PrizesPage = () => {
   const { role, organizationId } = useAuth();
-  const { editionId, editionList, labelFor, updateEdition } = useBetsEdition();
+  const { editionId, editionSelect, selectedEdition } = useBetsEdition({
+    limit: 10,
+    fetchMore: true,
+  });
   const [paidView, setPaidView] = useState<PaidView>('');
   const canMarkPaid = Boolean(role && isPollaSuperRole(role));
   // R21: el jugador ve sus premios, no si se pagaron (eso es entre el
@@ -137,12 +141,11 @@ export const PrizesPage = () => {
       <PageHeader description={description} />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <EditionPicker
-          editions={editionList}
-          value={editionId}
-          onChange={updateEdition}
-          labelFor={labelFor}
-        />
+        <div className="flex min-w-0 flex-col gap-1 sm:min-w-[260px]">
+          <Label>Edición</Label>
+          <EditionSelect {...editionSelect} />
+          <EditionPool edition={selectedEdition} />
+        </div>
 
         {seesPaid && (
           <div className="flex min-w-0 flex-col gap-1">

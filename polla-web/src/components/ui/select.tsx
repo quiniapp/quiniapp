@@ -52,8 +52,12 @@ function SelectContent({
   className,
   children,
   position = 'popper',
+  onViewportScroll,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & {
+  /** Scroll del panel de opciones (scroll infinito dentro del desplegable). */
+  onViewportScroll?: React.UIEventHandler<HTMLDivElement>;
+}) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -72,6 +76,7 @@ function SelectContent({
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
+          onScroll={onViewportScroll}
           className={cn(
             'p-1',
             position === 'popper' &&

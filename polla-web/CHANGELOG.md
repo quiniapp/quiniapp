@@ -4,6 +4,47 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-20 (revisión final de cobros de grupo y selector de ediciones)
+
+- **`EditionSelect`**: la edición elegida que no está entre las cargadas se muestra en el selector (rótulo en `SelectValue`) pero ya no se agrega a la lista de opciones (Jugadas mostraba 6). Se quitó `mergeSelected`. Un guardia con ref evita el pedido doble de la misma página (scroll + observer en el mismo instante).
+- **Selectores de ediciones** (`useBetsEdition`, `GroupEditionAccounts`): las páginas se unen sin ids repetidos (`uniqueById`, `lib/editionSelect.ts`) por si se crea una edición mientras se pagina con OFFSET. Comentario en `useEditionPages` / `useEditionAccountPages` de por qué OFFSET alcanza.
+- **Cuenta corriente → Grupos**: "Liquidar seleccionados" solo manda los grupos que se pueden liquidar (`groupLiquidatable`); un grupo tildado que dejó de poder liquidarse (carga reabierta, pasador pendiente) no se envía aunque tenga un monto escrito.
+
+### Changed - 2026-11-20 (selector de ediciones de a 10 en las pantallas)
+
+- **Jugadas, Administrar jugadas, Ventas y Premios** usan `EditionSelect` en vez de `EditionPicker` (borrado). Jugadas muestra solo las **últimas 5** ediciones, sin traer más (`useBetsEdition({ limit: 5, fetchMore: false })`), para todos los roles; las otras tres traen **de a 10** con scroll infinito en el desplegable (`{ limit: 10, fetchMore: true }`). Por qué: los selectores bajaban hasta 100 ediciones de una vez y cada semana hay más. El rótulo "Edición" y la línea de pozo (y "· N jugadas" en Administrar) quedan iguales: la línea pasa a `features/bets/EditionPool.tsx`.
+- **`useBetsEdition({ limit, fetchMore })`** (`features/bets/useBetsEdition.ts`): pagina con `useEditionPages`; la edición elegida sale de lo cargado o, si no está (un link con un `polla_edition_id` viejo), de `useEditionById`, y se muestra arriba en el selector. Sin edición elegida abre en la primera activa de lo cargado o, si no hay, la primera (`preferredEdition`, `lib/editionSelect.ts`). Devuelve además `editionSelect` (las props de `EditionSelect`), `editionOf(id)` (cargadas + elegida) y `fetchEdition(id)` (la conocida o pedida por id); `editionStatusOf` queda como respaldo (cada jugada trae `edition_status`).
+- **Administrar jugadas**: imprimir un ticket de una edición que no está cargada (buscando por nº de ticket) pide la edición por id (`useFetchEdition`, misma caché que `useEditionById`); el nombre de la edición de una cortesía que no está cargada se pide junto con las demás por id (`useEditionsByIds`, `GET /edition?ids=`). "Edición finalizada", "Eliminar impagos" y "Compartir PDF" usan la edición elegida aunque venga por id. `loadableEditions` no cambia.
+- **Cuenta corriente → Grupos** (`edition/GroupEditionAccounts.tsx`): el selector usa `useEditionAccountPages(…, 10)` + `EditionSelect` (antes, la lista de cuentas por edición con `limit: 200`), con "· Carga abierta" en el rótulo. Si la elegida deja de estar en lo cargado se arma con la edición pedida por id (sin "Carga abierta" y con la carga tomada como cerrada; la base rechaza igual liquidar con la carga abierta). El **parte diario por rango** titula cada edición pidiéndolas por id (`fetchEditionsByIds`, `features/current-account/fetchers.ts`, de a 60) en vez de buscarlas en la lista del selector.
+- `useEditionById` devuelve la edición (`IPollaEditionEntityFront`): `apiClient` ya desenvuelve `{ data: { edition } }`. `useEditionPages` deja estable su `fetchNextPage` (el observer del selector la tiene en sus dependencias).
+- Tests (`__tests__/bets/edition-select.test.ts`): `preferredEdition` (primera activa, la primera sin activas, ninguna sin ediciones) y `missingIds` (las que faltan, sin repetir y ordenadas).
+
+### Added - 2026-11-20 (selector de ediciones paginado)
+
+- **`EditionSelect`** (`features/bets/EditionSelect.tsx`): select de ediciones con scroll infinito dentro del desplegable ("Cargando…" al final) y `selectedFallback` para mostrar la elegida si no está en las páginas cargadas. Helpers en `lib/editionSelect.ts` (`shouldLoadMore`, `mergeSelected`).
+- **Hooks** (`hooks/fetchs/usePollaData.ts`): `useEditionPages(params, { limit, fetchMore })`, `useEditionAccountPages(params, limit)` y `useEditionById(id | null)` (solo pide si hay id).
+- **`SelectContent`** acepta `onViewportScroll` y lo pasa al `Viewport` (`components/ui/select.tsx`).
+
+### Changed - 2026-11-20 (selector de ediciones paginado)
+
+- **`BetsList`** usa `row.edition_status ?? editionStatusOf?.(…)` para el estado de la jugada.
+
+### Added - 2026-11-20 (cobros, pagos y Debe de los grupos)
+
+- **Cobros y Pagos en "Grupos a liquidar"** (`edition/GroupEditionAccounts.tsx`): dos columnas de inputs entre Capitalista y Estado (y las mismas filas en la tarjeta del celular), como en "Generar liquidación" de pasadores: arriba "Tenía $X" y en el input lo que se suma hoy. Por qué: los admins transfieren la parte del capitalista en partes y no había dónde anotarlo.
+  - Lo escrito vive en `GroupEditionAccounts` (un estado por grupo que leen la fila, la tarjeta y los dos diálogos de liquidar), se vacía al cambiar de edición y, para los grupos liquidados, solo cuando la liquidación sale bien.
+  - Vacío vale 0. Un negativo o algo que no es un número marca el input en rojo, deshabilita el Liquidar del grupo y bloquea "Liquidar seleccionados" mientras haya un grupo elegido con un monto inválido. Los inputs quedan deshabilitados donde no se puede liquidar (carga abierta o pasadores sin liquidar).
+  - Columna **Debe**: se recalcula mientras se escribe (Debe guardado − cobro + pago). Sin liquidación previa sale de la parte del capitalista con el % configurado del admin; sin %, "—". Un Debe negativo dice "Cobra $X". Tachado si la liquidación está desactualizada, como Admin y Capitalista.
+  - **Liquidar** y **Liquidar seleccionados** mandan `collection` y `payment` (solo los mayores a 0) y sus diálogos muestran Cobros y Pagos a sumar y cómo queda el Debe (con el total y la comisión de hoy, más lo que el grupo ya tenía). Mientras guardan no se cierran (Escape, clic afuera y Cancelar quedan sin efecto): lo escrito se vacía en el `onSuccess` del diálogo y, si se desmontaba antes, quedaba escrito y un segundo Liquidar volvía a cargar el mismo cobro.
+  - **Estado** suma el badge **Pagado** (verde) cuando el grupo está liquidado, su Debe es 0 y hay algo en la cuenta (`groupPaid`); convive con "Desactualizado".
+  - **Acciones** suma el ícono **Movimientos** cuando el grupo tiene cobros o pagos cargados (en el celular, un botón en la tarjeta).
+- **"Liquidaciones de grupo"** suma las columnas Cobros, Pagos, Debe (o "Cobra $X") y Estado (Pagado, Pendiente, o "—" si no hay nada que saldar), solo para mirar. El "Total general" suma Cobros, Pagos y el Debe neto, y debajo de la tabla va **"Falta cobrar $X"** (solo los Debe positivos).
+- **`edition/GroupMovementsDialog.tsx`** (nuevo, sobre el modelo de `MovementsDialog`): lista los cobros y pagos del grupo en la edición (fecha, tipo y monto), corrige el monto (> 0, sin cambiar el tipo) y borra con `ConfirmDialog`. No da de alta: los movimientos nuevos entran al liquidar.
+- **Cuenta del admin** (`AdminGroupAccountView.tsx`): `pageRows` suma Cobros, Pagos, Debe (o "Cobra $X") y Estado (Pagado/Pendiente), en la tabla y en las tarjetas, solo para leer. El título de la edición baja de renglón para que la tabla siga entrando a 1400 px.
+- Hooks y rutas: `useGroupEditionMovements` (`usePollaData.ts`), `useUpdateGroupMovement` y `useDeleteGroupMovement` (`usePollaMutations.ts`, invalidan `['edition-account']`), `editionAccount.groupMovements` y `editionAccount.groupMovement` (`backend-routes.ts`).
+- Funciones puras en `lib/groupLiquidation.ts` (con tests): `groupOwed`, `groupPaid`, `groupLiquidationPaidMark` y los totales `collections`, `payments`, `owed` (neto) y `missing` (Falta cobrar); y para la pantalla `readGroupMovementInputs`, `groupMovementPayload`, `groupRowOwed`, `groupOwedAfterLiquidation` y `groupPaymentStatus`. `fmtOwed` (`features/current-account/format.ts`) muestra un Debe como `$X` o `Cobra $X`.
+- La hoja de liquidación de grupo (PDF e imagen) suma los renglones Cobros, Pagos y Debe (o Cobra), y la línea **PAGADO** cuando el Debe es 0.
+
 ### Added - 2026-11-19 (totales en Liquidaciones de grupo)
 
 - **Fila "Total general" en "Liquidaciones de grupo"** (`GroupEditionAccounts.tsx`, `GroupEditionHistory`): al pie de la tabla de la edición elegida se suman los grupos liquidados (deja pasadores, gastos, total, total admin y total capitalista). El % admin queda vacío porque no se suma; los grupos desactualizados suman lo que tienen liquidado. "Grupos a liquidar" no lleva totales: ahí el total es el del momento y admin/capitalista solo de los liquidados, y no cerraría.
