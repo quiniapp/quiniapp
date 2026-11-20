@@ -4,6 +4,15 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-19 (cobros de grupo)
+
+- El trigger `polla_group_edition_movement_sync` toma el mismo candado advisory que la liquidación del grupo (`polla-group-edition-liq:<grupo>:<edición>`), para que las sumas no queden viejas con escrituras concurrentes.
+- **Migración `20261119234738_polla_group_edition_movements.sql`**: tabla `polla_group_edition_movements` (COLLECTION/PAYMENT, `amount > 0`, borrado lógico, índice `(polla_group_id, polla_edition_id) WHERE deleted_at IS NULL`, RLS y grants como los movimientos de pasadores) y columnas `polla_group_edition_accounts.collections` / `payments`, que mantiene el trigger `trg_polla_group_edition_movement_sync` (recalcula las sumas de los vigentes; no toca `edited_at`).
+- **`polla_liquidate_group_edition`**: la firma suma `p_collection` y `p_payment` (nulo = 0, < 0 lanza `POLLA_GROUP_MOVEMENT_INVALID`); cada monto > 0 inserta un movimiento después del upsert y devuelve la fila releída. `polla_liquidate_group_editions`: cada entrada acepta `collection` y `payment`; sigue todo o nada. Los tests 180, 230 y 250 pasan los dos argumentos nuevos.
+- **`POST /edition_account/:editionId/group_liquidate` y `/group_liquidate_many`**: aceptan `collection` (>= 0) por grupo.
+- **Los grupos no tienen pagos**: la base admite movimientos PAYMENT, pero `liquidateGroup` y `liquidateGroups` (`polla-edition-account.repository.ts`) mandan siempre `p_payment = 0` / `payment: 0` al RPC, y un `payment` que llegue en el body se descarta (el schema ya no lo tiene). `collections`/`payments` siguen en la respuesta; `payments` queda en 0.
+- **`GET /edition_account/:editionId/group_movements?polla_group_id=`**, **`PUT /edition_account/group_movements/:id`** (`{ amount > 0 }`) y **`DELETE /edition_account/group_movements/:id`** (borrado lógico): `accountGuard` (el admin recibe 403). Repositorio: `groupMovements`, `updateGroupMovement`, `deleteGroupMovement`; `GROUP_EDITION_ACCOUNT_COLUMNS` suma `collections, payments`.
+
 ### Fixed - 2026-11-18 (ajustes de la revisión de liquidaciones de grupo e imagen)
 
 - **`GET /edition_account/group_mine`**: usa `PollaEditionAccountRepository.groupAccountsOfGroup` (nuevo), con orden `edited_at` desc + `polla_group_edition_account_id` desc y tope `GROUP_MINE_MAX_ROWS` (500) en la base. `groupAccounts` (llamadas del dueño) no cambia. La ruta sigue ordenando por `start_date` de la edición.

@@ -9,6 +9,7 @@ import {
   IPollaEditionLiquidationResult,
   IPollaGroupEditionAccountEntity,
   IPollaGroupEditionAccountPreview,
+  IPollaGroupEditionMovement,
 } from '@helper/polla/types/game.type';
 import {
   IGenerateEditionLiquidationPayload,
@@ -22,7 +23,10 @@ const MOVEMENT_COLUMNS =
 
 /** Columnas de `polla_group_edition_accounts` (todas las de `IPollaGroupEditionAccountEntity`). */
 const GROUP_EDITION_ACCOUNT_COLUMNS =
-  'polla_group_edition_account_id, polla_organization_id, polla_group_id, polla_edition_id, group_name, cashiers_subtotal, expenses, base, admin_percentage, admin_commission, adjustments, paid, total, created_by, created_at, edited_at';
+  'polla_group_edition_account_id, polla_organization_id, polla_group_id, polla_edition_id, group_name, cashiers_subtotal, expenses, base, admin_percentage, admin_commission, adjustments, paid, total, collections, payments, created_by, created_at, edited_at';
+
+const GROUP_MOVEMENT_COLUMNS =
+  'polla_group_edition_movement_id, polla_group_id, polla_edition_id, type, amount, date, created_at';
 
 /** Tope de filas del parte diario de grupos por rango (grupos × ediciones del rango). */
 const GROUP_REPORT_MAX_ROWS = 5000;
@@ -341,6 +345,8 @@ export class PollaEditionAccountRepository {
     percentage: number | null;
     adjustments: number;
     paid: number;
+    /** Cobro de esta liquidación: > 0 genera un movimiento; 0, nada. */
+    collection: number;
     actorId: string;
   }): Promise<IPollaGroupEditionAccountEntity> {
     const { data, error } = await supabase.rpc('polla_liquidate_group_edition', {
@@ -350,6 +356,9 @@ export class PollaEditionAccountRepository {
       p_percentage: p.percentage,
       p_adjustments: p.adjustments,
       p_paid: p.paid,
+      p_collection: p.collection,
+      // Los grupos no tienen pagos: nunca se guarda uno.
+      p_payment: 0,
       p_actor_id: p.actorId,
     });
 
@@ -361,7 +370,11 @@ export class PollaEditionAccountRepository {
   async liquidateGroups(p: {
     organizationId: string;
     editionId: string;
-    groups: { polla_group_id: string; admin_percentage?: number | null }[];
+    groups: {
+      polla_group_id: string;
+      admin_percentage?: number | null;
+      collection?: number;
+    }[];
     actorId: string;
   }): Promise<IPollaGroupEditionAccountEntity[]> {
     const { data, error } = await supabase.rpc('polla_liquidate_group_editions', {
@@ -370,12 +383,75 @@ export class PollaEditionAccountRepository {
       p_entries: p.groups.map((g) => ({
         polla_group_id: g.polla_group_id,
         admin_percentage: g.admin_percentage ?? null,
+        collection: g.collection ?? 0,
+        // Los grupos no tienen pagos: nunca se guarda uno.
+        payment: 0,
       })),
       p_actor_id: p.actorId,
     });
 
     throwIfPollaError(error);
     return (data ?? []) as IPollaGroupEditionAccountEntity[];
+  }
+
+  /**
+   * Cobros y pagos vigentes de un grupo en una edición, del más viejo al más
+   * nuevo. Sin LIMIT: está acotado (a lo sumo 2 movimientos por liquidación de
+   * un grupo en una edición).
+   */
+  async groupMovements(p: {
+    organizationId: string;
+    groupId: string;
+    editionId: string;
+  }): Promise<IPollaGroupEditionMovement[]> {
+    const { data, error } = await supabase
+      .from('polla_group_edition_movements')
+      .select(GROUP_MOVEMENT_COLUMNS)
+      .eq('polla_organization_id', p.organizationId)
+      .eq('polla_group_id', p.groupId)
+      .eq('polla_edition_id', p.editionId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .order('polla_group_edition_movement_id', { ascending: true });
+
+    throwIfPollaError(error);
+    return (data ?? []) as IPollaGroupEditionMovement[];
+  }
+
+  /** Cambia el monto. La base recalcula `collections` / `payments` sin tocar `edited_at`. */
+  async updateGroupMovement(
+    id: string,
+    organizationId: string,
+    amount: number,
+    editedBy: string
+  ): Promise<IPollaGroupEditionMovement> {
+    const { data, error } = await supabase
+      .from('polla_group_edition_movements')
+      .update({ amount, edited_by: editedBy, edited_at: new Date().toISOString() })
+      .eq('polla_group_edition_movement_id', id)
+      .eq('polla_organization_id', organizationId)
+      .is('deleted_at', null)
+      .select(GROUP_MOVEMENT_COLUMNS)
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Movimiento');
+    return data as IPollaGroupEditionMovement;
+  }
+
+  /** Borrado lógico; la suma de la cuenta se recalcula en la base. */
+  async deleteGroupMovement(id: string, organizationId: string, deletedBy: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('polla_group_edition_movements')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: deletedBy })
+      .eq('polla_group_edition_movement_id', id)
+      .eq('polla_organization_id', organizationId)
+      .is('deleted_at', null)
+      .select('polla_group_edition_movement_id')
+      .maybeSingle();
+
+    throwIfPollaError(error);
+    if (!data) throw new NotFoundError('Movimiento');
   }
 
   /**

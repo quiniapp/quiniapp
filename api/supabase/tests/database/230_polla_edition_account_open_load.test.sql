@@ -108,7 +108,7 @@ SELECT throws_ok(
 SELECT throws_ok(
   $$SELECT polla_liquidate_group_edition('a9000000-0000-0000-0000-000000000230',
       'a9000000-0000-0000-0000-00000230e001', (SELECT id FROM eds WHERE name = 'B'),
-      10, 0, 0, 'a9000000-0000-0000-0000-00000230d001')$$,
+      10, 0, 0, 0, 0, 'a9000000-0000-0000-0000-00000230d001')$$,
   'POLLA_EDITION_LOAD_OPEN', 'liquidar el grupo con la carga abierta falla');
 
 -- ------------------------------------------------------------ marcar como liquidada
@@ -142,7 +142,7 @@ SELECT lives_ok(
 SELECT throws_ok(
   $$SELECT polla_liquidate_group_edition('a9000000-0000-0000-0000-000000000230',
       'a9000000-0000-0000-0000-00000230e001', gen_random_uuid(),
-      10, 0, 0, 'a9000000-0000-0000-0000-00000230d001')$$,
+      10, 0, 0, 0, 0, 'a9000000-0000-0000-0000-00000230d001')$$,
   'POLLA_EDITION_NOT_FOUND', 'liquidar el grupo de una edición que no existe falla');
 
 -- C tiene la carga abierta: sin el filtro de borradas tiraría POLLA_EDITION_LOAD_OPEN.
@@ -151,7 +151,7 @@ UPDATE polla_editions SET deleted_at = NOW() WHERE polla_edition_id = pg_temp.ed
 SELECT throws_ok(
   $$SELECT polla_liquidate_group_edition('a9000000-0000-0000-0000-000000000230',
       'a9000000-0000-0000-0000-00000230e001', (SELECT id FROM eds WHERE name = 'C'),
-      10, 0, 0, 'a9000000-0000-0000-0000-00000230d001')$$,
+      10, 0, 0, 0, 0, 'a9000000-0000-0000-0000-00000230d001')$$,
   'POLLA_EDITION_NOT_FOUND', 'y la de una edición borrada también');
 
 SELECT * FROM finish();

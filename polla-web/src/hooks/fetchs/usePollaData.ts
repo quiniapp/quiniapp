@@ -19,6 +19,7 @@ import {
   IPollaGroupEditionAccountEntity,
   IPollaGroupEditionLiquidation,
   IPollaGroupEditionAccountPreview,
+  IPollaGroupEditionMovement,
   IPollaUserEditionAccount,
   IPollaGroupAccountEntityFront,
   IPollaOrgExpenseEntityFront,
@@ -387,6 +388,22 @@ export const useGroupEditionPreviews = (editionId: string | null) =>
       : BACKEND_ROUTES.editionAccount.base,
     {},
     { enabled: Boolean(editionId) }
+  );
+
+/** Cobros y pagos vigentes de un grupo en la edición (el diálogo "Movimientos"). */
+export const useGroupEditionMovements = (
+  editionId: string | null,
+  groupId: string | null,
+  organizationId?: string | null
+) =>
+  useApiQuery<IPollaGroupEditionMovement[]>(
+    ['edition-account', 'group-movements', editionId, groupId],
+    editionId
+      ? BACKEND_ROUTES.editionAccount.groupMovements(editionId)
+      : BACKEND_ROUTES.editionAccount.base,
+    { polla_group_id: groupId, polla_organization_id: organizationId },
+    // Sin la lista anterior: es de otro grupo.
+    { enabled: Boolean(editionId && groupId), placeholderData: undefined }
   );
 
 /** Cuentas de grupo ya liquidadas (`polla_edition_id`, `polla_group_id`). */

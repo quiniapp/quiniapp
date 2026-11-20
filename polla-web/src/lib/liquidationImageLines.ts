@@ -4,6 +4,7 @@ import { owedWord } from '@/lib/editionAccount';
 import {
   type GroupLiquidationSheet,
   groupLiquidationLabel,
+  groupLiquidationPaidMark,
   groupLiquidationRows,
   money,
 } from '@/lib/groupLiquidation';
@@ -21,7 +22,7 @@ export type ImageLine =
   | { kind: 'row'; label: string; value: string; strong?: boolean }
   | { kind: 'divider' };
 
-const GROUP_STRONG = new Set(['Total', 'Total admin', 'Total capitalista']);
+const GROUP_STRONG = new Set(['Total', 'Total admin', 'Total capitalista', 'Debe', 'Cobra']);
 
 /** Imagen de un grupo: organización, grupo, edición y fecha; después los renglones de la hoja. */
 export const groupLiquidationImageLines = (sheet: GroupLiquidationSheet): ImageLine[] => {
@@ -29,6 +30,7 @@ export const groupLiquidationImageLines = (sheet: GroupLiquidationSheet): ImageL
     (row): ImageLine => ({ kind: 'row', ...row, strong: GROUP_STRONG.has(row.label) })
   );
   const orgName = sheet.orgName.trim();
+  const paidMark = groupLiquidationPaidMark(sheet.account);
   return [
     ...(orgName ? [{ kind: 'title', text: orgName.toUpperCase() } as const] : []),
     { kind: 'title', text: groupLiquidationLabel(sheet.group) },
@@ -38,6 +40,7 @@ export const groupLiquidationImageLines = (sheet: GroupLiquidationSheet): ImageL
     ...rows.slice(0, 3),
     { kind: 'divider' },
     ...rows.slice(3),
+    ...(paidMark ? [{ kind: 'row', label: paidMark, value: '', strong: true } as const] : []),
   ];
 };
 

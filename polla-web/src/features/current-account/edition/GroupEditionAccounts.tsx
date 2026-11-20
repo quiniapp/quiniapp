@@ -1,9 +1,11 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Fragment, ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import {
   AlertTriangle,
+  ArrowLeftRight,
   CalendarRange,
+  Check,
   FileText,
   FolderArchive,
   Printer,
@@ -75,6 +77,7 @@ import {
   groupLiquidationPercentage,
   groupSplit,
   groupsToSelectAll,
+  owedWord,
   parseAmount,
 } from '@/lib/editionAccount';
 import { cn } from '@/lib/utils';
@@ -94,9 +97,19 @@ import {
   downloadGroupRangeReportPDF,
 } from '@/functions/current-account/groupDailyReportPDF';
 import {
+  type GroupMovementAmounts,
+  type GroupMovementInputs,
+  type GroupMovementKey,
   groupLiquidationLabel,
   groupLiquidationSheets,
   groupLiquidationTotals,
+  groupMovementPayload,
+  groupOwed,
+  groupOwedAfterLiquidation,
+  groupPaid,
+  groupPaymentStatus,
+  groupRowOwed,
+  readGroupMovementInputs,
 } from '@/lib/groupLiquidation';
 import { groupLiquidationZipName } from '@/lib/liquidationZip';
 import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
@@ -104,12 +117,80 @@ import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
 import { exportActionLabel, useLiquidationDelivery } from '../dialogs/LiquidationFormat';
 import { DateField } from '../dialogs/shared';
 import { useOrganizationName } from '../useOrganizationName';
-import { fmtMoney } from '../format';
+import { fmtMoney, fmtOwed } from '../format';
 import { EditionExpensesEditor } from './EditionExpensesEditor';
+import { GroupMovementsDialog } from './GroupMovementsDialog';
 import { useCashierCode } from './useCashierCode';
 
 const OUTDATED_TEXT = 'Cambió desde la liquidación del grupo';
 const LOCKED_HINT = 'Configurado en el admin del grupo (Grupos).';
+const INVALID_AMOUNT_TEXT = 'El cobro no puede ser negativo';
+const NOT_LIQUIDATABLE_TEXT = 'Se carga al liquidar: la carga sigue abierta o faltan pasadores';
+const NO_PERCENTAGE_TEXT = 'Sin % configurado: sale al elegirlo en Liquidar';
+
+/** Cobros de "Grupos a liquidar": lo escrito se suma al liquidar el grupo. */
+const MOVEMENT_INPUTS = [{ key: 'collection', had: 'collections', label: 'Cobros' }] as const;
+
+type ReadMovements = ReturnType<typeof readGroupMovementInputs>;
+
+/** Lo que tenía el grupo (cobros guardados), para el "Tenía $X". */
+const hadAmount = (
+  account: IPollaGroupEditionAccountEntity | null,
+  key: (typeof MOVEMENT_INPUTS)[number]['had']
+) => Number(account?.[key] ?? 0);
+
+/** El grupo tiene cobros cargados en la edición. */
+const hasGroupMovements = (account: IPollaGroupEditionAccountEntity | null) =>
+  Boolean(account) && hadAmount(account, 'collections') > 0;
+
+/** La celda donde se escribe el cobro que se suma hoy (tabla y tarjeta). */
+const MovementInput = ({
+  groupName,
+  label,
+  value,
+  invalid,
+  disabled,
+  onChange,
+  className,
+}: {
+  groupName: string;
+  label: string;
+  value: string;
+  invalid: boolean;
+  disabled: boolean;
+  onChange: (value: string) => void;
+  className?: string;
+}) => (
+  <Input
+    aria-label={`${label} de ${groupName}`}
+    aria-invalid={invalid || undefined}
+    inputMode="decimal"
+    placeholder="+ 0"
+    disabled={disabled}
+    title={disabled ? NOT_LIQUIDATABLE_TEXT : invalid ? INVALID_AMOUNT_TEXT : undefined}
+    className={cn(
+      'h-8 w-24 shrink-0 text-right tabular-nums aria-[invalid]:border-destructive',
+      className
+    )}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+  />
+);
+
+/** Pagado (verde), Pendiente, o "—" si no hay nada que saldar. */
+const PaymentStatus = ({ account }: { account: IPollaGroupEditionAccountEntity }) => {
+  const status = groupPaymentStatus(account);
+  if (status === 'Pagado') {
+    return (
+      <Badge variant="success">
+        <Check aria-hidden />
+        Pagado
+      </Badge>
+    );
+  }
+  if (status === 'Pendiente') return <Badge variant="outline">Pendiente</Badge>;
+  return <span className="text-muted-foreground">—</span>;
+};
 
 /** Monto guardado en una liquidación vieja: tachado y apagado. */
 const outdatedAmount = (outdated: boolean) =>
@@ -243,28 +324,40 @@ const validPercentage = (raw: string) => {
   return value === null || value < 0 || value > 100 ? null : value;
 };
 
+/** Lo que ya tenía el grupo en cobros (va en los diálogos de liquidar). */
+const previousMovementsText = (account: IPollaGroupEditionAccountEntity | null) =>
+  hasGroupMovements(account)
+    ? `Ya tenía cobros por $${fmtMoney(hadAmount(account, 'collections'))}.`
+    : null;
+
 /**
- * Liquidar un grupo en la edición: solo el % del admin (fijo si el admin lo
- * tiene configurado). Muestra cuánto del total es para el admin (el 100% de su
- * comisión, que le transfiere el capitalista por afuera) y cuánto para el
- * capitalista.
+ * Liquidar un grupo en la edición: el % del admin (fijo si el admin lo tiene
+ * configurado) y el cobro escrito en la tabla. Muestra cuánto del
+ * total es para el admin (el 100% de su comisión, que le transfiere el
+ * capitalista por afuera), cuánto para el capitalista y cómo queda el Debe.
  */
 const LiquidateGroupDialog = ({
   preview,
   adminPercentage,
+  added,
   editionId,
   title,
   special,
   groupById,
   onClose,
+  onLiquidated,
 }: {
   preview: IPollaGroupEditionAccountPreview;
   adminPercentage: number | null;
+  /** Cobro escrito en la fila del grupo (0 = nada). */
+  added: GroupMovementAmounts;
   editionId: string;
   title: string;
   special: boolean;
   groupById: Map<string, GroupRef>;
   onClose: () => void;
+  /** Liquidó bien: se vacían los Cobros escritos del grupo. */
+  onLiquidated: () => void;
 }) => {
   const { organizationId } = useAuth();
   const { data: orgName } = useOrganizationName(organizationId);
@@ -273,7 +366,10 @@ const LiquidateGroupDialog = ({
   const { mutate: liquidate, isPending } = useLiquidateGroupEdition();
 
   const total = Number(preview.base);
-  const split = groupSplit(total, groupCommission(total, parseAmount(percentage) ?? 0));
+  const commission = groupCommission(total, parseAmount(percentage) ?? 0);
+  const split = groupSplit(total, commission);
+  const owed = groupOwedAfterLiquidation(preview.account, { total, commission }, added);
+  const previous = previousMovementsText(preview.account);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -290,9 +386,11 @@ const LiquidateGroupDialog = ({
         polla_group_id: preview.polla_group_id,
         // Con el % del admin configurado la base usa ese.
         admin_percentage: initial.locked ? null : value,
+        ...groupMovementPayload(added),
       },
       {
         onSuccess: (saved) => {
+          onLiquidated();
           onClose();
           void exportZipOrToast([saved], { groupById, organizationId, orgName, title, special });
         },
@@ -300,8 +398,10 @@ const LiquidateGroupDialog = ({
     );
   };
 
+  // Mientras guarda no se cierra (Escape, afuera o Cancelar): el vaciado de lo escrito
+  // corre en el onSuccess de este diálogo y, desmontado, no correría (doble cobro).
   return (
-    <Dialog open onOpenChange={(next) => !next && onClose()}>
+    <Dialog open onOpenChange={(next) => !next && !isPending && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>Liquidar {preview.group_name}</DialogTitle>
@@ -335,8 +435,19 @@ const LiquidateGroupDialog = ({
             <Amount label="Total para el capitalista" value={split.capitalist} strong />
           </div>
 
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Amount label="Cobros a sumar" value={added.collection} />
+              <Amount label={`${owedWord(owed)} al liquidar`} value={Math.abs(owed)} strong />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {previous ? `${previous} ` : ''}Lo que se suma se escribe en Cobros del grupo, antes
+              de liquidar.
+            </p>
+          </div>
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" disabled={isPending} onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isPending}>
@@ -351,12 +462,14 @@ const LiquidateGroupDialog = ({
 
 /**
  * "Liquidar seleccionados": una fila por grupo con su % (fijo si el admin lo
- * tiene, si no a mano) y lo que va al admin y al capitalista. Se liquidan
- * todos juntos (si uno falla, ninguno) y se baja un ZIP con un PDF por grupo.
+ * tiene, si no a mano), lo que va al admin y al capitalista, el cobro
+ * escrito y cómo queda el Debe. Se liquidan todos juntos (si uno falla,
+ * ninguno) y se baja un ZIP con un PDF por grupo.
  */
 const LiquidateGroupsDialog = ({
   previews,
   adminPercentageOf,
+  addedOf,
   editionId,
   title,
   special,
@@ -366,12 +479,15 @@ const LiquidateGroupsDialog = ({
 }: {
   previews: IPollaGroupEditionAccountPreview[];
   adminPercentageOf: (groupId: string) => number | null;
+  /** Cobro escrito en la fila de cada grupo (0 = nada). */
+  addedOf: (groupId: string) => GroupMovementAmounts;
   editionId: string;
   title: string;
   special: boolean;
   groupById: Map<string, GroupRef>;
   onClose: () => void;
-  onDone: () => void;
+  /** Liquidaron bien: se sueltan esos grupos y se vacía lo que tenían escrito. */
+  onDone: (groupIds: string[]) => void;
 }) => {
   const { organizationId } = useAuth();
   const { data: orgName } = useOrganizationName(organizationId);
@@ -393,8 +509,19 @@ const LiquidateGroupsDialog = ({
   const rows = previews.map((preview) => {
     const total = Number(preview.base);
     const raw = percentages[preview.polla_group_id] ?? '';
-    const split = groupSplit(total, groupCommission(total, parseAmount(raw) ?? 0));
-    return { preview, total, raw, split, locked: initial.get(preview.polla_group_id)?.locked };
+    const commission = groupCommission(total, parseAmount(raw) ?? 0);
+    const split = groupSplit(total, commission);
+    const added = addedOf(preview.polla_group_id);
+    const owed = groupOwedAfterLiquidation(preview.account, { total, commission }, added);
+    return {
+      preview,
+      total,
+      raw,
+      split,
+      added,
+      owed,
+      locked: initial.get(preview.polla_group_id)?.locked,
+    };
   });
   const sum = (pick: (row: (typeof rows)[number]) => number) =>
     rows.reduce((acc, row) => acc + pick(row), 0);
@@ -413,11 +540,12 @@ const LiquidateGroupsDialog = ({
         groups: rows.map((row) => ({
           polla_group_id: row.preview.polla_group_id,
           admin_percentage: row.locked ? null : validPercentage(row.raw),
+          ...groupMovementPayload(row.added),
         })),
       },
       {
         onSuccess: async (saved) => {
-          onDone();
+          onDone(rows.map((row) => row.preview.polla_group_id));
           onClose();
           await exportZipOrToast(saved, { groupById, organizationId, orgName, title, special });
         },
@@ -425,9 +553,11 @@ const LiquidateGroupsDialog = ({
     );
   };
 
+  // Mientras guarda no se cierra (Escape, afuera o Cancelar): el vaciado de lo escrito
+  // corre en el onSuccess de este diálogo y, desmontado, no correría (doble cobro).
   return (
-    <Dialog open onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-[760px]">
+    <Dialog open onOpenChange={(next) => !next && !isPending && onClose()}>
+      <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-[960px]">
         <DialogHeader>
           <DialogTitle>
             Liquidar {previews.length} {previews.length === 1 ? 'grupo' : 'grupos'}
@@ -448,6 +578,8 @@ const LiquidateGroupsDialog = ({
                   <TableHead className="w-24">% admin</TableHead>
                   <TableHead className="text-right">Admin</TableHead>
                   <TableHead className="text-right">Capitalista</TableHead>
+                  <TableHead className="text-right">Cobros</TableHead>
+                  <TableHead className="text-right">Debe</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -477,6 +609,12 @@ const LiquidateGroupsDialog = ({
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(row.split.capitalist)}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${fmtMoney(row.added.collection)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums">
+                      {fmtOwed(row.owed)}
+                    </TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="font-semibold">
@@ -491,16 +629,23 @@ const LiquidateGroupsDialog = ({
                   <TableCell className="text-right tabular-nums">
                     ${fmtMoney(sum((row) => row.split.capitalist))}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    ${fmtMoney(sum((row) => row.added.collection))}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-right tabular-nums">
+                    {fmtOwed(sum((row) => row.owed))}
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
           </div>
           <p className="text-xs text-muted-foreground">
-            Los % deshabilitados son los configurados en el admin de cada grupo.
+            Los % deshabilitados son los configurados en el admin de cada grupo. Cobros es lo
+            escrito en cada grupo; el Debe incluye los cobros que ya tenía.
           </p>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" disabled={isPending} onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isPending}>
@@ -545,7 +690,11 @@ const ExpensesDialog = ({
   </Dialog>
 );
 
-/** Estado del grupo en la edición: liquidado, desactualizado, pendientes o carga abierta. */
+/**
+ * Estado del grupo en la edición: liquidado, pagado (Debe 0, con lo
+ * liquidado aunque esté desactualizado), desactualizado, pendientes o carga
+ * abierta.
+ */
 const GroupStatus = ({
   preview,
   loadOpen,
@@ -562,6 +711,14 @@ const GroupStatus = ({
         Liquidado el {dayjs(account.edited_at).format('DD/MM/YYYY')}
       </Badge>
     );
+    if (groupPaid(account)) {
+      badges.push(
+        <Badge key="paid" variant="success">
+          <Check aria-hidden />
+          Pagado
+        </Badge>
+      );
+    }
   }
   if (outdated) {
     badges.push(
@@ -608,7 +765,41 @@ interface GroupRowProps {
   selected: boolean;
   onSelect: (checked: boolean) => void;
   onLiquidate: () => void;
+  /** Lo escrito en Cobros del grupo. */
+  inputs: Partial<GroupMovementInputs>;
+  /** Lo escrito, ya leído: montos (vacío = 0) e inválidos. */
+  movements: ReadMovements;
+  onInput: (key: GroupMovementKey, value: string) => void;
+  /** Abre "Movimientos" (cobros ya cargados). */
+  onMovements: () => void;
 }
+
+/** Lo que comparten la fila y la tarjeta: si se puede liquidar y el Debe con lo escrito. */
+const groupRowState = ({
+  preview,
+  adminPercentage,
+  loadOpen,
+  movements,
+}: Pick<GroupRowProps, 'preview' | 'adminPercentage' | 'loadOpen' | 'movements'>) => {
+  const { account } = preview;
+  const liquidatable = groupLiquidatable(preview, loadOpen);
+  const invalid = movements.invalid.size > 0;
+  return {
+    outdated: groupAccountOutdated(preview),
+    split: account ? groupSplit(account.base, account.admin_commission) : null,
+    liquidatable,
+    invalid,
+    canLiquidate: liquidatable && !invalid,
+    owed: groupRowOwed(preview, adminPercentage, movements.values),
+  };
+};
+
+/** El Debe de la fila con lo escrito; "—" si el grupo no tiene % y no se liquidó. */
+const owedText = (owed: number | null) => (owed === null ? '—' : fmtOwed(owed));
+
+/** `title` del Debe: viejo (desactualizado) o sin % para calcularlo. */
+const owedTitle = (owed: number | null, outdated: boolean) =>
+  owed === null ? NO_PERCENTAGE_TEXT : outdated ? OUTDATED_TEXT : undefined;
 
 /** Celular: una tarjeta por grupo con la edición elegida, lo que dejó y su liquidación. */
 const GroupCard = ({
@@ -618,14 +809,21 @@ const GroupCard = ({
   selected,
   onSelect,
   onLiquidate,
+  inputs,
+  movements,
+  onInput,
+  onMovements,
   editionId,
   organizationId,
   caption,
 }: GroupRowProps & { editionId: string; organizationId: string | null; caption: string }) => {
   const { account, pending_cashiers: pending } = preview;
-  const outdated = groupAccountOutdated(preview);
-  const split = account ? groupSplit(account.base, account.admin_commission) : null;
-  const liquidatable = groupLiquidatable(preview, loadOpen);
+  const { outdated, split, liquidatable, invalid, canLiquidate, owed } = groupRowState({
+    preview,
+    adminPercentage,
+    loadOpen,
+    movements,
+  });
   return (
     <li className="flex flex-col gap-3 rounded-md border bg-card p-3 text-card-foreground">
       <div className="flex items-start justify-between gap-2">
@@ -645,7 +843,13 @@ const GroupCard = ({
             </div>
           </div>
         </div>
-        <Button type="button" size="sm" disabled={!liquidatable} onClick={onLiquidate}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!canLiquidate}
+          title={invalid ? INVALID_AMOUNT_TEXT : undefined}
+          onClick={onLiquidate}
+        >
           <Wallet />
           Liquidar grupo
         </Button>
@@ -684,6 +888,43 @@ const GroupCard = ({
         )}
       </dl>
 
+      <dl className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 text-sm">
+        {MOVEMENT_INPUTS.map((input) => (
+          <Fragment key={input.key}>
+            <dt>
+              <span className="block">{input.label}</span>
+              <span className="block text-xs text-muted-foreground tabular-nums">
+                Tenía ${fmtMoney(hadAmount(account, input.had))}
+              </span>
+            </dt>
+            <dd>
+              <MovementInput
+                groupName={preview.group_name}
+                label={input.label}
+                value={inputs[input.key] ?? ''}
+                invalid={movements.invalid.has(input.key)}
+                disabled={!liquidatable}
+                onChange={(value) => onInput(input.key, value)}
+              />
+            </dd>
+          </Fragment>
+        ))}
+        <dt className="font-medium">Debe</dt>
+        <dd
+          className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
+          title={owedTitle(owed, outdated)}
+        >
+          {owedText(owed)}
+        </dd>
+      </dl>
+      {invalid && <p className="text-xs text-destructive">{INVALID_AMOUNT_TEXT}.</p>}
+      {hasGroupMovements(account) && (
+        <Button type="button" size="sm" variant="outline" className="w-fit" onClick={onMovements}>
+          <ArrowLeftRight />
+          Movimientos
+        </Button>
+      )}
+
       {pending.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 text-xs">
           <span className="text-muted-foreground">Falta liquidar:</span>
@@ -713,12 +954,19 @@ const GroupTableRow = ({
   selected,
   onSelect,
   onLiquidate,
+  inputs,
+  movements,
+  onInput,
+  onMovements,
   onExpenses,
 }: GroupRowProps & { onExpenses: () => void }) => {
   const { account } = preview;
-  const outdated = groupAccountOutdated(preview);
-  const split = account ? groupSplit(account.base, account.admin_commission) : null;
-  const liquidatable = groupLiquidatable(preview, loadOpen);
+  const { outdated, split, liquidatable, invalid, canLiquidate, owed } = groupRowState({
+    preview,
+    adminPercentage,
+    loadOpen,
+    movements,
+  });
   return (
     <TableRow data-state={selected ? 'selected' : undefined}>
       <TableCell>
@@ -752,6 +1000,31 @@ const GroupTableRow = ({
       >
         {split ? `$${fmtMoney(split.capitalist)}` : '—'}
       </TableCell>
+      {MOVEMENT_INPUTS.map((input) => (
+        <TableCell key={input.key} className="text-right">
+          <span className="block whitespace-nowrap text-xs text-muted-foreground tabular-nums">
+            Tenía ${fmtMoney(hadAmount(account, input.had))}
+          </span>
+          <MovementInput
+            groupName={preview.group_name}
+            label={input.label}
+            value={inputs[input.key] ?? ''}
+            invalid={movements.invalid.has(input.key)}
+            disabled={!liquidatable}
+            onChange={(value) => onInput(input.key, value)}
+            className="ml-auto w-20"
+          />
+        </TableCell>
+      ))}
+      <TableCell
+        className={cn(
+          'whitespace-nowrap text-right font-semibold tabular-nums',
+          outdatedAmount(outdated)
+        )}
+        title={owedTitle(owed, outdated)}
+      >
+        {owedText(owed)}
+      </TableCell>
       <TableCell>
         <GroupStatus preview={preview} loadOpen={loadOpen} />
       </TableCell>
@@ -767,7 +1040,25 @@ const GroupTableRow = ({
           >
             <Receipt />
           </Button>
-          <Button type="button" size="sm" disabled={!liquidatable} onClick={onLiquidate}>
+          {hasGroupMovements(account) && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              title="Movimientos"
+              aria-label={`Movimientos de ${preview.group_name}`}
+              onClick={onMovements}
+            >
+              <ArrowLeftRight />
+            </Button>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            disabled={!canLiquidate}
+            title={invalid ? INVALID_AMOUNT_TEXT : undefined}
+            onClick={onLiquidate}
+          >
             <Wallet />
             Liquidar
           </Button>
@@ -778,9 +1069,10 @@ const GroupTableRow = ({
 };
 
 /**
- * Liquidaciones de grupo de la edición. Una que quedó vieja (cambió lo que
- * dejaron los pasadores o los gastos) se marca, y reimprimirla pide
- * confirmación.
+ * Liquidaciones de grupo de la edición, con sus cobros, Debe y estado
+ * (solo para mirar), el "Total general" y debajo "Falta cobrar". Una que
+ * quedó vieja (cambió lo que dejaron los pasadores o los gastos) se marca, y
+ * reimprimirla pide confirmación.
  */
 const GroupEditionHistory = ({
   editionId,
@@ -827,107 +1119,148 @@ const GroupEditionHistory = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
-      {confirming && (
-        <ConfirmDialog
-          title={OUTDATED_TEXT}
-          description={`La liquidación de ${confirming.group_name} no tiene lo que dejaron hoy sus pasadores o los gastos de la edición. La hoja sale con los valores de la liquidación. Para que salga al día, volvé a liquidar el grupo.`}
-          confirmLabel="Descargar igual"
-          onConfirm={() => {
-            const account = confirming;
-            setConfirming(null);
-            void downloadSheet(account, { groupById, organizationId, orgName, title });
-          }}
-          onCancel={() => setConfirming(null)}
-        />
-      )}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Grupo</TableHead>
-            <TableHead className="text-right">Deja pasadores</TableHead>
-            <TableHead className="text-right">Gastos</TableHead>
-            <TableHead className="text-right">Total</TableHead>
-            <TableHead className="text-right">% admin</TableHead>
-            <TableHead className="text-right">Total admin</TableHead>
-            <TableHead className="text-right">Total capitalista</TableHead>
-            <TableHead />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {accounts.map((account) => {
-            const outdated = outdatedGroups.has(account.polla_group_id);
-            const split = groupSplit(account.base, account.admin_commission);
-            return (
-              <TableRow key={account.polla_group_edition_account_id}>
-                <TableCell className="font-medium">
-                  <span className="flex items-center gap-1.5">
-                    {account.group_name}
-                    {outdated && (
-                      <span
-                        role="img"
-                        aria-label={OUTDATED_TEXT}
-                        title={OUTDATED_TEXT}
-                        className="shrink-0 text-amber-600"
-                      >
-                        <AlertTriangle className="size-4" />
-                      </span>
+    <div className="flex flex-col gap-2">
+      <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
+        {confirming && (
+          <ConfirmDialog
+            title={OUTDATED_TEXT}
+            description={`La liquidación de ${confirming.group_name} no tiene lo que dejaron hoy sus pasadores o los gastos de la edición. La hoja sale con los valores de la liquidación. Para que salga al día, volvé a liquidar el grupo.`}
+            confirmLabel="Descargar igual"
+            onConfirm={() => {
+              const account = confirming;
+              setConfirming(null);
+              void downloadSheet(account, { groupById, organizationId, orgName, title });
+            }}
+            onCancel={() => setConfirming(null)}
+          />
+        )}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Grupo</TableHead>
+              <TableHead className="text-right">Deja pasadores</TableHead>
+              <TableHead className="text-right">Gastos</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">% admin</TableHead>
+              <TableHead className="text-right">Total admin</TableHead>
+              <TableHead className="text-right">Total capitalista</TableHead>
+              <TableHead className="text-right">Cobros</TableHead>
+              <TableHead className="text-right">Debe</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {accounts.map((account) => {
+              const outdated = outdatedGroups.has(account.polla_group_id);
+              const split = groupSplit(account.base, account.admin_commission);
+              return (
+                <TableRow key={account.polla_group_edition_account_id}>
+                  <TableCell className="font-medium">
+                    <span className="flex items-center gap-1.5">
+                      {account.group_name}
+                      {outdated && (
+                        <span
+                          role="img"
+                          aria-label={OUTDATED_TEXT}
+                          title={OUTDATED_TEXT}
+                          className="shrink-0 text-amber-600"
+                        >
+                          <AlertTriangle className="size-4" />
+                        </span>
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    ${fmtMoney(account.cashiers_subtotal)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    ${fmtMoney(account.expenses)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    ${fmtMoney(account.base)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {Number(account.admin_percentage)}%
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      'text-right font-semibold tabular-nums',
+                      outdatedAmount(outdated)
                     )}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  ${fmtMoney(account.cashiers_subtotal)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  ${fmtMoney(account.expenses)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">${fmtMoney(account.base)}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {Number(account.admin_percentage)}%
-                </TableCell>
-                <TableCell
-                  className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
-                >
-                  ${fmtMoney(split.admin)}
-                </TableCell>
-                <TableCell
-                  className={cn('text-right font-semibold tabular-nums', outdatedAmount(outdated))}
-                >
-                  ${fmtMoney(split.capitalist)}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    title="Imprimir"
-                    aria-label={`Imprimir la liquidación de ${account.group_name}`}
-                    onClick={() => reprint(account)}
                   >
-                    <Printer />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-        <TableFooter>
-          <TableRow className="font-semibold">
-            <TableCell>Total general</TableCell>
-            <TableCell className="text-right tabular-nums">
-              ${fmtMoney(totals.cashiersSubtotal)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">${fmtMoney(totals.expenses)}</TableCell>
-            <TableCell className="text-right tabular-nums">${fmtMoney(totals.total)}</TableCell>
-            <TableCell />
-            <TableCell className="text-right tabular-nums">${fmtMoney(totals.admin)}</TableCell>
-            <TableCell className="text-right tabular-nums">
-              ${fmtMoney(totals.capitalist)}
-            </TableCell>
-            <TableCell />
-          </TableRow>
-        </TableFooter>
-      </Table>
+                    ${fmtMoney(split.admin)}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      'text-right font-semibold tabular-nums',
+                      outdatedAmount(outdated)
+                    )}
+                  >
+                    ${fmtMoney(split.capitalist)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    ${fmtMoney(account.collections)}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      'whitespace-nowrap text-right font-semibold tabular-nums',
+                      outdatedAmount(outdated)
+                    )}
+                  >
+                    {fmtOwed(groupOwed(account))}
+                  </TableCell>
+                  <TableCell>
+                    <PaymentStatus account={account} />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      title="Imprimir"
+                      aria-label={`Imprimir la liquidación de ${account.group_name}`}
+                      onClick={() => reprint(account)}
+                    >
+                      <Printer />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+          <TableFooter>
+            <TableRow className="font-semibold">
+              <TableCell>Total general</TableCell>
+              <TableCell className="text-right tabular-nums">
+                ${fmtMoney(totals.cashiersSubtotal)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                ${fmtMoney(totals.expenses)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">${fmtMoney(totals.total)}</TableCell>
+              <TableCell />
+              <TableCell className="text-right tabular-nums">${fmtMoney(totals.admin)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                ${fmtMoney(totals.capitalist)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                ${fmtMoney(totals.collections)}
+              </TableCell>
+              {/* Debe neto: los negativos (Cobra) restan. */}
+              <TableCell className="whitespace-nowrap text-right tabular-nums">
+                {fmtOwed(totals.owed)}
+              </TableCell>
+              <TableCell />
+              <TableCell />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+      {/* Solo los Debe positivos: lo que los grupos todavía tienen que transferir. */}
+      <p className="text-sm">
+        Falta cobrar <span className="font-semibold tabular-nums">${fmtMoney(totals.missing)}</span>
+      </p>
     </div>
   );
 };
@@ -1051,7 +1384,13 @@ export const GroupEditionAccounts = () => {
   const [liquidating, setLiquidating] = useState<IPollaGroupEditionAccountPreview | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
   const [expensesOf, setExpensesOf] = useState<IPollaGroupEditionAccountPreview | null>(null);
+  const [movementsOf, setMovementsOf] = useState<IPollaGroupEditionAccountPreview | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Cobros escritos por grupo: los leen la fila, la tarjeta y los dos
+  // diálogos de liquidar; se vacían al liquidar bien.
+  const [movementInputs, setMovementInputs] = useState<
+    Record<string, Partial<GroupMovementInputs>>
+  >({});
   const [rangeOpen, setRangeOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   // Aparte de `exporting`: el parte diario no muestra "Generando…" al exportar liquidaciones.
@@ -1084,8 +1423,11 @@ export const GroupEditionAccounts = () => {
   useEffect(() => {
     if (!editionId && editions.length > 0) setEditionId(editions[0].edition.polla_edition_id);
   }, [editionId, editions]);
-  // Al cambiar de edición se suelta la selección.
-  useEffect(() => setSelected(new Set()), [editionId]);
+  // Al cambiar de edición se sueltan la selección y lo escrito.
+  useEffect(() => {
+    setSelected(new Set());
+    setMovementInputs({});
+  }, [editionId]);
 
   const current = editions.find((item) => item.edition.polla_edition_id === editionId);
   const title = current ? pollaEditionTitle(current.edition, catalogs) : '';
@@ -1123,6 +1465,20 @@ export const GroupEditionAccounts = () => {
       return next;
     });
   const toggleAll = (checked: boolean) => setSelected(new Set(checked ? toSelectAll : []));
+
+  const movementsOfGroup = (groupId: string) => readGroupMovementInputs(movementInputs[groupId]);
+  const setMovementInput = (groupId: string, key: GroupMovementKey, value: string) =>
+    setMovementInputs((prev) => ({ ...prev, [groupId]: { ...prev[groupId], [key]: value } }));
+  const clearMovementInputs = (groupIds: string[]) =>
+    setMovementInputs((prev) => {
+      const next = { ...prev };
+      for (const id of groupIds) delete next[id];
+      return next;
+    });
+  /** "Liquidar seleccionados" no va mientras un grupo elegido tenga un cobro o pago inválido. */
+  const selectedInvalid = selectedPreviews.some(
+    (preview) => movementsOfGroup(preview.polla_group_id).invalid.size > 0
+  );
 
   /**
    * Parte diario de grupos de la edición elegida: solo los grupos liquidados,
@@ -1201,6 +1557,11 @@ export const GroupEditionAccounts = () => {
     selected: selected.has(preview.polla_group_id),
     onSelect: (checked: boolean) => toggle(preview.polla_group_id, checked),
     onLiquidate: () => setLiquidating(preview),
+    inputs: movementInputs[preview.polla_group_id] ?? {},
+    movements: movementsOfGroup(preview.polla_group_id),
+    onInput: (key: GroupMovementKey, value: string) =>
+      setMovementInput(preview.polla_group_id, key, value),
+    onMovements: () => setMovementsOf(preview),
   });
 
   return (
@@ -1275,7 +1636,12 @@ export const GroupEditionAccounts = () => {
                   </label>
                   <Button
                     type="button"
-                    disabled={selectedPreviews.length === 0}
+                    disabled={selectedPreviews.length === 0 || selectedInvalid}
+                    title={
+                      selectedInvalid
+                        ? `${INVALID_AMOUNT_TEXT}: corregí los de los grupos elegidos`
+                        : undefined
+                    }
                     onClick={() => setBatchOpen(true)}
                   >
                     <Wallet />
@@ -1304,6 +1670,8 @@ export const GroupEditionAccounts = () => {
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Admin</TableHead>
                       <TableHead className="text-right">Capitalista</TableHead>
+                      <TableHead className="text-right">Cobros</TableHead>
+                      <TableHead className="text-right">Debe</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -1351,23 +1719,38 @@ export const GroupEditionAccounts = () => {
         <LiquidateGroupDialog
           preview={liquidating}
           adminPercentage={adminPercentageOf(liquidating.polla_group_id)}
+          added={movementsOfGroup(liquidating.polla_group_id).values}
           editionId={editionId}
           title={title}
           special={special}
           groupById={groupById}
           onClose={() => setLiquidating(null)}
+          onLiquidated={() => clearMovementInputs([liquidating.polla_group_id])}
         />
       )}
       {batchOpen && editionId && selectedPreviews.length > 0 && (
         <LiquidateGroupsDialog
           previews={selectedPreviews}
           adminPercentageOf={adminPercentageOf}
+          addedOf={(groupId) => movementsOfGroup(groupId).values}
           editionId={editionId}
           title={title}
           special={special}
           groupById={groupById}
           onClose={() => setBatchOpen(false)}
-          onDone={() => setSelected(new Set())}
+          onDone={(groupIds) => {
+            clearMovementInputs(groupIds);
+            setSelected(new Set());
+          }}
+        />
+      )}
+      {movementsOf && editionId && (
+        <GroupMovementsDialog
+          editionId={editionId}
+          groupId={movementsOf.polla_group_id}
+          groupName={movementsOf.group_name}
+          organizationId={organizationId}
+          onClose={() => setMovementsOf(null)}
         />
       )}
       {pickOpen && (

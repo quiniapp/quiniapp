@@ -3,6 +3,7 @@ import {
   IPollaCurrentAccountEntityFront,
   IPollaEditionLiquidationResult,
   IPollaGroupEditionAccountEntity,
+  IPollaGroupEditionMovement,
   IPollaProcessResult,
   IPollaRepeatResult,
   POLLA_PAYMENT_STATUS,
@@ -14,6 +15,7 @@ import {
   IPollaCurrentAccountPaymentsPayload,
   ILiquidatePollaGroupEditionPayload,
   ILiquidatePollaGroupEditionsPayload,
+  IUpdatePollaGroupMovementPayload,
 } from '@helper/polla/schemas/game.schema';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import { useApiMutation } from '../useApi';
@@ -422,6 +424,7 @@ export const useDeleteAccountMovement = () =>
     { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento eliminado' }
   );
 
+/** Liquidar un grupo: con `collection` (> 0) carga además su cobro. */
 export const useLiquidateGroupEdition = () =>
   useApiMutation<
     IPollaGroupEditionAccountEntity,
@@ -431,7 +434,10 @@ export const useLiquidateGroupEdition = () =>
     successMessage: 'Grupo liquidado',
   });
 
-/** "Liquidar seleccionados": varios grupos juntos, todo o nada. */
+/**
+ * "Liquidar seleccionados": varios grupos juntos, todo o nada. Cada grupo
+ * lleva su cobro (> 0), como al liquidar de a uno.
+ */
 export const useLiquidateGroupEditions = () =>
   useApiMutation<
     IPollaGroupEditionAccountEntity[],
@@ -440,6 +446,31 @@ export const useLiquidateGroupEditions = () =>
     invalidate: EDITION_ACCOUNT_KEYS,
     successMessage: 'Grupos liquidados',
   });
+
+/** `?polla_organization_id=…` para las rutas de un movimiento de grupo (va en la query). */
+const orgQuery = (organizationId?: string | null) =>
+  organizationId ? `?polla_organization_id=${organizationId}` : '';
+
+/** Corregir el monto de un cobro o pago de grupo (> 0; el tipo no cambia). */
+export const useUpdateGroupMovement = () =>
+  useApiMutation<
+    IPollaGroupEditionMovement,
+    { id: string; organizationId?: string | null } & IUpdatePollaGroupMovementPayload
+  >(
+    'put',
+    ({ id, organizationId }) =>
+      `${BACKEND_ROUTES.editionAccount.groupMovement(id)}${orgQuery(organizationId)}`,
+    { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento actualizado' }
+  );
+
+/** Borrar (lógico) un cobro o pago de grupo: el Debe se recalcula sin él. */
+export const useDeleteGroupMovement = () =>
+  useApiMutation<unknown, { id: string; organizationId?: string | null }>(
+    'delete',
+    ({ id, organizationId }) =>
+      `${BACKEND_ROUTES.editionAccount.groupMovement(id)}${orgQuery(organizationId)}`,
+    { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento eliminado' }
+  );
 
 // ------------------------------------------------- historial por fecha
 

@@ -3,9 +3,17 @@ import { IPollaGroupEditionAccountPreview } from '@helper/polla/types/game.type'
 import {
   type GroupLiquidationSheet,
   groupLiquidationLabel,
+  groupLiquidationPaidMark,
   groupLiquidationRows,
   groupLiquidationSheets,
   groupLiquidationTotals,
+  groupMovementPayload,
+  groupOwed,
+  groupOwedAfterLiquidation,
+  groupPaid,
+  groupPaymentStatus,
+  groupRowOwed,
+  readGroupMovementInputs,
 } from '@/lib/groupLiquidation';
 import { groupLiquidationFileName, groupLiquidationZipName } from '@/lib/liquidationZip';
 import { groupLiquidationZipEntries } from '@/functions/current-account/groupLiquidationPDF';
@@ -20,6 +28,7 @@ const account = {
   admin_percentage: 20,
   admin_commission: 23000,
   edited_at: '2026-11-15T21:30:00.000000+00:00',
+  collections: 50000,
 };
 
 const sheet = (group: { number?: number; name: string }): GroupLiquidationSheet => ({
@@ -71,7 +80,7 @@ describe('liquidaciones de grupo', () => {
     ]);
   });
 
-  it('groupLiquidationRows: los seis renglones, capitalista incluido', () => {
+  it('groupLiquidationRows: los ocho renglones, con Cobros y Debe (sin Pagos)', () => {
     expect(groupLiquidationRows(account)).toEqual([
       { label: 'Deja pasadores', value: '$120.000' },
       { label: 'Gastos del grupo', value: '-$5.000' },
@@ -79,7 +88,25 @@ describe('liquidaciones de grupo', () => {
       { label: '% admin', value: '20%' },
       { label: 'Total admin', value: '$23.000' },
       { label: 'Total capitalista', value: '$92.000' },
+      { label: 'Cobros', value: '$50.000' },
+      { label: 'Debe', value: '$42.000' },
     ]);
+  });
+
+  it('groupLiquidationRows: con Debe negativo dice Cobra y el valor absoluto', () => {
+    const rows = groupLiquidationRows({
+      ...account,
+      base: 100,
+      admin_commission: 0,
+      collections: 130,
+    });
+    expect(rows).toHaveLength(8);
+    expect(rows.at(-1)).toEqual({ label: 'Cobra', value: '$30' });
+  });
+
+  it('groupLiquidationPaidMark: PAGADO solo si Debe es 0 y hay movimiento', () => {
+    expect(groupLiquidationPaidMark({ ...account, collections: 92000 })).toBe('PAGADO');
+    expect(groupLiquidationPaidMark(account)).toBeNull();
   });
 
   it('groupLiquidationRows: sin gastos dice $0', () => {
@@ -144,12 +171,49 @@ describe('groupLiquidationSheets', () => {
   });
 });
 
+describe('groupOwed y groupPaid', () => {
+  const base = { base: 115000, admin_commission: 23000, collections: 50000 };
+
+  it('Debe = (base - comisión) - cobros', () => {
+    expect(groupOwed(base)).toBe(42000);
+    expect(groupOwed(base, { collection: 42000 })).toBe(0);
+  });
+
+  it('Debe: un pago guardado (cuenta vieja) no cuenta', () => {
+    expect(groupOwed({ ...base, payments: 1000 } as typeof base)).toBe(42000);
+  });
+
+  it('suma en centavos con montos en texto', () => {
+    const acc = { base: '0.3', admin_commission: '0', collections: '0.1' };
+    expect(groupOwed(acc as unknown as typeof base)).toBe(0.2);
+  });
+
+  it('Pagado: Debe 0 con algo en la cuenta', () => {
+    expect(groupPaid({ ...base, collections: 92000 })).toBe(true);
+    expect(groupPaid({ base: 0, admin_commission: 0, collections: 0 })).toBe(false);
+    expect(groupPaid({ ...base, collections: 102000 })).toBe(false);
+    expect(groupPaid({ base: 10, admin_commission: 0, collections: 20 })).toBe(false);
+  });
+});
+
 describe('groupLiquidationTotals', () => {
   it('suma los grupos de la edición', () => {
     expect(
       groupLiquidationTotals([
-        { cashiers_subtotal: 120000, expenses: 5000, base: 115000, admin_commission: 23000 },
-        { cashiers_subtotal: 30000, expenses: 0, base: 30000, admin_commission: 4500 },
+        {
+          cashiers_subtotal: 120000,
+          expenses: 5000,
+          base: 115000,
+          admin_commission: 23000,
+          collections: 50000,
+        },
+        {
+          cashiers_subtotal: 30000,
+          expenses: 0,
+          base: 30000,
+          admin_commission: 4500,
+          collections: 1000,
+        },
       ])
     ).toEqual({
       cashiersSubtotal: 150000,
@@ -157,13 +221,49 @@ describe('groupLiquidationTotals', () => {
       total: 145000,
       admin: 27500,
       capitalist: 117500,
+      collections: 51000,
+      owed: 66500,
+      missing: 66500,
     });
+  });
+
+  it('Falta cobrar suma solo los Debe positivos; el neto suma todos', () => {
+    const totals = groupLiquidationTotals([
+      {
+        cashiers_subtotal: 0,
+        expenses: 0,
+        base: 100,
+        admin_commission: 0,
+        collections: 0,
+      },
+      {
+        cashiers_subtotal: 0,
+        expenses: 0,
+        base: 0,
+        admin_commission: 0,
+        collections: 30,
+      },
+    ]);
+    expect(totals.owed).toBe(70);
+    expect(totals.missing).toBe(100);
   });
 
   it('suma en centavos y acepta montos en texto (numeric de la API)', () => {
     const rows = [
-      { cashiers_subtotal: '0.1', expenses: '0', base: '0.1', admin_commission: '0.05' },
-      { cashiers_subtotal: '0.2', expenses: '0', base: '0.2', admin_commission: '0.05' },
+      {
+        cashiers_subtotal: '0.1',
+        expenses: '0',
+        base: '0.1',
+        admin_commission: '0.05',
+        collections: '0',
+      },
+      {
+        cashiers_subtotal: '0.2',
+        expenses: '0',
+        base: '0.2',
+        admin_commission: '0.05',
+        collections: '0',
+      },
     ] as unknown as Parameters<typeof groupLiquidationTotals>[0];
     const totals = groupLiquidationTotals(rows);
     expect(totals).toEqual({
@@ -172,6 +272,9 @@ describe('groupLiquidationTotals', () => {
       total: 0.3,
       admin: 0.1,
       capitalist: 0.2,
+      collections: 0,
+      owed: 0.2,
+      missing: 0.2,
     });
     // Admin + capitalista cierra con el total (en centavos: en JS 0.1 + 0.2 ≠ 0.3).
     expect(Math.round(totals.admin * 100) + Math.round(totals.capitalist * 100)).toBe(
@@ -186,6 +289,75 @@ describe('groupLiquidationTotals', () => {
       total: 0,
       admin: 0,
       capitalist: 0,
+      collections: 0,
+      owed: 0,
+      missing: 0,
     });
+  });
+});
+
+describe('Cobros escritos en "Grupos a liquidar"', () => {
+  it('readGroupMovementInputs: vacío vale 0, coma decimal, negativo o inválido marcado', () => {
+    expect(readGroupMovementInputs(undefined)).toEqual({
+      values: { collection: 0 },
+      invalid: new Set(),
+    });
+    expect(readGroupMovementInputs({ collection: ' ' }).values).toEqual({ collection: 0 });
+    expect(readGroupMovementInputs({ collection: '1,5' })).toEqual({
+      values: { collection: 1.5 },
+      invalid: new Set(),
+    });
+    for (const text of ['-5', 'abc']) {
+      const bad = readGroupMovementInputs({ collection: text });
+      expect(bad.values).toEqual({ collection: 0 });
+      expect([...bad.invalid]).toEqual(['collection']);
+    }
+  });
+
+  it('groupMovementPayload: solo manda el cobro mayor a 0, nunca un pago', () => {
+    expect(groupMovementPayload({ collection: 0 })).toEqual({});
+    expect(groupMovementPayload({ collection: 100 })).toEqual({ collection: 100 });
+  });
+
+  const liquidated = {
+    base: 115000,
+    account: { base: 100000, admin_commission: 20000, collections: 50000 },
+  };
+
+  it('groupRowOwed: con liquidación usa la guardada más lo escrito', () => {
+    expect(groupRowOwed(liquidated, 10, { collection: 0 })).toBe(30000);
+    expect(groupRowOwed(liquidated, null, { collection: 29500 })).toBe(500);
+  });
+
+  it('groupRowOwed: sin liquidación, la parte del capitalista con el % del admin', () => {
+    const fresh = { base: 115000, account: null };
+    // 115.000 - 20% = 92.000 para el capitalista.
+    expect(groupRowOwed(fresh, 20, { collection: 0 })).toBe(92000);
+    expect(groupRowOwed(fresh, 20, { collection: 92000 })).toBe(0);
+    expect(groupRowOwed(fresh, 20, { collection: 100000 })).toBe(-8000);
+    // Sin % configurado no se sabe hasta liquidar.
+    expect(groupRowOwed(fresh, null, { collection: 0 })).toBeNull();
+  });
+
+  it('groupOwedAfterLiquidation: total y comisión de hoy, con lo guardado y lo escrito', () => {
+    const previous = { collections: 50000 };
+    expect(
+      groupOwedAfterLiquidation(
+        previous,
+        { total: 115000, commission: 23000 },
+        { collection: 42000 }
+      )
+    ).toBe(0);
+    expect(
+      groupOwedAfterLiquidation(null, { total: 115000, commission: 23000 }, { collection: 0 })
+    ).toBe(92000);
+  });
+
+  it('groupPaymentStatus: Pagado, Pendiente (también si Cobra) o nada si no hay qué saldar', () => {
+    const acc = { base: 115000, admin_commission: 23000, collections: 92000 };
+    expect(groupPaymentStatus(acc)).toBe('Pagado');
+    expect(groupPaymentStatus({ ...acc, collections: 50000 })).toBe('Pendiente');
+    expect(groupPaymentStatus({ ...acc, collections: 100000 })).toBe('Pendiente');
+    expect(groupPaymentStatus({ base: 0, admin_commission: 0, collections: 0 })).toBeNull();
   });
 });

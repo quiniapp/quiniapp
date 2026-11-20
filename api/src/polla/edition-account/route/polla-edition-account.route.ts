@@ -18,6 +18,7 @@ import {
   pollaAccountMovementSchema,
   pollaAccountMovementUpdateSchema,
   setEditionLiquidatedSchema,
+  updatePollaGroupMovementSchema,
 } from '@helper/polla/schemas/game.schema';
 import { asyncHandler } from 'api/src/middlewares/error.middleware';
 import { PollaEditionAccountRepository } from '../repository/polla-edition-account.repository';
@@ -146,6 +147,8 @@ export class PollaEditionAccountRouter {
     this.router.get('/group_accounts', accountGuard, this.groupAccountsHandler);
     this.router.put('/movements/:id', accountGuard, this.updateMovementHandler);
     this.router.delete('/movements/:id', accountGuard, this.deleteMovementHandler);
+    this.router.put('/group_movements/:id', accountGuard, this.updateGroupMovementHandler);
+    this.router.delete('/group_movements/:id', accountGuard, this.deleteGroupMovementHandler);
 
     this.router.get('/:editionId/accounts', readGuard, this.accountsHandler);
     this.router.post('/:editionId/liquidate', accountGuard, this.liquidateHandler);
@@ -154,6 +157,7 @@ export class PollaEditionAccountRouter {
     this.router.get('/:editionId/movements', readGuard, this.movementsHandler);
     this.router.post('/:editionId/movements', accountGuard, this.createMovementHandler);
     this.router.get('/:editionId/group_previews', accountGuard, this.groupPreviewsHandler);
+    this.router.get('/:editionId/group_movements', accountGuard, this.groupMovementsHandler);
     this.router.post('/:editionId/group_liquidate', accountGuard, this.groupLiquidateHandler);
     this.router.post(
       '/:editionId/group_liquidate_many',
@@ -479,10 +483,53 @@ export class PollaEditionAccountRouter {
       // Sin ajustes ni pagado: el total del admin es el 100% de la comisión.
       adjustments: 0,
       paid: 0,
+      collection: payload.collection ?? 0,
       actorId: user.polla_user_id,
     });
 
     res.status(200).json({ data: { group_account: groupAccount } });
+  });
+
+  /** Cobros y pagos vigentes de un grupo en la edición. */
+  private groupMovementsHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+
+    const groupId = queryUuid(req.query.polla_group_id, 'polla_group_id');
+    if (!groupId) throw new BadRequestError('Falta polla_group_id');
+
+    const movements = await this.repository.groupMovements({
+      organizationId: resolveOrganizationId(user, req.query.polla_organization_id),
+      groupId,
+      editionId: paramUuid(req.params.editionId, 'Edición'),
+    });
+
+    res.status(200).json({ data: { movements } });
+  });
+
+  private updateGroupMovementHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+    const { amount } = updatePollaGroupMovementSchema.parse(req.body);
+
+    const movement = await this.repository.updateGroupMovement(
+      paramUuid(req.params.id, 'Movimiento'),
+      resolveOrganizationId(user, req.query.polla_organization_id),
+      amount,
+      user.polla_user_id
+    );
+
+    res.status(200).json({ data: { movement } });
+  });
+
+  private deleteGroupMovementHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { user } = getPollaSession(req);
+
+    await this.repository.deleteGroupMovement(
+      paramUuid(req.params.id, 'Movimiento'),
+      resolveOrganizationId(user, req.query.polla_organization_id),
+      user.polla_user_id
+    );
+
+    res.status(200).json({ data: { success: true } });
   });
 
   /** Varios grupos juntos ("Liquidar seleccionados"): todo o nada. */
