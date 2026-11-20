@@ -3,6 +3,7 @@ import {
   IPollaCurrentAccountPeriodRow,
   IPollaEditionAccountRow,
   IPollaEditionAccountTotals,
+  IPollaEditionEntityFront,
   IPollaGroupEditionAccountEntity,
   IPollaOrgExpenseEntityFront,
 } from '@helper/polla/types/game.type';
@@ -63,6 +64,25 @@ export const fetchEditionTotals = async (
     );
   }
   return rows;
+};
+
+/** `GET /edition?ids=` admite hasta 60 ediciones por pedido (los ids van en la URL). */
+const EDITIONS_BY_IDS_PER_REQUEST = 60;
+
+/**
+ * Ediciones puntuales por id (títulos de un exporte), sin depender de las que
+ * tenga cargadas un selector. Con más de 60, en tandas una después de la otra.
+ */
+export const fetchEditionsByIds = async (ids: string[], organizationId: string | null) => {
+  const editions: IPollaEditionEntityFront[] = [];
+  for (const part of chunk(ids, EDITIONS_BY_IDS_PER_REQUEST)) {
+    const page = await apiClient.get<PollaPage<IPollaEditionEntityFront>>(
+      BACKEND_ROUTES.edition.base,
+      { params: cleanParams({ ids: part.join(','), polla_organization_id: organizationId }) }
+    );
+    editions.push(...page.data);
+  }
+  return editions;
 };
 
 export const fetchExpenses = (params: QueryParams) =>

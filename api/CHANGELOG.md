@@ -4,6 +4,23 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+> **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
+
+### Fixed - 2026-11-20 (revisión final de cobros de grupo y selector de ediciones)
+
+- **`GET /edition`** (`polla-edition.repository.ts`): el orden suma el desempate `polla_edition_id` después de `start_date DESC`, porque ahora se pagina con OFFSET y dos ediciones con la misma fecha de inicio en el borde de una página se podían repetir o saltear. Comentario de por qué OFFSET alcanza (ediciones: conjunto chico y acotado).
+- **`polla-errors.ts`**: `POLLA_GROUP_MOVEMENT_INVALID` y el CHECK `polla_group_edition_movements_amount_check` pasan a 400 (antes `PUT /group_movements/:id` con un monto inválido daba 500).
+- **`polla-edition-account.repository.ts`** (`groupMovements`): comentario de por qué no lleva LIMIT (a lo sumo 2 movimientos por liquidación de un grupo en una edición).
+- **pgTAP** `270_polla_group_edition_movements.test.sql`: caso del lote exitoso con cobro y pago en dos grupos (guarda las claves JSONB) y comentario sobre el assert posterior a `throws_like`.
+
+### Changed - 2026-11-20 (selector de ediciones de a 10)
+
+- **`GET /edition?ids=a,b,c`** (`polla-edition.route.ts`): ediciones puntuales por id (UUID sin repetir, hasta 60; si no, 400), siempre de la organización de la sesión (`resolveOrganizationId`), todas en una página y sin COUNT; ignora los demás filtros. Usa el filtro `ids` que ya tenía `PollaEditionRepository.getAll` (PK, sin índice nuevo). Por qué: la web nombra las ediciones que no están cargadas en un selector paginado (cortesías en Administrar jugadas, títulos del parte diario de grupos por rango).
+
+### Added - 2026-11-20 (estado de la edición en las jugadas)
+
+- **`GET /bet`**: cada jugada trae `edition_status` (vista pública y de staff). Sale del embed `polla_editions(status)` en `BET_COLUMNS` (`polla-bet.repository.ts`), aplanado en `withDerivedFields`; el objeto anidado no se expone. Por qué: el front ya no necesita tener cargada la edición para saber si una jugada perdió.
+
 ### Added - 2026-11-19 (cobros y pagos de grupo)
 
 - El trigger `polla_group_edition_movement_sync` toma el mismo candado advisory que la liquidación del grupo (`polla-group-edition-liq:<grupo>:<edición>`), para que las sumas no queden viejas con escrituras concurrentes.

@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-20 (estado de la edición en las jugadas)
+
+- **`IPollaBetDerivedFields`** suma `edition_status?: POLLA_EDITION_STATUS` (`helper/polla/types/game.type.ts`), que heredan la jugada de staff y la pública.
+
 ### Added - 2026-11-19 (cobros y pagos de grupo)
 
 - **`IPollaGroupEditionAccountEntity`** suma `collections` y `payments`; nueva **`IPollaGroupEditionMovement`** (`helper/polla/types/game.type.ts`).
