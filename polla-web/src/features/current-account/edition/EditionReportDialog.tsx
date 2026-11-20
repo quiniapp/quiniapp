@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { IPollaGroupEntityFront } from '@helper/polla/types/catalog.type';
 import {
   IPollaEditionAccountListItem,
   IPollaEditionAccountRow,
+  isPollaSpecialEdition,
   pollaEditionTitle,
 } from '@helper/polla/types/game.type';
 import { useDrawCatalogs } from '@/hooks/fetchs/useCatalogs';
@@ -25,9 +26,10 @@ import {
   downloadDailyAccountsPDF,
   downloadDailySummaryPDF,
 } from '@/functions/current-account/accountTablePDF';
+import type { LiquidationFormat } from '@/functions/current-account/liquidationDelivery';
 import {
   type LiquidationSlipSheet,
-  exportLiquidationSlipsZip,
+  prepareLiquidationSlips,
 } from '@/functions/current-account/liquidationSlipPDF';
 import { editionZipFolder, liquidationZipName } from '@/lib/liquidationZip';
 import {
@@ -39,9 +41,11 @@ import {
 import {
   editionAccountView,
   editionFileTag,
+  editionLiquidationDate,
   hasEditionMovement,
   reportEditionsInRange,
 } from '@/lib/editionAccount';
+import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
 import { todayIso } from '@/lib/dates';
 import {
   fetchEditionAccounts,
@@ -51,6 +55,11 @@ import {
 } from '../fetchers';
 import { ALL_GROUPS } from '../format';
 import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
+import {
+  LiquidationFormatToggle,
+  exportActionLabel,
+  useLiquidationDelivery,
+} from '../dialogs/LiquidationFormat';
 import { DateField, GroupSelect, ModeToggle } from '../dialogs/shared';
 import { EditionExpensesEditor } from './EditionExpensesEditor';
 import { useCashierCode } from './useCashierCode';
@@ -145,12 +154,16 @@ export const EditionReportDialog = ({
   const [percentage, setPercentage] = useState('50');
   const [printing, setPrinting] = useState(false);
   const [picking, setPicking] = useState<IPollaEditionAccountRow[] | null>(null);
+  const [format, setFormat] = useState<LiquidationFormat>('pdf');
+  const delivery = useLiquidationDelivery();
 
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
   const groupName = groups.find((g) => g.polla_group_id === effectiveGroupId)?.name;
   // Filtro de grupo para el nombre del ZIP (solo si el grupo elegido está en el catálogo).
   const selectedGroup = effectiveGroupId ? groupById.get(effectiveGroupId) : undefined;
   const zipGroupFilter = selectedGroup ? { number: selectedGroup.number } : undefined;
+  // "Polla semanal" o "Polla plus" en el nombre del parte diario y del ZIP.
+  const special = isPollaSpecialEdition(edition);
   const copy = COPY[kind];
   const many = scope === 'many';
   const editionId = edition.polla_edition_id;
@@ -181,16 +194,17 @@ export const EditionReportDialog = ({
     const sheets: LiquidationSlipSheet[] = [];
     for (const entry of checked) {
       const entryTitle = titleOf(entry);
-      const rows = (
-        await fetchEditionAccounts(entry.edition.polla_edition_id, {
-          polla_group_id: effectiveGroupId,
-        })
-      ).filter(hasEditionMovement);
-      for (const row of rows) {
+      const accounts = await fetchEditionAccounts(entry.edition.polla_edition_id, {
+        polla_group_id: effectiveGroupId,
+      });
+      // Cada edición con la fecha de su liquidación.
+      const date = editionLiquidationDate(accounts, entry.liquidated_at);
+      for (const row of accounts.filter(hasEditionMovement)) {
         sheets.push({
           account: editionAccountView(row, entry.edition),
           cashierCode: cashierCode(row),
           group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
+          date,
           edition: {
             key: entry.edition.polla_edition_id,
             folder: editionZipFolder(entry.edition.start_date, entryTitle),
@@ -203,10 +217,13 @@ export const EditionReportDialog = ({
       toast.error('Ninguna edición tiene pasadores con movimiento');
       return false;
     }
-    return exportLiquidationSlipsZip({
-      sheets,
-      zipName: liquidationZipName({ kind: 'range', from, to }, zipGroupFilter),
-    });
+    return delivery.run(() =>
+      prepareLiquidationSlips({
+        sheets,
+        zipName: liquidationZipName({ kind: 'range', from, to }, zipGroupFilter),
+        format,
+      })
+    );
   };
 
   const printOne = async () => {
@@ -232,6 +249,15 @@ export const EditionReportDialog = ({
         groupName,
         periodText: title,
         fileTag,
+        // El parte diario lleva la fecha de la liquidación de la edición.
+        fileName:
+          kind === 'daily'
+            ? pollaDailyReportName({
+                special,
+                date: editionLiquidationDate(accounts, item.liquidated_at),
+                group: groupFileLabel(selectedGroup ?? (groupName ? { name: groupName } : null)),
+              })
+            : undefined,
       });
       return true;
     }
@@ -299,7 +325,20 @@ export const EditionReportDialog = ({
     }
 
     if (kind === 'daily' || kind === 'summary') {
-      await downloadDailySummaryPDF({ from, to, totals, groupName });
+      await downloadDailySummaryPDF({
+        from,
+        to,
+        totals,
+        groupName,
+        ...(kind === 'daily' && {
+          title: 'Parte diario',
+          fileName: pollaDailyReportName({
+            date: from,
+            to,
+            group: groupFileLabel(selectedGroup ?? (groupName ? { name: groupName } : null)),
+          }),
+        }),
+      });
       return true;
     }
     const orgName = await fetchOrganizationName(organizationId);
@@ -341,16 +380,22 @@ export const EditionReportDialog = ({
   const handleExportPicked = async (selected: IPollaEditionAccountRow[]) => {
     try {
       setPrinting(true);
-      await exportLiquidationSlipsZip({
-        sheets: selected.map((row) => ({
-          account: editionAccountView(row, edition),
-          cashierCode: cashierCode(row),
-          group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
-          headerLabel: title,
-        })),
-        zipName: liquidationZipName({ kind: 'edition', title }, zipGroupFilter),
-      });
-      onClose();
+      // La fecha de la liquidación sale de todos los pasadores de la edición.
+      const date = editionLiquidationDate(picking ?? selected, item.liquidated_at);
+      const done = await delivery.run(() =>
+        prepareLiquidationSlips({
+          sheets: selected.map((row) => ({
+            account: editionAccountView(row, edition),
+            cashierCode: cashierCode(row),
+            group: row.polla_group_id ? groupById.get(row.polla_group_id) : undefined,
+            date,
+            headerLabel: title,
+          })),
+          zipName: liquidationZipName({ kind: 'edition', date, special }, zipGroupFilter),
+          format,
+        })
+      );
+      if (done) onClose();
     } catch (error) {
       console.error(error);
       toast.error('No se pudieron exportar las liquidaciones');
@@ -359,11 +404,24 @@ export const EditionReportDialog = ({
     }
   };
 
+  // Lo ya preparado deja de valer si cambia lo que se exportaría.
+  const { reset: resetDelivery } = delivery;
+  useEffect(
+    () => resetDelivery(),
+    [format, scope, from, to, groupId, unchecked, picking, resetDelivery]
+  );
+
+  /** Reintenta compartir las imágenes ya preparadas (el navegador pidió un toque nuevo). */
+  const handleShare = () =>
+    void delivery.retry().then((done) => {
+      if (done) onClose();
+    });
+
   if (picking) {
     return (
       <CashierPickDialog
         title="Exportar liquidación"
-        description="Se descarga un ZIP con un PDF por pasador, en carpetas por grupo. Los que no tienen movimiento en la edición vienen sin tildar."
+        description="Se descarga un ZIP con un archivo por pasador (PDF o imagen), en carpetas por grupo. Los que no tienen movimiento en la edición vienen sin tildar."
         items={picking}
         idOf={(row) => row.polla_user_id}
         labelOf={(row) => {
@@ -372,9 +430,13 @@ export const EditionReportDialog = ({
         }}
         totalOf={(row) => row.total}
         hasMovement={hasEditionMovement}
-        actionLabel={(count) => `Exportar ${count} ${count === 1 ? 'PDF' : 'PDFs'}`}
+        actionLabel={exportActionLabel}
         busyLabel="Exportando…"
-        busy={printing}
+        busy={printing || delivery.busy}
+        format={format}
+        onFormatChange={setFormat}
+        onSelectionChange={delivery.reset}
+        pendingShare={delivery.pending ? handleShare : undefined}
         onConfirm={handleExportPicked}
         onClose={onClose}
       />
@@ -396,6 +458,13 @@ export const EditionReportDialog = ({
             onChange={setScope}
             options={SCOPE_OPTIONS}
           />
+          {kind === 'liquidation' && (
+            <LiquidationFormatToggle
+              value={format}
+              onChange={setFormat}
+              disabled={printing || delivery.busy}
+            />
+          )}
           {hasGroup && <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />}
 
           {many ? (
@@ -462,8 +531,16 @@ export const EditionReportDialog = ({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="button" onClick={handlePrint} disabled={printing}>
-            {printing ? 'Generando…' : copy.action}
+          <Button
+            type="button"
+            onClick={delivery.pending ? handleShare : handlePrint}
+            disabled={printing || delivery.busy}
+          >
+            {printing || delivery.busy
+              ? 'Generando…'
+              : delivery.pending
+                ? 'Compartir'
+                : copy.action}
           </Button>
         </DialogFooter>
       </DialogContent>

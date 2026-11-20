@@ -4,6 +4,129 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-19 (totales en Liquidaciones de grupo)
+
+- **Fila "Total general" en "Liquidaciones de grupo"** (`GroupEditionAccounts.tsx`, `GroupEditionHistory`): al pie de la tabla de la edición elegida se suman los grupos liquidados (deja pasadores, gastos, total, total admin y total capitalista). El % admin queda vacío porque no se suma; los grupos desactualizados suman lo que tienen liquidado. "Grupos a liquidar" no lleva totales: ahí el total es el del momento y admin/capitalista solo de los liquidados, y no cerraría.
+- `groupLiquidationTotals(accounts)` (`lib/groupLiquidation.ts`, pura, con tests): suma en centavos, capitalista = total - comisión (igual que `groupSplit` en cada fila).
+
+### Fixed - 2026-11-19 (nombre de la organización en PDF e imagen)
+
+- **Nombre de la organización** (`useOrganizationName.ts`, `AdminGroupAccountView.tsx`, `GroupEditionAccounts.tsx`): si la primera carga fallaba, `fetchOrganizationName` devolvía `''`, la query lo guardaba con `staleTime: Infinity` y los exportes (`orgName ?? …`) no lo volvían a pedir: los PDF e imágenes de grupo salían sin el nombre hasta recargar la página. Ahora el vacío queda vencido (`staleTime` en 0 sin nombre, se vuelve a pedir al próximo montaje) y los exportes usan `||`, así que con el nombre vacío lo piden de nuevo al exportar.
+
+### Fixed - 2026-11-18 (ajustes de la revisión de liquidaciones de grupo e imagen)
+
+- **Imágenes en el celular, con salida al ZIP** (`liquidationDelivery.ts`, `shareFiles.ts`, `LiquidationFormat.tsx`, `lib/liquidationZip.ts`): más de `MAX_SHARE_FILES` (10) imágenes o más de `MAX_SHARE_BYTES` (50 MB) van directo al ZIP (`shouldZipImages`, con test), porque Android Chrome rechaza la hoja de compartir con `NotAllowedError`. `shareFiles(files, { fallbackDownload: false })` no baja las imágenes una por una y devuelve `'failed'`; `deliverLiquidation` entrega el ZIP en ese caso. El reintento de `useLiquidationDelivery.retry` (que ya es un toque nuevo) trata un segundo bloqueo como definitivo y entrega el ZIP. El comportamiento por defecto de `shareFiles` no cambia.
+- **Cuenta del admin** (`AdminGroupAccountView.tsx`): la tabla y las tarjetas formatean igual que "Liquidaciones de grupo" del dueño (`$fmtMoney`, gastos en positivo, `groupSplit`); el PDF y la imagen siguen en pesos enteros. Los botones PDF e Imagen de cada fila son solo ícono (con `aria-label` y `title`) para que entren a 1400 px. Si falla al compartir una imagen ya generada dice "No se pudo compartir la imagen".
+- `GroupAccountHistory` muestra `ErrorState` con "Reintentar" si la consulta falla y no hay datos (dueño y `mine`). `ModeToggle` se ve deshabilitado (`disabled:opacity-50 disabled:cursor-not-allowed`).
+- **Formato al reabrir**: `DailyHistoryView` y `GroupEditionAccounts` vuelven a PDF al cerrar la lista (como `EditionReportDialog`).
+- **Exportar liquidaciones** (`GroupEditionAccounts.tsx`): el botón se deshabilita mientras la lista de grupos de la edición carga vacía (antes salía "Todavía no hay grupos liquidados"); el parte diario ya no muestra "Generando…" durante esa exportación (estado `exportingLiquidations` aparte).
+- **Nombre de la organización precargado**: nuevo hook `useOrganizationName(organizationId)` (`features/current-account/useOrganizationName.ts`, misma query que ya usaba la vista del admin) usado al liquidar y exportar; solo si todavía no cargó se pide al exportar.
+- `sheetsOf` pasa a `groupLiquidationSheets` (`lib/groupLiquidation.ts`, pura) con tests: fecha de la liquidación más nueva, grupo fuera del catálogo sin número, sin liquidaciones no hay hojas.
+
+### Changed - 2026-11-18 (cambios de la exportación de liquidaciones que faltaba documentar)
+
+- `CashierPickDialog` (`dialogs/ExportLiquidationsDialog.tsx`) suma las props `format`, `onFormatChange`, `onSelectionChange`, `pendingShare` y `listLabel`; `actionLabel` pasa a `actionLabel(count, format)`.
+- `liquidationSlipAmounts` y `hasAccountMovement` se mueven a `lib/liquidationSlip.ts` (cambia la ruta de import).
+- El botón "Liquidar e imprimir" pasa a "Liquidar y exportar".
+
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **Cuenta corriente del admin** (`features/current-account/AdminGroupAccountView.tsx`): "Por edición" (tabla en la computadora, tarjetas en el celular, con Edición, Liquidada y los seis renglones, capitalista incluido) e "Historial por fechas", solo para consultar. Cada fila baja PDF o Imagen (en el celular la imagen va por la hoja de compartir; el botón se deshabilita mientras genera).
+- `useMyGroupEditionLiquidations` y `useMyGroupAccounts` (`usePollaData.ts`), rutas `editionAccount.groupMine` y `groupAccount.mine`; `GroupAccountHistory` recibe `mine`.
+- El menú y la ruta Cuenta corriente aparecen para el rol admin (`CURRENT_ACCOUNT`).
+
+### Added - 2026-11-18
+
+- **Formato Imagen al exportar liquidaciones**: las liquidaciones de pasadores (Exportar liquidación por edición, una o varias, y en Historial por fechas) y de grupos ("Exportar liquidaciones") tienen un selector "Formato: PDF | Imagen".
+  - En la computadora, un ZIP de PNG con las mismas carpetas que el de PDF.
+  - En el celular, las imágenes salen sueltas por la hoja de compartir (nombre con la carpeta de la edición si se repite). Si el navegador pide un toque nuevo, el botón pasa a "Compartir" y reintenta sin volver a generarlas.
+  - Al liquidar grupos se sigue bajando el ZIP de PDF, sin selector.
+- Nuevos `lib/liquidationImageLines.ts` (renglones de la imagen), `functions/current-account/liquidationImage.ts` (canvas a PNG), `functions/shareFiles.ts` (portado de QuiniApp), `functions/current-account/liquidationDelivery.ts`, `dialogs/LiquidationFormat.tsx` y `looseFileNames` en `lib/liquidationZip.ts`. `exportLiquidationSlipsZip` y `exportGroupLiquidationsZip` pasan a `prepareLiquidationSlips` y `prepareGroupLiquidations` + `deliverLiquidation`.
+
+### Changed - 2026-11-18 (liquidaciones de grupo en ZIP)
+
+- **Liquidar grupos** (`GroupEditionAccounts.tsx`): al liquidar uno o varios grupos se baja un ZIP con un PDF A4 por grupo, en lugar del ticket de 58 mm.
+  - ZIP `polla_liquidaciones_grupos_DD-MM-YYYY.zip` (`polla_plus_…` en una edición especial) con una carpeta raíz del mismo nombre y adentro `Grupo N - Nombre DD-MM-YYYY.pdf`, sin carpetas por grupo.
+  - Una sola fecha para el ZIP, la raíz y los archivos: la de la liquidación más nueva de los grupos exportados.
+  - La hoja deja pasadores, gastos del grupo (en negativo), total, % admin, total admin y total capitalista, siempre desde la liquidación guardada.
+- **"Exportar liquidaciones"** en la pestaña Grupos: elige entre los grupos liquidados (los desactualizados se marcan) y baja el ZIP. `CashierPickDialog` suma la prop `listLabel`.
+- **Imprimir de cada fila** de "Liquidaciones de grupo": baja la hoja A4 suelta (sin ZIP); la confirmación de desactualizada ahora dice "Descargar igual".
+- Nuevos `lib/groupLiquidation.ts`, `functions/current-account/groupLiquidationPDF.ts` y, en `lib/liquidationZip.ts`, `groupLiquidationZipName` y `groupLiquidationFileName`.
+
+### Removed - 2026-11-18
+
+- Ticket de 58 mm de la liquidación de grupo por edición (`groupEditionTicketLines`, `printGroupEditionLiquidationTicket(s)` en `groupLiquidationTicket.ts`). El ticket del Historial por fechas sigue.
+
+### Added - 2026-11-18 (repetir varios tickets con cargo)
+
+- **Administrar jugadas** (`features/manage-bets/index.tsx`): se tildan tickets y "Repetir con cargo (N)" los carga todos juntos en la edición elegida, con Efectivo o Debe (R04).
+  - Aparece para los roles que repiten cuando hay alguna edición con la carga abierta y su corte de repetir (`useEditions` con `loadable`, filtradas por `isPollaEditionRepeatable`), igual que "Repetir ticket" de Cargar jugada.
+  - Con cargo se puede tildar cualquier ticket: la base saltea los que no se pueden repetir y se avisan uno por uno.
+  - "Repetir sin cargo" (edición finalizada) sigue igual, pero toma solo los tildados que califican y dice cuántos son ("Repetir sin cargo (M)").
+  - Al terminar se limpia la selección.
+- **`RepeatBetDialog`** (`features/make-bet/RepeatBetDialog.tsx`): modo nuevo `picked`, con la lista de los tickets elegidos y "Cargar N tickets e imprimir". "Repetir ticket" de a uno en Cargar jugada no cambia.
+- **`usePollaTicketPrinter`** (`features/bets/usePollaTicketPrinter.ts`): la impresión de los tickets recién cargados (un PDF; el Súper solo ve un aviso, R12) y la etiqueta de la edición destino salen de Cargar jugada para usarlas también en Administrar.
+
+### Fixed - 2026-11-18
+
+- **`RepeatBetDialog`**: con un título de edición largo, el diálogo se desbordaba a la derecha y cortaba el botón de cargar. Ahora el selector trunca el texto.
+
+### Added - 2026-11-18 (parte diario de grupos)
+
+- **"Parte diario"** en la pestaña Grupos (`GroupEditionAccounts.tsx`): PDF de la edición elegida (`downloadGroupDailyReportPDF` en `functions/current-account/groupDailyReportPDF.ts`).
+  - Columnas Grupo, Total y $ Admin, con la fila Total y abajo el **Total capitalista**.
+  - Encabezado con la edición y la fecha de liquidación (la última de sus grupos).
+  - Entran solo los grupos liquidados, con lo guardado al liquidar. Los que tienen algo y no se liquidaron salen en un aviso ("Sin liquidar"), igual que los desactualizados. Los pasadores sin grupo no entran.
+  - Nombre: `Polla semanal parte diario grupos DD-MM-YYYY`, o `Polla plus …` si es especial.
+- **"Parte diario por rango"**: Desde y Hasta (hasta hoy, como máximo 62 días, Desde ≤ Hasta), por fecha de liquidación (`fetchGroupAccountsRange`).
+  - Una fila por edición (Fecha liq., Edición, Total, $ Admin, Capitalista) con TOTAL.
+  - Abajo, el "Resumen por grupo" con el Total capitalista.
+  - Nombre: `Polla parte diario grupos DD-MM-YYYY al DD-MM-YYYY`.
+- Los montos salen con hasta 2 decimales: lo del admin y del capitalista se paga al centavo.
+- **Lógica pura** en `lib/groupDailyReport.ts`: `groupReportRows`, `groupReportTotals`, `groupReportDate`, `groupRangeByEdition`, `unliquidatedGroupNames` y `outdatedGroupNames`. Test en `__tests__/current-account/group-daily-report.test.ts`.
+
+### Added - 2026-11-17 (% del admin, liquidar varios grupos y grupos en tabla)
+
+- **% de ganancia del admin** (`features/groups/index.tsx`):
+  - campo opcional al crear el grupo con su admin y al asignar un admin nuevo;
+  - columna "% admin" en la lista (`10%` o "A mano");
+  - "Editar grupo" cambia el nombre y el % del admin (`useUpdateAdminPercentage`, `PUT /user/:id`).
+  - También se edita en "Editar usuario" de un admin (`EditUserDialog.tsx`), solo para superadmin, capitalista y dueño.
+- **Liquidar un grupo** (`GroupEditionAccounts.tsx`, `LiquidateGroupDialog`): si el admin tiene %, el input viene con ese valor y deshabilitado, con la leyenda "Configurado en el admin del grupo"; si no, se escribe a mano como antes.
+- **Liquidar varios grupos:**
+  - casilla por grupo y "Seleccionar todos", que tilda los que se pueden liquidar y están sin liquidar o desactualizados (`groupsToSelectAll`). Los liquidados al día se tildan a mano;
+  - "Liquidar seleccionados (N)" abre `LiquidateGroupsDialog`: una fila por grupo con su % (fijo o a mano), Admin y Capitalista, más los totales;
+  - se liquidan todos juntos (`useLiquidateGroupEditions`) y sale un PDF con un ticket por grupo (`printGroupEditionLiquidationTickets` en `functions/current-account/groupLiquidationTicket.ts`).
+- **Pestaña Grupos:**
+  - en la computadora es una tabla (casilla, Grupo, % admin, Deja pasadores, Gastos, Total, Admin, Capitalista, Estado y acciones). Los gastos del grupo se cargan en un diálogo;
+  - en el celular siguen las tarjetas, con casilla;
+  - arriba, y en cada tarjeta, se ve la edición elegida: `Edición <título> · DD/MM/YYYY al DD/MM/YYYY[ · Carga abierta]`.
+- **Helpers** (`lib/editionAccount.ts`): `groupLiquidatable`, `groupsToSelectAll` y `groupLiquidationPercentage` (el % del admin fijo o, si no tiene, el de la última liquidación a mano).
+- **Test** `__tests__/current-account/group-batch.test.ts`: los helpers y los schemas del %.
+
+### Fixed - 2026-11-17
+
+- **Pestaña Grupos:** al cambiar de edición se veían un momento los grupos de la anterior (la consulta conserva los datos viejos mientras carga). Ahora se muestran solo los de la edición elegida (`polla_edition_id`), para no tildar ni liquidar sobre otra.
+
+### Changed - 2026-11-17 (nombres del parte diario y ZIP con carpeta raíz y fechas)
+
+Pedido del cliente del 17/11: los nombres llevan siempre fecha y el ZIP se descomprime en una sola carpeta.
+
+- **Exportar diario** pasa a llamarse "parte diario". El título del PDF cambia de "Liquidación" a "Parte diario".
+  - Una edición: `Polla semanal parte diario DD-MM-YYYY` si es regular, `Polla plus parte diario DD-MM-YYYY` si es especial (`isPollaSpecialEdition`).
+  - Varias ediciones: `Polla parte diario DD-MM-YYYY al DD-MM-YYYY`.
+  - Historial por fechas: `Polla parte diario DD-MM-YYYY`, o el rango.
+  - Con filtro de grupo se suma `Grupo N - Nombre` antes de la fecha.
+  - Nombres en `lib/exportNames.ts` (`pollaDailyReportName`, `groupFileLabel`). `downloadDailyAccountsPDF` y `downloadDailySummaryPDF` (`functions/current-account/accountTablePDF.ts`) aceptan `fileName`, y el segundo también `title`.
+- **Fecha de una edición** (`editionLiquidationDate` en `lib/editionAccount.ts`): la de su última liquidación de pasadores; si no hay, la marca de liquidada; si tampoco, hoy.
+- **ZIP de liquidaciones** (`lib/liquidationZip.ts`, `functions/current-account/liquidationSlipPDF.ts`):
+  - El ZIP y su carpeta raíz se llaman igual: `polla_liquidaciones_DD-MM-YYYY` (`polla_plus_liquidaciones_…` en las especiales), `…_DD-MM-YYYY_al_DD-MM-YYYY` en un rango, con `_Grupo_N` o `_Sin_grupo` si hay filtro.
+  - Adentro: `Grupo 1 - Leo DD-MM-YYYY/1-6 Laura DD-MM-YYYY.pdf` y `Sin grupo DD-MM-YYYY/`. Si ninguna hoja tiene grupo, los PDF van directo en la raíz.
+  - La fecha es la de la liquidación de cada edición (en el historial, el día elegido o el "Hasta").
+  - En "Varias ediciones" la carpeta de edición sigue siendo `AAAA-MM-DD <título>`, pero el título se corta en 24 caracteres (antes 40): con la raíz y las fechas, la ruta tiene que entrar en los 260 de Windows.
+  - `LiquidationSlipSheet` suma `date`. Las rutas salen de `@helper/functions/liquidationZip`, compartido con QuiniApp.
+- **Tests:** `__tests__/current-account/liquidation-zip.test.ts` (raíz, fechas, sin grupos, peor largo de ruta ≤ 185), `export-names.test.ts` (nombres y fecha de liquidación) y `__tests__/helper/quiniela-liquidation-zip.test.ts` (el ZIP de QuiniApp).
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 - **Historial por fechas** (`features/current-account/history/DailyHistoryView.tsx`): en modo "Día" y para `POLLA_ACCOUNT_ROLES` (dueño, capitalista y superadmin), cada fila de la tabla y cada tarjeta del celular tiene un botón "Editar" (lápiz). En modo rango no aparece, porque las filas son acumulados.

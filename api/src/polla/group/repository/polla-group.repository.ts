@@ -9,6 +9,8 @@ export interface NewGroupAdminRow {
   email?: string | null;
   phone?: number | null;
   password_hash: string;
+  /** % de ganancia al liquidar el grupo; sin valor se carga a mano. */
+  admin_percentage?: number | null;
 }
 
 export class PollaGroupRepository {

@@ -12,7 +12,7 @@ import { ilikeAny, searchCashierCode, searchNumber } from '../../helper/search';
 
 /** Nunca se devuelven hacia afuera las columnas sensibles de auth. */
 const PUBLIC_COLUMNS =
-  'polla_user_id, number, user_type, name, last_name, phone, email, username, password_reset_required, locked_until, last_login_at, polla_organization_id, polla_group_id, parent_polla_user_id, is_street, fee, fee_plus, disabled, created_at, edited_at';
+  'polla_user_id, number, user_type, name, last_name, phone, email, username, password_reset_required, locked_until, last_login_at, polla_organization_id, polla_group_id, parent_polla_user_id, is_street, fee, fee_plus, admin_percentage, disabled, created_at, edited_at';
 
 /** Grupo que no existe: un filtro por él no trae a nadie. */
 const NO_GROUP = '00000000-0000-0000-0000-000000000000';
@@ -395,7 +395,7 @@ export class PollaUserRepository {
 
     const { data, error } = await supabase
       .from('polla_users')
-      .select('polla_user_id, name, last_name, username, polla_group_id')
+      .select('polla_user_id, name, last_name, username, polla_group_id, admin_percentage')
       .eq('user_type', POLLA_USER_TYPE.ADMIN)
       .in('polla_group_id', groupIds)
       .is('deleted_at', null);
@@ -407,6 +407,7 @@ export class PollaUserRepository {
       last_name: string | null;
       username: string | null;
       polla_group_id: string;
+      admin_percentage: number | null;
     }[];
   }
 

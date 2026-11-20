@@ -126,6 +126,8 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
     new BadRequestError('El grupo ya tiene una liquidación posterior a esa fecha'),
   POLLA_GROUP_PERCENTAGE_INVALID: () =>
     new BadRequestError('El porcentaje del admin tiene que estar entre 0 y 100'),
+  POLLA_GROUP_BATCH_EMPTY: () => new BadRequestError('Elegí al menos un grupo'),
+  POLLA_GROUP_BATCH_DUPLICATED: () => new BadRequestError('Hay un grupo repetido'),
   unique_polla_group_admin_active: () => new ConflictError('Ese grupo ya tiene un admin'),
   unique_polla_username_active: () => new ConflictError('Ese nombre de usuario ya está en uso'),
   unique_polla_cashier_number_active: () =>
@@ -157,6 +159,14 @@ const SQL_ERROR_MAP: Record<string, () => AppError> = {
  */
 export const mapPollaError = (error: { message?: string; code?: string } | null): AppError => {
   const message = error?.message ?? '';
+
+  // Liquidar varios grupos: `POLLA_GROUP_BATCH[Grupo N - Nombre] <error>`.
+  // Se traduce el error de adentro y se le antepone el grupo.
+  const batch = /POLLA_GROUP_BATCH\[([^\]]*)\]\s*([\s\S]*)/.exec(message);
+  if (batch) {
+    const inner = mapPollaError({ message: batch[2] });
+    return new AppError(`${batch[1]}: ${inner.message}`, inner.statusCode, inner.errorCode);
+  }
 
   // Gana el código más largo: `POLLA_EDITION_HAS_WINNERS` es prefijo de
   // `POLLA_EDITION_HAS_WINNERS_LOCKED`.

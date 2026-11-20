@@ -3,8 +3,6 @@ import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { Repeat2 } from 'lucide-react';
 import {
-  IPollaBetEntityBack,
-  IPollaEditionEntityFront,
   POLLA_BET_IDENTIFIER_MAX,
   POLLA_BET_GAME_STATUS_LABEL,
   POLLA_EDITION_STATUS,
@@ -16,7 +14,6 @@ import {
   pollaEditionDrawLabels,
   pollaEditionTitle,
   pollaPrizeRuleLabel,
-  pollaTicketCashierCode,
 } from '@helper/polla/types/game.type';
 import {
   IPollaUserOption,
@@ -42,8 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PollaTicketData, makePollaTicketsPdf } from '@/functions/makePollaTicket';
-import { deliverPdf, sharePdf } from '@/functions/printPdf';
+import { TicketBet, usePollaTicketPrinter } from '@/features/bets/usePollaTicketPrinter';
 import { RepeatBetDialog } from './RepeatBetDialog';
 import { PaymentDialog } from './PaymentDialog';
 import { Badge } from '@/components/ui/badge';
@@ -54,22 +50,6 @@ const fmtDate = (value: string) => dayjs(value).format('DD-MM-YYYY');
 const fmtTime = (value: string) => value.slice(0, 5);
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
-/** `YYYY-MM-DDTHH:mm:ss` (Argentina) → `DD-MM-YYYY HH:mm`. */
-/** Lo que el ticket impreso necesita de la jugada. */
-type TicketBet = Pick<
-  IPollaBetEntityBack,
-  | 'ticket_number'
-  | 'user_name'
-  | 'identifier'
-  | 'cashier_number'
-  | 'numbers'
-  | 'load_date'
-  | 'amount'
-  | 'is_free'
-  | 'payment_status'
-  | 'created_at'
-  | 'winner'
->;
 
 const fmtCutoff = (value: string) => `${fmtDate(value.slice(0, 10))} ${value.slice(11, 16)}`;
 
@@ -139,54 +119,8 @@ export const MakeBetPage = () => {
   // Dueño, capitalista, superadmin y Súper cargan después del cierre, hasta el sorteo.
   const showMyCutoff = Boolean(role && (isPollaSuperRole(role) || isAssistant));
 
-  const ticketDataOf = (bet: TicketBet, of: IPollaEditionEntityFront): PollaTicketData => ({
-    ticket_number: bet.ticket_number,
-    user_name: bet.user_name,
-    identifier: bet.identifier,
-    cashier_code: pollaTicketCashierCode(bet.ticket_number, bet.cashier_number) || undefined,
-    numbers: bet.numbers,
-    editionName: of.name,
-    drawLines: pollaEditionDrawLabels(of, catalogs),
-    startDate: of.start_date,
-    endDate: of.end_date,
-    loadDate: bet.load_date,
-    loadedAt: bet.created_at,
-    ticketPrice: Number(bet.amount),
-    poolAmount: Number(of.pool_amount),
-    surprisePoolAmount: Number(of.surprise_pool_amount ?? 0),
-    isFree: Boolean(bet.is_free),
-    // El ticket del jugador no dice si está pagado.
-    paymentStatus: isPlayer ? undefined : bet.payment_status,
-  });
-
-  /**
-   * Tickets recién cargados: un PDF (con uno o varios). El pasador y el staff
-   * lo imprimen (o lo comparten en mobile); el jugador no imprime: lo guarda o
-   * lo comparte.
-   */
-  const printTickets = async (bets: TicketBet[], of: IPollaEditionEntityFront) => {
-    if (bets.length === 0) return;
-    setLastTickets(bets);
-    // R12: el Súper carga planillas en serie. No se abre la impresión: un
-    // aviso con el número de ticket (lo puede reimprimir desde Administrar).
-    if (isAssistant) {
-      toast.success(
-        bets.length === 1
-          ? `Ticket ${bets[0].ticket_number} cargado`
-          : `${bets.length} tickets cargados: ${bets.map((bet) => bet.ticket_number).join(', ')}`,
-        { duration: 6000 }
-      );
-      return;
-    }
-    const { blob, fileName } = await makePollaTicketsPdf(bets.map((bet) => ticketDataOf(bet, of)));
-    const text =
-      bets.length === 1 ? `Ticket Polla ${bets[0].ticket_number}` : `${bets.length} tickets Polla`;
-    if (isPlayer) {
-      await sharePdf(blob, fileName, text);
-      return;
-    }
-    await deliverPdf(blob, fileName, text);
-  };
+  // Tickets recién cargados: un PDF con uno o varios (el Súper solo ve un aviso).
+  const { printTickets, editionLabel } = usePollaTicketPrinter(setLastTickets);
 
   // Con todos sus sorteos: en la especial se ve que juega con las 5 quinielas.
   const nowMoment = dayjs().format('YYYY-MM-DDTHH:mm:ss');
@@ -197,11 +131,6 @@ export const MakeBetPage = () => {
         `${b.load_start_date}T${b.load_start_time}`
       )
     );
-
-  const editionLabel = (item: IPollaEditionEntityFront) =>
-    `${pollaEditionTitle(item, catalogs)} (${fmtDate(item.start_date)} al ${fmtDate(
-      item.end_date
-    )}) · $${fmtMoney(item.ticket_price)}`;
 
   const handleSubmit = (values: string[] = numbers) => {
     if (isPending) return;

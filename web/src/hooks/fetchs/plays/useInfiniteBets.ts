@@ -19,9 +19,22 @@ export interface FetchInfiniteBetsProps {
   min_amount?: number | null;
 }
 
+const DEFAULT_LIMIT = 100;
+
+/**
+ * Modo lista: keyset (`pageParam` = cursor, `''` en la primera página).
+ * Modo agrupado: offset (`pageParam` = número de página, desde 1).
+ */
+export type BetsPageParam = string | number;
+
+const EMPTY_PAGE: IPaginatedBetsResponse<IBetEntityFront> = {
+  data: [],
+  pagination: { pageSize: 0, hasMore: false, next_cursor: null },
+};
+
 export async function fetchPaginatedBets(
   props: FetchInfiniteBetsProps,
-  pageParam: number = 1
+  pageParam: BetsPageParam = props.grouped === 'true' ? 1 : ''
 ): Promise<IPaginatedBetsResponse<IBetEntityFront>> {
   const {
     date,
@@ -33,25 +46,16 @@ export async function fetchPaginatedBets(
     quatern,
     tern,
     ticket_number,
-    limit = 150,
+    limit = DEFAULT_LIMIT,
     group_id,
     min_amount,
   } = props;
 
-  if (!date) {
-    return {
-      data: [],
-      pagination: {
-        currentPage: 1,
-        pageSize: 0,
-        totalCount: 0,
-        totalPages: 0,
-        hasMore: false,
-      },
-    };
-  }
+  if (!date) return EMPTY_PAGE;
 
-  const params = new URLSearchParams({ date, page: pageParam.toString(), limit: limit.toString() });
+  const params = new URLSearchParams({ date, limit: limit.toString() });
+  if (grouped === 'true') params.append('page', String(pageParam || 1));
+  else if (pageParam) params.append('cursor', String(pageParam));
   if (schedule_id) params.append('schedule_id', schedule_id);
   if (lottery_id) params.append('lottery_id', lottery_id);
   if (cashier_id) params.append('cashier_id', cashier_id);
@@ -71,20 +75,25 @@ export async function fetchPaginatedBets(
   if (!res.ok) throw new Error('Error fetching paginated bets');
 
   const json = await res.json();
-  return json?.data?.bets ?? {
-    data: [],
-    pagination: {
-      currentPage: 1,
-      pageSize: 0,
-      totalCount: 0,
-      totalPages: 0,
-      hasMore: false,
-    },
-  };
+  return json?.data?.bets ?? EMPTY_PAGE;
 }
 
+/** Siguiente `pageParam` según el modo; `undefined` cuando no hay más. */
+export const nextBetsPageParam = (
+  lastPage: IPaginatedBetsResponse<IBetEntityFront>,
+  lastPageParam: BetsPageParam,
+  grouped: boolean
+): BetsPageParam | undefined => {
+  if (!lastPage.pagination.hasMore) return undefined;
+  if (grouped) return Number(lastPageParam) + 1;
+  return lastPage.pagination.next_cursor ?? undefined;
+};
+
 export const useInfiniteBets = (props: FetchInfiniteBetsProps) => {
-  return useInfiniteQuery<IPaginatedBetsResponse<IBetEntityFront>>({
+  const grouped = props.grouped === 'true';
+  const limit = props.limit ?? DEFAULT_LIMIT;
+
+  return useInfiniteQuery({
     queryKey: [
       'bets-infinite',
       props.date ?? '',
@@ -96,15 +105,14 @@ export const useInfiniteBets = (props: FetchInfiniteBetsProps) => {
       props.quatern ?? '',
       props.tern ?? '',
       props.ticket_number ?? '',
-      props.limit ?? 100,
+      limit,
       props.group_id ?? '',
       props.min_amount ?? 0,
     ],
-    queryFn: ({ pageParam = 1 }) => fetchPaginatedBets(props, pageParam as number),
-    getNextPageParam: (lastPage) => {
-      return lastPage.pagination.hasMore ? lastPage.pagination.currentPage + 1 : undefined;
-    },
+    queryFn: ({ pageParam }) => fetchPaginatedBets({ ...props, limit }, pageParam),
+    initialPageParam: (grouped ? 1 : '') as BetsPageParam,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      nextBetsPageParam(lastPage, lastPageParam, grouped),
     enabled: Boolean(props.date),
-    initialPageParam: 1,
   });
 };

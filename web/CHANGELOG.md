@@ -4,6 +4,38 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-17 (liquidaciones en ZIP y nombre del parte diario)
+
+- **Exportar liquidación** (`features/current-account/handlers/exportLiquidacion.ts`): baja un ZIP en lugar de un PDF por pasador.
+  - El ZIP y su carpeta raíz se llaman `quiniela_liquidaciones_DD-MM-YYYY`.
+  - Adentro va una carpeta por grupo, `Leo DD-MM-YYYY/6 Laura DD-MM-YYYY.pdf`, y `Sin grupo DD-MM-YYYY/` para los demás. Los grupos son sub-organizaciones sin número: la carpeta lleva solo el nombre. Si ningún pasador tiene grupo, los PDF van en la raíz.
+  - En el celular abre el menú de compartir; en la computadora se descarga.
+  - Los grupos salen de `useGroups`, que ahora usa la página (`features/current-account/index.tsx`).
+- **`web/src/lib/liquidationZip.ts`** (nuevo): nombres, rutas (con `@helper/functions/liquidationZip`) y `zipFiles` con **fflate** (dependencia nueva, ^0.8.2, la misma de polla-web, cargada con `import()`).
+- **`printLiquidationCashier.ts`**: `buildUserSlipPDF` arma la hoja y la devuelve; `printUserSlipPDF` la sigue bajando suelta en la vista del pasador, con el mismo nombre.
+- **Exportar diario** (`functions/exportDiarioPDF.ts`): el archivo pasa a llamarse `Quiniela parte diario DD-MM-YYYY` y el título del PDF, "Parte diario".
+- Sin cambios: Exportar diario y Exportar liquidación siguen sin aplicar el filtro de grupo de la página (`handlers/shared.ts`).
+
+### Changed - 2026-11-16 (rendimiento SQL — Fase 1: keyset en jugadas y tickets)
+
+**Qué cambia.** Los listados de jugadas (modo lista) y de tickets paginan con cursor (`next_cursor`), siguiendo el cambio de la API. Se arreglan los totales que hoy salían mal por la paginación.
+
+#### Hooks
+- **`useInfiniteBets`**:
+  - En modo lista, `pageParam` es el cursor (`''` en la primera página). El modo agrupado sigue con número de página.
+  - `nextBetsPageParam` resuelve el siguiente según el modo.
+  - El `limit` por defecto es el mismo en la query key y en el fetch: antes eran 100 y 150.
+- **`useInfiniteBetsByTicketNumber`** y **`useInfiniteTickets`**: cursor. `fetchTicketsPage` queda exportado.
+- **`web/src/lib/fetchAllPages.ts`** (nuevo): recorre un listado keyset hasta el final, de a 900 filas.
+
+#### Fixes
+- **`useBets`** / **`useTickets`** (cuenta corriente, "Aciertos / Tickets a liquidar" y PDF de liquidación): traen todas las páginas con `fetchAllPages`. Antes se cortaban en las primeras 100 filas.
+- **"Cantidad de Tickets"** (`table-terminal-ticket.tsx`): muestra `pages[0].pagination.totalCount`, el total del filtro. Antes contaba solo los tickets ya cargados en el scroll.
+- **Imprimir jugadas** (`print-grouped-bets-button.tsx`): en modo lista recorre con cursor, así que no repite filas si entran jugadas mientras imprime. El modo agrupado sigue por página.
+
+#### Removed
+- `web/src/hooks/fetchs/plays/useTotals.ts`: no tenía consumidores y dependía de `FetchBetsProps.grouped`, que se quitó. `useBets` es solo modo lista.
+
 ### Added - 2026-10-05 (Compartir ticket como imagen)
 
 #### El cajero elige cómo compartir el comprobante: imagen, PDF o imprimir

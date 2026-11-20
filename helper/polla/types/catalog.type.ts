@@ -41,6 +41,8 @@ export interface IPollaGroupWithAdmin extends IPollaGroupEntityFront {
     name: string;
     last_name: string | null;
     username: string | null;
+    /** % de ganancia al liquidar el grupo; null = se carga a mano. */
+    admin_percentage: number | null;
   } | null;
 }
 

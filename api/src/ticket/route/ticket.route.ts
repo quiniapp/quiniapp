@@ -7,6 +7,7 @@ import { newTicketSchema } from '@helper/schemas/ticket.schema';
 import { USER_TYPE } from '@helper/types/user.type';
 import { asyncHandler } from '../../middlewares/error.middleware';
 import { UserRepository } from '../../user/repository/user.repository';
+import { parsePageSize } from '../../utils/keyset';
 
 export class TicketRouter {
   public router: Router;
@@ -112,7 +113,7 @@ export class TicketRouter {
 
   private getAllTicketHandler = asyncHandler(async (req: Request, res: Response) => {
     const { user } = req;
-    const { date, ticket_number, cashier_id, winner, page, limit, paid, group_id } = req.query;
+    const { date, ticket_number, cashier_id, winner, cursor, limit, paid, group_id } = req.query;
 
     if (typeof ticket_number === 'string') {
       // Ticket lookup by number is scoped to the user's own org; group_id does not apply here
@@ -151,8 +152,8 @@ export class TicketRouter {
         : typeof paid === 'string' && paid === 'true'
           ? { paid: true }
           : { paid: false }),
-      page: typeof page === 'string' ? parseInt(page, 10) : 1,
-      limit: typeof limit === 'string' ? parseInt(limit, 10) : 100,
+      cursor: typeof cursor === 'string' ? cursor : '',
+      limit: parsePageSize(limit, 100),
     });
 
     const response: APIResponse<typeof result> = {

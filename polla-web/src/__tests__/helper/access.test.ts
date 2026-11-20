@@ -46,7 +46,7 @@ describe('los demás roles no cambian', () => {
     expect(pagesOf(SUPERADMIN)).toEqual(allButOrganizations);
   });
 
-  it('el admin de grupo: operación de su grupo, sin cuenta corriente ni configuración de la organización', () => {
+  it('el admin de grupo: operación de su grupo y su cuenta corriente', () => {
     expect(pagesOf(ADMIN)).toEqual([
       'BETS',
       'MAKE_BET',
@@ -55,10 +55,12 @@ describe('los demás roles no cambian', () => {
       'SALES',
       'RESULTS',
       'USERS',
+      'CURRENT_ACCOUNT',
       'PRIZES',
       'SETTINGS',
       'CHANGE_PASSWORD',
     ]);
+    expect(canSeePollaPage(ADMIN, 'CURRENT_ACCOUNT')).toBe(true);
   });
 
   it('el pasador, además, su cuenta corriente', () => {

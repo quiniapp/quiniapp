@@ -20,6 +20,7 @@ export class BetController {
     group_user_ids,
     min_amount = 0,
     page = 1,
+    cursor = '',
     limit = 100,
   }: {
     schedule_id?: string;
@@ -34,9 +35,24 @@ export class BetController {
     organization_ids: string[];
     group_user_ids?: string[];
     min_amount?: number;
+    /** Modo agrupado (offset). */
     page?: number;
+    /** Modo lista (keyset); vacío = primera página. */
+    cursor?: string;
     limit?: number;
   }): Promise<IPaginatedBetsResponse<IBetEntityFront>> => {
+    // Totales del día ("Total monto de jugadas / aciertos"): filtros base, sin
+    // ganadores/terna/cuaterna/monto mínimo (semántica vigente, ver
+    // docs/plan-rendimiento-sql.md).
+    const totalsFilters = {
+      date,
+      schedule_id,
+      cashier_id,
+      lottery_id,
+      organization_ids,
+      group_user_ids,
+    };
+
     try {
       if (grouped) {
         const { data: groupedBets, count } = await this.repository.getAllBetsGrouped({
@@ -63,22 +79,8 @@ export class BetController {
         let aggregates: { totalAmount?: number; totalPrize?: number } = {};
         if (page === 1) {
           const [totalAmount, totalPrize] = await Promise.all([
-            this.repository.getTotalAmount({
-              date,
-              schedule_id,
-              cashier_id,
-              lottery_id,
-              organization_ids,
-              group_user_ids,
-            }),
-            this.repository.getTotalPrize({
-              date,
-              schedule_id,
-              cashier_id,
-              lottery_id,
-              organization_ids,
-              group_user_ids,
-            }),
+            this.repository.getTotalAmount(totalsFilters),
+            this.repository.getTotalPrize(totalsFilters),
           ]);
           aggregates = { totalAmount, totalPrize };
         }
@@ -95,93 +97,40 @@ export class BetController {
           aggregates,
         };
       } else {
-        // Con paginación
-        const { data: bets, count } = await this.repository.getAllBets({
-          organization_ids,
-          group_user_ids,
-          schedule_id,
-          date,
-          cashier_id,
-          lottery_id,
-          winners,
-          tern,
-          quatern,
-          ticket_number,
-          page,
-          limit,
-        });
+        // Modo lista: keyset. Los totales del día van solo en la primera request
+        // (sin cursor) y en paralelo con la página. Con ticket_number no se
+        // calculan: el detalle del ticket usa GET /bet/amounts.
+        const isFirstRequest = !cursor;
+        const withTotals = isFirstRequest && !ticket_number;
 
-        const parsedBets = bets.map((bet) => parseBet(bet));
-        // count is 0 when PostgREST can't return it; fall back to length heuristic in that case
-        const effectiveCount =
-          count > 0
-            ? count
-            : parsedBets.length >= limit
-              ? page * limit + 1 // full page → assume at least one more page exists
-              : (page - 1) * limit + parsedBets.length; // partial page → this is the last
-        const totalPages = Math.ceil(effectiveCount / limit);
-
-        // Si hay ticket_number, obtener totales por ticket
-        let aggregates: {
-          totalAmount?: number;
-          totalPrize?: number;
-          totalCount?: number;
-          totalWinnersCount?: number;
-        } = {};
-
-        if (ticket_number) {
-          // Solo calcular sumas del ticket en la primera página
-          if (page === 1) {
-            const ticketSums = await this.repository.getAmountsByTicket({
-              ticket_number,
-              organization_ids,
-            });
-            aggregates = {
-              totalAmount: ticketSums?.total_amount ?? 0,
-              totalPrize: ticketSums?.total_prize ?? 0,
-              totalCount: ticketSums?.total_count ?? 0,
-              totalWinnersCount: ticketSums?.total_winners_count ?? 0,
-            };
-          }
-        } else {
-          // Solo calcular totales en la primera página — no cambian entre páginas
-          if (page === 1) {
-            const [totalAmount, totalPrize] = await Promise.all([
-              this.repository.getTotalAmount({
-                date,
-                schedule_id,
-                cashier_id,
-                lottery_id,
-                organization_ids,
-                group_user_ids,
-              }),
-              this.repository.getTotalPrize({
-                date,
-                schedule_id,
-                cashier_id,
-                lottery_id,
-                organization_ids,
-                group_user_ids,
-              }),
-            ]);
-            aggregates = {
-              totalAmount,
-              totalPrize,
-            };
-          }
-          // Pages 2+ no recalculan — el frontend usa data?.pages?.[0]?.aggregates
-        }
+        const [page, totalAmount, totalPrize] = await Promise.all([
+          this.repository.getAllBets({
+            organization_ids,
+            group_user_ids,
+            schedule_id,
+            date,
+            cashier_id,
+            lottery_id,
+            winners,
+            tern,
+            quatern,
+            ticket_number,
+            cursor,
+            limit,
+          }),
+          withTotals ? this.repository.getTotalAmount(totalsFilters) : undefined,
+          withTotals ? this.repository.getTotalPrize(totalsFilters) : undefined,
+        ]);
 
         return {
-          data: parsedBets,
+          data: page.data.map((bet) => parseBet(bet)),
           pagination: {
-            currentPage: page,
             pageSize: limit,
-            totalCount: effectiveCount,
-            totalPages,
-            hasMore: page < totalPages,
+            hasMore: page.hasMore,
+            next_cursor: page.next_cursor,
           },
-          aggregates,
+          // Pages siguientes no recalculan: el frontend usa data.pages[0].aggregates.
+          aggregates: withTotals ? { totalAmount, totalPrize } : {},
         };
       }
     } catch (error) {

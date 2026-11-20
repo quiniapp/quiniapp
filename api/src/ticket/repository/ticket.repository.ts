@@ -8,6 +8,15 @@ import {
 import { ITicketEntityBack /* ITicketEntityBase */ } from '@helper/types/ticket.type';
 import dayjs from 'dayjs';
 import { getTableName } from '../../archive/helper/archive-helper';
+import { CURSOR_TIMESTAMP, CURSOR_UUID, decodeCursor, keysetPage } from '../../utils/keyset';
+
+/** Columnas que lee `parseTicket`, más `created_at` para el cursor. */
+const TICKET_LIST_COLUMNS =
+  'ticket_id, user_id, user_name, ticket_number, date, paid, winner, total, deleted_by, ' +
+  'total_prize, hits, created_at';
+
+/** Orden del listado: `created_at DESC, ticket_id DESC` (desempate único). */
+const TICKET_CURSOR = [CURSOR_TIMESTAMP, CURSOR_UUID];
 
 export class TicketRepository {
   async create(ticket: INewTicketBaseEntity & { organization_id: string }) {
@@ -88,6 +97,12 @@ export class TicketRepository {
     return archiveData;
   }
 
+  /**
+   * Listado de tickets con paginación keyset, alineado con
+   * `idx_tickets_org_date_feed (organization_id, date, created_at DESC, ticket_id DESC)`.
+   * `cursor` vacío = primera página: es la única que cuenta (`count`), porque
+   * alimenta "Cantidad de Tickets". `hasMore` sale de pedir `limit + 1`.
+   */
   async getAll({
     organization_id,
     user_id,
@@ -95,7 +110,7 @@ export class TicketRepository {
     winner,
     paid,
     group_user_ids,
-    page = 1,
+    cursor = '',
     limit = 100,
   }: {
     organization_id: string;
@@ -104,22 +119,31 @@ export class TicketRepository {
     winner?: boolean;
     paid?: boolean;
     group_user_ids?: string[];
-    page?: number;
+    cursor?: string;
     limit?: number;
-  }) {
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    // Determine which table to query based on date
+  }): Promise<{
+    data: ITicketEntityBack[];
+    hasMore: boolean;
+    next_cursor: string | null;
+    count?: number;
+  }> {
     const tableName = getTableName(date, 'tickets');
+    const withCount = !cursor;
 
     let query = supabase
       .from(tableName)
-      .select('*', { count: 'exact' })
+      .select(TICKET_LIST_COLUMNS, withCount ? { count: 'exact' } : {})
       .eq('date', date)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .range(from, to);
+      .is('deleted_at', null);
+
+    if (cursor) {
+      const [createdAt, ticketId] = decodeCursor(cursor, TICKET_CURSOR);
+      // PostgREST no tiene row values: el `lte` redundante acota el rango del
+      // índice y el OR desempata dentro del mismo created_at.
+      query = query
+        .lte('created_at', createdAt)
+        .or(`created_at.lt.${createdAt},and(created_at.eq.${createdAt},ticket_id.lt.${ticketId})`);
+    }
 
     if (group_user_ids?.length) {
       query = query.in('user_id', group_user_ids);
@@ -141,9 +165,17 @@ export class TicketRepository {
       }
     }
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .order('ticket_id', { ascending: false })
+      .limit(limit + 1);
     if (error) throw error;
-    return { data, count: count ?? 0 };
+
+    const page = keysetPage((data ?? []) as unknown as ITicketEntityBack[], limit, (ticket) => [
+      ticket.created_at,
+      ticket.ticket_id,
+    ]);
+    return withCount ? { ...page, count: count ?? 0 } : page;
   }
 
   async delete(props: IDeleteTicketEntity & { organization_id: string }) {

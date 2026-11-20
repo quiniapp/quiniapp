@@ -24,6 +24,7 @@ export const ModeToggle = <T extends string = ReportMode>({
   onChange,
   id = 'report-mode',
   label = 'Tipo de reporte',
+  disabled = false,
   options = [
     ['day', 'Día'],
     ['range', 'Rango de fechas'],
@@ -33,6 +34,7 @@ export const ModeToggle = <T extends string = ReportMode>({
   onChange: (mode: T) => void;
   id?: string;
   label?: string;
+  disabled?: boolean;
   /** Pares `[valor, texto]`; por defecto "Día | Rango de fechas". */
   options?: readonly (readonly [T, string])[];
 }) => (
@@ -49,9 +51,10 @@ export const ModeToggle = <T extends string = ReportMode>({
           type="button"
           role="radio"
           aria-checked={value === mode}
+          disabled={disabled}
           onClick={() => onChange(mode)}
           className={cn(
-            'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+            'rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
             value === mode
               ? 'bg-nav-active text-nav-active-foreground'
               : 'text-foreground hover:bg-accent hover:text-accent-foreground'

@@ -16,7 +16,7 @@ import { USER_TYPE, IUserEntityFront } from '@helper/types/user.type';
 import dayjs from 'dayjs';
 import { NotFoundError, InvalidDeleteTimeError } from '@helper/errors';
 import { betBase } from 'src/bet/helper/betBase';
-import { IPaginatedResponse } from '@helper/request/pagination.request';
+import { IKeysetPaginatedResponse } from '@helper/request/pagination.request';
 
 export class TicketController {
   private repository = new TicketRepository();
@@ -54,49 +54,45 @@ export class TicketController {
     return parseTicket(ticket);
   };
 
+  /**
+   * Listado keyset. `totalCount` (todo el set filtrado) solo en la primera
+   * request: alimenta "Cantidad de Tickets".
+   */
   getAll = async (
-    props: IGetAllTicketEntity & { page?: number; limit?: number; group_user_ids?: string[] }
-  ): Promise<IPaginatedResponse<ITicketEntityFront>> => {
-    const page = props.page ?? 1;
+    props: IGetAllTicketEntity & { cursor?: string; limit?: number; group_user_ids?: string[] }
+  ): Promise<IKeysetPaginatedResponse<ITicketEntityFront>> => {
+    const cursor = props.cursor ?? '';
     const limit = props.limit ?? 100;
 
-    let result;
-    if (props.user_type === USER_TYPE.CASHIER) {
-      result = await this.repository.getAll({
-        organization_id: props.organization_id,
-        user_id: props.user_id,
-        date: props.date ?? '',
-        winner: props?.winner,
-        paid: props?.paid,
-        page,
-        limit,
-      });
-    } else {
-      result = await this.repository.getAll({
-        organization_id: props.organization_id,
-        date: props.date ?? '',
-        user_id: props?.cashier_id,
-        winner: props?.winner,
-        paid: props?.paid,
-        group_user_ids: props?.group_user_ids,
-        page,
-        limit,
-      });
-    }
-
-    const { data: tickets, count } = result;
-    const parsedTickets = tickets.map((ticket) => parseTicket(ticket));
-
-    const totalPages = Math.ceil(count / limit);
+    const result =
+      props.user_type === USER_TYPE.CASHIER
+        ? await this.repository.getAll({
+            organization_id: props.organization_id,
+            user_id: props.user_id,
+            date: props.date ?? '',
+            winner: props?.winner,
+            paid: props?.paid,
+            cursor,
+            limit,
+          })
+        : await this.repository.getAll({
+            organization_id: props.organization_id,
+            date: props.date ?? '',
+            user_id: props?.cashier_id,
+            winner: props?.winner,
+            paid: props?.paid,
+            group_user_ids: props?.group_user_ids,
+            cursor,
+            limit,
+          });
 
     return {
-      data: parsedTickets,
+      data: result.data.map((ticket) => parseTicket(ticket)),
       pagination: {
-        currentPage: page,
         pageSize: limit,
-        totalCount: count,
-        totalPages,
-        hasMore: page < totalPages,
+        hasMore: result.hasMore,
+        next_cursor: result.next_cursor,
+        ...(result.count !== undefined && { totalCount: result.count }),
       },
     };
   };

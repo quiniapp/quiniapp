@@ -4,6 +4,41 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **`POLLA_PAGE_ROLES.CURRENT_ACCOUNT`** (`helper/polla/config/access.config.ts`) suma `ADMIN`: ve las liquidaciones de su grupo, solo lectura.
+
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **`IPollaGroupEditionLiquidation`** (`helper/polla/types/game.type.ts`): `{ edition, account }`, una liquidación de grupo con su edición.
+
+### Added - 2026-11-18 (parte diario de grupos por rango)
+
+- **`POLLA_GROUP_REPORT_MAX_DAYS`** (`helper/polla/config/session.config.ts`): 62 días como máximo en el parte diario de grupos por rango.
+
+### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
+
+- **`pollaAdminPercentage`** (`helper/polla/schemas/user.schema.ts`): número de 0 a 100, nullable y opcional ("El porcentaje va de 0 a 100"). Lo usan `groupAdmin` (alta del grupo y "Asignar admin") y `updatePollaUserSchema`.
+- **`IPollaUserEntityBack.admin_percentage`** y **`IPollaGroupWithAdmin.admin.admin_percentage`**.
+- **`liquidatePollaGroupEditionSchema.admin_percentage`** pasa a ser opcional y nullable: si el admin tiene su %, la base usa ese.
+- **`liquidatePollaGroupEditionsSchema`** e **`ILiquidatePollaGroupEditionsPayload`**: `{ groups }`, de 1 a `POLLA_GROUP_BATCH_MAX` (200), sin repetidos ("Hay un grupo repetido").
+
+### Added - 2026-11-17 (ZIP de liquidaciones compartido)
+
+- **`helper/functions/liquidationZip.ts`** (nuevo, puro y sin dependencias): las rutas del ZIP de liquidaciones que usan Polla y QuiniApp.
+  - `zipFolderName`: saca `\/:*?"<>|` y los puntos o espacios del final.
+  - `groupFoldersIfAny`: si alguna hoja tiene grupo, las demás van a la carpeta de sin grupo; si ninguna tiene, no hay carpetas de grupo.
+  - `liquidationZipEntries(items, root?)`: arma `raíz/[edición/][grupo/]archivo`, ordenado por edición y grupo, sin repetidos.
+  - `zipRootFolder`: el nombre del ZIP sin `.zip`.
+
+### Added - 2026-11-16 (rendimiento SQL — Fase 1: tipos de paginación keyset)
+
+- **`helper/request/pagination.request.ts`**:
+  - **`IKeysetPagination` / `IKeysetPaginatedResponse<T>`**: `pageSize`, `hasMore`, `next_cursor` y `totalCount?`, que solo viene en la primera request. Los usa `GET /ticket`.
+  - **`IBetsPagination`**: paginación de `GET /bet`. El modo lista usa `next_cursor`; el agrupado, `currentPage` / `totalCount` / `totalPages`.
+  - **`IPaginatedBetsResponse<T>`** pasa a usar `IBetsPagination` y ya no extiende `IPaginatedResponse`. Sus `aggregates` quedan en `totalAmount` / `totalPrize`: `totalCount` / `totalWinnersCount` solo los llenaba la búsqueda por ticket y nadie los leía.
+  - `IPaginatedResponse<T>` (offset) no cambia: lo sigue usando Polla.
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 - **`pollaCurrentAccountPaymentsSchema`** e **`IPollaCurrentAccountPaymentsPayload`** (`helper/polla/schemas/game.schema.ts`): `{ collections, paid }` para `PUT /current_account/:id`. Los dos son obligatorios, ≥ 0 ("El monto no puede ser negativo"), hasta 9.999.999.999,99, el máximo de `NUMERIC(12,2)` ("El monto es demasiado grande"), y con hasta 2 decimales ("El monto tiene hasta 2 decimales").

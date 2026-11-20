@@ -6,9 +6,12 @@ import {
   POLLA_USER_TYPE,
   POLLA_USER_TYPE_LABEL,
   canBePollaStreetUser,
+  isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { IPollaGroupEntityFront } from '@helper/polla/types/catalog.type';
 import { useUpdateUser } from '@/hooks/mutations/usePollaMutations';
+import { useAuth } from '@/providers/AuthContext';
+import { parseAmount } from '@/lib/editionAccount';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,9 +42,13 @@ interface EditUserDialogProps {
  * pasador).
  */
 export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDialogProps) => {
+  const { role } = useAuth();
   const isCashier = user.user_type === POLLA_USER_TYPE.CASHIER;
   const hasNumber = isCashier || user.user_type === POLLA_USER_TYPE.PLAYER;
   const canBeStreet = canBePollaStreetUser(user.user_type);
+  // El % de ganancia del admin de grupo lo fijan los que liquidan el grupo.
+  const editsAdminPercentage =
+    user.user_type === POLLA_USER_TYPE.ADMIN && Boolean(role && isPollaSuperRole(role));
 
   const [form, setForm] = useState({
     name: user.name,
@@ -50,6 +57,10 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
     password: '',
     number: user.number ? String(user.number) : '',
     fee: user.fee !== null ? String(user.fee) : '',
+    admin_percentage:
+      user.admin_percentage === null || user.admin_percentage === undefined
+        ? ''
+        : String(Number(user.admin_percentage)),
     disabled: user.disabled,
     is_street: user.is_street,
   });
@@ -71,6 +82,14 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
       ...(toApp ? { password: form.password } : {}),
       ...(hasNumber ? { number: form.number ? Number(form.number) : null } : {}),
       ...(isCashier && canEditFee ? { fee: form.fee === '' ? null : Number(form.fee) } : {}),
+      ...(editsAdminPercentage
+        ? {
+            admin_percentage:
+              form.admin_percentage.trim() === ''
+                ? null
+                : (parseAmount(form.admin_percentage) ?? Number.NaN),
+          }
+        : {}),
     };
 
     if (hasNumber && !payload.number) {
@@ -189,6 +208,23 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
                   value={form.fee}
                   onChange={(e) => setForm({ ...form, fee: e.target.value })}
                 />
+              </div>
+            )}
+            {editsAdminPercentage && (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="edit-user-admin-percentage">% de ganancia del admin</Label>
+                <Input
+                  id="edit-user-admin-percentage"
+                  inputMode="decimal"
+                  placeholder="A mano"
+                  value={form.admin_percentage}
+                  onChange={(e) =>
+                    setForm({ ...form, admin_percentage: e.target.value.replace(/[^\d.,]/g, '') })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se usa al liquidar el grupo. Vacío: se carga a mano.
+                </p>
               </div>
             )}
           </div>

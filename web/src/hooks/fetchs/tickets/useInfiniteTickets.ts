@@ -1,11 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ITicketEntityFront } from '@helper/types/ticket.type';
-import { IPaginatedResponse } from '@helper/request/pagination.request';
+import { IKeysetPaginatedResponse } from '@helper/request/pagination.request';
 import { BACKEND_ROUTES } from '../../../../routes/routes';
 import dayjs from 'dayjs';
 import { apiClient } from '@/lib/apiClient';
 
-interface FetchInfiniteTicketsProps {
+export interface FetchTicketsProps {
   user_id?: string;
   date?: string;
   winner?: boolean;
@@ -15,47 +15,40 @@ interface FetchInfiniteTicketsProps {
   group_id?: string | null;
 }
 
-const fetchPaginatedTickets = async (
-  props: FetchInfiniteTicketsProps,
-  page: number
-): Promise<IPaginatedResponse<ITicketEntityFront>> => {
+const DEFAULT_LIMIT = 100;
+
+/**
+ * Una página de GET /ticket (keyset; `cursor` vacío = primera página). Solo la
+ * primera trae `pagination.totalCount` (todos los tickets del filtro).
+ */
+export const fetchTicketsPage = async (
+  props: FetchTicketsProps,
+  cursor: string
+): Promise<IKeysetPaginatedResponse<ITicketEntityFront>> => {
   const normalizedDate = props.date ?? dayjs().format('YYYY-MM-DD');
 
-  const data = await apiClient.get<IPaginatedResponse<ITicketEntityFront>>(
+  const data = await apiClient.get<IKeysetPaginatedResponse<ITicketEntityFront>>(
     BACKEND_ROUTES.ticket.base,
     {
       params: {
         date: normalizedDate,
-        page: page.toString(),
-        limit: (props.limit ?? 100).toString(),
+        cursor: cursor || undefined,
+        limit: (props.limit ?? DEFAULT_LIMIT).toString(),
         cashier_id: props.user_id || undefined,
         winner: props.winner ? 'true' : undefined,
-        paid: props.paid
-          ? 'true'
-          : props.not_paid
-            ? 'false'
-            : undefined,
+        paid: props.paid ? 'true' : props.not_paid ? 'false' : undefined,
         group_id: props.group_id || undefined,
       },
     }
   );
 
-  return (
-    data ?? {
-      data: [],
-      pagination: {
-        currentPage: 1,
-        pageSize: 0,
-        totalCount: 0,
-        totalPages: 0,
-        hasMore: false,
-      },
-    }
-  );
+  return data ?? { data: [], pagination: { pageSize: 0, hasMore: false, next_cursor: null } };
 };
 
-export const useInfiniteTickets = (props: FetchInfiniteTicketsProps) => {
-  return useInfiniteQuery<IPaginatedResponse<ITicketEntityFront>>({
+export const useInfiniteTickets = (props: FetchTicketsProps) => {
+  const limit = props.limit ?? DEFAULT_LIMIT;
+
+  return useInfiniteQuery({
     queryKey: [
       'tickets-infinite',
       props.user_id ?? null,
@@ -63,14 +56,13 @@ export const useInfiniteTickets = (props: FetchInfiniteTicketsProps) => {
       props.winner ?? null,
       props.paid ?? null,
       props.not_paid ?? null,
-      props.limit ?? 150,
+      limit,
       props.group_id ?? '',
     ],
-    queryFn: ({ pageParam = 1 }) => fetchPaginatedTickets(props, pageParam as number),
-    getNextPageParam: (lastPage) => {
-      return lastPage.pagination.hasMore ? lastPage.pagination.currentPage + 1 : undefined;
-    },
+    queryFn: ({ pageParam }) => fetchTicketsPage({ ...props, limit }, pageParam),
+    initialPageParam: '',
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasMore ? (lastPage.pagination.next_cursor ?? undefined) : undefined,
     enabled: Boolean(props.date),
-    initialPageParam: 1,
   });
 };

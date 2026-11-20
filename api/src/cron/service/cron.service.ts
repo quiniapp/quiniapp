@@ -86,8 +86,8 @@ export class CronService {
       console.log('[CronService] Stats before:');
       console.log(`  - Main bets: ${statsBefore.main_tables.bets_count}`);
       console.log(`  - Main tickets: ${statsBefore.main_tables.tickets_count}`);
-      console.log(`  - Archive bets: ${statsBefore.archive_tables.bets_count}`);
-      console.log(`  - Archive tickets: ${statsBefore.archive_tables.tickets_count}`);
+      console.log(`  - Archive bets (aprox.): ${statsBefore.archive_tables.bets_count}`);
+      console.log(`  - Archive tickets (aprox.): ${statsBefore.archive_tables.tickets_count}`);
 
       // Step 4: Archive old data
       console.log('[CronService] Archiving old data...');
@@ -119,8 +119,8 @@ export class CronService {
       console.log('\nSTATS AFTER:');
       console.log(`  - Main bets: ${statsAfter.main_tables.bets_count}`);
       console.log(`  - Main tickets: ${statsAfter.main_tables.tickets_count}`);
-      console.log(`  - Archive bets: ${statsAfter.archive_tables.bets_count}`);
-      console.log(`  - Archive tickets: ${statsAfter.archive_tables.tickets_count}`);
+      console.log(`  - Archive bets (aprox.): ${statsAfter.archive_tables.bets_count}`);
+      console.log(`  - Archive tickets (aprox.): ${statsAfter.archive_tables.tickets_count}`);
       console.log(`  - Compression ratio bets: ${statsAfter.compression_ratio.bets}%`);
       console.log(`  - Compression ratio tickets: ${statsAfter.compression_ratio.tickets}%`);
       console.log(`\n[CronService] Execution time: ${executionTime}ms`);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { POLLA_USER_TYPE } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
 import { CashierAccountView } from './CashierAccountView';
+import { AdminGroupAccountView } from './AdminGroupAccountView';
 import { AccountTabs } from './dialogs/shared';
 import { EditionAccountsView } from './edition/EditionAccountsView';
 import { GroupEditionAccounts } from './edition/GroupEditionAccounts';
@@ -19,8 +20,8 @@ const ACCOUNT_TABS: { value: AccountTab; label: string }[] = [
 /**
  * Superadmin+ liquida por edición: a cada pasador y, con los de un grupo
  * liquidados, al grupo (comisión del admin). "Historial por fechas" es lo
- * liquidado por días, solo para consultar. El pasador ve lo suyo. El admin no
- * entra (lo frena la ruta).
+ * liquidado por días, solo para consultar. El pasador ve lo suyo y el admin las
+ * liquidaciones de su grupo, solo para consultar.
  */
 export const CurrentAccountPage = () => {
   const { role } = useAuth();
@@ -37,6 +38,15 @@ export const CurrentAccountPage = () => {
       <div className="flex flex-col gap-4">
         {refreshRow}
         <CashierAccountView />
+      </div>
+    );
+  }
+
+  if (role === POLLA_USER_TYPE.ADMIN) {
+    return (
+      <div className="flex flex-col gap-4">
+        {refreshRow}
+        <AdminGroupAccountView />
       </div>
     );
   }

@@ -1,10 +1,22 @@
 import dayjs from 'dayjs';
-import { editionFileTag } from '@/lib/editionAccount';
+import {
+  groupFoldersIfAny,
+  liquidationZipEntries as zipEntries,
+  zipFolderName,
+  zipRootFolder,
+} from '@helper/functions/liquidationZip';
+import { groupLiquidationLabel } from '@/lib/groupLiquidation';
 
 /**
- * Reglas del ZIP de liquidaciones: carpetas por edición y grupo, nombres sin
- * colisiones y armado del archivo. Sin dependencias del DOM.
+ * Reglas del ZIP de liquidaciones de la Polla: nombres con fecha, carpetas por
+ * edición y grupo, y armado del archivo. Las rutas salen de
+ * `@helper/functions/liquidationZip` (las comparte QuiniApp). Sin DOM.
+ *
+ * `polla_liquidaciones_15-11-2026.zip`
+ * └ `polla_liquidaciones_15-11-2026/Grupo 1 - Leo 15-11-2026/1-6 Laura 15-11-2026.pdf`
  */
+
+export { zipFolderName, zipRootFolder };
 
 export const NO_GROUP_FOLDER = 'Sin grupo';
 
@@ -12,27 +24,21 @@ export type ZipGroup = { number: number; name: string };
 /** Filtro de grupo del exporte: un grupo, "Sin grupo" o ninguno. */
 export type ZipGroupFilter = { number: number } | 'none' | undefined;
 export type LiquidationZipScope =
-  | { kind: 'edition'; title: string }
+  /** Una edición: `date` es el de su liquidación; `special` → `polla_plus_…`. */
+  | { kind: 'edition'; date: string; special?: boolean }
   | { kind: 'range'; from: string; to: string } // YYYY-MM-DD
   | { kind: 'day'; date: string }; // YYYY-MM-DD
 
-export interface LiquidationZipItem {
-  fileName: string;
-  group?: ZipGroup;
-  /** Solo en varias ediciones; key distingue ediciones con el mismo título. */
-  edition?: { key: string; folder: string };
-}
+/** `DD-MM-YYYY` de una fecha `YYYY-MM-DD` (o un timestamp). */
+export const fileDate = (date: string) => dayjs(date).format('DD-MM-YYYY');
 
-/** Nombre apto para carpeta: sin caracteres prohibidos ni puntos/espacios al final. */
-export const zipFolderName = (text: string) =>
-  text
-    .replace(/[\\/:*?"<>|]/g, '_')
-    .trim()
-    .replace(/[. ]+$/, '');
+const FOLDER_TITLE_MAX = 24;
 
-const FOLDER_TITLE_MAX = 40;
-
-/** Carpeta de una edición en "Varias ediciones": `YYYY-MM-DD <título>`, título de hasta 40 caracteres. */
+/**
+ * Carpeta de una edición en "Varias ediciones": `YYYY-MM-DD <título>`, título
+ * de hasta 24 caracteres (con la raíz y las fechas, la ruta tiene que entrar en
+ * los 260 de Windows, que "Extraer todo" ya gasta en la carpeta de destino).
+ */
 export const editionZipFolder = (startDate: string, title: string) => {
   const clean = zipFolderName(title);
   if (!clean) return startDate;
@@ -43,81 +49,73 @@ export const editionZipFolder = (startDate: string, title: string) => {
   return `${startDate} ${short}`;
 };
 
-/** `{código} {nombre}.pdf` de un pasador dentro del ZIP. */
-export const liquidationZipPdfName = (cashierCode: string, userName: string | null | undefined) => {
+/** `{código} {nombre} {DD-MM-YYYY}.pdf` de un pasador dentro del ZIP. */
+export const liquidationZipPdfName = (
+  cashierCode: string,
+  userName: string | null | undefined,
+  date: string
+) => {
   const name = (userName ?? '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Pasador';
-  return `${cashierCode ? `${cashierCode} ` : ''}${name}.pdf`;
+  return `${cashierCode ? `${cashierCode} ` : ''}${name} ${fileDate(date)}.pdf`;
 };
 
-export const groupFolderName = (group?: ZipGroup) =>
-  group ? zipFolderName(`Grupo ${group.number} - ${group.name}`) : NO_GROUP_FOLDER;
+/** `Grupo N - Nombre DD-MM-YYYY` o `Sin grupo DD-MM-YYYY`. */
+export const groupFolderName = (group: ZipGroup | undefined, date: string) =>
+  zipFolderName(
+    `${group ? `Grupo ${group.number} - ${group.name}` : NO_GROUP_FOLDER} ${fileDate(date)}`
+  );
 
-/** Nombre del ZIP según el alcance y el filtro de grupo. */
+/** `polla_liquidaciones_grupos_DD-MM-YYYY.zip` (`polla_plus_…` en una edición especial). */
+export const groupLiquidationZipName = (p: { date: string; special?: boolean }) =>
+  `${p.special ? 'polla_plus' : 'polla'}_liquidaciones_grupos_${fileDate(p.date)}.zip`;
+
+/** `Grupo N - Nombre DD-MM-YYYY.ext` (sin el número, `Nombre DD-MM-YYYY.ext`). */
+export const groupLiquidationFileName = (
+  group: { number?: number; name: string },
+  date: string,
+  ext: 'pdf' | 'png'
+) => `${zipFolderName(`${groupLiquidationLabel(group)} ${fileDate(date)}`)}.${ext}`;
+
+/** Nombre del ZIP (y de su carpeta raíz) según el alcance y el filtro de grupo. */
 export const liquidationZipName = (scope: LiquidationZipScope, group?: ZipGroupFilter) => {
-  const fmt = (date: string) => dayjs(date).format('DD-MM-YYYY');
-  const base =
-    scope.kind === 'edition'
-      ? editionFileTag(scope.title)
-      : scope.kind === 'range'
-        ? `${fmt(scope.from)}_al_${fmt(scope.to)}`
-        : fmt(scope.date);
+  const prefix = scope.kind === 'edition' && scope.special ? 'polla_plus' : 'polla';
+  const dates =
+    scope.kind === 'range'
+      ? `${fileDate(scope.from)}_al_${fileDate(scope.to)}`
+      : fileDate(scope.date);
   const suffix = group === 'none' ? '_Sin_grupo' : group ? `_Grupo_${group.number}` : '';
-  return `polla_Liquidaciones_${base}${suffix}.zip`;
+  return `${prefix}_liquidaciones_${dates}${suffix}.zip`;
 };
 
-/** Agrega " (n)" antes de la extensión. */
-const withCounter = (path: string, n: number) => {
-  const dot = path.lastIndexOf('.');
-  const slash = path.lastIndexOf('/');
-  return dot > slash ? `${path.slice(0, dot)} (${n})${path.slice(dot)}` : `${path} (${n})`;
-};
+/** Una hoja del ZIP: archivo, grupo, fecha (de su liquidación) y, en varias, edición. */
+export interface LiquidationZipSheet {
+  fileName: string;
+  group?: ZipGroup;
+  /** `YYYY-MM-DD`: va en la carpeta del grupo. */
+  date: string;
+  edition?: { key: string; folder: string };
+}
 
-/** Ruta dentro del ZIP de cada archivo: [edición/]grupo/archivo, sin repetidos. */
-export const liquidationZipEntries = <T extends LiquidationZipItem>(items: T[]) => {
-  const editionOrder = new Map<string, number>();
-  items.forEach((item) => {
-    if (item.edition && !editionOrder.has(item.edition.key)) {
-      editionOrder.set(item.edition.key, editionOrder.size);
-    }
-  });
-  const rank = (item: T) => (item.edition ? (editionOrder.get(item.edition.key) ?? 0) : 0);
-  const groupRank = (item: T) => item.group?.number ?? Number.POSITIVE_INFINITY;
-
-  const sorted = items
-    .map((item, index) => ({ item, index }))
-    .sort((a, b) => {
-      const byEdition = rank(a.item) - rank(b.item);
-      if (byEdition !== 0) return byEdition;
-      if (groupRank(a.item) !== groupRank(b.item))
-        return groupRank(a.item) < groupRank(b.item) ? -1 : 1;
-      return a.index - b.index;
-    });
-
-  // Carpeta de edición única por key, sin distinguir mayúsculas: si ya está
-  // tomada lleva (2), (3)…
-  const folderByKey = new Map<string, string>();
-  const takenFolders = new Set<string>();
-  const editionFolder = (edition: { key: string; folder: string }) => {
-    const known = folderByKey.get(edition.key);
-    if (known !== undefined) return known;
-    const base = zipFolderName(edition.folder) || 'Edición';
-    let folder = base;
-    for (let n = 2; takenFolders.has(folder.toLowerCase()); n += 1) folder = `${base} (${n})`;
-    takenFolders.add(folder.toLowerCase());
-    folderByKey.set(edition.key, folder);
-    return folder;
-  };
-
-  const used = new Set<string>();
-  return sorted.map(({ item }) => {
-    const prefix = item.edition ? `${editionFolder(item.edition)}/` : '';
-    const base = `${prefix}${groupFolderName(item.group)}/${item.fileName}`;
-    let path = base;
-    for (let n = 2; used.has(path); n += 1) path = withCounter(base, n);
-    used.add(path);
-    return { path, item };
-  });
-};
+/**
+ * Ruta de cada archivo: `raíz/[edición/][grupo fecha/]archivo`, grupos por
+ * número y "Sin grupo" al final. Si ninguna hoja tiene grupo, sin carpetas de
+ * grupo.
+ */
+export const liquidationZipEntries = <T extends LiquidationZipSheet>(items: T[], root: string) =>
+  zipEntries(
+    groupFoldersIfAny(
+      items.map((item) => ({
+        sheet: item,
+        fileName: item.fileName,
+        edition: item.edition,
+        group: item.group
+          ? { folder: groupFolderName(item.group, item.date), order: item.group.number }
+          : undefined,
+      })),
+      (item) => groupFolderName(undefined, item.sheet.date)
+    ),
+    root
+  ).map(({ path, item }) => ({ path, item: item.sheet }));
 
 /**
  * Arma el ZIP comprimido (el PDF de jsPDF sale sin comprimir); fflate se carga
@@ -128,3 +126,38 @@ export const zipFiles = async (files: { path: string; data: Uint8Array }[]) => {
   const out = zipSync(Object.fromEntries(files.map((f) => [f.path, f.data])), { level: 6 });
   return new Blob([out], { type: 'application/zip' });
 };
+
+/**
+ * Nombres para compartir las imágenes sueltas (sin carpetas): el último
+ * segmento de cada ruta; si se repite, se le antepone la carpeta que sigue a la
+ * raíz (la edición) y, si todavía se repite, ` (n)` antes de la extensión.
+ */
+export const looseFileNames = (paths: string[]) => {
+  const parts = paths.map((path) => path.split('/'));
+  const base = parts.map((segments) => segments[segments.length - 1]);
+  const count = (names: string[], name: string) => names.filter((n) => n === name).length;
+  const named = base.map((name, i) =>
+    count(base, name) > 1 && parts[i].length > 2 ? `${parts[i][1]} ${name}` : name
+  );
+  const seen = new Map<string, number>();
+  return named.map((name) => {
+    if (count(named, name) < 2) return name;
+    const n = (seen.get(name) ?? 0) + 1;
+    seen.set(name, n);
+    if (n === 1) return name;
+    const dot = name.lastIndexOf('.');
+    return dot === -1 ? `${name} (${n})` : `${name.slice(0, dot)} (${n})${name.slice(dot)}`;
+  });
+};
+
+/**
+ * Límites de la hoja de compartir de Android Chrome: más de 10 archivos o más
+ * de 50 MB en total se rechazan con `NotAllowedError` (igual que un share sin
+ * toque), así que ni se intenta: se manda el ZIP.
+ */
+export const MAX_SHARE_FILES = 10;
+export const MAX_SHARE_BYTES = 50 * 1024 * 1024;
+
+/** True si las imágenes no entran sueltas en la hoja de compartir. */
+export const shouldZipImages = (files: { size: number }[]) =>
+  files.length > MAX_SHARE_FILES || files.reduce((sum, f) => sum + f.size, 0) > MAX_SHARE_BYTES;

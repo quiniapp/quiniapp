@@ -232,6 +232,8 @@ export interface IPollaUserEntityBack {
   is_street: boolean;
   fee: number | null;
   fee_plus: number | null;
+  /** % de ganancia del admin de grupo al liquidar el grupo; null = a mano. Solo ADMIN. */
+  admin_percentage: number | null;
   /** Sin uso: las jugadas ya no se pagan con créditos. Queda por el historial. */
   credit_balance: number;
   theme: POLLA_THEME;

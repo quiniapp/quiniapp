@@ -1,6 +1,5 @@
-import { Buffer } from 'node:buffer';
 import { supabase } from '@database/db.connection';
-import { BadRequestError, NotFoundError } from '@helper/errors';
+import { NotFoundError } from '@helper/errors';
 import { IPaginatedResponse } from '@helper/request/pagination.request';
 import {
   IPollaBetCourtesy,
@@ -16,6 +15,7 @@ import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
 import { pollaToday } from '../../helper/date';
 import { ilikeAny } from '../../helper/search';
+import { CURSOR_TIMESTAMP, CURSOR_UUID, decodeCursor, encodeCursor } from '../../../utils/keyset';
 
 /**
  * El grupo del pasador viaja embebido: es la columna "Coord" del listado y su
@@ -80,7 +80,7 @@ export interface PollaBetFilters {
 
 export interface PollaBetQueryOptions {
   sort: PollaBetSort;
-  /** Keyset: posición de la última fila de la página previa (ver `encodeCursor`). */
+  /** Keyset: posición de la última fila de la página previa (ver `encodeBetCursor`). */
   cursor?: string | null;
 }
 
@@ -131,45 +131,27 @@ interface CursorPosition {
   id: string;
 }
 
-const encodeCursor = (row: PollaBetRow, sort: PollaBetSort) => {
-  const parts =
+const encodeBetCursor = (row: PollaBetRow, sort: PollaBetSort) =>
+  encodeCursor(
     sort === 'hits'
       ? [row.hits, row.created_at, row.polla_bet_id]
-      : [row.created_at, row.polla_bet_id];
-  return Buffer.from(parts.join('|')).toString('base64url');
-};
+      : [row.created_at, row.polla_bet_id]
+  );
 
-// El cursor lo manda el cliente y sus partes se interpolan en un filtro `or=`
-// de PostgREST, que es un mini-lenguaje con comas y paréntesis: sin validar,
-// se pueden inyectar cláusulas extra. Solo se aceptan un entero chico, un
-// timestamp ISO y un UUID, así que no queda ningún carácter con significado en
-// ese lenguaje.
+// Validación de las partes del cursor: ver `api/src/utils/keyset.ts`.
 const CURSOR_HITS = /^\d{1,2}$/;
-const CURSOR_TIMESTAMP =
-  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}:?\d{2}|Z)?$/;
-const CURSOR_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const decodeCursor = (cursor: string, sort: PollaBetSort): CursorPosition => {
-  let decoded: string;
-  try {
-    decoded = Buffer.from(cursor, 'base64url').toString('utf8');
-  } catch {
-    throw new BadRequestError('Cursor inválido');
+const decodeBetCursor = (cursor: string, sort: PollaBetSort): CursorPosition => {
+  if (sort === 'hits') {
+    const [hits, createdAt, id] = decodeCursor(cursor, [
+      CURSOR_HITS,
+      CURSOR_TIMESTAMP,
+      CURSOR_UUID,
+    ]);
+    return { hits: Number(hits), createdAt, id };
   }
-
-  const parts = decoded.split('|');
-  const [hits, createdAt, id] = sort === 'hits' ? parts : ['0', ...parts];
-
-  if (
-    parts.length !== (sort === 'hits' ? 3 : 2) ||
-    !CURSOR_HITS.test(hits ?? '') ||
-    !CURSOR_TIMESTAMP.test(createdAt ?? '') ||
-    !CURSOR_UUID.test(id ?? '')
-  ) {
-    throw new BadRequestError('Cursor inválido');
-  }
-
-  return { hits: Number(hits), createdAt, id };
+  const [createdAt, id] = decodeCursor(cursor, [CURSOR_TIMESTAMP, CURSOR_UUID]);
+  return { hits: 0, createdAt, id };
 };
 
 /** Filas que van después del cursor, en el mismo orden que el listado. */
@@ -239,7 +221,7 @@ export class PollaBetRepository {
     if (filters.paymentStatus) query = query.eq('payment_status', filters.paymentStatus);
 
     if (useKeyset) {
-      query = query.or(afterCursor(decodeCursor(options.cursor!, options.sort), options.sort));
+      query = query.or(afterCursor(decodeBetCursor(options.cursor!, options.sort), options.sort));
     }
 
     if (options.sort === 'hits') query = query.order('hits', { ascending: false });
@@ -266,7 +248,7 @@ export class PollaBetRepository {
     return {
       ...page,
       next_cursor:
-        last && rows.length === pagination.limit ? encodeCursor(last, options.sort) : null,
+        last && rows.length === pagination.limit ? encodeBetCursor(last, options.sort) : null,
     };
   }
 

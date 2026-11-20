@@ -1,4 +1,4 @@
-import { ComponentProps, ReactNode, useMemo, useState } from 'react';
+import { ComponentProps, ReactNode, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { BarChart2, CreditCard, FileDown, FileText, List, Pencil } from 'lucide-react';
@@ -46,13 +46,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { downloadDailyAccountsPDF } from '@/functions/current-account/accountTablePDF';
-import { exportLiquidationSlipsZip } from '@/functions/current-account/liquidationSlipPDF';
+import type { LiquidationFormat } from '@/functions/current-account/liquidationDelivery';
+import { prepareLiquidationSlips } from '@/functions/current-account/liquidationSlipPDF';
 import { liquidationZipName } from '@/lib/liquidationZip';
+import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
 import { groupLabel } from '@/lib/pollaGroups';
 import { ReportMode, fmtMoney } from '../format';
 import { ReportDialog, ReportKind } from '../dialogs/ReportDialogs';
 import { ExportLiquidationsDialog } from '../dialogs/ExportLiquidationsDialog';
+import { useLiquidationDelivery } from '../dialogs/LiquidationFormat';
 import { ModeToggle } from '../dialogs/shared';
 import { GroupAccountHistory } from '../GroupAccounts';
 import { EditDayPaymentsDialog } from './EditDayPaymentsDialog';
@@ -100,6 +103,15 @@ export const DailyHistoryView = () => {
   const [report, setReport] = useState<ReportKind | null>(null);
   const [printing, setPrinting] = useState(false);
   const [exportingSlips, setExportingSlips] = useState(false);
+  const [format, setFormat] = useState<LiquidationFormat>('pdf');
+  const delivery = useLiquidationDelivery();
+  // Lo ya preparado deja de valer si cambia el formato o se cierra la lista.
+  const { reset: resetDelivery } = delivery;
+  useEffect(() => resetDelivery(), [format, exportingSlips, resetDelivery]);
+  // Al cerrar la lista el formato vuelve a PDF.
+  useEffect(() => {
+    if (!exportingSlips) setFormat('pdf');
+  }, [exportingSlips]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const rangeFrom = mode === 'range' ? accountRangeFrom(from, date) : undefined;
@@ -162,11 +174,22 @@ export const DailyHistoryView = () => {
     }
     setPrinting(true);
     try {
+      const groupName = groupId
+        ? noGroup
+          ? 'Sin grupo'
+          : groupById.get(groupId)?.name
+        : undefined;
       await downloadDailyAccountsPDF({
         date,
         from: rangeFrom,
         rows: views,
-        groupName: groupId ? (noGroup ? 'Sin grupo' : groupById.get(groupId)?.name) : undefined,
+        groupName,
+        // Sin edición: "Polla parte diario <día>" o "<desde> al <hasta>".
+        fileName: pollaDailyReportName({
+          date: rangeFrom ?? date,
+          to: rangeFrom ? date : undefined,
+          group: noGroup ? groupName : groupFileLabel(groupId ? groupById.get(groupId) : null),
+        }),
       });
     } catch {
       toast.error('No se pudo generar el PDF');
@@ -188,18 +211,23 @@ export const DailyHistoryView = () => {
     setPrinting(true);
     try {
       const selectedGroup = groupId ? groupById.get(groupId) : undefined;
-      await exportLiquidationSlipsZip({
-        sheets: accounts.map((account) => ({
-          account,
-          cashierCode: cashierCode(account),
-          group: groupOf(account),
-        })),
-        zipName: liquidationZipName(
-          rangeFrom ? { kind: 'range', from: rangeFrom, to: date } : { kind: 'day', date },
-          noGroup ? 'none' : selectedGroup ? { number: selectedGroup.number } : undefined
-        ),
-      });
-      setExportingSlips(false);
+      const done = await delivery.run(() =>
+        prepareLiquidationSlips({
+          // Lo liquidado por días lleva el día elegido (en rango, el "Hasta").
+          sheets: accounts.map((account) => ({
+            account,
+            cashierCode: cashierCode(account),
+            group: groupOf(account),
+            date,
+          })),
+          zipName: liquidationZipName(
+            rangeFrom ? { kind: 'range', from: rangeFrom, to: date } : { kind: 'day', date },
+            noGroup ? 'none' : selectedGroup ? { number: selectedGroup.number } : undefined
+          ),
+          format,
+        })
+      );
+      if (done) setExportingSlips(false);
     } catch (error) {
       console.error(error);
       toast.error('No se pudieron exportar las liquidaciones');
@@ -413,7 +441,18 @@ export const DailyHistoryView = () => {
         <ExportLiquidationsDialog
           accounts={views}
           cashierCodeOf={cashierCode}
-          exporting={printing}
+          exporting={printing || delivery.busy}
+          format={format}
+          onFormatChange={setFormat}
+          onSelectionChange={delivery.reset}
+          pendingShare={
+            delivery.pending
+              ? () =>
+                  void delivery.retry().then((done) => {
+                    if (done) setExportingSlips(false);
+                  })
+              : undefined
+          }
           onExport={handleExportLiquidations}
           onClose={() => setExportingSlips(false)}
         />

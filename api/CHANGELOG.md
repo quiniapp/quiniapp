@@ -4,6 +4,150 @@ All notable changes to the API workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-18 (ajustes de la revisión de liquidaciones de grupo e imagen)
+
+- **`GET /edition_account/group_mine`**: usa `PollaEditionAccountRepository.groupAccountsOfGroup` (nuevo), con orden `edited_at` desc + `polla_group_edition_account_id` desc y tope `GROUP_MINE_MAX_ROWS` (500) en la base. `groupAccounts` (llamadas del dueño) no cambia. La ruta sigue ordenando por `start_date` de la edición.
+- `GET /group_account/mine`: comentario de por qué el OFFSET está acotado (una fila por liquidación de un solo grupo; misma paginación que `GET /`).
+
+### Added - 2026-11-18 (el admin ve las liquidaciones de su grupo)
+
+- **`GET /edition_account/group_mine`** (`polla-edition-account.route.ts`): guard `ADMIN`; devuelve `{ liquidations: [{ edition, account }] }` con las liquidaciones de su grupo por edición, de la más nueva a la más vieja (`start_date`). El grupo (`user.polla_group_id`) y la organización salen solo de la sesión; no lee nada del query.
+- **`GET /group_account/mine`** (`polla-group-account.route.ts`): guard `ADMIN`; la misma respuesta paginada que `GET /group_account`, siempre con el grupo y la organización de la sesión (ignora `polla_group_id` del query).
+- `group_account`: el `router.use` global pasa a guards por ruta (`GET /` sigue con `POLLA_ACCOUNT_ROLES`). El resto de las rutas de `edition_account` siguen cerradas al admin.
+- Sin índice nuevo: `polla_group_edition_accounts_group_edition_uniq` y `polla_group_accounts_group_date_uniq` cubren el filtro por grupo.
+
+### Changed - 2026-11-18 (rendimiento SQL — Fase 1c: get_archive_stats estimado e índices de tickets sin uso)
+
+- **`get_archive_stats`** (migración `20261118061355_perf_get_archive_stats_estimate.sql`):
+  - Por qué: tardaba ~4,2 s en prod porque contaba `bets_archive` completa (~3,3M filas, ~1 GB) leyéndola de disco. Lo llama el cron de archivado dos veces por noche, solo para el log, y `GET /api/private/archive/stats`.
+  - Las tablas principales siguen con conteo exacto; las de archivo pasan a `pg_stat_user_tables.n_live_tup` (estimación). La respuesta agrega `archive_tables.is_estimate: true`.
+  - `CREATE OR REPLACE`: conserva los grants y el `search_path`.
+- **`archive.service.ts`**: el fallback manual cuenta el archivo con `count: 'estimated'`; `IArchiveStats.archive_tables.is_estimate`.
+- **`cron.service.ts`**: el log marca los conteos del archivo como "(aprox.)".
+- **Drop de índices de `tickets` sin uso** (una migración por índice, `DROP INDEX CONCURRENTLY IF EXISTS`):
+  - `idx_tickets_total_prize` (`20261118061356`);
+  - `idx_tickets_winner_deleted_created` (`20261118061357`);
+  - `idx_tickets_winner_user_deleted_created` (`20261118061358`);
+  - `idx_tickets_date_deleted_winner_created` (`20261118061359`).
+
+  Tienen 0 usos en el delta de 24 h de prod y prácticamente ninguno en 14 meses. Cada carga de ticket los mantenía, y los que incluyen `winner` o `total_prize` impedían updates HOT en `generate_winners`.
+
+### Changed - 2026-11-18 (rendimiento SQL — Fase 1b: generate_winners solo escribe lo que cambia)
+
+**Qué cambia.** Cargar resultados (`generate_winners_and_calculate_accounts`) deja de reescribir todas las jugadas y tickets del turno: solo actualiza las filas cuyo premio, aciertos o estado de ganador cambian. Mismo resultado.
+
+- **Por qué.** En prod (delta de 24 h de `pg_stat_statements`) cada carga de resultados tardaba ~311 ms y tocaba ~50k buffers. Las jugadas se insertan con `prize 0`, `hits 0` y `winner false`, así que el `UPDATE` era un no-op para casi todas. Igual creaba una versión nueva de cada fila y, como la mayoría de esos updates no son HOT, una entrada en cada índice de `bets`.
+- **Migración `20261118054824_perf_generate_winners_skip_unchanged.sql`** (`CREATE OR REPLACE` de `generate_winners`, misma firma, conserva grants y `search_path`):
+  - `UPDATE bets` / `UPDATE tickets` solo donde los valores son distintos (`IS DISTINCT FROM`);
+  - los totales por ticket y turno se calculan desde todas las jugadas del turno (`calculated_payouts`), no desde el `RETURNING` del `UPDATE`;
+  - el JSON devuelto (`affected_tickets`, `winner_tickets`) cuenta lo mismo que antes.
+- **Verificación:**
+  - pgTAP `260_generate_winners_skip_unchanged.test.sql` (19 tests): premios por jugada y por ticket sumando turnos, conteos del JSON, re-run sin reescrituras (ctid igual) y corrección de resultados que da vuelta ganadoras;
+  - en local, checksums iguales a la versión anterior en jugadas, tickets, `ticket_prizes_by_turn` y cuentas corrientes;
+  - con 24,5k jugadas por turno, la primera carga baja de 27,6 s a 3,8 s y el re-run de 12 s a 3,2 s, con 1,2k bloques modificados en lugar de 73k.
+
+### Added - 2026-11-18 (parte diario de grupos por rango)
+
+- **`GET /edition_account/group_accounts?from=YYYY-MM-DD&to=YYYY-MM-DD`**: las liquidaciones de grupo de la organización hechas en ese rango.
+  - Filtra por fecha de liquidación (`edited_at`), con bordes semiabiertos en hora de Argentina: `[from 00:00, to + 1 00:00)`, UTC-3.
+  - Valida que vengan las dos fechas, Desde ≤ Hasta ≤ hoy y hasta `POLLA_GROUP_REPORT_MAX_DAYS` (62) días; si no, 400.
+  - Ordena por `edited_at` y id, con tope de 5000 filas (400 si se pasa).
+  - Sin `from`/`to` sigue igual (por edición o grupo, ordenado por nombre).
+  - Columnas explícitas en lugar de `select('*')`.
+- **Migración `20261117235041_polla_group_edition_accounts_edited_idx.sql`**: índice `(polla_organization_id, edited_at, polla_group_edition_account_id)`. Con `EXPLAIN` es un Index Scan con la organización y el rango como condición de acceso, y sin `Sort`.
+
+### Added - 2026-11-17 (% del admin de grupo y liquidar varios grupos)
+
+- **Migración `20261117233719_polla_admin_percentage.sql`:**
+  - `polla_users.admin_percentage NUMERIC(5,2)`: el % de ganancia del admin de grupo. Lo tiene solo un ADMIN, de 0 a 100 (`polla_users_admin_percentage_check`). NULL quiere decir que se carga a mano al liquidar; los admins que ya existían quedan así.
+  - `polla_create_group_with_admin` lee `p_admin->>'admin_percentage'`.
+  - `polla_liquidate_group_edition`: si el admin activo del grupo tiene %, usa ese e ignora el que manda el cliente; si no, exige uno válido (`POLLA_GROUP_PERCENTAGE_INVALID`). El control se hace antes de redondear, así un valor fuera de rango no desborda.
+  - `polla_liquidate_group_editions(org, edition, entries JSONB, actor)` (nueva): liquida varios grupos por número de grupo, en una transacción.
+    - Si uno falla, se deshace todo y el error dice qué grupo: `POLLA_GROUP_BATCH[Grupo N - Nombre] <error>`.
+    - Otros errores: `POLLA_GROUP_BATCH_EMPTY`, `POLLA_GROUP_BATCH_DUPLICATED`, y `POLLA_GROUP_NOT_FOUND` si el grupo es de otra organización.
+- **`POST /edition_account/:editionId/group_liquidate_many`** (`POLLA_ACCOUNT_ROLES`), con body `{ groups: [{ polla_group_id, admin_percentage? }] }`. Repository: `liquidateGroups`.
+- **`POST /edition_account/:editionId/group_liquidate`**: `admin_percentage` pasa a ser opcional.
+- **`PUT /user/:id`** acepta `admin_percentage`, solo para un ADMIN (si no, 400) y solo si lo cambia superadmin, capitalista o dueño (si no, 403). El admin no se cambia su propio %.
+- **Grupos:**
+  - `GET /group` devuelve `admin.admin_percentage`;
+  - el alta del grupo y "Asignar admin" (con admin nuevo) guardan el %.
+  - `PUBLIC_COLUMNS` de usuarios suma la columna.
+- **`mapPollaError`** (`helper/polla-errors.ts`): traduce `POLLA_GROUP_BATCH[...]` con el error de adentro y le antepone el grupo.
+- **pgTAP `250_polla_admin_percentage.test.sql`** (16 pruebas): el CHECK, el alta con y sin %, que el % del admin gane, que sin % haya que mandarlo, el lote, el lote que falla sin liquidar ninguno, vacío, repetidos y grupo inexistente.
+
+### Changed - 2026-11-16 (rendimiento SQL — Fase 1: keyset en jugadas y tickets)
+
+**Qué cambia.** `GET /bet` (modo lista) y `GET /ticket` pasan de offset + `count: 'exact'` en cada página a **paginación keyset** con índices alineados. Medido en local (122k jugadas por organización y día): la página 1 de jugadas baja de 390 ms a 0,8 ms y una página profunda de 448 ms (sort en disco) a 0,3 ms. Plan y mediciones: `docs/plan-rendimiento-sql.md`, `docs/rendimiento-sql-baseline.md`.
+
+#### Migraciones (una por archivo: `CREATE INDEX CONCURRENTLY` tiene que ser la única sentencia)
+- `20261116213606_perf_idx_bets_org_date_feed.sql`: `bets (organization_id, date, created_at DESC, bet_order, bet_id) WHERE deleted_at IS NULL`.
+- `20261116213607_perf_idx_bets_archive_org_date_feed.sql`: el mismo sobre `bets_archive`. Hasta ahora ningún índice del archivo empezaba por organización.
+- `20261116213608_perf_idx_tickets_org_date_feed.sql`: `tickets (organization_id, date, created_at DESC, ticket_id DESC) WHERE deleted_at IS NULL`.
+- `20261116213609_perf_idx_tickets_archive_org_date_feed.sql`: el mismo sobre `tickets_archive`.
+- Reemplazan a `idx_bets_org_date_active` y a `idx_tickets_date_org_active`, que se dropean en la Fase 6 después de medir en prod.
+- Después del push, verificar `SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;`.
+
+#### API
+- **`api/src/utils/keyset.ts`** (nuevo): helper compartido de cursores.
+  - `encodeCursor` / `decodeCursor`: base64url opaco con validación de cada parte; un cursor inválido responde 400.
+  - `keysetPage`: hace `limit + 1` → `hasMore` + `next_cursor`.
+  - `parsePageSize`: tope `MAX_PAGE_SIZE = 900`, porque PostgREST corta en `max_rows` = 1000.
+  - `parsePageNumber`: guard de NaN.
+  - Tests en `keyset.test.ts` (`node:test`).
+  - Polla (`polla-bet.repository.ts`) pasa a usar este helper sin cambio de comportamiento.
+- **`BetRepository.getAllBets`**:
+  - Recibe `cursor` en vez de `page`. Orden `created_at DESC, bet_order ASC, bet_id ASC`, con desempate único: en prod hay hasta 1.254 jugadas con el mismo `created_at`.
+  - Filtro `lte` redundante + `or` para el desempate. Sin count.
+  - Organización por `eq`: con `in` (`= ANY`) el índice no entrega el orden.
+  - Select explícito (columnas de `parseBet` + `lotteries`/`schedules` achicados).
+  - `ticket_number` se filtra directo sobre `bets`, sin la consulta previa a `tickets`.
+- **`BetController.getAllBets`** (modo lista):
+  - Respuesta `pagination: { pageSize, hasMore, next_cursor }`.
+  - Los totales del día (`aggregates`) se calculan solo en la primera request (sin cursor), en paralelo con la página y con la misma semántica (filtros base).
+  - Con `ticket_number` ya no se llama a `getAmountsByTicket`: nadie leía esos agregados y el detalle del ticket usa `GET /bet/amounts`.
+  - El modo agrupado sigue con `page`.
+- **`GET /bet`**: acepta `cursor`, topea `limit` y un cursor inválido responde 400 (los `AppError` pasan al middleware de errores).
+- **`TicketRepository.getAll` / `TicketController.getAll` / `GET /ticket`**:
+  - Keyset con orden `created_at DESC, ticket_id DESC` y select explícito.
+  - `count: 'exact'` solo en la primera request, como `pagination.totalCount`, que alimenta "Cantidad de Tickets".
+  - El parámetro `page` ya no se usa.
+
+#### Verificación
+- `api/scripts/verify-keyset.ts` (solo local; aborta si `SUPABASE_URL` no es localhost) recorre con cursor sobre el dataset de `seed_perf.sql`:
+  - jugadas del día, por pasador, por ticket y en un día archivado;
+  - tickets;
+  - el feed de Polla en sus dos órdenes.
+- Comprueba:
+  - orden estricto;
+  - recorrido = `COUNT(*)`;
+  - totales = suma recorrida;
+  - `totalCount` = `COUNT(*)`;
+  - cursor manipulado → 400.
+
+### Added - 2026-11-16 (rendimiento SQL — Fase 0: scripts de medición)
+
+**Qué cambia.** Nada en runtime: scripts para medir antes de tocar índices o queries (plan en `docs/plan-rendimiento-sql.md`, mediciones en `docs/rendimiento-sql-baseline.md`).
+
+- **`api/supabase/scripts/perf_baseline.sql`** (solo lectura, para prod o develop vía psql). Abre la sesión con `default_transaction_read_only = on` y `statement_timeout = 60s`. Releva:
+  - configuración del planner;
+  - tamaño, actividad (seq vs idx, HOT updates, vacuum) y uso de cada índice de `bets`, `bets_archive`, `tickets`, `tickets_archive` y `polla_bets`;
+  - definiciones reales de esos índices;
+  - top 20 de `pg_stat_statements` por tiempo total y por tiempo medio;
+  - NULL en `created_at` / `bet_order`, que bloquearían el keyset;
+  - volumen por organización y día;
+  - formatos de `ticket_number` de Polla, para validar la futura columna `ticket_stamp`.
+- **`api/supabase/scripts/perf_stats_snapshot.sql`** (solo lectura) y **`perf_stats_diff.ts`** (local, solo lee archivos). La primera saca una foto CSV de los contadores acumulados (`pg_stat_statements`, `pg_stat_user_indexes`, `pg_stat_user_tables`). La segunda compara dos fotos (T0/T1) y muestra el estado **actual** sin resetear estadísticas: en prod acumulan desde 2025-09-16 y mezclan problemas ya resueltos.
+- **`api/supabase/scripts/seed_perf.sql`** (solo local; exige `-v confirm_local=yes`).
+  - Genera 1M `bets`, 200k `tickets`, ~1M `bets_archive`, ~204k `tickets_archive` y 300k `polla_bets` en organizaciones `perf-org-*` / `perf-polla-*`.
+  - Incluye empates de `created_at` a propósito, para probar desempates de keyset.
+  - Es idempotente: borra lo sembrado antes, incluidas las tablas de Polla que la UI pudo haber llenado.
+  - Termina con `ANALYZE`.
+- **`api/supabase/scripts/perf_explain_local.sql`** (solo local).
+  - Corre `EXPLAIN (ANALYZE, BUFFERS)` de las queries calientes: `GET /bet` y `GET /ticket` (página 1, página profunda, count, archivo, ticket), feed de Polla con cursores profundos (OR actual, acceso redundante y row values) y "Revisar ticket".
+  - Para el interior de las RPC (agrupadas, totales, cuentas por edición, ventas) usa `auto_explain`.
+  - Es el gate de aceptación de cada fase.
+- **Verificado:** Supabase CLI v2.65.7 corre cada archivo de migración como pipeline. `CREATE INDEX CONCURRENTLY` funciona solo como única sentencia del archivo; con dos o más sentencias falla (SQLSTATE 25001) y deja estado parcial. Documentado en `CLAUDE.md` (*SQL Performance*) y en el baseline.
+
 ### Added - 2026-11-16 (editar cobros y pagos del historial por fecha)
 
 **Qué cambia.** En el historial por fechas se pueden corregir los cobros y pagos de un día de un pasador, liquidado o no. La diferencia se arrastra al saldo de todos sus días siguientes. Los reclamos no se editan: cambiarían el pase, el subtotal y la comisión ya liquidados (un reclamo nuevo va en la cuenta por edición).
