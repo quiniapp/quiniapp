@@ -24,7 +24,13 @@ import {
   isPollaSuperRole,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
-import { useBets, useEditions, useRefreshBets, useUser } from '@/hooks/fetchs/usePollaData';
+import {
+  useBets,
+  useEditions,
+  useEditionsByIds,
+  useRefreshBets,
+  useUser,
+} from '@/hooks/fetchs/usePollaData';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
 import {
   unpaidQuery,
@@ -54,7 +60,8 @@ import { makePollaTicketPdf } from '@/functions/makePollaTicket';
 import { deliverPdf } from '@/functions/printPdf';
 import { BetsList } from '@/features/bets/BetsList';
 import { EditBetDialog, EditableBet } from '@/features/bets/EditBetDialog';
-import { EditionPicker } from '@/features/bets/EditionPicker';
+import { EditionPool } from '@/features/bets/EditionPool';
+import { EditionSelect } from '@/features/bets/EditionSelect';
 import { FreeRepeatDialog } from '@/features/bets/FreeRepeatDialog';
 import { usePollaTicketPrinter } from '@/features/bets/usePollaTicketPrinter';
 import { PickedBet, RepeatBetDialog } from '@/features/make-bet/RepeatBetDialog';
@@ -64,6 +71,7 @@ import { ShareTicketsPdfButton } from '@/features/bets/ShareTicketsPdfButton';
 import { WinnersBanner } from '@/features/bets/WinnersBanner';
 import { useBetsEdition } from '@/features/bets/useBetsEdition';
 import { useLoadRangeParam } from '@/features/bets/useLoadRangeParam';
+import { missingIds } from '@/lib/editionSelect';
 
 const fmtMoney = (value: number) =>
   new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(Number(value));
@@ -88,13 +96,15 @@ export const ManageBetsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     editionId,
-    editionList,
+    editionSelect,
     selectedEdition,
     labelFor,
     titleFor,
     drawLabelsFor,
+    editionOf,
     editionStatusOf,
-  } = useBetsEdition();
+    fetchEdition,
+  } = useBetsEdition({ limit: 10, fetchMore: true });
 
   const canManage = Boolean(role && isPollaAdminRole(role));
   const isSuper = Boolean(role && isPollaSuperRole(role));
@@ -389,7 +399,9 @@ export const ManageBetsPage = () => {
   };
 
   const handlePrint = async (row: IPollaBetListItem) => {
-    const edition = editionList.find((e) => e.polla_edition_id === row.polla_edition_id);
+    // Buscando por nº de ticket la jugada puede ser de una edición que no está
+    // cargada en el selector: se pide por id (si falla, avisa la query).
+    const edition = await fetchEdition(row.polla_edition_id).catch(() => undefined);
     if (!edition) return;
 
     const { blob, fileName } = await makePollaTicketPdf({
@@ -426,8 +438,15 @@ export const ManageBetsPage = () => {
       ) as Record<string, IPollaBetCourtesy>,
     [bets]
   );
+  // Las ediciones de las cortesías que no están cargadas en el selector se
+  // piden juntas por id (la API acepta hasta 60; más allá, "otra edición").
+  const courtesyEditionIds = missingIds(
+    Object.values(courtesies).map((courtesy) => courtesy.polla_edition_id),
+    (id) => Boolean(editionOf(id))
+  ).slice(0, 60);
+  const { data: courtesyEditions } = useEditionsByIds(courtesyEditionIds);
   const courtesyEditionName = (id: string) => {
-    const edition = editionList.find((e) => e.polla_edition_id === id);
+    const edition = editionOf(id) ?? courtesyEditions?.data.find((e) => e.polla_edition_id === id);
     return edition ? titleFor(edition) : 'otra edición';
   };
   const courtesyLabels = Object.fromEntries(
@@ -539,13 +558,11 @@ export const ManageBetsPage = () => {
       {/* Los filtros ocupan el ancho completo en mobile y se acomodan en línea
           desde sm: en 320px cualquier ancho fijo desborda. */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <EditionPicker
-          editions={editionList}
-          value={editionId}
-          onChange={(value) => updateParam('polla_edition_id', value)}
-          labelFor={labelFor}
-          showCount
-        />
+        <div className="flex min-w-0 flex-col gap-1 sm:min-w-[260px]">
+          <Label>Edición</Label>
+          <EditionSelect {...editionSelect} />
+          <EditionPool edition={selectedEdition} showCount />
+        </div>
 
         <div className="flex min-w-0 flex-col gap-1">
           <Label htmlFor="manage-bets-search">Buscar</Label>

@@ -201,7 +201,7 @@ export const BetsList = ({
               <BetStatus
                 row={row}
                 courtesyLabel={courtesyLabels[row.polla_bet_id]}
-                editionStatus={editionStatusOf?.(row.polla_edition_id)}
+                editionStatus={row.edition_status ?? editionStatusOf?.(row.polla_edition_id)}
               />
               {renderActions && <div className="flex gap-1">{renderActions(row)}</div>}
             </div>
@@ -267,7 +267,7 @@ export const BetsList = ({
                   <BetStatus
                     row={row}
                     courtesyLabel={courtesyLabels[row.polla_bet_id]}
-                    editionStatus={editionStatusOf?.(row.polla_edition_id)}
+                    editionStatus={row.edition_status ?? editionStatusOf?.(row.polla_edition_id)}
                   />
                 </TableCell>
                 {renderActions && (

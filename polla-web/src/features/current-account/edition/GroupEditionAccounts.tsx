@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Fragment, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import {
@@ -13,7 +13,9 @@ import {
   Wallet,
 } from 'lucide-react';
 import {
+  IPollaDrawCatalogs,
   IPollaEditionAccountListItem,
+  IPollaEditionEntityFront,
   IPollaGroupEditionAccountEntity,
   IPollaGroupEditionAccountPreview,
   isPollaSpecialEdition,
@@ -23,7 +25,8 @@ import { POLLA_GROUP_REPORT_MAX_DAYS } from '@helper/polla/config/session.config
 import { useAuth } from '@/providers/AuthContext';
 import { useDrawCatalogs } from '@/hooks/fetchs/useCatalogs';
 import {
-  useEditionAccountList,
+  useEditionAccountPages,
+  useEditionById,
   useGroupEditionAccounts,
   useGroupEditionPreviews,
 } from '@/hooks/fetchs/usePollaData';
@@ -46,13 +49,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -112,7 +108,9 @@ import {
   readGroupMovementInputs,
 } from '@/lib/groupLiquidation';
 import { groupLiquidationZipName } from '@/lib/liquidationZip';
-import { fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
+import { EditionSelect } from '@/features/bets/EditionSelect';
+import { uniqueById } from '@/lib/editionSelect';
+import { fetchEditionsByIds, fetchGroupAccountsRange, fetchOrganizationName } from '../fetchers';
 import { CashierPickDialog } from '../dialogs/ExportLiquidationsDialog';
 import { exportActionLabel, useLiquidationDelivery } from '../dialogs/LiquidationFormat';
 import { DateField } from '../dialogs/shared';
@@ -217,6 +215,26 @@ const editionCaption = (item: IPollaEditionAccountListItem, title: string) =>
   `Edición ${title} · ${dayjs(item.edition.start_date).format('DD/MM/YYYY')} al ${dayjs(
     item.edition.end_date
   ).format('DD/MM/YYYY')}${item.load_open ? ' · Carga abierta' : ''}`;
+
+const editionAccountIdOf = (item: IPollaEditionAccountListItem) => item.edition.polla_edition_id;
+
+/**
+ * La elegida cuando ya no está en las páginas cargadas, armada con la edición
+ * pedida por id. Sin la lista no se sabe si la carga sigue abierta: se toma
+ * cerrada (liquidar con la carga abierta lo rechaza la base igual).
+ */
+const editionAccountFallback = (
+  edition: IPollaEditionEntityFront
+): IPollaEditionAccountListItem => ({
+  edition,
+  liquidated_at: null,
+  liquidated_by_name: null,
+  cashiers_count: null,
+  liquidated_count: null,
+  owed_by_cashiers: null,
+  owed_to_cashiers: null,
+  load_open: false,
+});
 
 interface SheetsContext {
   groupById: Map<string, GroupRef>;
@@ -1271,12 +1289,13 @@ const GroupEditionHistory = ({
  */
 const GroupRangeReportDialog = ({
   groupById,
-  titleOf,
+  catalogs,
   organizationId,
   onClose,
 }: {
   groupById: Map<string, GroupRef>;
-  titleOf: (editionId: string) => string;
+  /** Para titular las ediciones del rango, que se piden por id al generar. */
+  catalogs: IPollaDrawCatalogs;
   organizationId: string | null;
   onClose: () => void;
 }) => {
@@ -1312,12 +1331,21 @@ const GroupRangeReportDialog = ({
         return;
       }
       const groups = groupReportRows(accounts, groupById);
+      const editionRows = groupRangeByEdition(accounts);
+      // Las ediciones del rango pueden no estar cargadas en el selector.
+      const editions = await fetchEditionsByIds(
+        editionRows.map((row) => row.editionId),
+        organizationId
+      );
+      const titles = new Map(
+        editions.map((edition) => [edition.polla_edition_id, pollaEditionTitle(edition, catalogs)])
+      );
       await downloadGroupRangeReportPDF({
         from,
         to,
-        editions: groupRangeByEdition(accounts).map((row) => ({
+        editions: editionRows.map((row) => ({
           ...row,
-          title: titleOf(row.editionId),
+          title: titles.get(row.editionId) ?? 'Edición',
         })),
         groups,
         totals: groupReportTotals(groups),
@@ -1373,13 +1401,13 @@ export const GroupEditionAccounts = () => {
   const { data: orgName } = useOrganizationName(organizationId);
   const catalogs = useDrawCatalogs(organizationId);
   const { groupById } = useCashierCode();
-  // Para el selector alcanzan las 200 más nuevas, sin contadores.
-  const listQuery = useEditionAccountList({
-    polla_organization_id: organizationId ?? undefined,
-    counts: false,
-    limit: 200,
-  });
-  const list = listQuery.data?.data;
+  // El selector trae de a 10 (de la más nueva a la más vieja), sin contadores,
+  // y la página siguiente al llegar al final del desplegable.
+  const pagesQuery = useEditionAccountPages(
+    { polla_organization_id: organizationId ?? undefined },
+    10
+  );
+  const pages = pagesQuery.data?.pages;
   const [editionId, setEditionId] = useState<string | null>(null);
   const [liquidating, setLiquidating] = useState<IPollaGroupEditionAccountPreview | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
@@ -1406,17 +1434,18 @@ export const GroupEditionAccounts = () => {
     if (!pickOpen) setFormat('pdf');
   }, [pickOpen]);
 
-  const editions = useMemo(() => list ?? [], [list]);
-  /** Título de cada edición de la lista, para el parte por rango. */
-  const titleOf = useMemo(() => {
-    const titles = new Map(
-      editions.map((item) => [
-        item.edition.polla_edition_id,
-        pollaEditionTitle(item.edition, catalogs),
-      ])
-    );
-    return (id: string) => titles.get(id) ?? 'Edición';
-  }, [editions, catalogs]);
+  const editions = useMemo(
+    () => uniqueById(pages?.flatMap((page) => page.data) ?? [], editionAccountIdOf),
+    [pages]
+  );
+  /** `<título> · DD/MM/YYYY[ · Carga abierta]`. */
+  const optionLabel = useCallback(
+    (item: IPollaEditionAccountListItem) =>
+      `${pollaEditionTitle(item.edition, catalogs)} · ${dayjs(item.edition.start_date).format(
+        'DD/MM/YYYY'
+      )}${item.load_open ? ' · Carga abierta' : ''}`,
+    [catalogs]
+  );
 
   // Arranca en la primera edición de la lista (la más nueva), aunque tenga la
   // carga abierta: en el selector se marca con "· Carga abierta".
@@ -1429,7 +1458,19 @@ export const GroupEditionAccounts = () => {
     setMovementInputs({});
   }, [editionId]);
 
-  const current = editions.find((item) => item.edition.polla_edition_id === editionId);
+  const listed = editions.find((item) => item.edition.polla_edition_id === editionId);
+  // La elegida sale de lo cargado; si ya no está (cambió la lista), se pide por id.
+  const { data: fetched } = useEditionById(
+    editionId && pagesQuery.isSuccess && !listed ? editionId : null
+  );
+  const fallback = useMemo(
+    () =>
+      fetched && fetched.polla_edition_id === editionId
+        ? editionAccountFallback(fetched)
+        : undefined,
+    [fetched, editionId]
+  );
+  const current = listed ?? fallback;
   const title = current ? pollaEditionTitle(current.edition, catalogs) : '';
   const caption = current ? editionCaption(current, title) : '';
   const loadOpen = current?.load_open ?? false;
@@ -1455,7 +1496,10 @@ export const GroupEditionAccounts = () => {
 
   const toSelectAll = useMemo(() => groupsToSelectAll(previews, loadOpen), [previews, loadOpen]);
   const allSelected = toSelectAll.length > 0 && toSelectAll.every((id) => selected.has(id));
-  const selectedPreviews = previews.filter((preview) => selected.has(preview.polla_group_id));
+  // Un grupo que dejó de poder liquidarse no se manda aunque siga tildado o con un monto escrito.
+  const selectedPreviews = previews.filter(
+    (preview) => selected.has(preview.polla_group_id) && groupLiquidatable(preview, loadOpen)
+  );
 
   const toggle = (groupId: string, checked: boolean) =>
     setSelected((prev) => {
@@ -1546,8 +1590,10 @@ export const GroupEditionAccounts = () => {
     }
   };
 
-  if (listQuery.isError && !list) return <ErrorState onRetry={() => void listQuery.refetch()} />;
-  if (!list) return <EmptyState message="Cargando…" />;
+  if (pagesQuery.isError && !pages) {
+    return <ErrorState onRetry={() => void pagesQuery.refetch()} />;
+  }
+  if (!pages) return <EmptyState message="Cargando…" />;
   if (editions.length === 0) return <EmptyState message="No hay ediciones." />;
 
   const rowProps = (preview: IPollaGroupEditionAccountPreview) => ({
@@ -1569,23 +1615,17 @@ export const GroupEditionAccounts = () => {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex w-full flex-col gap-1 sm:w-[360px]">
           <Label>Edición</Label>
-          <Select value={editionId ?? ''} onValueChange={setEditionId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Elegí una edición" />
-            </SelectTrigger>
-            <SelectContent>
-              {editions.map((item) => (
-                <SelectItem
-                  key={item.edition.polla_edition_id}
-                  value={item.edition.polla_edition_id}
-                >
-                  {pollaEditionTitle(item.edition, catalogs)} ·{' '}
-                  {dayjs(item.edition.start_date).format('DD/MM/YYYY')}
-                  {item.load_open && ' · Carga abierta'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EditionSelect
+            items={editions}
+            value={editionId ?? ''}
+            onChange={setEditionId}
+            idOf={editionAccountIdOf}
+            labelOf={optionLabel}
+            hasNextPage={Boolean(pagesQuery.hasNextPage)}
+            isFetchingNextPage={pagesQuery.isFetchingNextPage}
+            fetchNextPage={pagesQuery.fetchNextPage}
+            selectedFallback={listed ? undefined : fallback}
+          />
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -1789,7 +1829,7 @@ export const GroupEditionAccounts = () => {
       {rangeOpen && (
         <GroupRangeReportDialog
           groupById={groupById}
-          titleOf={titleOf}
+          catalogs={catalogs}
           organizationId={organizationId}
           onClose={() => setRangeOpen(false)}
         />

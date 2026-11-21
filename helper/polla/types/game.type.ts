@@ -407,6 +407,8 @@ export interface IPollaBetDerivedFields {
   group_number: number | null;
   /** Jugador dueño de la jugada; `null` si la jugó el propio pasador. */
   client_name: string | null;
+  /** Estado de su edición: una jugada de una edición terminada que no ganó es Perdió. */
+  edition_status?: POLLA_EDITION_STATUS;
 }
 
 /**

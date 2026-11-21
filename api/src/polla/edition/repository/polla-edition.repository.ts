@@ -67,8 +67,12 @@ export class PollaEditionRepository {
       query = query.or(list.map((period) => periodFilter(period, today)).join(','));
     }
 
+    // OFFSET aceptable: las ediciones son un conjunto chico y acotado (una por
+    // semana por organización). El desempate por id evita repetir o saltear
+    // ediciones con la misma `start_date` en el borde de una página.
     const { data, error, count } = await query
       .order('start_date', { ascending: false })
+      .order('polla_edition_id', { ascending: true })
       .range(pagination.from, pagination.to);
 
     throwIfPollaError(error);
