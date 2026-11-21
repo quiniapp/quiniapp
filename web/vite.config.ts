@@ -1,6 +1,6 @@
 import path from 'path';
 import { execSync } from 'child_process';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
@@ -13,6 +13,107 @@ const commitDate = (() => {
     return '';
   }
 })();
+
+// Los ids de módulo se normalizan a `/` porque en Windows pueden venir con `\`.
+const normalizeId = (id: string) => id.replace(/\\/g, '/');
+
+/**
+ * Chunk de cada dependencia externa, para mejor caching. Todo módulo de
+ * node_modules recibe un nombre (el último caso es 'vendor').
+ */
+function vendorChunkName(rawId: string): string | null {
+  const id = normalizeId(rawId);
+
+  if (id.includes('node_modules')) {
+    // PDF generation (lazy-loaded, separate chunk)
+    // DEBE estar primero porque NO depende de React
+    if (id.includes('jspdf')) {
+      return 'pdf-vendor';
+    }
+
+    // Calendar component dependencies (lazy-loaded via SelectDayToSearch)
+    if (id.includes('react-day-picker') || id.includes('date-fns')) {
+      return 'calendar-vendor';
+    }
+
+    // Date libraries (lazy-loaded con ClockProvider)
+    // Puede estar separado porque no depende de React directamente
+    if (id.includes('dayjs')) {
+      return 'date-vendor';
+    }
+
+    // React core - base que todo depende
+    if (id.includes('react-dom')) {
+      return 'react-dom-vendor';
+    }
+
+    // React base (scheduler, react)
+    if (id.includes('/react/') || id.includes('scheduler')) {
+      return 'react-vendor';
+    }
+
+    // React Router
+    if (id.includes('react-router') || id.includes('@remix-run')) {
+      return 'router-vendor';
+    }
+
+    // TanStack Query
+    if (id.includes('@tanstack/react-query')) {
+      return 'query-vendor';
+    }
+
+    // Radix UI components (separado para mejor caching)
+    if (id.includes('@radix-ui')) {
+      return 'radix-vendor';
+    }
+
+    // Icons (lucide-react es grande)
+    if (id.includes('lucide-react')) {
+      return 'icons-vendor';
+    }
+
+    // Utility libraries
+    if (
+      id.includes('clsx') ||
+      id.includes('tailwind-merge') ||
+      id.includes('class-variance-authority')
+    ) {
+      return 'utils-vendor';
+    }
+
+    // Otras dependencias
+    return 'vendor';
+  }
+
+  return null;
+}
+
+/**
+ * Feature chunks - solo para archivos grandes. Las rutas lazy-loaded ya generan
+ * chunks automáticamente; esto es para features específicos que queremos
+ * separar. Devolver null deja el módulo al reparto automático de Rolldown.
+ */
+function featureChunkName(rawId: string): string | null {
+  const id = normalizeId(rawId);
+
+  if (id.includes('node_modules')) {
+    return null;
+  }
+  if (id.includes('src/features/make-plays')) {
+    return 'feature-make-plays';
+  }
+  if (id.includes('src/features/plays-and-hits')) {
+    return 'feature-plays-hits';
+  }
+  if (id.includes('src/features/results')) {
+    return 'feature-results';
+  }
+  if (id.includes('src/features/terminal-ticket')) {
+    return 'feature-tickets';
+  }
+
+  return null;
+}
 
 export default defineConfig({
   define: {
@@ -33,10 +134,7 @@ export default defineConfig({
 
   css: {
     postcss: {
-      plugins: [
-        tailwindcss(),
-        autoprefixer(),
-      ],
+      plugins: [tailwindcss(), autoprefixer()],
     },
   },
 
@@ -56,8 +154,8 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@helper': path.resolve(__dirname, '../helper'),
+      '@': path.resolve(import.meta.dirname, './src'),
+      '@helper': path.resolve(import.meta.dirname, '../helper'),
     },
   },
 
@@ -88,92 +186,42 @@ export default defineConfig({
     // Sourcemaps solo en dev
     sourcemap: false,
 
-    // Rollup options para code splitting
-    rollupOptions: {
+    // Opciones de Rolldown (Vite 8) para code splitting
+    rolldownOptions: {
       output: {
-        // Manual chunks para mejor caching
-        manualChunks: (id) => {
-          // Vendor chunks - dependencias externas
-          if (id.includes('node_modules')) {
-            // PDF generation (lazy-loaded, separate chunk)
-            // DEBE estar primero porque NO depende de React
-            if (id.includes('jspdf')) {
-              return 'pdf-vendor';
-            }
-
-            // Calendar component dependencies (lazy-loaded via SelectDayToSearch)
-            if (id.includes('react-day-picker') || id.includes('date-fns')) {
-              return 'calendar-vendor';
-            }
-
-            // Date libraries (lazy-loaded con ClockProvider)
-            // Puede estar separado porque no depende de React directamente
-            if (id.includes('dayjs')) {
-              return 'date-vendor';
-            }
-
-            // React core - base que todo depende
-            if (id.includes('react-dom')) {
-              return 'react-dom-vendor';
-            }
-
-            // React base (scheduler, react)
-            if (id.includes('/react/') || id.includes('scheduler')) {
-              return 'react-vendor';
-            }
-
-            // React Router
-            if (id.includes('react-router') || id.includes('@remix-run')) {
-              return 'router-vendor';
-            }
-
-            // TanStack Query
-            if (id.includes('@tanstack/react-query')) {
-              return 'query-vendor';
-            }
-
-            // Radix UI components (separado para mejor caching)
-            if (id.includes('@radix-ui')) {
-              return 'radix-vendor';
-            }
-
-            // Icons (lucide-react es grande)
-            if (id.includes('lucide-react')) {
-              return 'icons-vendor';
-            }
-
-            // Utility libraries
-            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
-              return 'utils-vendor';
-            }
-
-            // Otras dependencias
-            return 'vendor';
-          }
-
-          // Feature chunks - solo para archivos grandes
-          // Las rutas lazy-loaded ya generan chunks automáticamente
-          // Esto es para features específicos que queremos separar
-          if (id.includes('src/features/make-plays') && !id.includes('node_modules')) {
-            return 'feature-make-plays';
-          }
-          if (id.includes('src/features/plays-and-hits') && !id.includes('node_modules')) {
-            return 'feature-plays-hits';
-          }
-          if (id.includes('src/features/results') && !id.includes('node_modules')) {
-            return 'feature-results';
-          }
-          if (id.includes('src/features/terminal-ticket') && !id.includes('node_modules')) {
-            return 'feature-tickets';
-          }
+        // Vite 8 deprecó `manualChunks`; esto reproduce el reparto que hacía.
+        // Rolldown mete en el chunk de cada módulo capturado también sus
+        // dependencias, así que el orden importa: con un solo grupo, un feature
+        // se llevaba react-dom, el router y Radix.
+        codeSplitting: {
+          groups: [
+            // 1º las dependencias, cada una a su chunk y sin arrastrar las suyas
+            // (también tienen nombre propio).
+            {
+              name: vendorChunkName,
+              priority: 2,
+              includeDependenciesRecursively: false,
+              debugName: 'vendor-chunks',
+            },
+            // 2º los features, que se llevan el código propio que usan y no
+            // quedó en otro chunk (como hacía Rollup).
+            { name: featureChunkName, priority: 1, debugName: 'feature-chunks' },
+          ],
         },
+        // Hay chunks que se importan en ciclo (vendor ↔ react-dom-vendor y
+        // vendor ↔ radix-vendor). Rollup lo toleraba; con Rolldown el CommonJS
+        // de un chunk puede no estar inicializado cuando el otro lo llama
+        // ("require_react_dom is not a function", página en blanco). Esto
+        // respeta el orden de ejecución del código fuente, como pide Rolldown
+        // al usar includeDependenciesRecursively: false.
+        strictExecutionOrder: true,
 
         // Nombres de archivos con hash para cache busting
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          // Organizar assets por tipo
-          const name = assetInfo.name || '';
+          // Organizar assets por tipo (`name` está deprecado en Rolldown)
+          const name = assetInfo.names[0] ?? '';
           if (/\.css$/.test(name)) {
             return 'css/[name]-[hash][extname]';
           }
@@ -191,12 +239,7 @@ export default defineConfig({
 
   // Optimización de dependencias
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@tanstack/react-query',
-    ],
+    include: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
     exclude: [
       // Excluir jsPDF para lazy loading
       'jspdf',

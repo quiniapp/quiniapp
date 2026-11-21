@@ -4,6 +4,13 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-21 (Vite 6 → Vite 8)
+
+- **Vite 8** (`vite` `>=6.4.1` → `^8.3.8`) con Rolldown + Oxc: el build baja de 13,5 s a 6 s y se cierran las vulnerabilidades del dev server de Vite 6. Requiere Node 20.19+ o 22.12+, también en Vercel.
+- **`@vitejs/plugin-react` v6** reemplaza a `@vitejs/plugin-react-swc`.
+- **`vite.config.ts`**: `rollupOptions` → `rolldownOptions`. El `manualChunks` en forma de objeto, que Vite 8 ya no acepta, pasa a `codeSplitting.groups` con un `test` por paquete (react, router, query, radix). Los alias usan `import.meta.dirname`. El peso total no cambia (514 KB gzip); los chunks de cada ruta ahora se llaman como su carpeta (`bets-[hash].js`) en vez de `index-[hash].js`. No hay ciclos entre chunks, así que no hace falta `strictExecutionOrder` (a diferencia de web).
+- Vitest 5.0.5 ya soporta Vite 8: 246 tests OK. Verificado: login, las 16 rutas y "Compartir PDF" en build, `preview` y dev.
+
 ### Changed - 2026-11-21 (los grupos no tienen pagos)
 
 - **Sin Pagos en las liquidaciones de grupo**: los grupos solo registran Cobros. Se sacan la columna, el input y la fila de Pagos de "Grupos a liquidar" (tabla y tarjeta del celular), la columna y el total de "Liquidaciones de grupo", "Pagos a sumar" y la columna Pagos de los diálogos de liquidar (`GroupEditionAccounts.tsx`), el renglón de la vista del admin (`AdminGroupAccountView.tsx`) y el del PDF/imagen (`groupLiquidationRows`, ahora 8 renglones). Los textos de `GroupMovementsDialog` hablan solo de cobros.
