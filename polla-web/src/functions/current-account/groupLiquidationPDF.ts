@@ -4,6 +4,7 @@ import type { CellInput } from 'jspdf-autotable';
 import {
   GroupLiquidationSheet,
   groupLiquidationLabel,
+  groupLiquidationPaidMark,
   groupLiquidationRows,
 } from '@/lib/groupLiquidation';
 import { groupLiquidationImageLines } from '@/lib/liquidationImageLines';
@@ -11,7 +12,13 @@ import { groupLiquidationFileName, zipRootFolder } from '@/lib/liquidationZip';
 import { downloadPdfBlob } from '../printPdf';
 import type { LiquidationFormat, PreparedLiquidation } from './liquidationDelivery';
 import { renderLiquidationImage } from './liquidationImage';
-import { PdfDoc, addFooterPageNumbers, getPDFDeps, gridTableOptions } from './pdf-shared';
+import {
+  PdfDoc,
+  addFooterPageNumbers,
+  getPDFDeps,
+  gridTableOptions,
+  lastTableY,
+} from './pdf-shared';
 
 /**
  * Hoja de liquidación de un grupo en una edición (A4 vertical, una por grupo):
@@ -56,6 +63,15 @@ export async function buildGroupLiquidationPDF(sheet: GroupLiquidationSheet) {
     body,
     startY: 32,
   });
+
+  const paidMark = groupLiquidationPaidMark(sheet.account);
+  if (paidMark) {
+    const finalY = lastTableY(doc, 32);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text(paidMark, MARGIN.left + width / 2, finalY + 12, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
 
   addFooterPageNumbers(doc);
   return doc;

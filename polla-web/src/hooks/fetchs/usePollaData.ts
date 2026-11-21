@@ -19,6 +19,7 @@ import {
   IPollaGroupEditionAccountEntity,
   IPollaGroupEditionLiquidation,
   IPollaGroupEditionAccountPreview,
+  IPollaGroupEditionMovement,
   IPollaUserEditionAccount,
   IPollaGroupAccountEntityFront,
   IPollaOrgExpenseEntityFront,
@@ -27,6 +28,7 @@ import {
   IPollaTicketCheck,
   POLLA_TICKET_SEARCH,
 } from '@helper/polla/types/game.type';
+import { apiClient } from '@/lib/apiClient';
 import { BACKEND_ROUTES } from '@/routes/backend-routes';
 import {
   PollaPage,
@@ -124,6 +126,87 @@ export const useEditionList = (params: QueryParams = {}) =>
     params,
     // Al tildar o destildar un período se sigue viendo la lista anterior.
     { limit: 25, keepPrevious: true }
+  );
+
+/**
+ * Ediciones para un selector, de a `limit` por página (la API ya las ordena
+ * por fecha de inicio descendente). Con `fetchMore: false` (Jugadas: solo las
+ * últimas) no hay página siguiente: el selector no pide más. Pagina con
+ * OFFSET: es aceptable porque las ediciones son un conjunto chico y acotado
+ * (una por semana por organización).
+ */
+export const useEditionPages = (
+  params: QueryParams = {},
+  { limit, fetchMore }: { limit: number; fetchMore: boolean }
+) => {
+  const query = useApiInfiniteQuery<IPollaEditionEntityFront>(
+    ['polla-editions', 'select'],
+    BACKEND_ROUTES.edition.base,
+    params,
+    { limit, keepPrevious: true }
+  );
+  // Estable: el selector la tiene en las dependencias de su observer.
+  const { fetchNextPage: fetchNext } = query;
+  const fetchNextPage = useCallback(
+    () => (fetchMore ? fetchNext() : Promise.resolve(undefined)),
+    [fetchMore, fetchNext]
+  );
+  return { ...query, hasNextPage: fetchMore && query.hasNextPage, fetchNextPage };
+};
+
+/**
+ * Cuenta corriente de ediciones para un selector (sin conteos), de a `limit`.
+ * Pagina con OFFSET: aceptable porque las ediciones son un conjunto chico y
+ * acotado (una por semana por organización).
+ */
+export const useEditionAccountPages = (params: QueryParams = {}, limit = 10) =>
+  useApiInfiniteQuery<IPollaEditionAccountListItem>(
+    ['edition-account', 'list', 'select'],
+    BACKEND_ROUTES.editionAccount.base,
+    { ...params, counts: false },
+    { limit, keepPrevious: true }
+  );
+
+/**
+ * Una edición puntual, para mostrar la elegida cuando no está en las páginas
+ * cargadas. Solo pide si hay `id`: el que llama pasa `null` si ya la tiene.
+ */
+export const useEditionById = (id: string | null) =>
+  useApiQuery<IPollaEditionEntityFront>(
+    ['polla-editions', 'by-id', id],
+    id ? BACKEND_ROUTES.edition.id(id) : '',
+    {},
+    { enabled: !!id }
+  );
+
+/**
+ * La misma edición que `useEditionById`, pedida en el momento (imprimir el
+ * ticket de una edición que no está cargada). Comparte la caché del hook.
+ */
+export const useFetchEdition = () => {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (id: string) =>
+      queryClient.fetchQuery({
+        // `useApiQuery` suma los params (vacíos) al final de la key.
+        queryKey: ['polla-editions', 'by-id', id, {}],
+        queryFn: () => apiClient.get<IPollaEditionEntityFront>(BACKEND_ROUTES.edition.id(id)),
+      }),
+    [queryClient]
+  );
+};
+
+/**
+ * Varias ediciones puntuales por id (hasta 60), para nombrar las que no están
+ * en las páginas cargadas de un selector. Solo pide si hay ids; conviene
+ * pasarlos ordenados para que la key no cambie.
+ */
+export const useEditionsByIds = (ids: string[]) =>
+  useApiQuery<PollaPage<IPollaEditionEntityFront>>(
+    ['polla-editions', 'by-ids'],
+    BACKEND_ROUTES.edition.base,
+    { ids: ids.join(',') },
+    { enabled: ids.length > 0 }
   );
 
 // ----------------------------------------------------------------- jugadas
@@ -387,6 +470,22 @@ export const useGroupEditionPreviews = (editionId: string | null) =>
       : BACKEND_ROUTES.editionAccount.base,
     {},
     { enabled: Boolean(editionId) }
+  );
+
+/** Cobros y pagos vigentes de un grupo en la edición (el diálogo "Movimientos"). */
+export const useGroupEditionMovements = (
+  editionId: string | null,
+  groupId: string | null,
+  organizationId?: string | null
+) =>
+  useApiQuery<IPollaGroupEditionMovement[]>(
+    ['edition-account', 'group-movements', editionId, groupId],
+    editionId
+      ? BACKEND_ROUTES.editionAccount.groupMovements(editionId)
+      : BACKEND_ROUTES.editionAccount.base,
+    { polla_group_id: groupId, polla_organization_id: organizationId },
+    // Sin la lista anterior: es de otro grupo.
+    { enabled: Boolean(editionId && groupId), placeholderData: undefined }
   );
 
 /** Cuentas de grupo ya liquidadas (`polla_edition_id`, `polla_group_id`). */

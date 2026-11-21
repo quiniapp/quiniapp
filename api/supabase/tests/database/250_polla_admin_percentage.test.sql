@@ -109,17 +109,17 @@ SELECT is(
 
 -- ------------------------------------------------------- liquidar un grupo
 SELECT is(
-  (polla_liquidate_group_edition(pg_temp.org(), pg_temp.g(1), pg_temp.ed(), 50, 0, 0, pg_temp.owner())).admin_percentage,
+  (polla_liquidate_group_edition(pg_temp.org(), pg_temp.g(1), pg_temp.ed(), 50, 0, 0, 0, 0, pg_temp.owner())).admin_percentage,
   12.50::NUMERIC(5,2), 'con % en el admin se usa ese, no el del cliente');
 SELECT is(
   (SELECT admin_commission FROM polla_group_edition_accounts
    WHERE polla_group_id = pg_temp.g(1) AND polla_edition_id = pg_temp.ed()),
   11.25::NUMERIC(12,2), 'comisión = 90 × 12,5%');
 SELECT throws_like(
-  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g(2), pg_temp.ed(), NULL, 0, 0, pg_temp.owner())$$,
+  $$SELECT polla_liquidate_group_edition(pg_temp.org(), pg_temp.g(2), pg_temp.ed(), NULL, 0, 0, 0, 0, pg_temp.owner())$$,
   '%POLLA_GROUP_PERCENTAGE_INVALID%', 'admin sin %: hay que mandar uno');
 SELECT is(
-  (polla_liquidate_group_edition(pg_temp.org(), pg_temp.g(2), pg_temp.ed(), 20, 0, 0, pg_temp.owner())).admin_percentage,
+  (polla_liquidate_group_edition(pg_temp.org(), pg_temp.g(2), pg_temp.ed(), 20, 0, 0, 0, 0, pg_temp.owner())).admin_percentage,
   20.00::NUMERIC(5,2), 'admin sin %: se usa el del cliente');
 
 -- ------------------------------------------------------------ varios grupos

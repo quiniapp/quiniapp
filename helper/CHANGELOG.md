@@ -4,6 +4,19 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-21 (los grupos no tienen pagos)
+
+- **`liquidatePollaGroupEditionSchema`** (`helper/polla/schemas/game.schema.ts`) ya no tiene `payment`: solo `collection` (>= 0). Un `payment` que llegue se descarta (zod no estricto). `IPollaGroupEditionAccountEntity.payments` queda (la base lo sigue devolviendo, siempre en 0).
+
+### Added - 2026-11-20 (estado de la edición en las jugadas)
+
+- **`IPollaBetDerivedFields`** suma `edition_status?: POLLA_EDITION_STATUS` (`helper/polla/types/game.type.ts`), que heredan la jugada de staff y la pública.
+
+### Added - 2026-11-19 (cobros y pagos de grupo)
+
+- **`IPollaGroupEditionAccountEntity`** suma `collections` y `payments`; nueva **`IPollaGroupEditionMovement`** (`helper/polla/types/game.type.ts`).
+- **`liquidatePollaGroupEditionSchema`** acepta `collection` y `payment` (>= 0); nuevo **`updatePollaGroupMovementSchema`** (`{ amount > 0 }`) e `IUpdatePollaGroupMovementPayload` (`helper/polla/schemas/game.schema.ts`).
+
 ### Changed - 2026-11-18 (el admin ve las liquidaciones de su grupo)
 
 - **`POLLA_PAGE_ROLES.CURRENT_ACCOUNT`** (`helper/polla/config/access.config.ts`) suma `ADMIN`: ve las liquidaciones de su grupo, solo lectura.

@@ -9,6 +9,7 @@ import {
   IPollaDailySalesGroup,
   IPollaRepeatResult,
   IPollaUnpaidSummary,
+  POLLA_EDITION_STATUS,
   POLLA_PAYMENT_STATUS,
 } from '@helper/polla/types/game.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
@@ -21,17 +22,23 @@ import { CURSOR_TIMESTAMP, CURSOR_UUID, decodeCursor, encodeCursor } from '../..
  * El grupo del pasador viaja embebido: es la columna "Coord" del listado y su
  * número encabeza el del pasador (`{grupo}-{pasador}`).
  */
-const BET_COLUMNS = '*, polla_groups(name, number)';
+const BET_COLUMNS = '*, polla_groups(name, number), polla_editions(status)';
 
 /** Jugada tal como la devuelve el repositorio: la fila más los campos derivados. */
 export type PollaBetRow = IPollaBetEntityBack & IPollaBetDerivedFields;
 
 type RawBetRow = IPollaBetEntityBack & {
   polla_groups: { name: string; number: number } | null;
+  polla_editions: { status: POLLA_EDITION_STATUS } | null;
 };
 
-const withDerivedFields = ({ polla_groups: group, ...bet }: RawBetRow): PollaBetRow => ({
+const withDerivedFields = ({
+  polla_groups: group,
+  polla_editions: edition,
+  ...bet
+}: RawBetRow): PollaBetRow => ({
   ...bet,
+  edition_status: edition?.status,
   group_name: group?.name ?? null,
   group_number: group?.number ?? null,
   // Si la jugó el propio pasador no hay cliente.

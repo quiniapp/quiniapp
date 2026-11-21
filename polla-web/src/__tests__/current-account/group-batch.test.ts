@@ -35,6 +35,8 @@ const account = (
   created_by: null,
   created_at: '',
   edited_at: '',
+  collections: 0,
+  payments: 0,
   ...over,
 });
 

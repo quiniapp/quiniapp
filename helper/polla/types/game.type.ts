@@ -407,6 +407,8 @@ export interface IPollaBetDerivedFields {
   group_number: number | null;
   /** Jugador dueño de la jugada; `null` si la jugó el propio pasador. */
   client_name: string | null;
+  /** Estado de su edición: una jugada de una edición terminada que no ganó es Perdió. */
+  edition_status?: POLLA_EDITION_STATUS;
 }
 
 /**
@@ -976,9 +978,24 @@ export interface IPollaGroupEditionAccountEntity {
   adjustments: number;
   paid: number;
   total: number;
+  /** Suma de los cobros vigentes del grupo en la edición. */
+  collections: number;
+  /** Suma de los pagos vigentes del grupo en la edición. */
+  payments: number;
   created_by: string | null;
   created_at: string;
   edited_at: string;
+}
+
+/** Cobro o pago de un grupo en una edición (`polla_group_edition_movements`). */
+export interface IPollaGroupEditionMovement {
+  polla_group_edition_movement_id: string;
+  polla_group_id: string;
+  polla_edition_id: string;
+  type: 'COLLECTION' | 'PAYMENT';
+  amount: number;
+  date: string;
+  created_at: string;
 }
 
 /** Liquidación de un grupo en una edición, con la edición (vista del admin). */
