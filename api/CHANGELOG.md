@@ -6,6 +6,11 @@ All notable changes to the API workspace are documented in this file.
 
 > **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
 
+### Changed - 2026-11-21 (los grupos no tienen pagos)
+
+- **`liquidateGroup` y `liquidateGroups`** (`polla-edition-account.repository.ts`): mandan siempre `p_payment = 0` / `payment: 0` al RPC; la firma de `liquidateGroup` ya no recibe `payment`. `POST /edition_account/:editionId/group_liquidate` y `/group_liquidate_many` aceptan solo `collection`: un `payment` en el body se descarta. Por qué: los grupos solo registran cobros (lo que el admin transfiere de la parte del capitalista).
+- La base no cambia: `polla_group_edition_movements` sigue admitiendo PAYMENT y la respuesta sigue trayendo `payments`, que queda en 0.
+
 ### Fixed - 2026-11-20 (revisión final de cobros de grupo y selector de ediciones)
 
 - **`GET /edition`** (`polla-edition.repository.ts`): el orden suma el desempate `polla_edition_id` después de `start_date DESC`, porque ahora se pagina con OFFSET y dos ediciones con la misma fecha de inicio en el borde de una página se podían repetir o saltear. Comentario de por qué OFFSET alcanza (ediciones: conjunto chico y acotado).

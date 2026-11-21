@@ -19,7 +19,6 @@ const sheet: GroupLiquidationSheet = {
     admin_commission: 23000,
     edited_at: '2026-11-15T21:30:00.000000+00:00',
     collections: 50000,
-    payments: 0,
   },
   group: { number: 1, name: 'Leo' },
   orgName: 'Org',

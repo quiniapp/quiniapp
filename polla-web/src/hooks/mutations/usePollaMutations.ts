@@ -424,7 +424,7 @@ export const useDeleteAccountMovement = () =>
     { invalidate: EDITION_ACCOUNT_KEYS, successMessage: 'Movimiento eliminado' }
   );
 
-/** Liquidar un grupo: con `collection` y `payment` (> 0) carga además su cobro y su pago. */
+/** Liquidar un grupo: con `collection` (> 0) carga además su cobro. */
 export const useLiquidateGroupEdition = () =>
   useApiMutation<
     IPollaGroupEditionAccountEntity,
@@ -436,7 +436,7 @@ export const useLiquidateGroupEdition = () =>
 
 /**
  * "Liquidar seleccionados": varios grupos juntos, todo o nada. Cada grupo
- * lleva su cobro y su pago (> 0), como al liquidar de a uno.
+ * lleva su cobro (> 0), como al liquidar de a uno.
  */
 export const useLiquidateGroupEditions = () =>
   useApiMutation<

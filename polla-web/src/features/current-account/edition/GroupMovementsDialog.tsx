@@ -31,7 +31,7 @@ const LABEL: Record<IPollaGroupEditionMovement['type'], string> = {
 const fmtDate = (value: string) => dayjs(value).format('DD/MM/YYYY');
 
 /**
- * "Movimientos" de un grupo en la edición: los cobros y pagos que entraron al
+ * "Movimientos" de un grupo en la edición: los cobros que entraron al
  * liquidarlo, para corregir el monto (siempre > 0, sin cambiar el tipo) o
  * borrar uno. No da de alta: los nuevos se cargan al liquidar el grupo.
  */
@@ -98,8 +98,8 @@ export const GroupMovementsDialog = ({
         <DialogHeader>
           <DialogTitle>Movimientos de {groupName}</DialogTitle>
           <DialogDescription>
-            Cobros y pagos del grupo en la edición. Se cargan al liquidar el grupo; acá se corrige
-            el monto o se borran.
+            Cobros del grupo en la edición. Se cargan al liquidar el grupo; acá se corrige el monto
+            o se borran.
           </DialogDescription>
         </DialogHeader>
 

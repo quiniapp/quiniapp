@@ -122,29 +122,26 @@ import { useCashierCode } from './useCashierCode';
 
 const OUTDATED_TEXT = 'Cambió desde la liquidación del grupo';
 const LOCKED_HINT = 'Configurado en el admin del grupo (Grupos).';
-const INVALID_AMOUNT_TEXT = 'Cobros y pagos no pueden ser negativos';
+const INVALID_AMOUNT_TEXT = 'El cobro no puede ser negativo';
 const NOT_LIQUIDATABLE_TEXT = 'Se carga al liquidar: la carga sigue abierta o faltan pasadores';
 const NO_PERCENTAGE_TEXT = 'Sin % configurado: sale al elegirlo en Liquidar';
 
-/** Cobros y Pagos de "Grupos a liquidar": lo escrito se suma al liquidar el grupo. */
-const MOVEMENT_INPUTS = [
-  { key: 'collection', had: 'collections', label: 'Cobros' },
-  { key: 'payment', had: 'payments', label: 'Pagos' },
-] as const;
+/** Cobros de "Grupos a liquidar": lo escrito se suma al liquidar el grupo. */
+const MOVEMENT_INPUTS = [{ key: 'collection', had: 'collections', label: 'Cobros' }] as const;
 
 type ReadMovements = ReturnType<typeof readGroupMovementInputs>;
 
-/** Lo que tenía el grupo (cobros o pagos guardados), para el "Tenía $X". */
+/** Lo que tenía el grupo (cobros guardados), para el "Tenía $X". */
 const hadAmount = (
   account: IPollaGroupEditionAccountEntity | null,
   key: (typeof MOVEMENT_INPUTS)[number]['had']
 ) => Number(account?.[key] ?? 0);
 
-/** El grupo tiene cobros o pagos cargados en la edición. */
+/** El grupo tiene cobros cargados en la edición. */
 const hasGroupMovements = (account: IPollaGroupEditionAccountEntity | null) =>
-  Boolean(account) && hadAmount(account, 'collections') + hadAmount(account, 'payments') > 0;
+  Boolean(account) && hadAmount(account, 'collections') > 0;
 
-/** La celda donde se escribe el cobro o el pago que se suma hoy (tabla y tarjeta). */
+/** La celda donde se escribe el cobro que se suma hoy (tabla y tarjeta). */
 const MovementInput = ({
   groupName,
   label,
@@ -345,15 +342,15 @@ const validPercentage = (raw: string) => {
   return value === null || value < 0 || value > 100 ? null : value;
 };
 
-/** Lo que ya tenía el grupo en cobros y pagos (va en los diálogos de liquidar). */
+/** Lo que ya tenía el grupo en cobros (va en los diálogos de liquidar). */
 const previousMovementsText = (account: IPollaGroupEditionAccountEntity | null) =>
   hasGroupMovements(account)
-    ? `Ya tenía cobros por $${fmtMoney(hadAmount(account, 'collections'))} y pagos por $${fmtMoney(hadAmount(account, 'payments'))}.`
+    ? `Ya tenía cobros por $${fmtMoney(hadAmount(account, 'collections'))}.`
     : null;
 
 /**
  * Liquidar un grupo en la edición: el % del admin (fijo si el admin lo tiene
- * configurado) y el cobro y el pago escritos en la tabla. Muestra cuánto del
+ * configurado) y el cobro escrito en la tabla. Muestra cuánto del
  * total es para el admin (el 100% de su comisión, que le transfiere el
  * capitalista por afuera), cuánto para el capitalista y cómo queda el Debe.
  */
@@ -370,14 +367,14 @@ const LiquidateGroupDialog = ({
 }: {
   preview: IPollaGroupEditionAccountPreview;
   adminPercentage: number | null;
-  /** Cobro y pago escritos en la fila del grupo (0 = nada). */
+  /** Cobro escrito en la fila del grupo (0 = nada). */
   added: GroupMovementAmounts;
   editionId: string;
   title: string;
   special: boolean;
   groupById: Map<string, GroupRef>;
   onClose: () => void;
-  /** Liquidó bien: se vacían los Cobros y Pagos escritos del grupo. */
+  /** Liquidó bien: se vacían los Cobros escritos del grupo. */
   onLiquidated: () => void;
 }) => {
   const { organizationId } = useAuth();
@@ -459,12 +456,11 @@ const LiquidateGroupDialog = ({
           <div className="flex flex-col gap-2">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Amount label="Cobros a sumar" value={added.collection} />
-              <Amount label="Pagos a sumar" value={added.payment} />
               <Amount label={`${owedWord(owed)} al liquidar`} value={Math.abs(owed)} strong />
             </div>
             <p className="text-xs text-muted-foreground">
-              {previous ? `${previous} ` : ''}Lo que se suma se escribe en Cobros y Pagos del grupo,
-              antes de liquidar.
+              {previous ? `${previous} ` : ''}Lo que se suma se escribe en Cobros del grupo, antes
+              de liquidar.
             </p>
           </div>
 
@@ -484,8 +480,8 @@ const LiquidateGroupDialog = ({
 
 /**
  * "Liquidar seleccionados": una fila por grupo con su % (fijo si el admin lo
- * tiene, si no a mano), lo que va al admin y al capitalista, el cobro y el
- * pago escritos y cómo queda el Debe. Se liquidan todos juntos (si uno falla,
+ * tiene, si no a mano), lo que va al admin y al capitalista, el cobro
+ * escrito y cómo queda el Debe. Se liquidan todos juntos (si uno falla,
  * ninguno) y se baja un ZIP con un PDF por grupo.
  */
 const LiquidateGroupsDialog = ({
@@ -501,7 +497,7 @@ const LiquidateGroupsDialog = ({
 }: {
   previews: IPollaGroupEditionAccountPreview[];
   adminPercentageOf: (groupId: string) => number | null;
-  /** Cobro y pago escritos en la fila de cada grupo (0 = nada). */
+  /** Cobro escrito en la fila de cada grupo (0 = nada). */
   addedOf: (groupId: string) => GroupMovementAmounts;
   editionId: string;
   title: string;
@@ -601,7 +597,6 @@ const LiquidateGroupsDialog = ({
                   <TableHead className="text-right">Admin</TableHead>
                   <TableHead className="text-right">Capitalista</TableHead>
                   <TableHead className="text-right">Cobros</TableHead>
-                  <TableHead className="text-right">Pagos</TableHead>
                   <TableHead className="text-right">Debe</TableHead>
                 </TableRow>
               </TableHeader>
@@ -635,9 +630,6 @@ const LiquidateGroupsDialog = ({
                     <TableCell className="text-right tabular-nums">
                       ${fmtMoney(row.added.collection)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      ${fmtMoney(row.added.payment)}
-                    </TableCell>
                     <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums">
                       {fmtOwed(row.owed)}
                     </TableCell>
@@ -658,9 +650,6 @@ const LiquidateGroupsDialog = ({
                   <TableCell className="text-right tabular-nums">
                     ${fmtMoney(sum((row) => row.added.collection))}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(sum((row) => row.added.payment))}
-                  </TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">
                     {fmtOwed(sum((row) => row.owed))}
                   </TableCell>
@@ -669,8 +658,8 @@ const LiquidateGroupsDialog = ({
             </Table>
           </div>
           <p className="text-xs text-muted-foreground">
-            Los % deshabilitados son los configurados en el admin de cada grupo. Cobros y Pagos son
-            lo escrito en cada grupo; el Debe incluye los cobros y pagos que ya tenía.
+            Los % deshabilitados son los configurados en el admin de cada grupo. Cobros es lo
+            escrito en cada grupo; el Debe incluye los cobros que ya tenía.
           </p>
 
           <DialogFooter>
@@ -794,12 +783,12 @@ interface GroupRowProps {
   selected: boolean;
   onSelect: (checked: boolean) => void;
   onLiquidate: () => void;
-  /** Lo escrito en Cobros y Pagos del grupo. */
+  /** Lo escrito en Cobros del grupo. */
   inputs: Partial<GroupMovementInputs>;
   /** Lo escrito, ya leído: montos (vacío = 0) e inválidos. */
   movements: ReadMovements;
   onInput: (key: GroupMovementKey, value: string) => void;
-  /** Abre "Movimientos" (cobros y pagos ya cargados). */
+  /** Abre "Movimientos" (cobros ya cargados). */
   onMovements: () => void;
 }
 
@@ -1098,7 +1087,7 @@ const GroupTableRow = ({
 };
 
 /**
- * Liquidaciones de grupo de la edición, con sus cobros, pagos, Debe y estado
+ * Liquidaciones de grupo de la edición, con sus cobros, Debe y estado
  * (solo para mirar), el "Total general" y debajo "Falta cobrar". Una que
  * quedó vieja (cambió lo que dejaron los pasadores o los gastos) se marca, y
  * reimprimirla pide confirmación.
@@ -1174,7 +1163,6 @@ const GroupEditionHistory = ({
               <TableHead className="text-right">Total admin</TableHead>
               <TableHead className="text-right">Total capitalista</TableHead>
               <TableHead className="text-right">Cobros</TableHead>
-              <TableHead className="text-right">Pagos</TableHead>
               <TableHead className="text-right">Debe</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead />
@@ -1232,9 +1220,6 @@ const GroupEditionHistory = ({
                   <TableCell className="text-right tabular-nums">
                     ${fmtMoney(account.collections)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    ${fmtMoney(account.payments)}
-                  </TableCell>
                   <TableCell
                     className={cn(
                       'whitespace-nowrap text-right font-semibold tabular-nums',
@@ -1279,9 +1264,6 @@ const GroupEditionHistory = ({
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 ${fmtMoney(totals.collections)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                ${fmtMoney(totals.payments)}
               </TableCell>
               {/* Debe neto: los negativos (Cobra) restan. */}
               <TableCell className="whitespace-nowrap text-right tabular-nums">
@@ -1432,7 +1414,7 @@ export const GroupEditionAccounts = () => {
   const [expensesOf, setExpensesOf] = useState<IPollaGroupEditionAccountPreview | null>(null);
   const [movementsOf, setMovementsOf] = useState<IPollaGroupEditionAccountPreview | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // Cobros y Pagos escritos por grupo: los leen la fila, la tarjeta y los dos
+  // Cobros escritos por grupo: los leen la fila, la tarjeta y los dos
   // diálogos de liquidar; se vacían al liquidar bien.
   const [movementInputs, setMovementInputs] = useState<
     Record<string, Partial<GroupMovementInputs>>
@@ -1729,7 +1711,6 @@ export const GroupEditionAccounts = () => {
                       <TableHead className="text-right">Admin</TableHead>
                       <TableHead className="text-right">Capitalista</TableHead>
                       <TableHead className="text-right">Cobros</TableHead>
-                      <TableHead className="text-right">Pagos</TableHead>
                       <TableHead className="text-right">Debe</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>

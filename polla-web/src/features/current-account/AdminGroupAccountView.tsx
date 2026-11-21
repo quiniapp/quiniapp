@@ -49,7 +49,7 @@ type Format = 'pdf' | 'png';
 /**
  * Los renglones de la página, formateados igual que la tabla de liquidaciones
  * del dueño (con decimales y gastos en positivo). El PDF y la imagen usan
- * pesos enteros (`groupLiquidationRows`). Cobros, Pagos, Debe y Estado son
+ * pesos enteros (`groupLiquidationRows`). Cobros, Debe y Estado son
  * solo para mirar: los carga el dueño al liquidar. Las etiquetas son fijas
  * (son las columnas): un Debe negativo dice "Cobra $X" en el valor.
  */
@@ -63,7 +63,6 @@ const pageRows = (account: IPollaGroupEditionLiquidation['account']) => {
     { label: 'Total admin', value: `$${fmtMoney(split.admin)}` },
     { label: 'Total capitalista', value: `$${fmtMoney(split.capitalist)}` },
     { label: 'Cobros', value: `$${fmtMoney(account.collections)}` },
-    { label: 'Pagos', value: `$${fmtMoney(account.payments)}` },
     { label: 'Debe', value: fmtOwed(groupOwed(account)) },
     { label: 'Estado', value: groupPaymentStatus(account) ?? '—' },
   ];
@@ -213,7 +212,7 @@ const AdminEditionLiquidations = () => {
           <TableBody>
             {data.map((item) => (
               <TableRow key={item.account.polla_group_edition_account_id}>
-                {/* El título largo baja de renglón: con Cobros, Pagos, Debe y Estado no entra a 1400 px. */}
+                {/* El título largo baja de renglón: con Cobros, Debe y Estado no entra a 1400 px. */}
                 <TableCell className="min-w-[180px] whitespace-normal font-medium">
                   {titleOf(item)} · {fmtDate(item.edition.start_date)}
                 </TableCell>

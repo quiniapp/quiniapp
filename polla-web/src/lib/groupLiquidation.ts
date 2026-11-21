@@ -22,7 +22,6 @@ export type GroupLiquidationAccount = Pick<
   | 'admin_commission'
   | 'edited_at'
   | 'collections'
-  | 'payments'
 >;
 
 const toNumber = (n: number | string | null | undefined) =>
@@ -37,35 +36,29 @@ export const money = (n: number | string | null | undefined) => {
 
 const cents = (n: number | string | null | undefined) => Math.round(toNumber(n) * 100);
 
-type GroupOwedAccount = Pick<
-  GroupLiquidationAccount,
-  'base' | 'admin_commission' | 'collections' | 'payments'
->;
+type GroupOwedAccount = Pick<GroupLiquidationAccount, 'base' | 'admin_commission' | 'collections'>;
 
 /**
- * Debe del grupo: (total - comisión del admin) - cobros + pagos, sumado en
- * centavos. `added` suma lo escrito y todavía no guardado. Negativo = le deben
- * al grupo ("Cobra").
+ * Debe del grupo: (total - comisión del admin) - cobros, sumado en centavos.
+ * `added` suma lo escrito y todavía no guardado. Negativo = le deben al grupo
+ * ("Cobra"). Los grupos no tienen pagos: la API guarda siempre 0.
  */
 export const groupOwed = (
   account: GroupOwedAccount,
-  added: { collection: number; payment: number } = { collection: 0, payment: 0 }
+  added: { collection: number } = { collection: 0 }
 ): number =>
   (cents(account.base) -
     cents(account.admin_commission) -
-    (cents(account.collections) + cents(added.collection)) +
-    (cents(account.payments) + cents(added.payment))) /
+    (cents(account.collections) + cents(added.collection))) /
   100;
 
 /**
  * Pagado: la cuenta está liquidada, el Debe es 0 y hay algo en ella
- * (capitalista, cobros o pagos distintos de 0). Un Debe negativo nunca es Pagado.
+ * (capitalista o cobros distintos de 0). Un Debe negativo nunca es Pagado.
  */
 export const groupPaid = (account: GroupOwedAccount): boolean =>
   cents(groupOwed(account)) === 0 &&
-  (cents(account.base) - cents(account.admin_commission) !== 0 ||
-    cents(account.collections) !== 0 ||
-    cents(account.payments) !== 0);
+  (cents(account.base) - cents(account.admin_commission) !== 0 || cents(account.collections) !== 0);
 
 /** `'PAGADO'` si la cuenta del grupo está saldada; si no, `null`. */
 export const groupLiquidationPaidMark = (account: GroupOwedAccount): 'PAGADO' | null =>
@@ -81,29 +74,28 @@ export const groupPaymentStatus = (account: GroupOwedAccount): 'Pagado' | 'Pendi
   return cents(groupOwed(account)) !== 0 ? 'Pendiente' : null;
 };
 
-/** Cobro y pago de un grupo que se suman al liquidar. */
+/** El cobro de un grupo que se suma al liquidar. */
 export interface GroupMovementAmounts {
   collection: number;
-  payment: number;
 }
 
 export type GroupMovementKey = keyof GroupMovementAmounts;
 
-/** Lo escrito en Cobros y Pagos de un grupo en "Grupos a liquidar". */
+/** Lo escrito en Cobros de un grupo en "Grupos a liquidar". */
 export type GroupMovementInputs = Record<GroupMovementKey, string>;
 
-const NO_GROUP_MOVEMENTS: GroupMovementAmounts = { collection: 0, payment: 0 };
+const NO_GROUP_MOVEMENTS: GroupMovementAmounts = { collection: 0 };
 
 /**
- * Lee lo escrito en Cobros y Pagos: vacío vale 0 y acepta coma decimal. Un
- * negativo o algo que no es un número queda en `invalid` (y vale 0).
+ * Lee lo escrito en Cobros: vacío vale 0 y acepta coma decimal. Un negativo o
+ * algo que no es un número queda en `invalid` (y vale 0).
  */
 export const readGroupMovementInputs = (
   raw: Partial<GroupMovementInputs> | undefined
 ): { values: GroupMovementAmounts; invalid: Set<GroupMovementKey> } => {
   const values = { ...NO_GROUP_MOVEMENTS };
   const invalid = new Set<GroupMovementKey>();
-  for (const key of ['collection', 'payment'] as const) {
+  for (const key of ['collection'] as const) {
     const text = raw?.[key] ?? '';
     if (text.trim() === '') continue;
     const value = parseAmount(text);
@@ -113,13 +105,11 @@ export const readGroupMovementInputs = (
   return { values, invalid };
 };
 
-/** Lo que se manda al liquidar: solo el cobro y el pago mayores a 0. */
+/** Lo que se manda al liquidar: el cobro, solo si es mayor a 0. */
 export const groupMovementPayload = (
   values: GroupMovementAmounts
-): Partial<GroupMovementAmounts> => ({
-  ...(values.collection > 0 ? { collection: values.collection } : {}),
-  ...(values.payment > 0 ? { payment: values.payment } : {}),
-});
+): Partial<GroupMovementAmounts> =>
+  values.collection > 0 ? { collection: values.collection } : {};
 
 /**
  * Debe de la fila de "Grupos a liquidar" con lo escrito: el de la liquidación
@@ -147,10 +137,10 @@ export const groupRowOwed = (
 
 /**
  * Cómo queda el Debe al liquidar hoy: el total y la comisión que se van a
- * guardar, los cobros y pagos que ya tenía el grupo y lo escrito.
+ * guardar, los cobros que ya tenía el grupo y lo escrito.
  */
 export const groupOwedAfterLiquidation = (
-  previous: Pick<GroupOwedAccount, 'collections' | 'payments'> | null,
+  previous: Pick<GroupOwedAccount, 'collections'> | null,
   liquidation: { total: number; commission: number },
   added: GroupMovementAmounts
 ): number =>
@@ -159,7 +149,6 @@ export const groupOwedAfterLiquidation = (
       base: liquidation.total,
       admin_commission: liquidation.commission,
       collections: previous?.collections ?? 0,
-      payments: previous?.payments ?? 0,
     },
     added
   );
@@ -195,7 +184,6 @@ export const groupLiquidationRows = (
     { label: 'Total admin', value: money(split.admin) },
     { label: 'Total capitalista', value: money(split.capitalist) },
     { label: 'Cobros', value: money(account.collections) },
-    { label: 'Pagos', value: money(account.payments) },
     { label: owedWord(owed), value: money(Math.abs(owed)) },
   ];
 };
@@ -208,7 +196,6 @@ export interface GroupLiquidationTotals {
   admin: number;
   capitalist: number;
   collections: number;
-  payments: number;
   /** Debe neto: suma de todos los Debe (los negativos restan). */
   owed: number;
   /** Falta cobrar: suma solo de los Debe positivos. */
@@ -223,7 +210,7 @@ export interface GroupLiquidationTotals {
 export const groupLiquidationTotals = (
   accounts: Pick<
     GroupLiquidationAccount,
-    'cashiers_subtotal' | 'expenses' | 'base' | 'admin_commission' | 'collections' | 'payments'
+    'cashiers_subtotal' | 'expenses' | 'base' | 'admin_commission' | 'collections'
   >[]
 ): GroupLiquidationTotals => {
   const sum = accounts.reduce(
@@ -236,7 +223,6 @@ export const groupLiquidationTotals = (
         admin: acc.admin + cents(account.admin_commission),
         capitalist: acc.capitalist + cents(account.base) - cents(account.admin_commission),
         collections: acc.collections + cents(account.collections),
-        payments: acc.payments + cents(account.payments),
         owed: acc.owed + owed,
         missing: acc.missing + Math.max(owed, 0),
       };
@@ -248,7 +234,6 @@ export const groupLiquidationTotals = (
       admin: 0,
       capitalist: 0,
       collections: 0,
-      payments: 0,
       owed: 0,
       missing: 0,
     }
@@ -260,7 +245,6 @@ export const groupLiquidationTotals = (
     admin: sum.admin / 100,
     capitalist: sum.capitalist / 100,
     collections: sum.collections / 100,
-    payments: sum.payments / 100,
     owed: sum.owed / 100,
     missing: sum.missing / 100,
   };
