@@ -345,9 +345,8 @@ export class PollaEditionAccountRepository {
     percentage: number | null;
     adjustments: number;
     paid: number;
-    /** Cobro y pago de esta liquidación: > 0 genera un movimiento; 0, nada. */
+    /** Cobro de esta liquidación: > 0 genera un movimiento; 0, nada. */
     collection: number;
-    payment: number;
     actorId: string;
   }): Promise<IPollaGroupEditionAccountEntity> {
     const { data, error } = await supabase.rpc('polla_liquidate_group_edition', {
@@ -358,7 +357,8 @@ export class PollaEditionAccountRepository {
       p_adjustments: p.adjustments,
       p_paid: p.paid,
       p_collection: p.collection,
-      p_payment: p.payment,
+      // Los grupos no tienen pagos: nunca se guarda uno.
+      p_payment: 0,
       p_actor_id: p.actorId,
     });
 
@@ -374,7 +374,6 @@ export class PollaEditionAccountRepository {
       polla_group_id: string;
       admin_percentage?: number | null;
       collection?: number;
-      payment?: number;
     }[];
     actorId: string;
   }): Promise<IPollaGroupEditionAccountEntity[]> {
@@ -385,7 +384,8 @@ export class PollaEditionAccountRepository {
         polla_group_id: g.polla_group_id,
         admin_percentage: g.admin_percentage ?? null,
         collection: g.collection ?? 0,
-        payment: g.payment ?? 0,
+        // Los grupos no tienen pagos: nunca se guarda uno.
+        payment: 0,
       })),
       p_actor_id: p.actorId,
     });

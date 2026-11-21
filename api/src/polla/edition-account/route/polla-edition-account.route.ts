@@ -484,7 +484,6 @@ export class PollaEditionAccountRouter {
       adjustments: 0,
       paid: 0,
       collection: payload.collection ?? 0,
-      payment: payload.payment ?? 0,
       actorId: user.polla_user_id,
     });
 

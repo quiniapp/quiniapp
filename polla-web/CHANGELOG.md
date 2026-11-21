@@ -4,6 +4,11 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-21 (los grupos no tienen pagos)
+
+- **Sin Pagos en las liquidaciones de grupo**: los grupos solo registran Cobros. Se sacan la columna, el input y la fila de Pagos de "Grupos a liquidar" (tabla y tarjeta del celular), la columna y el total de "Liquidaciones de grupo", "Pagos a sumar" y la columna Pagos de los diálogos de liquidar (`GroupEditionAccounts.tsx`), el renglón de la vista del admin (`AdminGroupAccountView.tsx`) y el del PDF/imagen (`groupLiquidationRows`, ahora 8 renglones). Los textos de `GroupMovementsDialog` hablan solo de cobros.
+- **`lib/groupLiquidation.ts`**: Debe = (total − comisión) − cobros; `groupOwed`, `groupPaid` y `groupOwedAfterLiquidation` ya no suman `payments` (un pago viejo guardado no cuenta). `GroupMovementAmounts` es solo `{ collection }`, `groupMovementPayload` manda solo el cobro y `groupLiquidationTotals` ya no devuelve `payments`. Tests actualizados.
+
 ### Fixed - 2026-11-20 (revisión final de cobros de grupo y selector de ediciones)
 
 - **`EditionSelect`**: la edición elegida que no está entre las cargadas se muestra en el selector (rótulo en `SelectValue`) pero ya no se agrega a la lista de opciones (Jugadas mostraba 6). Se quitó `mergeSelected`. Un guardia con ref evita el pedido doble de la misma página (scroll + observer en el mismo instante).

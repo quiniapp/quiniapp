@@ -333,9 +333,12 @@ export const liquidatePollaGroupEditionSchema = z.object({
    * (`polla_users.admin_percentage`): si lo tiene, la base usa ese.
    */
   admin_percentage: z.number().min(0).max(100).nullable().optional(),
-  /** Cobro y pago que se cargan al liquidar: cada uno > 0 genera un movimiento; vacío o 0, nada. */
+  /**
+   * Cobro que se carga al liquidar: > 0 genera un movimiento; vacío o 0, nada.
+   * Los grupos no tienen pagos: un `payment` que llegue se descarta (zod no
+   * estricto) y la API guarda siempre 0.
+   */
   collection: z.number().min(0).max(9999999999.99).optional(),
-  payment: z.number().min(0).max(9999999999.99).optional(),
 });
 
 /** Editar el monto de un cobro o pago de grupo (siempre > 0). */
