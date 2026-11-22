@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import type { IOrganizationEntityFront } from '@helper/types/organization.type';
 import { buildUserSlipPDF } from '@/functions/printLiquidationCashier';
 import { downloadFiles, shareFiles } from '@/functions/shareFiles';
+import { hasLiquidationAmounts } from '@/lib/liquidationSlip';
 import {
   quinielaLiquidationPdfName,
   quinielaLiquidationZipEntries,
@@ -15,8 +16,9 @@ const isMobileDevice = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgen
 
 /**
  * Exportar liquidación: un PDF por pasador, todos en un ZIP
- * `quiniela_liquidaciones_DD-MM-YYYY` con una carpeta por grupo. En el celular
- * se comparte; en la computadora (o si no se puede compartir), se descarga.
+ * `quiniela_liquidaciones_DD-MM-YYYY` con una carpeta por grupo. Los pasadores
+ * con la hoja toda en 0 no se exportan. En el celular se comparte; en la
+ * computadora (o si no se puede compartir), se descarga.
  */
 export async function exportLiquidacion(
   queryClient: QueryClient,
@@ -26,7 +28,9 @@ export async function exportLiquidacion(
 ) {
   try {
     setPrinting(true);
-    const accounts = await fetchCurrentAccountData(queryClient, date);
+    const accounts = (await fetchCurrentAccountData(queryClient, date))?.filter(
+      hasLiquidationAmounts
+    );
     if (!accounts?.length) {
       toast.error('No hay cuentas a liquidar.');
       return;
