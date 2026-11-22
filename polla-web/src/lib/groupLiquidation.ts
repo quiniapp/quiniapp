@@ -160,6 +160,8 @@ export interface GroupLiquidationSheet {
   editionTitle: string;
   /** `YYYY-MM-DD`: la de la liquidación más nueva de las que se exportan. */
   date: string;
+  /** Edición especial: los archivos llevan `polla_plus_`, como el ZIP. */
+  special?: boolean;
 }
 
 /** `Grupo N - Nombre`, o `Nombre` si el grupo ya no tiene número. */
@@ -261,6 +263,7 @@ export const groupLiquidationSheets = (
     orgName: string;
     editionTitle: string;
     today: string;
+    special?: boolean;
   }
 ): GroupLiquidationSheet[] => {
   const date = groupReportDate(accounts) ?? ctx.today;
@@ -270,5 +273,6 @@ export const groupLiquidationSheets = (
     orgName: ctx.orgName,
     editionTitle: ctx.editionTitle,
     date,
+    special: ctx.special,
   }));
 };

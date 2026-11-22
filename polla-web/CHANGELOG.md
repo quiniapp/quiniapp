@@ -4,6 +4,23 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-21 (prefijo del juego en los archivos de liquidación)
+
+- **Los PDFs e imágenes de liquidación llevan el prefijo del juego**, el mismo que el ZIP: `polla_`, o `polla_plus_` en una edición especial. El resto del nombre no cambia. Por qué: al abrir el ZIP o mandar un archivo suelto no se distinguía si era de Polla o de Quiniela.
+  - Pasadores en el ZIP: `polla_1-6 Laura 15-11-2026.pdf` (`.png` en formato Imagen), con `liquidationZipPdfName(…, special)`. `prepareLiquidationSlips` recibe `special`, que pasa "Exportar liquidación" de una edición (`EditionReportDialog`); por día, por rango y en "Varias ediciones" el ZIP es `polla_…` y los archivos también.
+  - Grupos: `polla_Grupo 1 - Leo 15-11-2026.pdf`, en el ZIP, en la hoja suelta (reimprimir en "Liquidaciones de grupo") y en la vista del admin (PDF e imagen), con `groupLiquidationFileName(…, special)`. `GroupLiquidationSheet` y `groupLiquidationSheets` llevan `special`; `GroupEditionHistory` recibe `special` y `AdminGroupAccountView` lo calcula con `isPollaSpecialEdition`.
+  - El PDF suelto del pasador ya era `polla_Exportar_Liquidacion_…`: no cambia.
+  - `liquidationGamePrefix(special)` (`lib/liquidationZip.ts`) arma el prefijo del ZIP y de los archivos.
+- **Largo de ruta**: el peor caso de "Varias ediciones" (filtro de grupo, nombre de 30 letras y grupo de 20) pasa de 185 a 191 caracteres por el prefijo; el test acepta hasta 191.
+- Tests: `liquidation-zip.test.ts` y `group-liquidation.test.ts` (prefijo, `polla_plus_` y `special` en las hojas).
+
+### Changed - 2026-11-21 (Vite 6 → Vite 8)
+
+- **Vite 8** (`vite` `>=6.4.1` → `^8.3.8`) con Rolldown + Oxc: el build baja de 13,5 s a 6 s y se cierran las vulnerabilidades del dev server de Vite 6. Requiere Node 20.19+ o 22.12+, también en Vercel.
+- **`@vitejs/plugin-react` v6** reemplaza a `@vitejs/plugin-react-swc`.
+- **`vite.config.ts`**: `rollupOptions` → `rolldownOptions`. El `manualChunks` en forma de objeto, que Vite 8 ya no acepta, pasa a `codeSplitting.groups` con un `test` por paquete (react, router, query, radix). Los alias usan `import.meta.dirname`. El peso total no cambia (514 KB gzip); los chunks de cada ruta ahora se llaman como su carpeta (`bets-[hash].js`) en vez de `index-[hash].js`. No hay ciclos entre chunks, así que no hace falta `strictExecutionOrder` (a diferencia de web).
+- Vitest 5.0.5 ya soporta Vite 8: 246 tests OK. Verificado: login, las 16 rutas y "Compartir PDF" en build, `preview` y dev.
+
 ### Changed - 2026-11-21 (los grupos no tienen pagos)
 
 - **Sin Pagos en las liquidaciones de grupo**: los grupos solo registran Cobros. Se sacan la columna, el input y la fila de Pagos de "Grupos a liquidar" (tabla y tarjeta del celular), la columna y el total de "Liquidaciones de grupo", "Pagos a sumar" y la columna Pagos de los diálogos de liquidar (`GroupEditionAccounts.tsx`), el renglón de la vista del admin (`AdminGroupAccountView.tsx`) y el del PDF/imagen (`groupLiquidationRows`, ahora 8 renglones). Los textos de `GroupMovementsDialog` hablan solo de cobros.

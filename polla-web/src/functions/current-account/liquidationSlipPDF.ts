@@ -145,12 +145,19 @@ export async function prepareLiquidationSlips(params: {
   sheets: LiquidationSlipSheet[];
   zipName: string;
   format: LiquidationFormat;
+  /** Edición especial: los archivos llevan `polla_plus_`, igual que `zipName`. */
+  special?: boolean;
 }): Promise<PreparedLiquidation | null> {
   if (params.sheets.length === 0) return null;
 
   const entries = liquidationZipEntries(
     params.sheets.map((sheet) => {
-      const pdfName = liquidationZipPdfName(sheet.cashierCode, sheet.account.user_name, sheet.date);
+      const pdfName = liquidationZipPdfName(
+        sheet.cashierCode,
+        sheet.account.user_name,
+        sheet.date,
+        params.special
+      );
       return {
         ...sheet,
         fileName: params.format === 'image' ? pdfName.replace(/\.pdf$/, '.png') : pdfName,

@@ -2,7 +2,11 @@ import { useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import { FileText, Image as ImageIcon } from 'lucide-react';
-import { IPollaGroupEditionLiquidation, pollaEditionTitle } from '@helper/polla/types/game.type';
+import {
+  IPollaGroupEditionLiquidation,
+  isPollaSpecialEdition,
+  pollaEditionTitle,
+} from '@helper/polla/types/game.type';
 import { useAuth } from '@/providers/AuthContext';
 import { useDrawCatalogs, useGroups } from '@/hooks/fetchs/useCatalogs';
 import { useMyGroupEditionLiquidations } from '@/hooks/fetchs/usePollaData';
@@ -122,6 +126,7 @@ const AdminEditionLiquidations = () => {
         orgName: orgName || (await fetchOrganizationName(organizationId)),
         editionTitle: titleOf(item),
         date: dayjs(item.account.edited_at).format('YYYY-MM-DD'),
+        special: isPollaSpecialEdition(item.edition),
       };
 
       if (format === 'pdf') {
@@ -130,9 +135,8 @@ const AdminEditionLiquidations = () => {
       }
 
       const blob = await renderLiquidationImage(groupLiquidationImageLines(sheet));
-      const file = new File([blob], groupLiquidationFileName(sheet.group, sheet.date, 'png'), {
-        type: 'image/png',
-      });
+      const fileName = groupLiquidationFileName(sheet.group, sheet.date, 'png', sheet.special);
+      const file = new File([blob], fileName, { type: 'image/png' });
       if (!isMobileDevice()) {
         downloadFiles([file]);
         return;
