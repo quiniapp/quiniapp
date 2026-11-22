@@ -1,0 +1,8 @@
+# Config-as-code de Railway (API). Lo que se define acá pisa al dashboard en cada deploy;
+# lo que no se define (build/start command, healthcheck, variables) sigue saliendo del dashboard.
+#
+# Railpack toma la versión de Node de `engines.node` del package.json raíz. Nixpacks llega
+# solo hasta Node 23: con `26.x` volvía sin avisar a Node 18, y tsx 4.23 no resuelve los
+# alias `@helper/*` en Node 18.
+[build]
+builder = "railpack"
