@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (tests propios con Vitest)
+
+- **Web tiene sus propios tests**: `npm run test --workspace web` (`vitest run`; `test:watch` para el modo watch). Antes los tests de QuiniApp vivían en polla-web e importaban `../../../../web/src/...`. Ahora cada app tiene los suyos.
+  - **`vitest.config.ts`** (nuevo): igual que el de polla-web. Toma `vite.config.ts` (alias `@` y `@helper`) y corre `src/**/*.test.ts` en entorno `node`.
+  - **`vitest`** `5.0.5` en devDependencies, la misma versión exacta que polla-web (queda una sola copia en la raíz).
+  - Se pasaron de `polla-web/src/__tests__/helper/quiniela-*.test.ts` a `src/__tests__/`: `liquidation-zip.test.ts`, `liquidation-slip.test.ts` y `cashier-pick.test.ts` (11 tests), que ahora importan con `@/lib/...`. Las entradas de abajo nombran las rutas viejas.
+  - **CI** (`.github/workflows/ci.yml`): nuevo paso "Test web".
+
 ### Changed - 2026-11-22 (Exportar liquidación: elegir los pasadores)
 
 - **Exportar liquidación abre un modal para elegir los pasadores**, igual que en la Polla (`CashierPickDialog`). Vienen tildados los que tuvieron movimiento; los que tienen la hoja toda en 0 aparecen sin tildar, con "Sin movimiento", y se pueden sumar a mano. Reemplaza al filtro fijo de la entrada de abajo, que los dejaba afuera sin opción.
@@ -12,7 +20,7 @@ All notable changes to the Web workspace are documented in this file.
   - **`lib/liquidationSlip.ts`**: `hasLiquidationAmounts` pasa a llamarse `hasAccountMovement` (mismo criterio: algún monto de la hoja distinto de 0), como en la Polla.
   - **`handlers/exportLiquidacion.ts`**: `loadLiquidationAccounts` trae las cuentas para el modal ("No hay cuentas a liquidar." si no hay ninguna). `exportLiquidacion` arma el ZIP con las cuentas elegidas y devuelve si se entregó. El modal se cierra solo si se entregó; si se cancela el compartir, queda abierto.
   - **Fix:** en el celular, si Safari rechaza el compartir porque armar el ZIP tardó (`blocked`), el ZIP se descarga, como en la Polla. Antes no pasaba nada y el toast igual decía "Liquidaciones exportadas.".
-- Tests: `polla-web/src/__tests__/helper/quiniela-cashier-pick.test.ts` (nuevo) y `quiniela-liquidation-slip.test.ts`. Probado en el navegador con datos de prueba: vienen tildados solo los que tienen movimiento, y funcionan el filtro por grupo, "Seleccionar todos" y la selección que se exporta.
+- Tests: `src/__tests__/cashier-pick.test.ts` (nuevo) y `src/__tests__/liquidation-slip.test.ts`. Probado en el navegador con datos de prueba: vienen tildados solo los que tienen movimiento, y funcionan el filtro por grupo, "Seleccionar todos" y la selección que se exporta.
 
 ### Changed - 2026-11-22 (liquidaciones en 0 fuera del ZIP)
 

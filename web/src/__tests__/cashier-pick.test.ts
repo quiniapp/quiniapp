@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-// La lista para elegir pasadores de QuiniApp (web/); web no tiene tests propios, así que se prueba acá.
-import { NO_GROUP, filterByGroup, pickedVisible } from '../../../../web/src/lib/cashierPick';
+import { NO_GROUP, filterByGroup, pickedVisible } from '@/lib/cashierPick';
 
 type Row = { id: string; group: string | null };
 const rows: Row[] = [
