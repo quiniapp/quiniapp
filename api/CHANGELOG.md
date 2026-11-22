@@ -11,7 +11,11 @@ All notable changes to the API workspace are documented in this file.
 - **`engines.node: "26.x"`** en el `package.json` raíz (y en `package-lock.json`). Railway y Render construyen desde la raíz y toman de ahí la versión de Node. CI (`.github/workflows/ci.yml`) también pasa a Node 26.
 - Por qué: Railway no tenía versión fijada y corría Node 18.20.5. Con `tsx` 4.23 en Node 18 no se aplican los `paths` del tsconfig y la API se caía al arrancar: `ERR_MODULE_NOT_FOUND: Cannot find package '@helper/errors'`. Reproducido en local: Node 18 + tsx 4.23.15 falla, Node 18 + tsx 4.20.3 anda, Node 20 y Node 26 andan. No se vuelve a tsx 4.20 porque rompe Vite 8 (ver la entrada de abajo). Además, Node 18 ya no tiene soporte.
 - Verificado con Node 26.13.1: carga todo el grafo de módulos de `src/index.ts` con tsx (incluido `bcrypt` nativo) y pasan los 252 tests de polla-web.
-- **`railway.toml`** (raíz, nuevo): `builder = "railpack"`. Nixpacks solo soporta Node hasta la 23: con `26.x` vuelve sin avisar al default (18) y sigue fallando. Railpack respeta `engines.node` y solo poda las devDependencies con `RAILPACK_PRUNE_DEPS=true` (`tsx` es devDependency). El build, el start y las variables siguen saliendo del dashboard de Railway.
+- **`railway.toml`** (raíz, nuevo): la config de build y deploy de Railway sale del repo y pisa al dashboard. Solo las variables de entorno siguen en el dashboard.
+  - `builder = "railpack"`: Nixpacks solo soporta Node hasta la 23. Con `26.x` vuelve sin avisar al default (18) y la API sigue cayéndose. Railpack respeta `engines.node` y deja `NPM_CONFIG_PRODUCTION=false`, así que instala `tsx` (devDependency).
+  - `buildCommand = "node --version"`: la API no se compila. Sin esto, Railpack corre el `build` de la raíz, que arma web y polla-web y falla en `helper` (no tiene script `build`). Además deja en el log la versión de Node.
+  - `startCommand = "npm --workspace api run start"` (`tsx src/index.ts`), igual que Render. Antes Railway corría `npm run api`, que es `tsx watch`, pensado para desarrollo.
+  - `healthcheckPath = "/health"` (no toca la base, timeout 300 s): si la API no levanta, Railway sigue sirviendo el deploy anterior en vez de cortar el servicio. `restartPolicyType = "ON_FAILURE"` (10 reintentos) y `sleepApplication = false` (corre los jobs de fondo).
 
 ### Changed - 2026-11-21 (tsx 4.23, necesario para Vite 8)
 
