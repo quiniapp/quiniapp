@@ -10,7 +10,7 @@ import {
  * (`@helper/functions/liquidationZip`):
  *
  * `quiniela_liquidaciones_15-11-2026.zip`
- * └ `quiniela_liquidaciones_15-11-2026/Leo 15-11-2026/6 Laura 15-11-2026.pdf`
+ * └ `quiniela_liquidaciones_15-11-2026/Leo 15-11-2026/quiniela_6 Laura 15-11-2026.pdf`
  *
  * Los grupos son sub-organizaciones sin número: la carpeta es el nombre y la
  * fecha. Si ningún pasador tiene grupo, los PDF van directo en la raíz.
@@ -18,14 +18,17 @@ import {
 
 export const NO_GROUP_FOLDER = 'Sin grupo';
 
+/** Prefijo del juego que se liquida, en el nombre del ZIP y de cada PDF. */
+export const LIQUIDATION_GAME_PREFIX = 'quiniela';
+
 /** `DD-MM-YYYY` de una fecha `YYYY-MM-DD`. */
 export const fileDate = (date: string) => dayjs(date).format('DD-MM-YYYY');
 
 /** `quiniela_liquidaciones_DD-MM-YYYY.zip`. */
 export const quinielaLiquidationZipName = (date: string) =>
-  `quiniela_liquidaciones_${fileDate(date)}.zip`;
+  `${LIQUIDATION_GAME_PREFIX}_liquidaciones_${fileDate(date)}.zip`;
 
-/** `{número} {nombre} {DD-MM-YYYY}.pdf` de un pasador. */
+/** `quiniela_{número} {nombre} {DD-MM-YYYY}.pdf` de un pasador. */
 export const quinielaLiquidationPdfName = (
   userNumber: number | string | null | undefined,
   userName: string | null | undefined,
@@ -33,7 +36,7 @@ export const quinielaLiquidationPdfName = (
 ) => {
   const name = (userName ?? '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Pasador';
   const number = userNumber === null || userNumber === undefined ? '' : `${userNumber} `;
-  return `${number}${name} ${fileDate(date)}.pdf`;
+  return `${LIQUIDATION_GAME_PREFIX}_${number}${name} ${fileDate(date)}.pdf`;
 };
 
 export interface QuinielaZipSheet {

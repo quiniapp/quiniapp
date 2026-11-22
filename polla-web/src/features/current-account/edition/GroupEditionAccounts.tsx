@@ -242,20 +242,18 @@ interface SheetsContext {
   /** El nombre ya cargado (`useOrganizationName`); sin él (o vacío) se pide al exportar. */
   orgName?: string;
   title: string;
-  /** Edición especial: el ZIP lleva el prefijo `polla_plus_`. */
+  /** Edición especial: el ZIP y sus archivos llevan el prefijo `polla_plus_`. */
   special: boolean;
 }
 
 /** Las hojas de las liquidaciones, con el nombre de la organización ya cargado si se puede. */
-const sheetsOf = async (
-  accounts: IPollaGroupEditionAccountEntity[],
-  ctx: Omit<SheetsContext, 'special'>
-) =>
+const sheetsOf = async (accounts: IPollaGroupEditionAccountEntity[], ctx: SheetsContext) =>
   groupLiquidationSheets(accounts, {
     groupNumberOf: (groupId) => ctx.groupById.get(groupId)?.number,
     orgName: ctx.orgName || (await fetchOrganizationName(ctx.organizationId)),
     editionTitle: ctx.title,
     today: todayIso(),
+    special: ctx.special,
   });
 
 /** Un archivo por grupo (aunque sea uno solo), listo para entregar. */
@@ -295,10 +293,7 @@ const exportZipOrToast = async (
 };
 
 /** Baja la hoja A4 suelta de un grupo, con el título de la edición. */
-const downloadSheet = async (
-  account: IPollaGroupEditionAccountEntity,
-  ctx: Omit<SheetsContext, 'special'>
-) => {
+const downloadSheet = async (account: IPollaGroupEditionAccountEntity, ctx: SheetsContext) => {
   try {
     const [sheet] = await sheetsOf([account], ctx);
     await downloadGroupLiquidationPDF(sheet);
@@ -1095,12 +1090,14 @@ const GroupTableRow = ({
 const GroupEditionHistory = ({
   editionId,
   title,
+  special,
   organizationId,
   groupById,
   previews,
 }: {
   editionId: string;
   title: string;
+  special: boolean;
   organizationId: string | null;
   groupById: Map<string, GroupRef>;
   previews: IPollaGroupEditionAccountPreview[];
@@ -1124,7 +1121,7 @@ const GroupEditionHistory = ({
 
   const reprint = (account: IPollaGroupEditionAccountEntity) => {
     if (outdatedGroups.has(account.polla_group_id)) setConfirming(account);
-    else void downloadSheet(account, { groupById, organizationId, orgName, title });
+    else void downloadSheet(account, { groupById, organizationId, orgName, title, special });
   };
 
   if (accountsQuery.isError && !accountsQuery.data) {
@@ -1147,7 +1144,13 @@ const GroupEditionHistory = ({
             onConfirm={() => {
               const account = confirming;
               setConfirming(null);
-              void downloadSheet(account, { groupById, organizationId, orgName, title });
+              void downloadSheet(account, {
+                groupById,
+                organizationId,
+                orgName,
+                title,
+                special,
+              });
             }}
             onCancel={() => setConfirming(null)}
           />
@@ -1747,6 +1750,7 @@ export const GroupEditionAccounts = () => {
             <GroupEditionHistory
               editionId={editionId}
               title={title}
+              special={special}
               organizationId={organizationId}
               groupById={groupById}
               previews={previews}

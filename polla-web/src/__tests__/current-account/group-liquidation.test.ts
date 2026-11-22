@@ -31,12 +31,16 @@ const account = {
   collections: 50000,
 };
 
-const sheet = (group: { number?: number; name: string }): GroupLiquidationSheet => ({
+const sheet = (
+  group: { number?: number; name: string },
+  special?: boolean
+): GroupLiquidationSheet => ({
   account: { ...account, group_name: group.name },
   group,
   orgName: 'Sistema',
   editionTitle: 'Semana 46',
   date: D,
+  special,
 });
 
 describe('liquidaciones de grupo', () => {
@@ -47,13 +51,16 @@ describe('liquidaciones de grupo', () => {
     );
   });
 
-  it('groupLiquidationFileName: con número, sin número y caracteres prohibidos', () => {
+  it('groupLiquidationFileName: prefijo del juego, con número, sin número y caracteres prohibidos', () => {
     expect(groupLiquidationFileName({ number: 1, name: 'Leo' }, D, 'pdf')).toBe(
-      'Grupo 1 - Leo 15-11-2026.pdf'
+      'polla_Grupo 1 - Leo 15-11-2026.pdf'
     );
-    expect(groupLiquidationFileName({ name: 'Leo' }, D, 'png')).toBe('Leo 15-11-2026.png');
+    expect(groupLiquidationFileName({ name: 'Leo' }, D, 'png')).toBe('polla_Leo 15-11-2026.png');
     expect(groupLiquidationFileName({ number: 4, name: 'Norte/Sur' }, D, 'pdf')).toBe(
-      'Grupo 4 - Norte_Sur 15-11-2026.pdf'
+      'polla_Grupo 4 - Norte_Sur 15-11-2026.pdf'
+    );
+    expect(groupLiquidationFileName({ number: 1, name: 'Leo' }, D, 'pdf', true)).toBe(
+      'polla_plus_Grupo 1 - Leo 15-11-2026.pdf'
     );
   });
 
@@ -74,9 +81,21 @@ describe('liquidaciones de grupo', () => {
       'pdf'
     ).map((entry) => entry.path);
     expect(paths).toEqual([
-      'polla_liquidaciones_grupos_15-11-2026/Grupo 1 - Leo 15-11-2026.pdf',
-      'polla_liquidaciones_grupos_15-11-2026/Grupo 2 - Ana 15-11-2026.pdf',
-      'polla_liquidaciones_grupos_15-11-2026/Sin 15-11-2026.pdf',
+      'polla_liquidaciones_grupos_15-11-2026/polla_Grupo 1 - Leo 15-11-2026.pdf',
+      'polla_liquidaciones_grupos_15-11-2026/polla_Grupo 2 - Ana 15-11-2026.pdf',
+      'polla_liquidaciones_grupos_15-11-2026/polla_Sin 15-11-2026.pdf',
+    ]);
+  });
+
+  it('groupLiquidationZipEntries: en una edición especial los archivos llevan polla_plus_, como el ZIP', () => {
+    const zipName = groupLiquidationZipName({ date: D, special: true });
+    const paths = groupLiquidationZipEntries(
+      [sheet({ number: 1, name: 'Leo' }, true)],
+      zipName,
+      'png'
+    ).map((entry) => entry.path);
+    expect(paths).toEqual([
+      'polla_plus_liquidaciones_grupos_15-11-2026/polla_plus_Grupo 1 - Leo 15-11-2026.png',
     ]);
   });
 
@@ -168,6 +187,12 @@ describe('groupLiquidationSheets', () => {
 
   it('sin liquidaciones no hay hojas', () => {
     expect(groupLiquidationSheets([], ctx)).toEqual([]);
+  });
+
+  it('las hojas de una edición especial quedan marcadas (sus archivos llevan polla_plus_)', () => {
+    const accounts = [acc('g1', '2026-11-15T10:00:00.000000+00:00')];
+    expect(groupLiquidationSheets(accounts, { ...ctx, special: true })[0].special).toBe(true);
+    expect(groupLiquidationSheets(accounts, ctx)[0].special).toBeFalsy();
   });
 });
 

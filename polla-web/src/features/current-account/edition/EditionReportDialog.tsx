@@ -393,6 +393,7 @@ export const EditionReportDialog = ({
           })),
           zipName: liquidationZipName({ kind: 'edition', date, special }, zipGroupFilter),
           format,
+          special,
         })
       );
       if (done) onClose();
