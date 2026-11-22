@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Removed - 2026-11-22 (tests de QuiniApp)
+
+- Los tests de QuiniApp que vivían acá (`src/__tests__/helper/quiniela-liquidation-zip.test.ts`, `quiniela-liquidation-slip.test.ts` y `quiniela-cashier-pick.test.ts`) se pasaron a `web/src/__tests__/`. Web ahora tiene su propio Vitest: cada app con sus tests. polla-web queda con 246 tests, todos de la Polla.
+
 ### Changed - 2026-11-21 (prefijo del juego en los archivos de liquidación)
 
 - **Los PDFs e imágenes de liquidación llevan el prefijo del juego**, el mismo que el ZIP: `polla_`, o `polla_plus_` en una edición especial. El resto del nombre no cambia. Por qué: al abrir el ZIP o mandar un archivo suelto no se distinguía si era de Polla o de Quiniela.

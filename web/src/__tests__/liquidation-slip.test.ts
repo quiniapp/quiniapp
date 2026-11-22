@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-// La hoja de liquidación de QuiniApp (web/); web no tiene tests propios, así que se prueba acá.
-import { hasAccountMovement } from '../../../../web/src/lib/liquidationSlip';
+import { hasAccountMovement } from '@/lib/liquidationSlip';
 
 const zero = {
   pass: 0,
