@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // La hoja de liquidación de QuiniApp (web/); web no tiene tests propios, así que se prueba acá.
-import { hasLiquidationAmounts } from '../../../../web/src/lib/liquidationSlip';
+import { hasAccountMovement } from '../../../../web/src/lib/liquidationSlip';
 
 const zero = {
   pass: 0,
@@ -17,21 +17,21 @@ const zero = {
   bills: 0,
 };
 
-describe('hasLiquidationAmounts (QuiniApp)', () => {
-  it('todos los montos de la hoja en 0: no se exporta', () => {
-    expect(hasLiquidationAmounts(zero)).toBe(false);
+describe('hasAccountMovement (QuiniApp)', () => {
+  it('todos los montos de la hoja en 0: sin movimiento (viene sin tildar)', () => {
+    expect(hasAccountMovement(zero)).toBe(false);
   });
 
-  it('cualquier monto de la hoja distinto de 0 (también negativo): se exporta', () => {
+  it('cualquier monto de la hoja distinto de 0 (también negativo): con movimiento (viene tildado)', () => {
     for (const key of Object.keys(zero)) {
-      expect(hasLiquidationAmounts({ ...zero, [key]: 150 })).toBe(true);
-      expect(hasLiquidationAmounts({ ...zero, [key]: -150 })).toBe(true);
+      expect(hasAccountMovement({ ...zero, [key]: 150 })).toBe(true);
+      expect(hasAccountMovement({ ...zero, [key]: -150 })).toBe(true);
     }
   });
 
   it('null, undefined y "0" cuentan como 0', () => {
     expect(
-      hasLiquidationAmounts({
+      hasAccountMovement({
         ...zero,
         pass: null,
         total: undefined,

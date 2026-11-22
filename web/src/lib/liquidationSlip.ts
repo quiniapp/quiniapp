@@ -21,9 +21,10 @@ const SLIP_AMOUNT_KEYS = [
 ] as const satisfies readonly (keyof ICurrentAccountEntityFront)[];
 
 /**
- * False si la hoja saldría toda en 0: ese pasador no se exporta. Sin aciertos
- * (`successes` en 0) tampoco hay premios en la tabla de la hoja.
+ * Con movimiento: algún monto de la hoja distinto de 0. Los que tienen la hoja
+ * toda en 0 vienen sin tildar al exportar (se pueden sumar a mano). Sin
+ * aciertos (`successes` en 0) tampoco hay premios en la tabla de la hoja.
  */
-export const hasLiquidationAmounts = (
+export const hasAccountMovement = (
   account: Pick<ICurrentAccountEntityFront, (typeof SLIP_AMOUNT_KEYS)[number]>
 ) => SLIP_AMOUNT_KEYS.some((key) => Number(account[key] ?? 0) !== 0);
