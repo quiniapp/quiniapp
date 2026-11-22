@@ -6,6 +6,13 @@ All notable changes to the API workspace are documented in this file.
 
 > **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
 
+### Fixed - 2026-11-22 (Node 26: la API no arrancaba en Railway)
+
+- **`engines.node: "26.x"`** en el `package.json` raíz (y en `package-lock.json`). Railway y Render construyen desde la raíz y toman de ahí la versión de Node. CI (`.github/workflows/ci.yml`) también pasa a Node 26.
+- Por qué: Railway no tenía versión fijada y corría Node 18.20.5. Con `tsx` 4.23 en Node 18 no se aplican los `paths` del tsconfig y la API se caía al arrancar: `ERR_MODULE_NOT_FOUND: Cannot find package '@helper/errors'`. Reproducido en local: Node 18 + tsx 4.23.15 falla, Node 18 + tsx 4.20.3 anda, Node 20 y Node 26 andan. No se vuelve a tsx 4.20 porque rompe Vite 8 (ver la entrada de abajo). Además, Node 18 ya no tiene soporte.
+- Verificado con Node 26.13.1: carga todo el grafo de módulos de `src/index.ts` con tsx (incluido `bcrypt` nativo) y pasan los 252 tests de polla-web.
+- **`railway.toml`** (raíz, nuevo): `builder = "railpack"`. Nixpacks solo soporta Node hasta la 23: con `26.x` vuelve sin avisar al default (18) y sigue fallando. Railpack respeta `engines.node` y solo poda las devDependencies con `RAILPACK_PRUNE_DEPS=true` (`tsx` es devDependency). El build, el start y las variables siguen saliendo del dashboard de Railway.
+
 ### Changed - 2026-11-21 (tsx 4.23, necesario para Vite 8)
 
 - **`tsx`** `^4.19.3` → `^4.23.15`. Es el runtime de la API en Railway/Render y en dev. Por qué: `tsx` 4.20 traía `esbuild@0.25`, que quedaba en la raíz del monorepo y no cumple el peer de Vite 8 (`esbuild ^0.27 || ^0.28`). Por eso npm dejaba Vite 8 anidado en cada workspace y Vitest, que vive en la raíz, no lo encontraba. `tsx` 4.23 usa `esbuild ~0.28`.

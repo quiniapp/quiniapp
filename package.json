@@ -29,6 +29,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": "26.x"
+  },
   "bugs": {
     "url": "https://github.com/quiniapp/quiniapp/issues"
   },
