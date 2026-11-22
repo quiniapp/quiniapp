@@ -4,6 +4,13 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-22 (liquidaciones en 0 fuera del ZIP)
+
+- **Exportar liquidación** (`features/current-account/handlers/exportLiquidacion.ts`): los pasadores con la hoja toda en 0 no se exportan, así el ZIP trae solo las liquidaciones con algo que cobrar o pagar. Si todos están en 0, avisa "No hay cuentas a liquidar." y no arma un ZIP vacío. Tampoco se piden sus aciertos.
+  - **`lib/liquidationSlip.ts`** (nuevo): `hasLiquidationAmounts(account)`, false cuando los 12 montos que imprime la hoja (Pase, Aciertos, Reclamos, Subtotal, Saldo, Cobre, Pague, Deje, Comisión, Deja, Gastos y Debe/Cobra) son 0. Mismo criterio que la Polla, que deja sin tildar a los pasadores sin movimiento.
+  - Sin cambios: el PDF suelto de la vista del pasador se sigue bajando aunque esté en 0.
+- Tests: `polla-web/src/__tests__/helper/quiniela-liquidation-slip.test.ts`.
+
 ### Changed - 2026-11-21 (prefijo del juego en los PDFs de liquidación)
 
 - **Los PDFs de liquidación llevan el prefijo `quiniela_`**, igual que el ZIP; el resto del nombre no cambia. Por qué: al abrir el ZIP o mandar un PDF suelto no se distinguía si era de Quiniela o de Polla.
