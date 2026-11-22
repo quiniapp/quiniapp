@@ -1,8 +1,25 @@
-# Config-as-code de Railway (API). Lo que se define acá pisa al dashboard en cada deploy;
-# lo que no se define (build/start command, healthcheck, variables) sigue saliendo del dashboard.
-#
-# Railpack toma la versión de Node de `engines.node` del package.json raíz. Nixpacks llega
-# solo hasta Node 23: con `26.x` volvía sin avisar a Node 18, y tsx 4.23 no resuelve los
-# alias `@helper/*` en Node 18.
+# Config-as-code de Railway para la API (servicio principal; el backup es Render, ver render.yaml).
+# Railway lee este archivo en cada deploy y pisa lo que diga el dashboard.
+# Las variables de entorno no se pueden poner acá: siguen en el dashboard.
+
 [build]
+# Railpack toma Node de `engines.node` del package.json raíz (26.x). Nixpacks llega solo hasta
+# Node 23: con 26.x volvía sin avisar a Node 18, donde tsx 4.23 no resuelve los alias `@helper/*`.
+# Railpack deja NPM_CONFIG_PRODUCTION=false, así que instala las devDependencies (tsx es el runtime).
 builder = "railpack"
+# La API no se compila: corre con tsx. Sin esto, Railpack corre el `build` de la raíz
+# (`npm run build --workspaces`), que arma web y polla-web y falla en helper (no tiene `build`).
+# `node --version` deja en el log del build la versión de Node que tomó.
+buildCommand = "node --version"
+
+[deploy]
+# tsx sin watch, igual que Render. `npm run api` usaba `tsx watch`, que es para desarrollo.
+startCommand = "npm --workspace api run start"
+# /health no toca la base. Si la API no levanta, el deploy nuevo no recibe tráfico y Railway
+# sigue sirviendo el anterior.
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+# Corre los jobs de fondo (archivo, limpieza de sesiones): no se puede dormir.
+sleepApplication = false
