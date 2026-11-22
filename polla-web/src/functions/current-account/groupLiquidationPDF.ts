@@ -36,7 +36,9 @@ export async function buildGroupLiquidationPDF(sheet: GroupLiquidationSheet) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const width = pageWidth - MARGIN.left - MARGIN.right;
 
-  doc.setProperties({ title: groupLiquidationFileName(sheet.group, sheet.date, 'pdf') });
+  doc.setProperties({
+    title: groupLiquidationFileName(sheet.group, sheet.date, 'pdf', sheet.special),
+  });
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text(sheet.orgName, MARGIN.left, 16);
@@ -78,7 +80,7 @@ export async function buildGroupLiquidationPDF(sheet: GroupLiquidationSheet) {
 }
 
 /**
- * Ruta de cada hoja dentro del ZIP: `raíz/Grupo N - Nombre DD-MM-YYYY.ext`, sin
+ * Ruta de cada hoja dentro del ZIP: `raíz/polla_Grupo N - Nombre DD-MM-YYYY.ext`, sin
  * carpetas por grupo. Ordenadas por número de grupo; las sin número, al final.
  */
 export const groupLiquidationZipEntries = (
@@ -93,7 +95,7 @@ export const groupLiquidationZipEntries = (
   return liquidationZipEntries(
     byNumber.map((sheet) => ({
       sheet,
-      fileName: groupLiquidationFileName(sheet.group, sheet.date, ext),
+      fileName: groupLiquidationFileName(sheet.group, sheet.date, ext, sheet.special),
     })),
     zipRootFolder(zipName)
   ).map(({ path, item }) => ({ path, item: item.sheet }));
@@ -132,5 +134,8 @@ export async function prepareGroupLiquidations(params: {
 /** Una sola hoja: baja el PDF suelto, sin ZIP. */
 export async function downloadGroupLiquidationPDF(sheet: GroupLiquidationSheet) {
   const doc = await buildGroupLiquidationPDF(sheet);
-  downloadPdfBlob(doc.output('blob'), groupLiquidationFileName(sheet.group, sheet.date, 'pdf'));
+  downloadPdfBlob(
+    doc.output('blob'),
+    groupLiquidationFileName(sheet.group, sheet.date, 'pdf', sheet.special)
+  );
 }

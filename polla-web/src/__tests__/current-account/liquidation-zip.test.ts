@@ -80,13 +80,19 @@ describe('editionZipFolder', () => {
 });
 
 describe('liquidationZipPdfName', () => {
-  it('código, nombre y fecha; sin código, caracteres prohibidos y sin nombre', () => {
-    expect(liquidationZipPdfName('1-6', 'Laura', D)).toBe('1-6 Laura 15-11-2026.pdf');
-    expect(liquidationZipPdfName('', 'Ana', D)).toBe('Ana 15-11-2026.pdf');
+  it('prefijo del juego, código, nombre y fecha; sin código, caracteres prohibidos y sin nombre', () => {
+    expect(liquidationZipPdfName('1-6', 'Laura', D)).toBe('polla_1-6 Laura 15-11-2026.pdf');
+    expect(liquidationZipPdfName('', 'Ana', D)).toBe('polla_Ana 15-11-2026.pdf');
     expect(liquidationZipPdfName('2-5', 'Ana/Beto: "x"', D)).toBe(
-      '2-5 Ana_Beto_ _x_ 15-11-2026.pdf'
+      'polla_2-5 Ana_Beto_ _x_ 15-11-2026.pdf'
     );
-    expect(liquidationZipPdfName('3-1', null, D)).toBe('3-1 Pasador 15-11-2026.pdf');
+    expect(liquidationZipPdfName('3-1', null, D)).toBe('polla_3-1 Pasador 15-11-2026.pdf');
+  });
+
+  it('edición especial: polla_plus_, como el ZIP', () => {
+    expect(liquidationZipPdfName('1-6', 'Laura', D, true)).toBe(
+      'polla_plus_1-6 Laura 15-11-2026.pdf'
+    );
   });
 });
 
@@ -183,7 +189,9 @@ describe('liquidationZipEntries', () => {
     ]);
   });
 
-  it('peor caso de varias ediciones: la ruta adentro del ZIP no pasa los 185 caracteres', () => {
+  // 185 + los 6 del prefijo `polla_` del archivo: lo que queda de los 260 de Windows es para
+  // la carpeta de destino de "Extraer todo".
+  it('peor caso de varias ediciones: la ruta adentro del ZIP no pasa los 191 caracteres', () => {
     const zipName = liquidationZipName(
       { kind: 'range', from: '2026-11-01', to: '2026-11-30' },
       { number: 10 }
@@ -205,7 +213,7 @@ describe('liquidationZipEntries', () => {
       ],
       zipRootFolder(zipName)
     );
-    expect(path.length).toBeLessThanOrEqual(185);
+    expect(path.length).toBeLessThanOrEqual(191);
   });
 });
 

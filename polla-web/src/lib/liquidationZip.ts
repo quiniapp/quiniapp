@@ -13,7 +13,7 @@ import { groupLiquidationLabel } from '@/lib/groupLiquidation';
  * `@helper/functions/liquidationZip` (las comparte QuiniApp). Sin DOM.
  *
  * `polla_liquidaciones_15-11-2026.zip`
- * └ `polla_liquidaciones_15-11-2026/Grupo 1 - Leo 15-11-2026/1-6 Laura 15-11-2026.pdf`
+ * └ `polla_liquidaciones_15-11-2026/Grupo 1 - Leo 15-11-2026/polla_1-6 Laura 15-11-2026.pdf`
  */
 
 export { zipFolderName, zipRootFolder };
@@ -28,6 +28,12 @@ export type LiquidationZipScope =
   | { kind: 'edition'; date: string; special?: boolean }
   | { kind: 'range'; from: string; to: string } // YYYY-MM-DD
   | { kind: 'day'; date: string }; // YYYY-MM-DD
+
+/**
+ * Prefijo del juego que se liquida, en el nombre del ZIP y de cada archivo:
+ * `polla`, o `polla_plus` en una edición especial.
+ */
+export const liquidationGamePrefix = (special?: boolean) => (special ? 'polla_plus' : 'polla');
 
 /** `DD-MM-YYYY` de una fecha `YYYY-MM-DD` (o un timestamp). */
 export const fileDate = (date: string) => dayjs(date).format('DD-MM-YYYY');
@@ -49,14 +55,19 @@ export const editionZipFolder = (startDate: string, title: string) => {
   return `${startDate} ${short}`;
 };
 
-/** `{código} {nombre} {DD-MM-YYYY}.pdf` de un pasador dentro del ZIP. */
+/**
+ * `polla_{código} {nombre} {DD-MM-YYYY}.pdf` de un pasador dentro del ZIP
+ * (`polla_plus_…` en una edición especial, como el ZIP).
+ */
 export const liquidationZipPdfName = (
   cashierCode: string,
   userName: string | null | undefined,
-  date: string
+  date: string,
+  special?: boolean
 ) => {
   const name = (userName ?? '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Pasador';
-  return `${cashierCode ? `${cashierCode} ` : ''}${name} ${fileDate(date)}.pdf`;
+  const code = cashierCode ? `${cashierCode} ` : '';
+  return `${liquidationGamePrefix(special)}_${code}${name} ${fileDate(date)}.pdf`;
 };
 
 /** `Grupo N - Nombre DD-MM-YYYY` o `Sin grupo DD-MM-YYYY`. */
@@ -67,18 +78,25 @@ export const groupFolderName = (group: ZipGroup | undefined, date: string) =>
 
 /** `polla_liquidaciones_grupos_DD-MM-YYYY.zip` (`polla_plus_…` en una edición especial). */
 export const groupLiquidationZipName = (p: { date: string; special?: boolean }) =>
-  `${p.special ? 'polla_plus' : 'polla'}_liquidaciones_grupos_${fileDate(p.date)}.zip`;
+  `${liquidationGamePrefix(p.special)}_liquidaciones_grupos_${fileDate(p.date)}.zip`;
 
-/** `Grupo N - Nombre DD-MM-YYYY.ext` (sin el número, `Nombre DD-MM-YYYY.ext`). */
+/**
+ * `polla_Grupo N - Nombre DD-MM-YYYY.ext` (sin el número,
+ * `polla_Nombre DD-MM-YYYY.ext`; `polla_plus_…` en una edición especial).
+ */
 export const groupLiquidationFileName = (
   group: { number?: number; name: string },
   date: string,
-  ext: 'pdf' | 'png'
-) => `${zipFolderName(`${groupLiquidationLabel(group)} ${fileDate(date)}`)}.${ext}`;
+  ext: 'pdf' | 'png',
+  special?: boolean
+) => {
+  const label = zipFolderName(`${groupLiquidationLabel(group)} ${fileDate(date)}`);
+  return `${liquidationGamePrefix(special)}_${label}.${ext}`;
+};
 
 /** Nombre del ZIP (y de su carpeta raíz) según el alcance y el filtro de grupo. */
 export const liquidationZipName = (scope: LiquidationZipScope, group?: ZipGroupFilter) => {
-  const prefix = scope.kind === 'edition' && scope.special ? 'polla_plus' : 'polla';
+  const prefix = liquidationGamePrefix(scope.kind === 'edition' && scope.special);
   const dates =
     scope.kind === 'range'
       ? `${fileDate(scope.from)}_al_${fileDate(scope.to)}`

@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import type { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 import type { IBetEntityFront } from '@helper/types/bet.type';
 import { betPlaceDictionary } from '@helper/functions/betPlaceDictionary';
+import { LIQUIDATION_GAME_PREFIX } from '@/lib/liquidationZip';
 
 const money = (n?: number | null) =>
   Number(n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -179,10 +180,12 @@ export async function buildUserSlipPDF(opts: UserSlipOptions) {
   return { doc, dateStr };
 }
 
-/** Un solo pasador: baja el PDF suelto (vista del pasador). */
+/** Un solo pasador: baja el PDF suelto (vista del pasador), con el prefijo del juego. */
 export async function printUserSlipPDF(opts: UserSlipOptions) {
   const { doc, dateStr } = await buildUserSlipPDF(opts);
   const { account } = opts;
   const dateFile = dateStr.replace(/\//g, '-');
-  doc.save(`Exportar_Liquidacion_${dateFile}_${account.user_name}-${account.user_number}.pdf`);
+  doc.save(
+    `${LIQUIDATION_GAME_PREFIX}_Exportar_Liquidacion_${dateFile}_${account.user_name}-${account.user_number}.pdf`
+  );
 }

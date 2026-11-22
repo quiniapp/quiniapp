@@ -4,6 +4,14 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-21 (prefijo del juego en los PDFs de liquidación)
+
+- **Los PDFs de liquidación llevan el prefijo `quiniela_`**, igual que el ZIP; el resto del nombre no cambia. Por qué: al abrir el ZIP o mandar un PDF suelto no se distinguía si era de Quiniela o de Polla.
+  - Adentro del ZIP de "Exportar liquidación": `quiniela_6 Laura 15-11-2026.pdf` (antes `6 Laura 15-11-2026.pdf`), `quinielaLiquidationPdfName` en `lib/liquidationZip.ts`.
+  - PDF suelto de un pasador (`printUserSlipPDF`, `functions/printLiquidationCashier.ts`): `quiniela_Exportar_Liquidacion_15-11-2026_Laura-6.pdf`.
+  - El prefijo sale de una constante, `LIQUIDATION_GAME_PREFIX` (`lib/liquidationZip.ts`), que usan el ZIP y los dos PDFs.
+- Tests: `polla-web/src/__tests__/helper/quiniela-liquidation-zip.test.ts`.
+
 ### Changed - 2026-11-21 (Vite 6 → Vite 8)
 
 - **Vite 8** (`vite` `>=6.4.1` → `^8.3.8`): el build usa Rolldown + Oxc en lugar de Rollup + esbuild. El build de producción baja de 31 s a 10 s y se cierran las vulnerabilidades del dev server de Vite 6 (lectura de archivos, `launch-editor` en Windows). El rango deja de ser `>=` sin techo. Requiere Node 20.19+ o 22.12+, también en Vercel.
