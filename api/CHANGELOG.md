@@ -6,6 +6,11 @@ All notable changes to the API workspace are documented in this file.
 
 > **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
 
+### Changed - 2026-11-21 (tsx 4.23, necesario para Vite 8)
+
+- **`tsx`** `^4.19.3` → `^4.23.15`. Es el runtime de la API en Railway/Render y en dev. Por qué: `tsx` 4.20 traía `esbuild@0.25`, que quedaba en la raíz del monorepo y no cumple el peer de Vite 8 (`esbuild ^0.27 || ^0.28`). Por eso npm dejaba Vite 8 anidado en cada workspace y Vitest, que vive en la raíz, no lo encontraba. `tsx` 4.23 usa `esbuild ~0.28`.
+- Verificado: la API levanta con `npx tsx src/index.ts` contra Supabase local, responde `/health` y atiende el login de web y polla-web.
+
 ### Changed - 2026-11-21 (los grupos no tienen pagos)
 
 - **`liquidateGroup` y `liquidateGroups`** (`polla-edition-account.repository.ts`): mandan siempre `p_payment = 0` / `payment: 0` al RPC; la firma de `liquidateGroup` ya no recibe `payment`. `POST /edition_account/:editionId/group_liquidate` y `/group_liquidate_many` aceptan solo `collection`: un `payment` en el body se descarta. Por qué: los grupos solo registran cobros (lo que el admin transfiere de la parte del capitalista).

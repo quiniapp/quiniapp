@@ -4,6 +4,19 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-21 (Vite 6 → Vite 8)
+
+- **Vite 8** (`vite` `>=6.4.1` → `^8.3.8`): el build usa Rolldown + Oxc en lugar de Rollup + esbuild. El build de producción baja de 31 s a 10 s y se cierran las vulnerabilidades del dev server de Vite 6 (lectura de archivos, `launch-editor` en Windows). El rango deja de ser `>=` sin techo. Requiere Node 20.19+ o 22.12+, también en Vercel.
+- **`@vitejs/plugin-react` v6** reemplaza a `@vitejs/plugin-react-swc`: en Vite 8 las transformaciones las hace Oxc y el plugin de SWC solo sirve con plugins de SWC. Se quita el `@vitejs/plugin-react` v4 que no se usaba.
+- **`rollup-plugin-visualizer`** 6 → 7 (soporta Rolldown).
+- Se quita **`@tailwindcss/vite`** (v4, sin uso: Tailwind 3 corre por PostCSS) porque su peer `vite ^5 || ^6` impedía instalar Vite 8.
+- **`vite.config.ts`**:
+  - `build.rollupOptions` → `build.rolldownOptions` y `manualChunks` → `codeSplitting.groups`: un grupo para las dependencias (`vendorChunkName`, prioridad 2, `includeDependenciesRecursively: false`) y otro para los features (`featureChunkName`, prioridad 1). Con un solo grupo, Rolldown metía react-dom, el router y Radix dentro de `feature-make-plays` (66 → 464 KB). Así los chunks quedan como en Vite 6.
+  - `strictExecutionOrder: true`: hay chunks que se importan en ciclo (`vendor` ↔ `react-dom-vendor` ↔ `radix-vendor`, ya en Vite 6). Rollup lo toleraba; con Rolldown la página quedaba en blanco (`require_react_dom is not a function`). Costo: +27 KB gzip en total (565 → 592 KB).
+  - `assetFileNames` usa `assetInfo.names[0]` (`name` está deprecado en Rolldown) y los alias usan `import.meta.dirname` en vez de `__dirname`.
+  - El CSS ahora lo minifica Lightning CSS (default de Vite 8): `index.css` pasa de 70,6 a 75,1 KB sin comprimir. El entry pasa a llamarse `web-[hash].js` y lo carga un `index-[hash].js` de 42 bytes. Las rutas de caché de `vercel.json` (`/js/`, `/css/`) no cambian.
+- Verificado: build, `preview` y dev; login y las 15 rutas sin errores; Exportar Diario genera el mismo PDF (19.544 bytes) que con Vite 6.
+
 ### Changed - 2026-11-17 (liquidaciones en ZIP y nombre del parte diario)
 
 - **Exportar liquidación** (`features/current-account/handlers/exportLiquidacion.ts`): baja un ZIP en lugar de un PDF por pasador.
