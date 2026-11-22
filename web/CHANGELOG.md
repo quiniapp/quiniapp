@@ -4,6 +4,16 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-22 (Exportar liquidación: elegir los pasadores)
+
+- **Exportar liquidación abre un modal para elegir los pasadores**, igual que en la Polla (`CashierPickDialog`). Vienen tildados los que tuvieron movimiento; los que tienen la hoja toda en 0 aparecen sin tildar, con "Sin movimiento", y se pueden sumar a mano. Reemplaza al filtro fijo de la entrada de abajo, que los dejaba afuera sin opción.
+  - **`features/current-account/dialogs/ExportLiquidationsDialog.tsx`** (nuevo): lista con casillas (`{número} · {nombre}` y el Debe/Cobra), "Seleccionar todos (N de M)" y filtro por grupo ("Todos los grupos", cada grupo y "Sin grupo"). Con un filtro se exportan solo los tildados que se ven, y avisa cuántos tildados de otros grupos no entran. El botón dice cuántos PDFs salen ("Exportar 3 PDFs") y se deshabilita sin ninguno.
+  - **`lib/cashierPick.ts`** (nuevo): `filterByGroup`, `pickedVisible` y `NO_GROUP`, los helpers de la Polla. Un `group_id` que no es un grupo de la lista (la organización) cuenta como "Sin grupo", igual que en el ZIP.
+  - **`lib/liquidationSlip.ts`**: `hasLiquidationAmounts` pasa a llamarse `hasAccountMovement` (mismo criterio: algún monto de la hoja distinto de 0), como en la Polla.
+  - **`handlers/exportLiquidacion.ts`**: `loadLiquidationAccounts` trae las cuentas para el modal ("No hay cuentas a liquidar." si no hay ninguna). `exportLiquidacion` arma el ZIP con las cuentas elegidas y devuelve si se entregó. El modal se cierra solo si se entregó; si se cancela el compartir, queda abierto.
+  - **Fix:** en el celular, si Safari rechaza el compartir porque armar el ZIP tardó (`blocked`), el ZIP se descarga, como en la Polla. Antes no pasaba nada y el toast igual decía "Liquidaciones exportadas.".
+- Tests: `polla-web/src/__tests__/helper/quiniela-cashier-pick.test.ts` (nuevo) y `quiniela-liquidation-slip.test.ts`. Probado en el navegador con datos de prueba: vienen tildados solo los que tienen movimiento, y funcionan el filtro por grupo, "Seleccionar todos" y la selección que se exporta.
+
 ### Changed - 2026-11-22 (liquidaciones en 0 fuera del ZIP)
 
 - **Exportar liquidación** (`features/current-account/handlers/exportLiquidacion.ts`): los pasadores con la hoja toda en 0 no se exportan, así el ZIP trae solo las liquidaciones con algo que cobrar o pagar. Si todos están en 0, avisa "No hay cuentas a liquidar." y no arma un ZIP vacío. Tampoco se piden sus aciertos.

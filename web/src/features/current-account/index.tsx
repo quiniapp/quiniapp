@@ -15,9 +15,10 @@ import React, { Suspense, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { exportDiario } from './handlers/exportDiario';
-import { exportLiquidacion } from './handlers/exportLiquidacion';
+import { exportLiquidacion, loadLiquidationAccounts } from './handlers/exportLiquidacion';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
 import { useGroups } from '@/hooks/fetchs/organization/useGroups';
+import type { ICurrentAccountEntityFront } from '@helper/types/current_account.type';
 
 const CurrentAccountContent = () => {
   const queryClient = useQueryClient();
@@ -34,6 +35,8 @@ const CurrentAccountContent = () => {
   const [searchParams] = useSearchParams();
   const { mutate: calculateCurrentAccount } = useCalculateCurrentAccount();
   const [printing, setPrinting] = useState(false);
+  // Cuentas del modal de "Exportar liquidación" (abierto si no es null).
+  const [exportAccounts, setExportAccounts] = useState<ICurrentAccountEntityFront[] | null>(null);
   const date = searchParams.get('date'); // puede ser null: backend devuelve la última
   const group_id = searchParams.get('group_id');
 
@@ -51,8 +54,19 @@ const CurrentAccountContent = () => {
   const handleGenerateLiquidation = () => {
     setOpen(true);
   };
-  const handlePrintLiquidationCashier = () =>
-    exportLiquidacion(queryClient, date, setPrinting, groups ?? []);
+  // Primero se eligen los pasadores (vienen tildados los que tuvieron movimiento).
+  const handlePrintLiquidationCashier = async () => {
+    setPrinting(true);
+    const accounts = await loadLiquidationAccounts(queryClient, date);
+    setPrinting(false);
+    if (accounts) setExportAccounts(accounts);
+  };
+  const handleExportPicked = async (selected: ICurrentAccountEntityFront[]) => {
+    setPrinting(true);
+    const done = await exportLiquidacion(queryClient, selected, date, groups ?? []);
+    setPrinting(false);
+    if (done) setExportAccounts(null);
+  };
   const handlePrintDiaryLiquidation = () => exportDiario(queryClient, date, setPrinting);
 
   if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable />;
@@ -126,6 +140,17 @@ const CurrentAccountContent = () => {
       <Suspense>
         <GenerateLiquitationModal isOpen={open} onClose={() => setOpen(false)} />
       </Suspense>
+      {exportAccounts && (
+        <Suspense>
+          <ExportLiquidationsDialog
+            accounts={exportAccounts}
+            groups={groups ?? []}
+            exporting={printing}
+            onExport={handleExportPicked}
+            onClose={() => setExportAccounts(null)}
+          />
+        </Suspense>
+      )}
       <Suspense>
         <PrintTotalsModal
           key={printTotalsKey}
@@ -170,3 +195,5 @@ const PrintDailySummaryModal = React.lazy(
 );
 
 const PrintSubtotalsModal = React.lazy(() => import('../../components/modals/PrintSubtotalsModal'));
+
+const ExportLiquidationsDialog = React.lazy(() => import('./dialogs/ExportLiquidationsDialog'));
