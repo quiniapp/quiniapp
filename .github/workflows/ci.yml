@@ -25,4 +25,7 @@ jobs:
       - name: Build API
         run: npm run build --workspace=api
 
+      - name: Test web
+        run: npm run test --workspace=web
+
 

@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-// El ZIP de QuiniApp (web/) usa las mismas rutas de `@helper/functions/liquidationZip`;
-// web no tiene tests propios, así que se prueba acá.
+// El ZIP de QuiniApp usa las mismas rutas que la Polla (`@helper/functions/liquidationZip`).
 import {
   quinielaLiquidationPdfName,
   quinielaLiquidationZipEntries,
   quinielaLiquidationZipName,
-} from '../../../../web/src/lib/liquidationZip';
+} from '@/lib/liquidationZip';
 
 const D = '2026-11-15';
 
