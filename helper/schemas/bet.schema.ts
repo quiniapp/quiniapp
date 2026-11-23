@@ -1,15 +1,13 @@
 import { z } from 'zod';
 import { PLACE_TYPE } from '../types/bet.type';
 
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-
 // --- Schemas mínimos para schedule y lottery (solo IDs) ---
 const scheduleFrontSchema = z.object({
-  schedule_id: z.string().uuid(),
+  schedule_id: z.guid(),
 });
 
 const lotteryFrontSchema = z.object({
-  lottery_id: z.string().uuid(),
+  lottery_id: z.guid(),
 });
 
 const lotteryScheduleSchema = z.object({

@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Genera jugadas para un cashier según su escenario
@@ -54,7 +54,7 @@ export function generateBetsForCashier(params: BetGeneratorParams) {
 
   // 1. ONE HEAD
   bets.push({
-    bet_id: uuidv4(),
+    bet_id: randomUUID(),
     organization_id: organizationId,
     bet_type: 'ONE' as const,
     place: 'HEAD' as const,
@@ -75,7 +75,7 @@ export function generateBetsForCashier(params: BetGeneratorParams) {
   // 2-5. DOUBLE (HEAD, FIVE, TEN, TWENTY)
   for (const place of ['HEAD', 'FIVE', 'TEN', 'TWENTY'] as const) {
     bets.push({
-      bet_id: uuidv4(),
+      bet_id: randomUUID(),
       organization_id: organizationId,
       bet_type: 'DOUBLE' as const,
       place,
@@ -97,7 +97,7 @@ export function generateBetsForCashier(params: BetGeneratorParams) {
   // 6-9. TERN (HEAD, FIVE, TEN, TWENTY)
   for (const place of ['HEAD', 'FIVE', 'TEN', 'TWENTY'] as const) {
     bets.push({
-      bet_id: uuidv4(),
+      bet_id: randomUUID(),
       organization_id: organizationId,
       bet_type: 'TERN' as const,
       place,
@@ -119,7 +119,7 @@ export function generateBetsForCashier(params: BetGeneratorParams) {
   // 10-13. QUATERN (HEAD, FIVE, TEN, TWENTY)
   for (const place of ['HEAD', 'FIVE', 'TEN', 'TWENTY'] as const) {
     bets.push({
-      bet_id: uuidv4(),
+      bet_id: randomUUID(),
       organization_id: organizationId,
       bet_type: 'QUATERN' as const,
       place,
@@ -141,7 +141,7 @@ export function generateBetsForCashier(params: BetGeneratorParams) {
   // 14-17. BORRATINA (HEAD, FIVE, TEN, TWENTY)
   for (const place of ['HEAD', 'FIVE', 'TEN', 'TWENTY'] as const) {
     bets.push({
-      bet_id: uuidv4(),
+      bet_id: randomUUID(),
       organization_id: organizationId,
       bet_type: 'BORRATINA' as const,
       place,
@@ -175,7 +175,7 @@ export function generateBetsForCashier(params: BetGeneratorParams) {
 
   for (const combo of redoubleCombos) {
     bets.push({
-      bet_id: uuidv4(),
+      bet_id: randomUUID(),
       organization_id: organizationId,
       bet_type: 'REDOUBLE' as const,
       place: combo.place,

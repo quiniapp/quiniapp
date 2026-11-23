@@ -31,17 +31,14 @@ type UseUpdateScheduleOptions = Omit<
   'mutationFn'
 >;
 
-export const useUpdateSchedule = (
-  _?: undefined,
-  options?: UseUpdateScheduleOptions
-) => {
+export const useUpdateSchedule = (_?: undefined, options?: UseUpdateScheduleOptions) => {
   const queryClient = useQueryClient();
   const { onSuccess, onError, ...rest } = options ?? {};
 
   return useMutation({
     mutationFn: updateSchedule,
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await queryClient.invalidateQueries({
         queryKey: ['schedules'],
         exact: false, // asegura que invalida ['schedules', { all: true/false }]
@@ -53,11 +50,11 @@ export const useUpdateSchedule = (
       });
 
       toast.success('Turno actualizado correctamente');
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       toast.error(`Error al actualizar turno: ${error.message}`);
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

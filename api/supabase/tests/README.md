@@ -8,9 +8,11 @@ Con el Supabase local levantado (`npx supabase status` desde `api/`):
 
 ```bash
 cd api
-npx supabase db push --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres   # migraciones pendientes
-npx supabase test db                                                                     # corre tests/database/*.sql
+npx supabase db push   # migraciones pendientes
+npx supabase test db   # corre tests/database/*.sql
 ```
+
+Con la CLI v3 los comandos de base apuntan al stack local por defecto: no hace falta `--db-url`. Para una base hosteada hay que pasar `--remote=<url>`, y como cambia una base remota pide confirmación (`--yes`).
 
 `supabase test db` instala pgTAP solo para la corrida (la base no lo conserva) y ejecuta los archivos con `pg_prove`, en orden alfabético.
 

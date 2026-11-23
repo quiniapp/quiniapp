@@ -18,7 +18,6 @@
     "allowSyntheticDefaultImports": true,
     "target": "esnext",
     "lib": ["dom", "esnext"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@helper/*": ["../helper/*"]

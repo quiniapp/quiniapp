@@ -26,28 +26,25 @@ type UseCreateScheduleOptions = Omit<
   'mutationFn'
 >;
 
-export const useCreateSchedule = (
-  _?: undefined,
-  options?: UseCreateScheduleOptions
-) => {
+export const useCreateSchedule = (_?: undefined, options?: UseCreateScheduleOptions) => {
   const queryClient = useQueryClient();
   const { onSuccess, onError, ...rest } = options ?? {};
 
   return useMutation({
     mutationFn: createSchedule,
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await queryClient.invalidateQueries({
         queryKey: ['schedules'],
         exact: false, // asegura que invalida ['schedules', { all: true/false }]
       });
 
       toast.success('Turno creado exitosamente');
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       toast.error(`Error al crear turno: ${error.message}`);
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

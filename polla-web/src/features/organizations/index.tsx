@@ -71,7 +71,7 @@ const CreateOrganizationDialog = ({ onClose }: { onClose: () => void }) => {
 
     const parsed = newPollaOrganizationWithCapitalistSchema.safeParse(payload);
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
       return;
     }
 

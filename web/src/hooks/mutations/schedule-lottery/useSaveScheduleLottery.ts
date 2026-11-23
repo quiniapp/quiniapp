@@ -4,7 +4,9 @@ import { IScheduleLotteryEntityFront } from '@helper/types/schedule-lottery.type
 import { toast } from 'react-hot-toast';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
-const saveScheduleLottery = async (scheduleLottery: IScheduleLotteryEntityFront): Promise<IScheduleLotteryEntityFront> => {
+const saveScheduleLottery = async (
+  scheduleLottery: IScheduleLotteryEntityFront
+): Promise<IScheduleLotteryEntityFront> => {
   const res = await fetchWithAuth(BACKEND_ROUTES.schedule_lottery.base, {
     method: 'POST',
     headers: {
@@ -27,17 +29,14 @@ type UseSaveScheduleLotteryOptions = Omit<
   'mutationFn'
 >;
 
-export const useSaveScheduleLottery = (
-  _?: undefined,
-  options?: UseSaveScheduleLotteryOptions
-) => {
+export const useSaveScheduleLottery = (_?: undefined, options?: UseSaveScheduleLotteryOptions) => {
   const queryClient = useQueryClient();
   const { onSuccess, onError, ...rest } = options ?? {};
 
   return useMutation({
     mutationFn: saveScheduleLottery,
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       // Update cache synchronously with server response
       queryClient.setQueryData(['schedule-lottery'], data);
 
@@ -48,11 +47,11 @@ export const useSaveScheduleLottery = (
       ]);
 
       toast.success('Guardado correctamente');
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       toast.error(`Ocurrió un error: ${error.message}`);
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

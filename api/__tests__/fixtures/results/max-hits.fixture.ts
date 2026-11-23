@@ -19,7 +19,7 @@
  * - REDOUBLE: máximo hits según combinación
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 // Estrategia: usar números repetidos que maximicen coincidencias
 export const RESULTS_MAX_HITS = {
@@ -71,7 +71,7 @@ export function generateMaxHitsResults(
 ): any {
   const lotteryKey = `lottery_${lotteryIndex + 1}` as keyof typeof RESULTS_MAX_HITS;
   return {
-    results_id: uuidv4(),
+    results_id: randomUUID(),
     date,
     schedule_id: scheduleId,
     results: RESULTS_MAX_HITS[lotteryKey],

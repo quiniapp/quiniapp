@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Genera jugadas simples usando números repetidos (1111, 2222, etc.)
@@ -75,7 +75,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
     bets.push(
       // ONE HEAD
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'ONE' as const,
         place: 'HEAD' as const,
@@ -94,7 +94,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // DOUBLE HEAD
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'DOUBLE' as const,
         place: 'HEAD' as const,
@@ -117,7 +117,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
     bets.push(
       // DOUBLE FIVE
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'DOUBLE' as const,
         place: 'FIVE' as const,
@@ -136,7 +136,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // TERN FIVE
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'TERN' as const,
         place: 'FIVE' as const,
@@ -155,7 +155,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // QUATERN FIVE
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'QUATERN' as const,
         place: 'FIVE' as const,
@@ -178,7 +178,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
     bets.push(
       // DOUBLE TEN
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'DOUBLE' as const,
         place: 'TEN' as const,
@@ -197,7 +197,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // TERN TEN
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'TERN' as const,
         place: 'TEN' as const,
@@ -216,7 +216,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // QUATERN TEN
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'QUATERN' as const,
         place: 'TEN' as const,
@@ -239,7 +239,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
     bets.push(
       // DOUBLE TWENTY
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'DOUBLE' as const,
         place: 'TWENTY' as const,
@@ -258,7 +258,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // TERN TWENTY
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'TERN' as const,
         place: 'TWENTY' as const,
@@ -277,7 +277,7 @@ export function generateSimpleBetsForCashier(params: BetGeneratorParams) {
       },
       // QUATERN TWENTY
       {
-        bet_id: uuidv4(),
+        bet_id: randomUUID(),
         organization_id: organizationId,
         bet_type: 'QUATERN' as const,
         place: 'TWENTY' as const,

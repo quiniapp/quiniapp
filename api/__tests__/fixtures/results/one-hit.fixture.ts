@@ -11,7 +11,7 @@
  * - REDOUBLE: number aparece en su rango, with aparece en su rango, pero solo 1 hit combinado
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export const RESULTS_ONE_HIT = {
   lottery_1: [
@@ -64,7 +64,7 @@ export const RESULTS_ONE_HIT = {
 export function generateOneHitResults(date: string, scheduleId: string, lotteryIndex: number): any {
   const lotteryKey = `lottery_${lotteryIndex + 1}` as keyof typeof RESULTS_ONE_HIT;
   return {
-    results_id: uuidv4(),
+    results_id: randomUUID(),
     date,
     schedule_id: scheduleId,
     results: RESULTS_ONE_HIT[lotteryKey],

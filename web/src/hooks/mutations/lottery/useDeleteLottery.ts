@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react-query';
 import { BACKEND_ROUTES } from '../../../../routes/routes.ts';
 import { toast } from 'react-hot-toast';
@@ -20,24 +19,18 @@ const deleteLottery = async (lottery_id: string) => {
   return await response.json();
 };
 
-type UseDeleteLotteryOptions = Omit<
-  UseMutationOptions<unknown, Error, string>,
-  'mutationFn'
-> & {
+type UseDeleteLotteryOptions = Omit<UseMutationOptions<unknown, Error, string>, 'mutationFn'> & {
   suppressToast?: boolean;
 };
 
-export const useDeleteLottery = (
-  _?: undefined,
-  options?: UseDeleteLotteryOptions
-) => {
+export const useDeleteLottery = (_?: undefined, options?: UseDeleteLotteryOptions) => {
   const queryClient = useQueryClient();
   const { onSuccess, onError, suppressToast, ...rest } = options ?? {};
 
   return useMutation({
     mutationFn: deleteLottery,
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await queryClient.invalidateQueries({
         queryKey: ['lotteries'],
         exact: false, // asegura que invalida ['lotteries', { all: true/false }]
@@ -51,13 +44,13 @@ export const useDeleteLottery = (
       if (!suppressToast) {
         toast.success('Lotería eliminada correctamente');
       }
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       if (!suppressToast) {
         toast.error(`Error al eliminar la lotería: ${error.message}`);
       }
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

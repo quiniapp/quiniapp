@@ -116,7 +116,7 @@ describe('schemas del % del admin', () => {
       admin: { ...admin, admin_percentage: 101 },
     });
     expect(over.success).toBe(false);
-    expect(over.error?.errors[0]?.message).toBe('El porcentaje va de 0 a 100');
+    expect(over.error?.issues[0]?.message).toBe('El porcentaje va de 0 a 100');
     expect(
       newPollaGroupWithAdminSchema.safeParse({
         ...base,
@@ -156,6 +156,6 @@ describe('schemas del % del admin', () => {
       groups: [{ polla_group_id: G1 }, { polla_group_id: G1 }],
     });
     expect(dup.success).toBe(false);
-    expect(dup.error?.errors[0]?.message).toBe('Hay un grupo repetido');
+    expect(dup.error?.issues[0]?.message).toBe('Hay un grupo repetido');
   });
 });

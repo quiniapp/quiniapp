@@ -4,6 +4,28 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
+
+Informe completo en `docs/auditoria-dependencias-2026-11-23.md`. `npm audit` queda en 0.
+
+- **React 18.3 → 19.3.1** (`react`, `react-dom`). Una sola copia en el monorepo. `components/logo`: `fetchpriority` → `fetchPriority`.
+- **react-day-picker 8 → 10** en `components/ui/calendar.tsx`, que se reescribió.
+  - Claves nuevas de `classNames`: `month_caption`, `month_grid`, `weekday`, `week`, `day_button`, y los modificadores `selected`/`today`/`outside`/`disabled`, que ahora van en el `<td>`.
+  - Un único componente `Chevron` reemplaza `IconLeft`/`IconRight`.
+  - La raíz conserva la clase `rdp-root`.
+  - `SelectDayToSearch`: `toDate` → `endMonth` + `disabled={{ after }}`, `initialFocus` → `autoFocus`, y el locale `es` sale de `react-day-picker/locale` (incluye las etiquetas accesibles en español).
+  - `styles/index.css`: la excepción a los estilos globales de tablas pasa de `.rdp` a `.rdp-root`.
+  - Verificado en el navegador: celdas de 36 px en mobile, sin padding ni rayado, días futuros deshabilitados.
+- **jspdf 4.0 → 4.2.1**: cierra PDF injection (crítica) y DoS. **react-router-dom 7.12 → 7.18.6** (alta). fflate 0.8.3.
+- **zod 4.6.7** y **@hookform/resolvers 7.0.8**. El único uso, el login, no cambia.
+- **TanStack Query 5.108**: los callbacks de mutación reciben un 4º argumento (`context`). Los hooks que reenvían `onSuccess`/`onError` (`hooks/mutations/lottery/*`, `schedule/*`, `schedule-lottery/*`) lo pasan.
+- **lucide-react 0.486 → 1.78** (ningún ícono usado cambió de nombre), **@vercel/analytics 2**, Radix, react-hook-form 7.92, tailwind-merge 3.7 y el resto en su última versión. **Tailwind queda en 3.4.19**: la migración a 4 va en un PR aparte.
+- **`api/api-proxy.ts`**: se saca `@vercel/node`, que solo aportaba los tipos `VercelRequest`/`VercelResponse` y en su última versión fija `undici` y `path-to-regexp` vulnerables. Los dos tipos se declaran en el archivo. El body es `Buffer<ArrayBuffer>`, porque con `@types/node` 26 un `Buffer` genérico no entra en `fetch`.
+- **Eliminadas por no usarse:** `zustand`, `vaul` (con `components/ui/drawer.tsx`, que no se importaba), `date-fns` (llega por react-day-picker), `postcss-import`, `postcss-nested`, `is-ci`, `patch-package` (y el `postinstall`), `postinstall-postinstall`, `@types/react-router-dom` (v5), `import-sort-*`, `eslint-plugin-import` y `eslint-import-resolver-typescript`.
+- **Tooling muerto eliminado:** `.eslintrc.cjs` y `__eslint.config.js` (ESLint no los leía), `.importsortrc`, `.lintstagedrc`, la clave `lint-staged`, husky 8 con su `prepare` y `.husky/`. Los hooks del repo los instala husky 9 desde la raíz.
+- TypeScript 6.0.3: sin `baseUrl` en `tsconfig.json` y `tsconfig.app.json`. ESLint 10, react-hooks 7, react-refresh 0.5, globals 17 y vitest 5.1.1.
+- Verificado: los 11 tests, `vite build`, y en el navegador las 15 rutas logueado sin errores, más el calendario.
+
 ### Changed - 2026-11-23 (Node 26 en Vercel)
 
 - **`engines.node: "26.x"`** en `web/package.json`. El proyecto de Vercel tiene la raíz en `web/` y no lee el `engines` del `package.json` raíz: hasta ahora la versión salía de la configuración del dashboard. `engines` la pisa, así que el build y la función `api/api-proxy.ts` corren en Node 26, igual que la API (Railway/Render) y CI.

@@ -1,12 +1,12 @@
 import { INewResultsEntity } from '@helper/request/results.request';
 import { IResultsBase } from '@helper/types/results.type';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import dayjs from 'dayjs';
 
 export const resultsBase = (results: INewResultsEntity, organization_id: string): IResultsBase => {
   const timestamp = dayjs().toISOString();
   return {
-    results_id: uuidv4(),
+    results_id: randomUUID(),
     organization_id,
     results: results.results,
     date: results?.date ?? dayjs().format('YYYY-MM-DD'),
