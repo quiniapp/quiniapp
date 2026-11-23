@@ -4,6 +4,14 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-23 (Node 26 en Vercel)
+
+- **`engines.node: "26.x"`** en `polla-web/package.json`. El proyecto de Vercel tiene la raíz en `polla-web/` y no lee el `engines` del `package.json` raíz: hasta ahora la versión salía de la configuración del dashboard. `engines` la pisa, así que el build y la función `api/api-proxy.ts` corren en Node 26, igual que la API (Railway/Render) y CI.
+- **`@types/node`** `^22.18.8` → `^26.6.6`.
+- **`tsconfig.app.json`**: `lib` pasa de `ES2020` a `ES2022`. `@types/node` 22 agregaba `Array.prototype.at` a todos los arrays y la 26 ya no, así que el typecheck fallaba en 3 tests que usan `.at(-1)`. Con `ES2022` queda permitido lo mismo que antes.
+- **`api/api-proxy.ts` no cambia**, pero en Node 26 `fetch` negocia HTTP/2 con los backends que lo soportan. Se probó en local con Node 26.13.1 contra un backend HTTPS con HTTP/2 (status, cookies, varios `Set-Cookie`, body del POST) y contra la API local. Si el proxy fallara con HTTP/2, la variable de entorno `VERCEL_FETCH_DISABLE_H2=1` en Vercel lo vuelve a HTTP/1.1.
+- Verificado con Node 26.13.1: typecheck, los 246 tests y `vite build`.
+
 ### Removed - 2026-11-22 (tests de QuiniApp)
 
 - Los tests de QuiniApp que vivían acá (`src/__tests__/helper/quiniela-liquidation-zip.test.ts`, `quiniela-liquidation-slip.test.ts` y `quiniela-cashier-pick.test.ts`) se pasaron a `web/src/__tests__/`. Web ahora tiene su propio Vitest: cada app con sus tests. polla-web queda con 246 tests, todos de la Polla.
