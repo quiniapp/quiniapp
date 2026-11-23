@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import React from 'react';
 
@@ -296,9 +297,7 @@ const OrganizationsContent = () => {
                       name="superAdmin.password"
                       control={control}
                       rules={{ required: 'La contraseña es requerida' }}
-                      render={({ field }) => (
-                        <Input id="password" type="password" {...field} />
-                      )}
+                      render={({ field }) => <PasswordInput id="password" {...field} />}
                     />
                     {errors.superAdmin?.password && (
                       <p className="text-sm text-destructive">{errors.superAdmin.password.message}</p>

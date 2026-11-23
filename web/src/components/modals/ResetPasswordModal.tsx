@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { IUserEntityFront } from '@helper/types/user.type';
@@ -74,9 +74,8 @@ const ResetPasswordModal = ({
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="new-password">Nueva Contraseña</Label>
-            <Input
+            <PasswordInput
               id="new-password"
-              type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Ingresa la nueva contraseña"
@@ -86,9 +85,8 @@ const ResetPasswordModal = ({
 
           <div className="grid gap-2">
             <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
-            <Input
+            <PasswordInput
               id="confirm-password"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirma la nueva contraseña"

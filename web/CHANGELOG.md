@@ -4,6 +4,16 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (ojito para ver la contraseña)
+
+- **`components/ui/password-input.tsx`** (nuevo): `PasswordInput`, un input de contraseña con un botón de ojo para mostrar u ocultar lo escrito. Es el mismo componente que ya usa la Polla.
+  - Arranca oculta, y cada campo se muestra por separado.
+  - El botón tiene `aria-label` ("Mostrar contraseña" / "Ocultar contraseña") y `aria-pressed`.
+  - El foco (y el teclado en el celular) se queda en el input al tocarlo.
+  - Se deshabilita junto con el input y pasa el `ref`, así anda con react-hook-form.
+- Lo usan todos los inputs que eran `type="password"`: el login (`features/login`), la contraseña del super admin al crear una organización (`features/organizations`) y los dos campos de `ResetPasswordModal` y de `ResetSuperAdminPasswordModal`.
+- Sin cambios: la contraseña al crear o editar un usuario (`UserForm`, `user-list-form`) ya era `type="text"` y se sigue viendo siempre.
+
 ### Added - 2026-11-22 (tests propios con Vitest)
 
 - **Web tiene sus propios tests**: `npm run test --workspace web` (`vitest run`; `test:watch` para el modo watch). Antes los tests de QuiniApp vivían en polla-web e importaban `../../../../web/src/...`. Ahora cada app tiene los suyos.
