@@ -36,7 +36,7 @@ export const errorHandler = (
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Error de validación en los datos enviados',
-        details: err.errors.map((e) => ({
+        details: err.issues.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
         })),
@@ -49,6 +49,20 @@ export const errorHandler = (
       statusCode: 400,
     };
     res.status(400).json(response);
+    return;
+  }
+
+  // Errores del cliente que lanza el parser de JSON (body-parser): JSON mal formado (400),
+  // cuerpo demasiado grande (413), charset no soportado (415). Antes caían como 500.
+  const clientErr = err as Error & { status?: number; expose?: boolean };
+  if (clientErr.expose && clientErr.status && clientErr.status >= 400 && clientErr.status < 500) {
+    const tooLarge = clientErr.status === 413;
+    const code = tooLarge ? 'PAYLOAD_TOO_LARGE' : 'BAD_REQUEST';
+    const message = tooLarge
+      ? 'El cuerpo de la solicitud es demasiado grande'
+      : 'El cuerpo de la solicitud no es válido';
+    res.locals.errorInfo = { code, message, statusCode: clientErr.status };
+    res.status(clientErr.status).json({ error: { code, message } } satisfies APIResponse<null>);
     return;
   }
 

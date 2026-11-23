@@ -8,6 +8,6 @@
   "main": "",
   "scripts": {},
   "dependencies": {
-    "zod": "^3.25.61"
+    "zod": "^4.6.7"
   }
 }

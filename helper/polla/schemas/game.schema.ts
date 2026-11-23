@@ -36,8 +36,8 @@ const moment = (date: string, time: string) => `${date}T${time.length === 5 ? `$
 const editionDraws = z
   .array(
     z.object({
-      polla_lottery_id: z.string().uuid(),
-      polla_schedule_id: z.string().uuid(),
+      polla_lottery_id: z.guid(),
+      polla_schedule_id: z.guid(),
     })
   )
   .min(1, 'Elegí al menos un sorteo (quiniela y turno)')
@@ -60,7 +60,7 @@ export const newPollaEditionSchema = z
   .object({
     draws: editionDraws,
     min_winning_hits: minWinningHits.optional(),
-    polla_organization_id: z.string().uuid().optional(),
+    polla_organization_id: z.guid().optional(),
     name: z.string().max(120).nullable().optional(),
     start_date: isoDate,
     end_date: isoDate,
@@ -161,9 +161,9 @@ export const updatePollaEditionSchema = z
 const resultNumbers = z.array(twoDigitNumber).length(20, 'Se cargan exactamente 20 resultados');
 
 export const newPollaResultSchema = z.object({
-  polla_lottery_id: z.string().uuid(),
-  polla_schedule_id: z.string().uuid(),
-  polla_organization_id: z.string().uuid().optional(),
+  polla_lottery_id: z.guid(),
+  polla_schedule_id: z.guid(),
+  polla_organization_id: z.guid().optional(),
   date: isoDate,
   results: resultNumbers,
 });
@@ -173,23 +173,23 @@ export const updatePollaResultSchema = z.object({
 });
 
 export const processPollaResultsSchema = z.object({
-  polla_schedule_id: z.string().uuid(),
+  polla_schedule_id: z.guid(),
   date: isoDate,
-  polla_organization_id: z.string().uuid().optional(),
+  polla_organization_id: z.guid().optional(),
 });
 
 /** "Definir con lo cargado": el día de la edición define con los sorteos que tiene. */
 export const definePollaEditionDaySchema = z.object({
-  polla_edition_id: z.string().uuid(),
+  polla_edition_id: z.guid(),
   date: isoDate,
 });
 
 // ----------------------------------------------------------------- jugadas
 
 export const newPollaBetSchema = z.object({
-  polla_edition_id: z.string().uuid(),
+  polla_edition_id: z.guid(),
   /** Dueño de la jugada. Si falta, el backend usa al usuario autenticado. */
-  polla_user_id: z.string().uuid().optional(),
+  polla_user_id: z.guid().optional(),
   numbers: betNumbers,
   date: isoDate.optional(),
   /**
@@ -225,9 +225,9 @@ export const POLLA_REPEAT_MAX_BETS = 500;
  * y tickets de ediciones finalizadas.
  */
 export const repeatPollaBetsSchema = z.object({
-  polla_edition_id: z.string().uuid(),
+  polla_edition_id: z.guid(),
   polla_bet_ids: z
-    .array(z.string().uuid())
+    .array(z.guid())
     .min(1, 'Elegí al menos un ticket')
     .max(POLLA_REPEAT_MAX_BETS, `Se repiten hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`),
   /** Pago de todo el lote (ver `newPollaBetSchema`). Lo sin cargo queda pagado. */
@@ -241,12 +241,12 @@ export const repeatPollaBetsSchema = z.object({
 export const markPollaBetsPaidSchema = z
   .object({
     polla_bet_ids: z
-      .array(z.string().uuid())
+      .array(z.guid())
       .min(1, 'Elegí al menos un ticket')
       .max(POLLA_REPEAT_MAX_BETS, `Se marcan hasta ${POLLA_REPEAT_MAX_BETS} tickets por vez`)
       .optional(),
-    polla_edition_id: z.string().uuid().optional(),
-    polla_user_id: z.string().uuid().optional(),
+    polla_edition_id: z.guid().optional(),
+    polla_user_id: z.guid().optional(),
   })
   .refine(
     (data) => Boolean(data.polla_bet_ids) || Boolean(data.polla_edition_id && data.polla_user_id),
@@ -256,11 +256,11 @@ export const markPollaBetsPaidSchema = z
 // ------------------------------------------------------------------ gastos
 
 export const newPollaOrgExpenseSchema = z.object({
-  polla_edition_id: z.string().uuid(),
+  polla_edition_id: z.guid(),
   name: z.string().trim().min(1, 'El gasto necesita un nombre').max(120),
   amount: z.number().positive('El monto tiene que ser mayor a cero'),
-  polla_group_id: z.string().uuid().nullable().optional(),
-  polla_organization_id: z.string().uuid().optional(),
+  polla_group_id: z.guid().nullable().optional(),
+  polla_organization_id: z.guid().optional(),
 });
 
 // ------------------------------------------------- cuenta por edición
@@ -269,7 +269,7 @@ const ACCOUNT_AMOUNT_MESSAGE = 'El cobro y el pago tienen que ser mayores a 0';
 
 export const pollaAccountMovementSchema = z
   .object({
-    polla_user_id: z.string().uuid(),
+    polla_user_id: z.guid(),
     type: z.nativeEnum(POLLA_ACCOUNT_MOVEMENT_TYPE),
     amount: z.number(),
     date: isoDate.optional(),
@@ -292,7 +292,7 @@ export const pollaAccountMovementUpdateSchema = z
   });
 
 export const liquidateEditionAccountsSchema = z.object({
-  polla_user_ids: z.array(z.string().uuid()).min(1),
+  polla_user_ids: z.array(z.guid()).min(1),
   ticket_source: z.enum(['NEW', 'OLD']).optional(),
 });
 
@@ -308,7 +308,7 @@ export const generateEditionLiquidationSchema = z.object({
   entries: z
     .array(
       z.object({
-        polla_user_id: z.string().uuid(),
+        polla_user_id: z.guid(),
         collection: z.number().finite().min(0, LIQUIDATION_AMOUNT_MESSAGE).optional(),
         payment: z.number().finite().min(0, LIQUIDATION_AMOUNT_MESSAGE).optional(),
         claim: z.number().finite().optional(),
@@ -327,7 +327,7 @@ export const generateEditionLiquidationSchema = z.object({
  * transfiere el capitalista por afuera.
  */
 export const liquidatePollaGroupEditionSchema = z.object({
-  polla_group_id: z.string().uuid(),
+  polla_group_id: z.guid(),
   /**
    * Solo cuenta si el admin del grupo no tiene su % configurado
    * (`polla_users.admin_percentage`): si lo tiene, la base usa ese.
@@ -370,7 +370,7 @@ export const liquidatePollaGroupEditionsSchema = z.object({
 const hasAtMostTwoDecimals = (value: number) => /^-?\d+(\.\d{1,2})?$/.test(String(value));
 
 const dayPaymentAmount = z
-  .number({ required_error: 'Falta el monto', invalid_type_error: 'Falta el monto' })
+  .number({ error: 'Falta el monto' })
   .min(0, 'El monto no puede ser negativo')
   // El máximo de NUMERIC(12,2). Va antes que los decimales: `1e21` se escribe
   // "1e+21" y, si no, el primer error sería el de los decimales.

@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { INewUserEntity } from '@helper/request/user.request';
 import { CASHIER_TYPE, IUserEntityBack, USER_TYPE } from '@helper/types/user.type';
 import dayjs from 'dayjs';
@@ -16,7 +16,7 @@ const getBaseUserFields = (user: INewUserEntity, organization_id: string) => {
     user.user_type === USER_TYPE.SUPERADMIN;
 
   return {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     number: shouldNumberBeNull ? null : (user.number ?? null),
     user_type: user.user_type,
     name: user.name,

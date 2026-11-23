@@ -1,5 +1,5 @@
 import { IBetTable, INewTicketBaseEntity, INewTicketEntity } from '@helper/request/ticket.request';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import dayjs from 'dayjs';
 import { betBase } from 'api/src/bet/helper/betBase';
 import { dateRegex } from '@helper/functions/dateRegex';
@@ -14,7 +14,7 @@ export const ticketBase = (
   options?: { allowCustomDate?: boolean }
 ): Omit<INewTicketBaseEntity, 'organization_id'> => {
   const timestamp = dayjs().tz('America/Argentina/Buenos_Aires');
-  const ticket_id = uuidv4();
+  const ticket_id = randomUUID();
   const base = dayjs().tz('America/Argentina/Buenos_Aires').format('YYYYMMDDHHmmssSSS');
   const ticket_number = ticket.user_number != null ? `${base}-${ticket.user_number}` : base;
 

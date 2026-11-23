@@ -34,7 +34,7 @@ describe('inicio de carga en la edición (R29)', () => {
       load_start_time: '20:00',
     });
     expect(parsed.success).toBe(false);
-    expect(parsed.error?.errors[0]?.message).toBe(
+    expect(parsed.error?.issues[0]?.message).toBe(
       'El inicio de carga tiene que ser antes del cierre de carga'
     );
   });

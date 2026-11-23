@@ -48,7 +48,7 @@ export const RESULTS_NO_WINNERS = {
   ],
 };
 
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 // Helper para generar results para una fecha específica
 export function generateNoWinnersResults(
@@ -58,7 +58,7 @@ export function generateNoWinnersResults(
 ): any {
   const lotteryKey = `lottery_${lotteryIndex + 1}` as keyof typeof RESULTS_NO_WINNERS;
   return {
-    results_id: uuidv4(),
+    results_id: randomUUID(),
     date,
     schedule_id: scheduleId,
     results: RESULTS_NO_WINNERS[lotteryKey],

@@ -104,7 +104,7 @@ export const EditUserDialog = ({ user, groups, canEditFee, onClose }: EditUserDi
 
     const parsed = updatePollaUserSchema.safeParse(payload);
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
       return;
     }
 

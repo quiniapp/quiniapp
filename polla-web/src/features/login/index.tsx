@@ -26,7 +26,7 @@ export const LoginPage = () => {
 
     const parsed = pollaLoginSchema.safeParse({ username, password });
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Datos inválidos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Datos inválidos');
       return;
     }
 

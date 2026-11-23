@@ -6,26 +6,51 @@ on:
   pull_request:
     branches: [main, develop]
 
+# El workflow solo lee el repo.
+permissions:
+  contents: read
+
 jobs:
   lint-build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '26'
           cache: 'npm'
 
+      # `npm ci` instala exactamente lo que dice package-lock.json y falla si no coincide
+      # con los package.json (OWASP A08: integridad de lo que se instala).
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Run Linter
+      # OWASP A03: el CI falla si una dependencia de producción tiene una vulnerabilidad
+      # alta o crítica conocida.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Lint API
         run: npm run lint --workspace=api
 
-      - name: Build API
-        run: npm run build --workspace=api
+      - name: Lint polla-web
+        run: npm run lint --workspace=polla-web
+
+      - name: Typecheck polla-web
+        run: npm run typecheck --workspace=polla-web
+
+      - name: Test polla-web
+        run: npm run test --workspace=polla-web
 
       - name: Test web
         run: npm run test --workspace=web
 
+      - name: Build polla-web
+        run: npm run build --workspace=polla-web
 
+      - name: Build web
+        run: npm run build --workspace=web
+
+      # Al final: `tsc` de la API escribe los .js junto a los .ts (también en helper/).
+      - name: Build API
+        run: npm run build --workspace=api

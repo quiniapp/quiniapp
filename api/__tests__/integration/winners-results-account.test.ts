@@ -1,10 +1,10 @@
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import dayjs from 'dayjs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 
 // Cargar variables de entorno para tests
-dotenv.config();
+dotenv.config({ quiet: true });
 
 import {
   cleanTestDatabase,
@@ -122,7 +122,7 @@ describe('Winners, Results and Current Account - E2E Test Suite', () => {
 
           // Crear tickets (1 bet por ticket)
           for (const bet of bets) {
-            const ticketId = uuidv4();
+            const ticketId = randomUUID();
             const ticketNumber = ticketCounter;
             ticketCounter++;
 

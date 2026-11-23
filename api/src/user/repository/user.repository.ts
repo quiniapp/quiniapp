@@ -246,7 +246,13 @@ export class UserRepository {
   }
 
   async create(newUser: IUserEntityBack): Promise<IUserEntityBack> {
-    const { data, error } = await supabase.from('users').insert(newUser).select().single();
+    // Tipo explícito: con la unión (owner/admin | cajero), supabase-js 2.119 infiere solo el
+    // primer miembro y rechaza el cajero.
+    const { data, error } = await supabase
+      .from('users')
+      .insert<IUserEntityBack>(newUser)
+      .select()
+      .single();
 
     if (error) throw error;
     return data as unknown as IUserEntityBack;

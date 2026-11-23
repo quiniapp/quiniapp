@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Results diseñados con números repetidos simples (1111, 2222, etc.)
@@ -77,7 +77,7 @@ export function generateResultsByScheduleLottery(
   const targetHits = HITS_MAP[scheduleIndex]?.[lotteryIndex] ?? 0;
 
   return {
-    results_id: uuidv4(),
+    results_id: randomUUID(),
     date,
     schedule_id: scheduleId,
     lottery_id: lotteryId,

@@ -6,6 +6,48 @@ All notable changes to the API workspace are documented in this file.
 
 > **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
 
+### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
+
+Escaneo de dependencias con foco en OWASP Top 10:2025. Informe: `docs/auditoria-dependencias-2026-11-23.md`. `npm audit` pasa de **41 vulnerabilidades (16 en producción, 4 críticas)** a **0**. `package-lock.json` se regeneró desde cero con npm 11.20 (Node 26).
+
+- **Express 4.22 → 5.3** (`body-parser` 2, `path-to-regexp` 8). Cierra `proxy-addr` (crítica, IP spoofing), `body-parser`, `qs` y `path-to-regexp` (DoS).
+  - `src/index.ts`: se saca `app.options('*', corsMiddleware)`, que en Express 5 tira error al arrancar; `app.use(corsMiddleware)` ya responde los preflight (204).
+  - `src/index.ts`: `ensureBody` después de cada `express.json()`. Express 5 deja `req.body` en `undefined` cuando no hay cuerpo JSON (GET/DELETE, o un POST sin Content-Type), y los handlers esperan `{}` como en Express 4.
+  - `src/index.ts`: el callback de `app.listen` recibe el error (por ejemplo, EADDRINUSE) y corta el proceso. En Express 5 ya no se caía solo, y arrancaban los jobs sin servidor HTTP.
+  - El query parser por defecto pasa a `simple` (`node:querystring`). La API no usa parámetros anidados (`a[b]=1`): las listas van separadas por coma.
+  - `@types/express-serve-static-core` queda fijo en 5.0.6 (`overrides` en el `package.json` raíz). La 5.1 tipa `req.params` como `string | string[]` y da 92 errores en 21 rutas.
+- **`middlewares/error.middleware.ts`**: los errores del parser de JSON responden 400 (JSON mal formado), 413 (cuerpo demasiado grande) o 415, en vez de 500 (OWASP A10, manejo de condiciones excepcionales). Y `ZodError.errors` → `.issues` (zod 4).
+- **zod 3.25 → 4.6.7** (también en helper, web y polla-web): cierra un DoS por memoria (alta). Ver `helper/CHANGELOG.md`. Cambian los mensajes por defecto de zod en los campos sin mensaje propio, por ejemplo "Required" → "Invalid input: expected string, received undefined".
+- **Seguridad, minor/patch:** express-rate-limit 8.7.5 (bypass del rate limit con IPv6 mapeada), morgan 1.12.1 (log forging), supabase-js 2.119.2, dayjs, cors, node-cron, express-slow-down y otras.
+- **`uuid` eliminado:** los 5 helpers (`lotteryBase`, `resultsBase`, `scheduleBase`, `ticketBase`, `userBase`) y los fixtures de tests usan `randomUUID()` de `node:crypto`.
+- **Eliminadas por no usarse:** `pg`, `postgres`, `express-session` (+ tipos), `lusca` (+ tipos), `ts-node`, `ts-node-dev`, `@types/node-cron`, `supertest` (+ tipos).
+- **`user/repository/user.repository.ts`**: `insert<IUserEntityBack>()` con tipo explícito. supabase-js 2.119 infiere solo el primer miembro de la unión owner/admin | cajero.
+- **`organization/controller/organization.controller.ts`**: los errores re-lanzados llevan `{ cause }` (regla `preserve-caught-error` de ESLint 10).
+- **dotenv 16 → 18**: los scripts `test*` usan el binario `dotenv-cli`, porque dotenv 18 trae su propio `dotenv` y pisa el de dotenv-cli. Los `dotenv.config()` pasan `{ quiet: true }`.
+- **jest 29 → 30** (+ `@types/jest` 30). `overrides` en la raíz llevan `glob` a 14 y `minimatch` a 11 dentro de jest, porque jest 30.5.2 todavía trae versiones con advisories. jest sigue sin `jest.config` (ver el informe).
+- **TypeScript 5.9 → 6.0.3** (raíz y workspaces). TS 7 no: es el compilador nativo y typescript-eslint/ts-jest no lo soportan todavía.
+  - `tsconfig.base.json` y `api/tsconfig.json`: `moduleResolution: "bundler"` y sin `baseUrl` (deprecados en TS 6). `api/tsconfig.json` agrega `paths` `src/*` y `envs` (antes resolvían por `baseUrl`), `types: ["node"]` y `lib: ["ES2022"]`.
+- **Supabase CLI 2.65 → 3.3** (devDependency):
+  - `supabase/config.toml`: `[inbucket]` → `[local_smtp]`, y `enable_signup` → `enabled` en `[auth.email]` y `[auth.sms]`.
+  - Los comandos de base apuntan al stack local por defecto. Para una base hosteada se usa `--remote=<url>` (antes `--db-url`), y como cambia una base remota pide `--yes`.
+  - `supabase/tests/README.md` y `database/db.connection.ts` actualizados.
+- **ESLint 9 → 10** (raíz), lint-staged 15 → 17, prettier 3.10. Se saca `eslint-plugin-prettier`, que no se usaba.
+- **`src/index.ts`**: `isAllowedOrigin` sin asignación inútil (regla `no-useless-assignment`).
+- **CI** (`.github/workflows/ci.yml`): `npm ci` en vez de `npm install` y gate `npm audit --omit=dev --audit-level=high` (OWASP A03/A08). Además lint, typecheck, tests y build de polla-web y web, y `permissions: contents: read`.
+- **Dependabot** (`.github/dependabot.yml`, nuevo): npm y GitHub Actions, semanal hacia `develop`, minor/patch agrupados, cooldown de 7 días (14 para major). Ignora los major de Tailwind (PR aparte) y TypeScript.
+- **`scripts/prepare.js`**: instala los hooks con husky 9 (antes la función no se llamaba nunca). No corre en CI, Vercel ni producción.
+- Verificado con Node 26.13.1:
+  - `tsc` y ESLint.
+  - La API arranca contra Supabase local y responden bien login, preflight, POST sin body, JSON inválido, 413, 404 y logout. Una segunda instancia en el mismo puerto termina con código 1.
+  - `supabase test db` con la CLI 3: 513 tests.
+
+### Changed - 2026-11-23 (`@types/node` 26)
+
+- **`@types/node`** `^22.19.3` → `^26.6.6`, la misma versión de Node que corre la API (`engines.node: "26.x"`). web y polla-web también pasan a Node 26 en Vercel (ver sus CHANGELOG).
+- `package-lock.json` regenerado con npm 11.20, que viene con Node 26. Se van restos que ya nadie usaba: `@swc/core` (de `@vitejs/plugin-react-swc`, que se sacó con Vite 8) y un `jiti` 2.4.2 huérfano. Tailwind sigue con su `jiti` 1.21.
+- npm 11 avisa al instalar que hay dependencias con install scripts sin aprobar en `allowScripts` (bcrypt, esbuild, supabase, etc.). Por ahora solo avisa y los scripts corren igual; los saltea solo si están denegados explícitamente.
+- Verificado con Node 26.13.1: `tsc --noEmit` y ESLint pasan, la API arranca contra Supabase local, y el login de la Polla (bcrypt + base + JWT) anda.
+
 ### Fixed - 2026-11-22 (Node 26: la API no arrancaba en Railway)
 
 - **`engines.node: "26.x"`** en el `package.json` raíz (y en `package-lock.json`). Railway y Render construyen desde la raíz y toman de ahí la versión de Node. CI (`.github/workflows/ci.yml`) también pasa a Node 26.

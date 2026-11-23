@@ -262,7 +262,7 @@ const EditionDialog = ({
         ...(organizationId ? { polla_organization_id: organizationId } : {}),
       });
       if (!parsed.success) {
-        toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+        toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
         return;
       }
       createEdition(parsed.data, { onSuccess: onClose });
@@ -288,7 +288,7 @@ const EditionDialog = ({
       hasWinner ? { name: values.name, min_winning_hits: values.min_winning_hits } : values
     );
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
       return;
     }
     updateEdition({ id: edition.polla_edition_id, ...parsed.data }, { onSuccess: onClose });

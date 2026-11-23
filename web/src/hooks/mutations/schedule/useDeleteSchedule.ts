@@ -19,22 +19,16 @@ const deleteSchedule = async (schedule_id: string) => {
   return await response.json();
 };
 
-type UseDeleteScheduleOptions = Omit<
-  UseMutationOptions<unknown, Error, string>,
-  'mutationFn'
->;
+type UseDeleteScheduleOptions = Omit<UseMutationOptions<unknown, Error, string>, 'mutationFn'>;
 
-export const useDeleteSchedule = (
-  _?: undefined,
-  options?: UseDeleteScheduleOptions
-) => {
+export const useDeleteSchedule = (_?: undefined, options?: UseDeleteScheduleOptions) => {
   const queryClient = useQueryClient();
   const { onSuccess, onError, ...rest } = options ?? {};
 
   return useMutation({
     mutationFn: deleteSchedule,
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await queryClient.invalidateQueries({
         queryKey: ['schedules'],
         exact: false, // asegura que invalida ['schedules', { all: true/false }]
@@ -46,11 +40,11 @@ export const useDeleteSchedule = (
       });
 
       toast.success('Turno eliminado correctamente');
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       toast.error(`Error al eliminar turno: ${error.message}`);
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

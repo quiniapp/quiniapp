@@ -7,10 +7,21 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 /**
- * Config propia de polla-web (flat config de ESLint 9). ESLint toma la config
- * más cercana al directorio desde el que se corre: `npm run lint` en este
- * workspace usa esta; la de la raíz solo cubre api/ y helper/.
+ * Config propia de polla-web (flat config). ESLint 10 toma la config más cercana
+ * a cada archivo: los de polla-web usan esta; la de la raíz solo cubre api/ y helper/.
  */
+
+// react-hooks 7 suma las reglas del React Compiler como error (set-state-in-effect
+// marca 13 casos hoy). Quedan como warning hasta revisar ese código; las dos de
+// siempre mantienen su nivel.
+const CLASSIC_HOOK_RULES = ['react-hooks/rules-of-hooks', 'react-hooks/exhaustive-deps'];
+const reactHooksRules = Object.fromEntries(
+  Object.entries(reactHooks.configs.recommended.rules).map(([rule, level]) => [
+    rule,
+    CLASSIC_HOOK_RULES.includes(rule) ? level : 'warn',
+  ])
+);
+
 export default defineConfig([
   globalIgnores(['dist', 'node_modules']),
   {
@@ -25,7 +36,7 @@ export default defineConfig([
       'react-refresh': reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooksRules,
       // Las variantes de los componentes shadcn se exportan junto al componente.
       'react-refresh/only-export-components': [
         'warn',

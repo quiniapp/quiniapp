@@ -1,6 +1,6 @@
 import { INewLotteryEntity } from '@helper/request/lottery.request';
 import { ILotteryEntityBack } from '@helper/types/lottery.type';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import dayjs from 'dayjs';
 
 export const lotteryBase = (
@@ -9,7 +9,7 @@ export const lotteryBase = (
 ): ILotteryEntityBack => {
   const timestamp = dayjs().toISOString();
   return {
-    lottery_id: uuidv4(),
+    lottery_id: randomUUID(),
     organization_id,
     name: lottery.name,
     order: lottery.order ?? 0,

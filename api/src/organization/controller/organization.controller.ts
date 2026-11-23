@@ -37,7 +37,8 @@ export class OrganizationController {
         console.error('Capitalist creation error, organization rolled back:', userError);
         throw new Error(
           'Error al crear el Capitalista: ' +
-            (userError instanceof Error ? userError.message : 'Unknown error')
+            (userError instanceof Error ? userError.message : 'Unknown error'),
+          { cause: userError }
         );
       }
 
@@ -77,7 +78,8 @@ export class OrganizationController {
         console.error('Sub-organization setup error, rolled back:', setupError);
         throw new Error(
           'Error al configurar el grupo: ' +
-            (setupError instanceof Error ? setupError.message : 'Unknown error')
+            (setupError instanceof Error ? setupError.message : 'Unknown error'),
+          { cause: setupError }
         );
       }
 

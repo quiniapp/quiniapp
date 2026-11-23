@@ -61,7 +61,7 @@ const isAllowedOrigin = (origin?: string | null) => {
   if (!origin) return true; // para requests server->server, curl, etc.
   if (baseAllowedOrigins.includes(origin)) return true;
 
-  let url: URL | null = null;
+  let url: URL;
   try {
     url = new URL(origin);
   } catch {
@@ -98,8 +98,15 @@ app.use((req, res, next) => {
   res.header('Vary', 'Origin');
   next();
 });
+// También responde los preflight (OPTIONS → 204). Express 5 ya no acepta `app.options('*')`.
 app.use(corsMiddleware);
-app.options('*', corsMiddleware); // preflight
+
+// Express 5 (body-parser 2) deja `req.body` en undefined cuando no hay cuerpo JSON
+// (GET/DELETE, o un POST sin Content-Type). Los handlers esperan `{}`, como en Express 4.
+const ensureBody: express.RequestHandler = (req, _res, next) => {
+  req.body ??= {};
+  next();
+};
 
 // ---- Health (público, sin auth/csrf/rate-limit/logging) ----
 // Antes de morgan para no llenar logs con los pings del keep-warm/uptime monitors.
@@ -154,6 +161,7 @@ app.use(
   privateSlowDown,
   privateRateLimit,
   express.json({ limit: '1mb' }),
+  ensureBody,
   isPollaAuthenticated,
   pollaRouter
 );
@@ -162,6 +170,7 @@ app.use(
   publicSlowDown,
   publicRateLimit,
   express.json({ limit: '200kb' }),
+  ensureBody,
   pollaPublicRouter
 );
 
@@ -170,10 +179,18 @@ app.use(
   privateSlowDown,
   privateRateLimit,
   express.json({ limit: '5mb' }),
+  ensureBody,
   isAuthenticated,
   router
 );
-app.use('/api', publicSlowDown, publicRateLimit, express.json({ limit: '200kb' }), publicRouter);
+app.use(
+  '/api',
+  publicSlowDown,
+  publicRateLimit,
+  express.json({ limit: '200kb' }),
+  ensureBody,
+  publicRouter
+);
 
 // ---- 404 Handler ----
 app.use((req, res) => {
@@ -198,7 +215,13 @@ app.use(errorHandler);
 // ---- Arranque ----
 // Solo iniciar servidor si no estamos en entorno de test
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, async () => {
+  // En Express 5 este callback también recibe el error de listen (p. ej. EADDRINUSE) y el
+  // proceso ya no se cae solo: sin este corte arrancarían los jobs sin servidor HTTP.
+  app.listen(PORT, async (err?: Error) => {
+    if (err) {
+      console.error('[Server] No se pudo escuchar en el puerto', PORT, err);
+      process.exit(1);
+    }
     console.log(
       `Servidor corriendo en ${BACKEND_URL}:${PORT} [node_env=${NODE_ENV}] [instance=${INSTANCE_NAME}]`
     );

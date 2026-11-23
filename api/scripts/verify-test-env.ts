@@ -14,7 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
 
 // Cargar variables de entorno
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const REQUIRED_ENV_VARS = [
   'SUPABASE_URL',
