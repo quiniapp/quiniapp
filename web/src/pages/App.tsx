@@ -11,6 +11,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 
 const router = createBrowserRouter(RoutesContent);
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -30,7 +31,8 @@ function App() {
           <ConditionalProviders>
             <Toaster position="bottom-center" />
             <RouterProvider router={router} />
-            <SpeedInsights />
+            {/* Se habilita con ENABLE_SPEED_INSIGHTS=true (ver vite.config.ts). */}
+            {__ENABLE_SPEED_INSIGHTS__ && <SpeedInsights />}
             <Analytics />
           </ConditionalProviders>
         </ThemeProvider>

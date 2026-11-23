@@ -3,6 +3,7 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { queryErrorMessage } from '@/lib/queryErrors';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { RoutesContent } from '@/routes/route';
 
@@ -35,6 +36,9 @@ export const App = () => (
       <RouterProvider router={router} />
       {/* Vercel Web Analytics: visitas y páginas, separadas de las de QuiniApp. */}
       <Analytics />
+      {/* Vercel Speed Insights: Core Web Vitals de usuarios reales, por página.
+          Se habilita con ENABLE_SPEED_INSIGHTS=true (ver vite.config.ts). */}
+      {__ENABLE_SPEED_INSIGHTS__ && <SpeedInsights />}
     </AuthProvider>
   </QueryClientProvider>
 );
