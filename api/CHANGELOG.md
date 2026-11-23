@@ -6,6 +6,13 @@ All notable changes to the API workspace are documented in this file.
 
 > **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
 
+### Changed - 2026-11-23 (`@types/node` 26)
+
+- **`@types/node`** `^22.19.3` → `^26.6.6`, la misma versión de Node que corre la API (`engines.node: "26.x"`). web y polla-web también pasan a Node 26 en Vercel (ver sus CHANGELOG).
+- `package-lock.json` regenerado con npm 11.20, que viene con Node 26. Se van restos que ya nadie usaba: `@swc/core` (de `@vitejs/plugin-react-swc`, que se sacó con Vite 8) y un `jiti` 2.4.2 huérfano. Tailwind sigue con su `jiti` 1.21.
+- npm 11 avisa al instalar que hay dependencias con install scripts sin aprobar en `allowScripts` (bcrypt, esbuild, supabase, etc.). Por ahora solo avisa y los scripts corren igual; los saltea solo si están denegados explícitamente.
+- Verificado con Node 26.13.1: `tsc --noEmit` y ESLint pasan, la API arranca contra Supabase local, y el login de la Polla (bcrypt + base + JWT) anda.
+
 ### Fixed - 2026-11-22 (Node 26: la API no arrancaba en Railway)
 
 - **`engines.node: "26.x"`** en el `package.json` raíz (y en `package-lock.json`). Railway y Render construyen desde la raíz y toman de ahí la versión de Node. CI (`.github/workflows/ci.yml`) también pasa a Node 26.
