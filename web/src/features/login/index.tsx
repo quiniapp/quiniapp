@@ -12,6 +12,7 @@ import Logo from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { usePlatform } from '@/hooks/use-platform';
 import { ROUTES } from '@/types/routes.type';
@@ -93,7 +94,11 @@ const LoginContent = () => {
                   render={({ field }) => (
                     <Flex className="flex-col space-y-4">
                       <Label>Contraseña</Label>
-                      <Input {...field} type="password" placeholder="******" autoComplete="current-password" />
+                      <PasswordInput
+                        {...field}
+                        placeholder="******"
+                        autoComplete="current-password"
+                      />
                       {errors.password?.message && (
                         <ErrorMessage>{errors.password.message}</ErrorMessage>
                       )}
