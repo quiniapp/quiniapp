@@ -126,7 +126,7 @@ describe('newPollaEditionSchema', () => {
   it('pide al menos un sorteo', () => {
     const parsed = newPollaEditionSchema.safeParse({ ...base, draws: [] });
     expect(parsed.success).toBe(false);
-    expect(parsed.error?.errors[0]?.message).toBe('Elegí al menos un sorteo (quiniela y turno)');
+    expect(parsed.error?.issues[0]?.message).toBe('Elegí al menos un sorteo (quiniela y turno)');
   });
 
   it('no acepta sorteos repetidos', () => {
@@ -135,7 +135,7 @@ describe('newPollaEditionSchema', () => {
       draws: [draw(NACIONAL, NOCTURNA), draw(NACIONAL, NOCTURNA)],
     });
     expect(parsed.success).toBe(false);
-    expect(parsed.error?.errors[0]?.message).toBe('Hay sorteos repetidos');
+    expect(parsed.error?.issues[0]?.message).toBe('Hay sorteos repetidos');
   });
 
   it('el mínimo de aciertos va de 1 a 10', () => {

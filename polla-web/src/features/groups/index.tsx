@@ -156,7 +156,7 @@ const CreateGroupDialog = ({ onClose }: { onClose: () => void }) => {
     const payload = { group: { name: name.trim() }, admin: adminPayload(admin) };
     const parsed = newPollaGroupWithAdminSchema.safeParse(payload);
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
       return;
     }
 
@@ -320,7 +320,7 @@ const AssignAdminDialog = ({
     const payload = creating ? { admin: adminPayload(admin) } : { polla_user_id: existing };
     const parsed = assignPollaGroupAdminSchema.safeParse(payload);
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
       return;
     }
 

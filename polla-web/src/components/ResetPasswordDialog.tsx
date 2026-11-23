@@ -39,7 +39,7 @@ export const ResetPasswordDialog = ({
 
     const parsed = resetPollaPasswordSchema.safeParse({ password });
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Contraseña inválida');
+      toast.error(parsed.error.issues[0]?.message ?? 'Contraseña inválida');
       return;
     }
     if (password !== confirm) {

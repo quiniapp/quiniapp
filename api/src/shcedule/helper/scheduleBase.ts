@@ -1,6 +1,6 @@
 import { INewScheduleEntity } from '@helper/request/schedule.request';
 import { IScheduleEntityBack } from '@helper/types/schedule.type';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import dayjs from 'dayjs';
 
 export const scheduleBase = (
@@ -9,7 +9,7 @@ export const scheduleBase = (
 ): IScheduleEntityBack => {
   const timestamp = dayjs().toISOString();
   return {
-    schedule_id: uuidv4(),
+    schedule_id: randomUUID(),
     name: schedule.name,
     time: schedule.time,
     active: true,

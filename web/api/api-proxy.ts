@@ -1,5 +1,10 @@
 // /api/api-proxy.ts
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
+// Lo que agrega el runtime de Node de Vercel sobre req/res y usa este proxy. Antes venía de
+// `@vercel/node`, que solo se usaba por estos tipos y arrastraba dependencias vulnerables.
+type VercelRequest = IncomingMessage & { query: Partial<Record<string, string | string[]>> };
+type VercelResponse = ServerResponse & { status: (statusCode: number) => VercelResponse };
 
 /**
  * Reverse proxy with transparent failover for the high-availability setup.
@@ -43,7 +48,11 @@ function isNotDelivered(err: unknown): boolean {
   if (!code) return false;
   if (NOT_DELIVERED_CODES.has(code)) return true;
   // TLS/certificate handshake failures also happen before the request is sent.
-  if (code.startsWith('CERT_') || code.includes('SELF_SIGNED') || code.includes('UNABLE_TO_VERIFY')) {
+  if (
+    code.startsWith('CERT_') ||
+    code.includes('SELF_SIGNED') ||
+    code.includes('UNABLE_TO_VERIFY')
+  ) {
     return true;
   }
   return false;
@@ -77,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isSafe = SAFE_METHODS.has(method);
 
   // Buffer the body ONCE into a Buffer so it can be reused across primary + backup attempts.
-  let body: Buffer | undefined;
+  let body: Buffer<ArrayBuffer> | undefined;
   if (!['GET', 'HEAD'].includes(method)) {
     const chunks: Buffer[] = [];
     for await (const c of req as unknown as AsyncIterable<Buffer | string>) {
@@ -101,7 +110,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), PRIMARY_TIMEOUT_MS);
     try {
-      const resp = await fetch(`${stripTrailingSlash(primaryBase)}${targetPath}`, buildInit(controller.signal));
+      const resp = await fetch(
+        `${stripTrailingSlash(primaryBase)}${targetPath}`,
+        buildInit(controller.signal)
+      );
       clearTimeout(timer);
       primaryDownUntil = 0; // primary answered → close the circuit
 
@@ -140,7 +152,10 @@ async function tryBackup(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PRIMARY_TIMEOUT_MS);
   try {
-    const resp = await fetch(`${stripTrailingSlash(backupBase)}${targetPath}`, buildInit(controller.signal));
+    const resp = await fetch(
+      `${stripTrailingSlash(backupBase)}${targetPath}`,
+      buildInit(controller.signal)
+    );
     return resp;
   } catch {
     return null;
@@ -153,7 +168,11 @@ async function sendResponse(res: VercelResponse, resp: Response): Promise<void> 
   res.status(resp.status);
 
   resp.headers.forEach((value, key) => {
-    if (!['transfer-encoding', 'content-length', 'set-cookie', 'content-encoding'].includes(key.toLowerCase())) {
+    if (
+      !['transfer-encoding', 'content-length', 'set-cookie', 'content-encoding'].includes(
+        key.toLowerCase()
+      )
+    ) {
       res.setHeader(key, value);
     }
   });

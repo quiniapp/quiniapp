@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import { es } from 'date-fns/locale';
+import { es } from 'react-day-picker/locale';
 import { CalendarIcon } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 
@@ -56,7 +56,9 @@ export function SelectDayToSearch({
           <span className="truncate text-white font-semibold  text-xs md:text-sm lg:text-base text-nowrap">
             {date ? (
               // Show shorter format on mobile
-              <span className="hidden sm:inline">{dayjs(date).locale('es').format('D [de] MMMM [de] YYYY')}</span>
+              <span className="hidden sm:inline">
+                {dayjs(date).locale('es').format('D [de] MMMM [de] YYYY')}
+              </span>
             ) : null}
             {date ? (
               <span className="inline sm:hidden">{dayjs(date).format('DD/MM/YY')}</span>
@@ -81,9 +83,10 @@ export function SelectDayToSearch({
             defaultMonth={date}
             onSelect={handleSelect}
             locale={es}
-            toDate={toDate}
+            endMonth={toDate}
+            disabled={{ after: toDate }}
             weekStartsOn={0}
-            initialFocus
+            autoFocus
             className={cn('p-2 sm:p-3 pointer-events-auto')}
           />
         </Suspense>

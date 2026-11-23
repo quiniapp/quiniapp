@@ -4,6 +4,22 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
+
+Informe completo en `docs/auditoria-dependencias-2026-11-23.md`. `npm audit` queda en 0.
+
+- **React 18.3 → 19.3.1**, una sola copia en el monorepo.
+- **zod 4.6.7** (por helper): `parsed.error.errors[0]` → `parsed.error.issues[0]` en los 11 formularios que muestran el primer error en un toast:
+  - `ResetPasswordDialog`, `change-password`, `editions` (2), `groups` (2), `login`, `organizations`, `results`, `EditUserDialog` y `users`.
+  - También en los tests `group-batch`, `edition` y `load-start`.
+- **TanStack Query 5.108**: `hooks/useApi.ts` reenvía el 4º argumento (`context`) de `onSuccess`/`onError`.
+- **jspdf 4.2.1** (PDF injection, crítica), **react-router-dom 7.18.6**, fflate 0.8.3, **lucide-react 1.78**, **@vercel/analytics 2**, Radix, TanStack Query y el resto en su última versión. **Tailwind queda en 3.4.19**: la migración a 4 va en un PR aparte.
+- **`api/api-proxy.ts`**: se saca `@vercel/node`, igual que en web. Los tipos se declaran en el archivo y el body es `Buffer<ArrayBuffer>`.
+- **Eliminadas por no usarse:** `react-hook-form`, `@hookform/resolvers` y `zod`. polla-web no los importaba; zod le llega por helper.
+- **ESLint 10 y eslint-plugin-react-hooks 7** (`eslint.config.js`): las reglas nuevas del React Compiler quedan como warning hasta revisar el código. `set-state-in-effect` marca 13 casos en 9 archivos. `rules-of-hooks` y `exhaustive-deps` mantienen su nivel. react-refresh 0.5 y globals 17.
+- TypeScript 6.0.3: sin `baseUrl` en `tsconfig.json` y `tsconfig.app.json`. Vitest 5.1.1.
+- Verificado: typecheck, los 246 tests, lint (0 errores), `vite build`, y en el navegador las 14 rutas logueado sin errores.
+
 ### Changed - 2026-11-23 (Node 26 en Vercel)
 
 - **`engines.node: "26.x"`** en `polla-web/package.json`. El proyecto de Vercel tiene la raíz en `polla-web/` y no lee el `engines` del `package.json` raíz: hasta ahora la versión salía de la configuración del dashboard. `engines` la pisa, así que el build y la función `api/api-proxy.ts` corren en Node 26, igual que la API (Railway/Render) y CI.

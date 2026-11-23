@@ -161,18 +161,18 @@ export const useApiMutation = <TData, TVariables>(
       return apiClient[method]<TData>(endpoint, variables);
     },
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await Promise.all(
         (config.invalidate ?? []).map((prefix) =>
           queryClient.invalidateQueries({ queryKey: [prefix], exact: false })
         )
       );
       if (config.successMessage) toast.success(config.successMessage);
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       toast.error(error.message);
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

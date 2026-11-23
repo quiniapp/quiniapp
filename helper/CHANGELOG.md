@@ -4,6 +4,15 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-23 (zod 4)
+
+- **zod 3.25 → 4.6.7**: cierra un DoS por memoria al validar colecciones grandes con restricciones (GHSA-mrhx-c7xc-m3w5, alta).
+  - `z.string().uuid()` → `z.guid()` en 37 campos (`polla/schemas/catalog|game|user.schema.ts`, `schemas/bet|ticket.schema.ts`). En zod 4, `.uuid()` exige el formato RFC 9562 (versión 1–8 y variante 8–b). `z.guid()` acepta lo mismo que `.uuid()` en zod 3, así que ningún id existente pasa a ser rechazado.
+  - `required_error` / `invalid_type_error` → `error` en `polla/schemas/game.schema.ts` (monto del pago del día) y `polla/schemas/user.schema.ts` (% de ganancia del admin). En zod 4 esas claves se ignoraban sin aviso y el mensaje salía en inglés.
+  - `schemas/schedule_lottery.schema.ts`: `z.record(z.nativeEnum(...))` → `z.partialRecord(z.enum(...))`. En zod 4, `z.record` con un enum de claves exige todos los días.
+  - Los mensajes por defecto de zod cambian en los campos sin mensaje propio.
+- `tsconfig.json`: sin `baseUrl` (TypeScript 6).
+
 ### Changed - 2026-11-21 (los grupos no tienen pagos)
 
 - **`liquidatePollaGroupEditionSchema`** (`helper/polla/schemas/game.schema.ts`) ya no tiene `payment`: solo `collection` (>= 0). Un `payment` que llegue se descarta (zod no estricto). `IPollaGroupEditionAccountEntity.payments` queda (la base lo sigue devolviendo, siempre en 0).

@@ -35,7 +35,7 @@ export const useCreateLottery = (_?: undefined, options?: UseCreateLotteryOption
   return useMutation({
     mutationFn: createLottery,
     ...rest,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await queryClient.invalidateQueries({
         queryKey: ['lotteries'],
         exact: false, // asegura que invalida ['lotteries', { all: true/false }]
@@ -44,13 +44,13 @@ export const useCreateLottery = (_?: undefined, options?: UseCreateLotteryOption
       if (!suppressToast) {
         toast.success('Lotería creada exitosamente');
       }
-      onSuccess?.(data, variables, context);
+      onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       if (!suppressToast) {
         toast.error(`Error al crear lotería: ${error.message}`);
       }
-      onError?.(error, variables, context);
+      onError?.(error, variables, onMutateResult, context);
     },
   });
 };

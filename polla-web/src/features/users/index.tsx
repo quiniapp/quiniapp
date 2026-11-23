@@ -208,7 +208,7 @@ export const UsersPage = () => {
       isCashier ? { ...payload, parent_polla_user_id: user?.polla_user_id } : payload
     );
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los datos');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los datos');
       return;
     }
 

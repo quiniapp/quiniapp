@@ -1,9 +1,9 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
-export const TEST_ORG_ID = uuidv4();
+export const TEST_ORG_ID = randomUUID();
 
 export const TEST_OWNER = {
-  user_id: uuidv4(),
+  user_id: randomUUID(),
   organization_id: TEST_ORG_ID,
   user_type: 'OWNER' as const,
   cashier_type: null,
@@ -21,7 +21,7 @@ export const TEST_OWNER = {
 export const TEST_CASHIERS = [
   // === Cashiers con fee_plus=10 ===
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -35,7 +35,7 @@ export const TEST_CASHIERS = [
     scenario: 'HITS_0' as const, // Perdedoras
   },
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -49,7 +49,7 @@ export const TEST_CASHIERS = [
     scenario: 'HITS_1_TO_5' as const, // 1, 2, 3, 4, 5 hits (distribuido entre schedules)
   },
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -63,7 +63,7 @@ export const TEST_CASHIERS = [
     scenario: 'HITS_6_TO_10' as const, // 6, 7, 8, 9, 10 hits
   },
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -79,7 +79,7 @@ export const TEST_CASHIERS = [
 
   // === Cashiers con fee_plus=0 ===
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -93,7 +93,7 @@ export const TEST_CASHIERS = [
     scenario: 'HITS_0' as const,
   },
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -107,7 +107,7 @@ export const TEST_CASHIERS = [
     scenario: 'HITS_1_TO_5' as const,
   },
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,
@@ -121,7 +121,7 @@ export const TEST_CASHIERS = [
     scenario: 'HITS_6_TO_10' as const,
   },
   {
-    user_id: uuidv4(),
+    user_id: randomUUID(),
     organization_id: TEST_ORG_ID,
     user_type: 'CASHIER' as const,
     cashier_type: 'PC' as const,

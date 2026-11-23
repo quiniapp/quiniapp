@@ -11,7 +11,7 @@ export const updatePollaOrganizationSchema = z.object({ name: name.optional() })
 
 export const newPollaGroupSchema = z.object({
   name,
-  polla_organization_id: z.string().uuid().optional(),
+  polla_organization_id: z.guid().optional(),
 });
 export const updatePollaGroupSchema = z.object({ name: name.optional() });
 
@@ -21,7 +21,7 @@ export const newPollaLotterySchema = z.object({
   name,
   active: z.boolean().optional(),
   order: z.number().int().min(0).optional(),
-  polla_organization_id: z.string().uuid().optional(),
+  polla_organization_id: z.guid().optional(),
 });
 
 export const updatePollaLotterySchema = z.object({
@@ -32,8 +32,8 @@ export const updatePollaLotterySchema = z.object({
 
 /** R28: todas las quinielas de la organización, en el orden nuevo. */
 export const reorderPollaLotteriesSchema = z.object({
-  polla_lottery_ids: z.array(z.string().uuid()).min(1, 'No hay quinielas para ordenar').max(200),
-  polla_organization_id: z.string().uuid().optional(),
+  polla_lottery_ids: z.array(z.guid()).min(1, 'No hay quinielas para ordenar').max(200),
+  polla_organization_id: z.guid().optional(),
 });
 
 // ----------------------------------------------------------------- turnos
@@ -44,7 +44,7 @@ export const newPollaScheduleSchema = z.object({
   name,
   time: z.string().regex(timeRegex, 'Horario inválido (HH:mm)'),
   active: z.boolean().optional(),
-  polla_organization_id: z.string().uuid().optional(),
+  polla_organization_id: z.guid().optional(),
 });
 
 export const updatePollaScheduleSchema = z.object({

@@ -1,7 +1,6 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".", // base del helper
   },
   "include": ["functions", "request", "response", "schemas", "types"]
 }

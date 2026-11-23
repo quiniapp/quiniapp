@@ -10,7 +10,7 @@ const baseUser = {
   email: z.string().email('Email inválido').nullable().optional(),
   number: z.number().int().positive().nullable().optional(),
   username: z.string().min(3, 'Mínimo 3 caracteres').max(60).nullable().optional(),
-  polla_group_id: z.string().uuid().nullable().optional(),
+  polla_group_id: z.guid().nullable().optional(),
   disabled: z.boolean().optional(),
 };
 
@@ -19,7 +19,7 @@ const baseUser = {
  * (null), se carga a mano al liquidar.
  */
 export const pollaAdminPercentage = z
-  .number({ invalid_type_error: 'El porcentaje tiene que ser un número' })
+  .number({ error: 'El porcentaje tiene que ser un número' })
   .min(0, 'El porcentaje va de 0 a 100')
   .max(100, 'El porcentaje va de 0 a 100')
   .nullable()
@@ -32,8 +32,8 @@ export const newPollaUserSchema = z
     /** De calle: sin usuario ni contraseña (solo pasadores y jugadores). */
     is_street: z.boolean().optional(),
     password: password.optional(),
-    polla_organization_id: z.string().uuid().optional(),
-    parent_polla_user_id: z.string().uuid().nullable().optional(),
+    polla_organization_id: z.guid().optional(),
+    parent_polla_user_id: z.guid().nullable().optional(),
     fee: z.number().min(0).max(100).nullable().optional(),
     /** La liquidación de Polla no tiene deje: la API lo fuerza a 0. */
     fee_plus: z.number().min(0).max(100).nullable().optional(),
@@ -106,7 +106,7 @@ export const newPollaUserSchema = z
 
 export const updatePollaUserSchema = z.object({
   ...baseUser,
-  parent_polla_user_id: z.string().uuid().nullable().optional(),
+  parent_polla_user_id: z.guid().nullable().optional(),
   fee: z.number().min(0).max(100).nullable().optional(),
   fee_plus: z.number().min(0).max(100).nullable().optional(),
   /**
@@ -164,7 +164,7 @@ export const newPollaGroupWithAdminSchema = z.object({
  */
 export const assignPollaGroupAdminSchema = z
   .object({
-    polla_user_id: z.string().uuid().optional(),
+    polla_user_id: z.guid().optional(),
     admin: groupAdmin.optional(),
   })
   .refine((data) => Boolean(data.polla_user_id) !== Boolean(data.admin), {

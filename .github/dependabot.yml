@@ -1,0 +1,44 @@
+# Actualizaciones automáticas de dependencias (OWASP A03: Software Supply Chain Failures).
+# Las alertas y PRs de seguridad se activan aparte, en Settings → Code security.
+version: 2
+updates:
+  - package-ecosystem: npm
+    # Un solo lockfile en la raíz cubre los workspaces (api, web, polla-web, helper).
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Argentina/Buenos_Aires
+    # No proponer versiones recién publicadas: da tiempo a que se detecte un paquete malicioso.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    open-pull-requests-limit: 10
+    # Minor y patch en dos PRs semanales (producción y desarrollo); los major van de a uno.
+    groups:
+      produccion:
+        dependency-type: production
+        update-types: [minor, patch]
+      desarrollo:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Migración planificada en un PR aparte (navegadores soportados y revisión visual).
+      - dependency-name: tailwindcss
+        update-types: [version-update:semver-major]
+      # TypeScript 7 (compilador nativo) todavía no lo soportan typescript-eslint ni ts-jest.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Argentina/Buenos_Aires
+    cooldown:
+      default-days: 7

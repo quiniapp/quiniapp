@@ -177,7 +177,7 @@ export const ResultsPage = () => {
         .filter((index) => index >= 0);
       setIncomplete(new Set(missing));
       inputRefs.current[missing[0]]?.focus();
-      toast.error(parsed.error.errors[0]?.message ?? 'Revisá los resultados');
+      toast.error(parsed.error.issues[0]?.message ?? 'Revisá los resultados');
       return;
     }
 
