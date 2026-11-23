@@ -4,6 +4,13 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-23 (Speed Insights por variable de entorno)
+
+- **Vercel Speed Insights** (`pages/App.tsx`): `<SpeedInsights />` ahora se monta solo si el build corre con **`ENABLE_SPEED_INSIGHTS=true`**. Antes se montaba siempre: en los previews (que gastan cuota y mezclan sus datos con los de producción) y en local (donde cargaba el script de debug desde el CDN de Vercel).
+  - `vite.config.ts` lee la variable de `process.env` (no de los `.env`) y la expone como la constante `__ENABLE_SPEED_INSIGHTS__`, declarada en `src/vite-env.d.ts`. Sin la variable, el paquete queda fuera del bundle.
+  - En Vercel, cargarla solo en el entorno **Production** y redeployar.
+  - Requiere tener Speed Insights activado en el proyecto de Vercel.
+
 ### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
 
 Informe completo en `docs/auditoria-dependencias-2026-11-23.md`. `npm audit` queda en 0.
