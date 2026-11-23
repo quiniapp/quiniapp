@@ -118,6 +118,10 @@ function featureChunkName(rawId: string): string | null {
 export default defineConfig({
   define: {
     __COMMIT_DATE__: JSON.stringify(commitDate),
+    // Speed Insights se monta solo si el build corre con ENABLE_SPEED_INSIGHTS=true
+    // (en Vercel, cargarla solo en el entorno Production). Se lee de process.env,
+    // no de los .env. Sin la variable, el paquete queda fuera del bundle.
+    __ENABLE_SPEED_INSIGHTS__: JSON.stringify(process.env.ENABLE_SPEED_INSIGHTS === 'true'),
   },
 
   plugins: [
