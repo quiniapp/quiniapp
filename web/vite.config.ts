@@ -14,6 +14,21 @@ const commitDate = (() => {
   }
 })();
 
+// Fracción de page views que Speed Insights envía a Vercel: SPEED_INSIGHTS_SAMPLE_RATE
+// en el build (de process.env, no de los .env), 0.01 (1 %) si no está. Un valor fuera
+// de (0, 1] corta el build: el paquete trata 0 como "sin muestreo" y mandaría el 100 %.
+const speedInsightsSampleRate = (() => {
+  const raw = process.env.SPEED_INSIGHTS_SAMPLE_RATE?.trim();
+  if (!raw) return 0.01;
+  const rate = Number(raw);
+  if (!Number.isFinite(rate) || rate <= 0 || rate > 1) {
+    throw new Error(
+      `SPEED_INSIGHTS_SAMPLE_RATE inválida: "${raw}". Debe ser un número mayor que 0 y hasta 1.`
+    );
+  }
+  return rate;
+})();
+
 // Los ids de módulo se normalizan a `/` porque en Windows pueden venir con `\`.
 const normalizeId = (id: string) => id.replace(/\\/g, '/');
 
@@ -122,6 +137,7 @@ export default defineConfig({
     // (en Vercel, cargarla solo en el entorno Production). Se lee de process.env,
     // no de los .env. Sin la variable, el paquete queda fuera del bundle.
     __ENABLE_SPEED_INSIGHTS__: JSON.stringify(process.env.ENABLE_SPEED_INSIGHTS === 'true'),
+    __SPEED_INSIGHTS_SAMPLE_RATE__: JSON.stringify(speedInsightsSampleRate),
   },
 
   plugins: [

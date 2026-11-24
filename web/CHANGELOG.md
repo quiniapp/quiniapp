@@ -4,12 +4,19 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-23 (muestreo de Speed Insights)
+
+- **Muestreo de Vercel Speed Insights** (`pages/App.tsx`): `<SpeedInsights sampleRate={…} />` toma la fracción de page views que se envían de la variable de build **`SPEED_INSIGHTS_SAMPLE_RATE`**. Sin la variable, **0.01** (1 %), para no gastar la cuota de eventos.
+  - `vite.config.ts` la lee de `process.env` (no de los `.env`) y la expone como la constante `__SPEED_INSIGHTS_SAMPLE_RATE__`, declarada en `src/vite-env.d.ts`.
+  - Un valor que no sea un número mayor que 0 y hasta 1 corta el build. El 0 también: el paquete lo trata como "sin muestreo" y mandaría el 100 %. Para apagar Speed Insights se quita `ENABLE_SPEED_INSIGHTS`.
+  - En Vercel, cargarla en el entorno **Production** y redeployar.
+
 ### Changed - 2026-11-23 (Speed Insights por variable de entorno)
 
 - **Vercel Speed Insights** (`pages/App.tsx`): `<SpeedInsights />` ahora se monta solo si el build corre con **`ENABLE_SPEED_INSIGHTS=true`**. Antes se montaba siempre: en los previews (que gastan cuota y mezclan sus datos con los de producción) y en local (donde cargaba el script de debug desde el CDN de Vercel).
   - `vite.config.ts` lee la variable de `process.env` (no de los `.env`) y la expone como la constante `__ENABLE_SPEED_INSIGHTS__`, declarada en `src/vite-env.d.ts`. Sin la variable, el paquete queda fuera del bundle.
   - En Vercel, cargarla solo en el entorno **Production** y redeployar.
-  - Requiere tener Speed Insights activado en el proyecto de Vercel.
+  - No hay que activar nada en el dashboard de Vercel: el plan gratis de Speed Insights (Hobby, Pro y Enterprise) junta datos apenas el deploy incluye el paquete, y cada deploy sirve `/_vercel/speed-insights/*` solo. El "Enable" del proyecto (o `vercel project speed-insights enable`) pasa a Speed Insights Plus, que es pago y requiere plan Pro.
 
 ### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
 

@@ -37,8 +37,9 @@ export const App = () => (
       {/* Vercel Web Analytics: visitas y páginas, separadas de las de QuiniApp. */}
       <Analytics />
       {/* Vercel Speed Insights: Core Web Vitals de usuarios reales, por página.
-          Se habilita con ENABLE_SPEED_INSIGHTS=true (ver vite.config.ts). */}
-      {__ENABLE_SPEED_INSIGHTS__ && <SpeedInsights />}
+          Se habilita con ENABLE_SPEED_INSIGHTS=true; muestreo con
+          SPEED_INSIGHTS_SAMPLE_RATE (ver vite.config.ts). */}
+      {__ENABLE_SPEED_INSIGHTS__ && <SpeedInsights sampleRate={__SPEED_INSIGHTS_SAMPLE_RATE__} />}
     </AuthProvider>
   </QueryClientProvider>
 );
