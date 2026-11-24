@@ -49,17 +49,19 @@ export const editResultsSchema = z.object({
     .optional(),
 });
 
+// Zod >= 4.4 rechaza keys ausentes salvo que el schema sea `.optional()`:
+// `z.undefined()` solo exigiría la key presente con valor undefined.
 export const getResultsSchema = z.union([
   // Caso 1: solo results_id
   z.object({
     results_id: z.string(),
-    date: z.undefined(),
-    lottery_id: z.undefined(),
-    schedule_id: z.undefined(),
+    date: z.undefined().optional(),
+    lottery_id: z.undefined().optional(),
+    schedule_id: z.undefined().optional(),
   }),
   // Caso 2: date + lottery_id + schedule_id
   z.object({
-    results_id: z.undefined(),
+    results_id: z.undefined().optional(),
     date: z
       .string()
       .regex(dateRegex, { message: 'Formato inválido YYYY-MM-DD' })

@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Fixed - 2026-11-23 (GET de resultados con zod 4)
+
+- **`getResultsSchema`** (`helper/schemas/results.schema.ts`): las claves excluidas de cada rama del union pasan de `z.undefined()` a `z.undefined().optional()`. Desde zod 4.4 una clave ausente solo se acepta si el schema es `.optional()`, así que `GET /api/private/results?date=…&lottery_id=…&schedule_id=…` respondía 400 (`results_id: expected nonoptional`) y `?results_id=…` también fallaba. Se mantiene la exclusión: mezclar `results_id` con `date`/`lottery_id`/`schedule_id` sigue siendo inválido.
+
 ### Changed - 2026-11-23 (zod 4)
 
 - **zod 3.25 → 4.6.7**: cierra un DoS por memoria al validar colecciones grandes con restricciones (GHSA-mrhx-c7xc-m3w5, alta).
