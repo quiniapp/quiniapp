@@ -6,6 +6,14 @@ All notable changes to the API workspace are documented in this file.
 
 > **Orden de despliegue (cobros de grupo + selector de ediciones):** 1) `db push` de la migración `*_polla_group_edition_movements.sql` en develop/prod, 2) desplegar la API en Railway y en Render (backup), 3) recién después la web en Vercel. Por qué: la migración borra la `polla_liquidate_group_edition` de 7 argumentos y la API nueva lee `collections`/`payments`; una API vieja (zod no estricto) descartaría en silencio el `collection`/`payment` que manda la web nueva.
 
+### Fixed - 2026-11-23 (POST de archive sin cuerpo con Express 5)
+
+- **`ArchiveController`** (`src/archive/controller/archive.controller.ts`): `triggerArchive`, `runArchive` y `updateActivityForDate` leen `req.body ?? {}`. Con Express 5 (body-parser 2) `req.body` queda en `undefined` cuando el POST llega sin cuerpo JSON, así que un `curl -X POST …/archive/run` sin `-d` (como en `ARCHIVE_SYSTEM.md`) respondía 500 en vez de usar `ARCHIVE_DAYS_TO_KEEP`, y `update-activity` sin cuerpo respondía 500 en vez de 400. El cron diario no pasa por estos handlers.
+
+### Removed - 2026-11-23
+
+- **`helper/validateUUID.ts`**: sin uso, y era el último `z.string().uuid()` que quedaba sin pasar a `z.guid()` después de zod 4.
+
 ### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
 
 Escaneo de dependencias con foco en OWASP Top 10:2025. Informe: `docs/auditoria-dependencias-2026-11-23.md`. `npm audit` pasa de **41 vulnerabilidades (16 en producción, 4 críticas)** a **0**. `package-lock.json` se regeneró desde cero con npm 11.20 (Node 26).
