@@ -45,7 +45,8 @@ export class ArchiveController {
    */
   async triggerArchive(req: Request, res: Response) {
     try {
-      const { days_to_keep = ARCHIVE_DAYS_TO_KEEP } = req.body;
+      // Express 5 deja req.body en undefined si el POST llega sin cuerpo JSON
+      const { days_to_keep = ARCHIVE_DAYS_TO_KEEP } = req.body ?? {};
 
       console.log('[ArchiveController] Manual archive trigger requested');
 
@@ -73,7 +74,7 @@ export class ArchiveController {
    */
   async runArchive(req: Request, res: Response) {
     try {
-      const { days_to_keep = ARCHIVE_DAYS_TO_KEEP } = req.body;
+      const { days_to_keep = ARCHIVE_DAYS_TO_KEEP } = req.body ?? {};
 
       const result = await this.archiveService.archiveOldData(days_to_keep);
 
@@ -121,7 +122,7 @@ export class ArchiveController {
    */
   async updateActivityForDate(req: Request, res: Response): Promise<void> {
     try {
-      const { date } = req.body;
+      const { date } = req.body ?? {};
 
       if (!date) {
         res.status(400).json({
