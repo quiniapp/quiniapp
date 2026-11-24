@@ -10,6 +10,7 @@ All notable changes to the Polla Web workspace are documented in this file.
   - Se habilita con la variable de entorno **`ENABLE_SPEED_INSIGHTS=true`** en el build. `vite.config.ts` la lee de `process.env` (no de los `.env`) y la expone como la constante `__ENABLE_SPEED_INSIGHTS__`, declarada en `src/vite-env.d.ts`. Sin la variable, el componente no se monta y el paquete queda fuera del bundle.
   - En Vercel, cargarla solo en el entorno **Production**: así los previews y el entorno local no gastan cuota ni mezclan sus datos con los de producción. Por ser de build, después de cambiarla hay que redeployar.
   - Requiere activar Speed Insights en el proyecto de Vercel. Sin eso, `/_vercel/speed-insights/script.js` da 404 y no se miden datos.
+  - **Muestreo**: `<SpeedInsights sampleRate={…} />` toma la fracción de page views que se envían de la variable de build **`SPEED_INSIGHTS_SAMPLE_RATE`**. Sin la variable, **0.01** (1 %), para no gastar la cuota de eventos. `vite.config.ts` la expone como `__SPEED_INSIGHTS_SAMPLE_RATE__` (declarada en `src/vite-env.d.ts`). Un valor que no sea un número mayor que 0 y hasta 1 corta el build. El 0 también: el paquete lo trata como "sin muestreo" y mandaría el 100 %. Para apagar Speed Insights se quita `ENABLE_SPEED_INSIGHTS`.
 
 ### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
 
