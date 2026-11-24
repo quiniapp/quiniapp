@@ -9,7 +9,7 @@ All notable changes to the Web workspace are documented in this file.
 - **Vercel Speed Insights** (`pages/App.tsx`): `<SpeedInsights />` ahora se monta solo si el build corre con **`ENABLE_SPEED_INSIGHTS=true`**. Antes se montaba siempre: en los previews (que gastan cuota y mezclan sus datos con los de producción) y en local (donde cargaba el script de debug desde el CDN de Vercel).
   - `vite.config.ts` lee la variable de `process.env` (no de los `.env`) y la expone como la constante `__ENABLE_SPEED_INSIGHTS__`, declarada en `src/vite-env.d.ts`. Sin la variable, el paquete queda fuera del bundle.
   - En Vercel, cargarla solo en el entorno **Production** y redeployar.
-  - Requiere tener Speed Insights activado en el proyecto de Vercel.
+  - No hay que activar nada en el dashboard de Vercel: el plan gratis de Speed Insights (Hobby, Pro y Enterprise) junta datos apenas el deploy incluye el paquete, y cada deploy sirve `/_vercel/speed-insights/*` solo. El "Enable" del proyecto (o `vercel project speed-insights enable`) pasa a Speed Insights Plus, que es pago y requiere plan Pro.
 
 ### Changed - 2026-11-23 (actualización de dependencias y OWASP Top 10)
 
