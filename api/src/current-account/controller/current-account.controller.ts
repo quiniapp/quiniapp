@@ -274,6 +274,30 @@ export class CurrentAccountController {
   };
 
   /**
+   * Fecha más reciente con cuenta corriente según el alcance del rol (misma lógica que getAll...).
+   */
+  getLatestCurrentAccountDateHandler = async (props: {
+    user_type: USER_TYPE;
+    user_id: string;
+    organization_id: string;
+  }): Promise<string | null> => {
+    const { user_type, user_id, organization_id } = props;
+    if (user_type === USER_TYPE.CASHIER) {
+      // Misma fila que devuelve /:id sin fecha para el pasador: su última cuenta liquidada
+      return this.repository.getLatestCurrentAccountDate({
+        organization_id,
+        network: false,
+        user_id,
+        liquidatedOnly: true,
+      });
+    }
+    const network = [USER_TYPE.CAPITALIST, USER_TYPE.OWNER].includes(user_type)
+      ? true
+      : !(await new UserRepository().isSubOrganization(organization_id));
+    return this.repository.getLatestCurrentAccountDate({ organization_id, network });
+  };
+
+  /**
    * Get totals grouped by date within a date range
    */
   getTotalsByDateRangeHandler = async (

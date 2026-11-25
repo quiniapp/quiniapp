@@ -282,6 +282,37 @@ export class CurrentAccountRepository {
   }
 
   /**
+   * Fecha (YYYY-MM-DD) de la cuenta corriente más reciente del alcance dado, o null si no hay.
+   */
+  async getLatestCurrentAccountDate({
+    organization_id,
+    network,
+    user_id,
+    liquidatedOnly,
+  }: {
+    organization_id: string;
+    network: boolean;
+    user_id?: string;
+    liquidatedOnly?: boolean;
+  }): Promise<string | null> {
+    const orgIds = network
+      ? await this.getOrganizationNetworkIds(organization_id)
+      : [organization_id];
+
+    let query = supabase.from('current_accounts').select('date');
+    query =
+      orgIds.length === 1
+        ? query.eq('organization_id', orgIds[0])
+        : query.in('organization_id', orgIds);
+    if (user_id) query = query.eq('user_id', user_id);
+    if (liquidatedOnly) query = query.eq('is_liquidated', true);
+
+    const { data, error } = await query.order('date', { ascending: false }).limit(1).maybeSingle();
+    if (error) throw error;
+    return data?.date ?? null;
+  }
+
+  /**
    * Get network summary (aggregated totals per organization)
    */
   async getNetworkSummaryHandler(
