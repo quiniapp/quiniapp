@@ -8,6 +8,7 @@ All notable changes to the API workspace are documented in this file.
 
 ### Added - 2026-11-24
 
+- **Código del pasador en `GET /api/polla/private/user`** (`src/polla/user/repository/polla-user.repository.ts`, `getAll`): el embebido pasa de `parent(disabled)` a `parent(disabled, number)` más `grp:polla_group_id(number)`, y cada fila trae `cashier_code` (`{grupo}-{número}` del pasador para un jugador, `null` en el resto). El grupo del jugador es el de su pasador, lo sincroniza la base. Sin migración ni cambio de filtros.
 - **`GET /api/private/current_account/latest-date`** (`src/current-account/{route,controller,repository}`): devuelve `{ data: { date: 'YYYY-MM-DD' | null } }` con la fecha de la cuenta corriente más reciente según el rol. CASHIER (pasador): su última fila liquidada, la misma que hoy devuelve `/:id` sin fecha. CAPITALIST y OWNER: toda la red. ADMIN y resto: la red si la organización es raíz, solo su organización si es sub-organización. Por qué: la Cta Cte de QuiniApp lo usa para arrancar con la fecha explícita en vez de depender de "la última". La ruta está registrada antes de `/:id`. Nuevo método `CurrentAccountRepository.getLatestCurrentAccountDate`. Sin migración: `EXPLAIN` local usa `Index Only Scan Backward` sobre `idx_current_accounts_date_org`, sin `Sort`.
 
 ### Fixed - 2026-11-23 (POST de archive sin cuerpo con Express 5)

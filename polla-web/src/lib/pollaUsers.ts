@@ -18,6 +18,24 @@ export const pollaUserCode = (user: IPollaUserOption) =>
     : String(user.number);
 
 /**
+ * Código del pasador junto al jugador en la lista de Usuarios. Solo lo ven los
+ * superiores: el pasador y el jugador no lo necesitan.
+ */
+export const pollaListCashierCode = (
+  user: Pick<IPollaUserEntityFront, 'user_type' | 'cashier_code'>,
+  viewerRole: POLLA_USER_TYPE | null | undefined
+): string | null => {
+  if (
+    !viewerRole ||
+    viewerRole === POLLA_USER_TYPE.CASHIER ||
+    viewerRole === POLLA_USER_TYPE.PLAYER
+  )
+    return null;
+  if (user.user_type !== POLLA_USER_TYPE.PLAYER) return null;
+  return user.cashier_code || null;
+};
+
+/**
  * Por qué no puede entrar ni jugar: deshabilitado, o jugador de un pasador
  * deshabilitado. Solo aparecen así en los buscadores que filtran.
  */

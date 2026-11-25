@@ -257,6 +257,11 @@ export type IPollaUserEntityFront = Omit<
    * trae la lista de usuarios.
    */
   cashier_disabled?: boolean;
+  /**
+   * Código `{grupo}-{número}` del pasador de un jugador; `null` en el resto. Lo
+   * trae la lista de usuarios y solo se muestra, no se guarda.
+   */
+  cashier_code?: string | null;
 };
 
 /** Usuario encontrado por número para cargarle una jugada a su nombre. */

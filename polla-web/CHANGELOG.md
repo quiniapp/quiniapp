@@ -4,6 +4,10 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-24
+
+- **Código del pasador en Usuarios** (`src/features/users/index.tsx`, `src/lib/pollaUsers.ts`): junto al nombre de cada jugador se muestra el código de su pasador, p. ej. `7 · Pedro Gómez (10-938)`, en la tarjeta del celular y en la tabla. Lo ven OWNER, CAPITALIST, SUPERADMIN, ASSISTANT y ADMIN; el pasador, el jugador y los demás no. Es solo de visualización: no se guarda. Nuevo helper `pollaListCashierCode` con test en `src/__tests__/users/list-cashier-code.test.ts`.
+
 ### Added - 2026-11-23
 
 - **Vercel Speed Insights** (`@vercel/speed-insights` 2.1): `<SpeedInsights />` en `App.tsx`, junto a `<Analytics />`. Mide los Core Web Vitals de usuarios reales (LCP, INP, CLS, FCP, TTFB) por página.
