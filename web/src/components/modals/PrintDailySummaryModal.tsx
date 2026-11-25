@@ -45,9 +45,7 @@ const PrintDailySummaryModal = ({
   const [dateFrom, setDateFrom] = useState<string>(
     initialDate ?? dayjs().startOf('week').format('YYYY-MM-DD')
   );
-  const [dateTo, setDateTo] = useState<string>(
-    initialDate ?? dayjs().format('YYYY-MM-DD')
-  );
+  const [dateTo, setDateTo] = useState<string>(initialDate ?? dayjs().format('YYYY-MM-DD'));
   const [groupId, setGroupId] = useState<string>(initialGroupId || ALL_GROUPS);
   const [printing, setPrinting] = useState(false);
   const [orgName, setOrgName] = useState<string>('');
@@ -81,7 +79,12 @@ const PrintDailySummaryModal = ({
           toast.error('Sin datos para ese período.');
           return;
         }
-        await downloadCurrentAccountDailySummaryPDF({ date_from: from, date_to: to, data, groupName: selectedGroup?.name });
+        await downloadCurrentAccountDailySummaryPDF({
+          date_from: from,
+          date_to: to,
+          data,
+          groupName: selectedGroup?.name,
+        });
       }
       toast.success('PDF generado.');
       onClose();
@@ -123,11 +126,15 @@ const PrintDailySummaryModal = ({
           >
             <div className="flex items-center gap-2">
               <RadioGroupItem value="day" id="sum-mode-day" />
-              <Label htmlFor="sum-mode-day" className="cursor-pointer">Día</Label>
+              <Label htmlFor="sum-mode-day" className="cursor-pointer">
+                Día
+              </Label>
             </div>
             <div className="flex items-center gap-2">
               <RadioGroupItem value="range" id="sum-mode-range" />
-              <Label htmlFor="sum-mode-range" className="cursor-pointer">Rango de fechas</Label>
+              <Label htmlFor="sum-mode-range" className="cursor-pointer">
+                Rango de fechas
+              </Label>
             </div>
           </RadioGroup>
         </div>
@@ -137,7 +144,7 @@ const PrintDailySummaryModal = ({
             <Label>Fecha</Label>
             <SelectDayToSearch
               selectedDay={date}
-              onDayChange={(d) => d && setDate(d)}
+              onDayChange={setDate}
               toDate={dayjs().toDate()}
               className="w-full"
             />
@@ -150,7 +157,7 @@ const PrintDailySummaryModal = ({
               <Label>Desde</Label>
               <SelectDayToSearch
                 selectedDay={dateFrom}
-                onDayChange={(d) => d && setDateFrom(d)}
+                onDayChange={setDateFrom}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />
@@ -159,7 +166,7 @@ const PrintDailySummaryModal = ({
               <Label>Hasta</Label>
               <SelectDayToSearch
                 selectedDay={dateTo}
-                onDayChange={(d) => d && setDateTo(d)}
+                onDayChange={setDateTo}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />

@@ -27,8 +27,14 @@ import { usePlayDetails } from './context/MakePlaysContext';
 const RepeatTicketModal = React.lazy(() => import('@/components/modals/repeat-ticket-modal.tsx'));
 
 const HeaderPlayDetail = () => {
-  const { cashier, userNumber, setUserNumber, handleRecreateBet, handleEditTicket, setTicketToShare } =
-    usePlayDetails();
+  const {
+    cashier,
+    userNumber,
+    setUserNumber,
+    handleRecreateBet,
+    handleEditTicket,
+    setTicketToShare,
+  } = usePlayDetails();
   const [selectedValue, setSelectedValue] = useState<string>('');
   const { role } = useAuth();
 
@@ -36,10 +42,9 @@ const HeaderPlayDetail = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const dateParam = searchParams.get('date') ?? dayjs().format('YYYY-MM-DD');
 
-  const handleDayChange = (date?: string) => {
+  const handleDayChange = (date: string) => {
     const params = new URLSearchParams(searchParams);
-    if (date) params.set('date', date);
-    else params.delete('date');
+    params.set('date', date);
     setSearchParams(params);
   };
 
@@ -82,7 +87,7 @@ const HeaderPlayDetail = () => {
   }, [userNumber]);
 
   return (
-    <HeaderSection title={' Realizar Jugadas'} className='gap-2'>
+    <HeaderSection title={' Realizar Jugadas'} className="gap-2">
       {role !== USER_TYPE.CASHIER && (
         <Flex className=" w-full flex-wrap items-center justify-start sm:justify-end gap-1 sm:gap-2 xl:gap-3 ">
           <SelectDayToSearch
@@ -95,13 +100,19 @@ const HeaderPlayDetail = () => {
               'flex-row items-center justify-start gap-2 sm:gap-4 lg:gap-1.5 flex-1 min-w-0 sm:flex-initial sm:w-auto'
             }
           >
-            <Label htmlFor={'user'} className="hidden sm:inline text-xs sm:text-sm lg:text-base whitespace-nowrap"> Usuario</Label>
+            <Label
+              htmlFor={'user'}
+              className="hidden sm:inline text-xs sm:text-sm lg:text-base whitespace-nowrap"
+            >
+              {' '}
+              Usuario
+            </Label>
             <Input
               type={'number'}
               inputMode="numeric"
               id={'user'}
               name={'user'}
-              placeholder='Usuario'
+              placeholder="Usuario"
               className={'w-20 sm:max-w-[100px] text-xs sm:text-sm lg:text-base h-8 sm:h-9 lg:h-7'}
               value={userNumber?.toString() ?? ''}
               onChange={(e) => {
@@ -109,12 +120,21 @@ const HeaderPlayDetail = () => {
               }}
             />
             <div className="flex-1 truncate">
-              <Label htmlFor={'user'} className="text-xs w-20 sm:text-sm lg:text-xs truncate"> {cashier?.name}</Label>
+              <Label htmlFor={'user'} className="text-xs w-20 sm:text-sm lg:text-xs truncate">
+                {' '}
+                {cashier?.name}
+              </Label>
             </div>
           </Flex>
 
-          <Flex className={'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'}>
-            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">Ticket</Label>
+          <Flex
+            className={
+              'flex-row items-center justify-start gap-2 xl:gap-4 lg:gap-1.5 w-full sm:w-auto'
+            }
+          >
+            <Label htmlFor={'ticket'} className="text-xs sm:text-sm lg:text-xs whitespace-nowrap">
+              Ticket
+            </Label>
             <Select onValueChange={(value) => handleSelectTicket(value)} value={selectedValue}>
               <SelectTrigger className="border-dark-lighter h-8 sm:h-9 lg:h-7">
                 <SelectValue placeholder="Seleccione uno" />

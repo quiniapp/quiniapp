@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { es } from 'react-day-picker/locale';
 import { CalendarIcon } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,8 +13,8 @@ const Calendar = lazy(() =>
 import { cn } from '@/lib/utils';
 
 interface SelectDayToSearchProps {
-  selectedDay?: string;
-  onDayChange: (date?: string) => void;
+  selectedDay: string;
+  onDayChange: (date: string) => void;
   className?: string;
   toDate?: Date;
 }
@@ -25,20 +25,11 @@ export function SelectDayToSearch({
   className,
   toDate = dayjs().toDate(),
 }: SelectDayToSearchProps) {
-  // Maintain internal Date state synced with selectedDay prop
-  const [date, setDate] = useState<Date | undefined>(
-    selectedDay ? dayjs(selectedDay).toDate() : undefined
-  );
+  const date = dayjs(selectedDay).toDate();
 
-  // Sync when selectedDay prop changes
-  useEffect(() => {
-    setDate(selectedDay ? dayjs(selectedDay).toDate() : undefined);
-  }, [selectedDay]);
-
-  const handleSelect = (newDate: Date | undefined) => {
-    setDate(newDate);
-    // Format to local date string without timezone offset
-    onDayChange(newDate ? dayjs(newDate).format('YYYY-MM-DD') : undefined);
+  // Format to local date string without timezone offset
+  const handleSelect = (newDate: Date) => {
+    onDayChange(dayjs(newDate).format('YYYY-MM-DD'));
   };
 
   return (
@@ -48,26 +39,16 @@ export function SelectDayToSearch({
           variant="outline"
           className={cn(
             'w-auto flex items-center gap-1 md:gap-2 justify-center px-2 py-1 lg:px-4 lg:py-2 cursor-pointer',
-            !date && 'text-muted-foreground',
             className
           )}
         >
           <CalendarIcon color="white" className="h-2 w-2  lg:h-4 lg:w-4 flex-shrink-0" />
           <span className="truncate text-white font-semibold  text-xs md:text-sm lg:text-base text-nowrap">
-            {date ? (
-              // Show shorter format on mobile
-              <span className="hidden sm:inline">
-                {dayjs(date).locale('es').format('D [de] MMMM [de] YYYY')}
-              </span>
-            ) : null}
-            {date ? (
-              <span className="inline sm:hidden">{dayjs(date).format('DD/MM/YY')}</span>
-            ) : (
-              <span className="">
-                <span className="hidden sm:inline">Seleccionar Fecha</span>
-                <span className="inline sm:hidden">Fecha</span>
-              </span>
-            )}
+            {/* Show shorter format on mobile */}
+            <span className="hidden sm:inline">
+              {dayjs(date).locale('es').format('D [de] MMMM [de] YYYY')}
+            </span>
+            <span className="inline sm:hidden">{dayjs(date).format('DD/MM/YY')}</span>
           </span>
         </Button>
       </PopoverTrigger>
@@ -79,6 +60,7 @@ export function SelectDayToSearch({
         <Suspense fallback={null}>
           <Calendar
             mode="single"
+            required
             selected={date}
             defaultMonth={date}
             onSelect={handleSelect}

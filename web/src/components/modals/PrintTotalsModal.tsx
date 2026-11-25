@@ -20,7 +20,11 @@ import { useGroups } from '@/hooks/fetchs/organization/useGroups';
 import { fetchCurrentAccount } from '@/hooks/fetchs/current-account/useGetCurrentAccount';
 import { fetchCurrentAccountTotals } from '@/hooks/fetchs/current-account/useGetCurrentAccountTotals';
 import { printDailyTotalsTicket, printRangeTotalsTicket } from '@/functions/printTotalsTicket';
-import { useGetOrgExpenses, fetchOrgExpenses, type OrgExpense } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
+import {
+  useGetOrgExpenses,
+  fetchOrgExpenses,
+  type OrgExpense,
+} from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
 import { useCreateOrgExpense } from '@/hooks/mutations/org-expense/useCreateOrgExpense';
 import { useDeleteOrgExpense } from '@/hooks/mutations/org-expense/useDeleteOrgExpense';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
@@ -62,7 +66,10 @@ const PrintTotalsModal = ({
   const selectedGroup = groups?.find((g) => g.organization_id === groupId);
 
   // Load existing expenses from DB for selected date and group
-  const { data: savedExpenses = [] } = useGetOrgExpenses(mode === 'day' ? date : null, effectiveGroupId);
+  const { data: savedExpenses = [] } = useGetOrgExpenses(
+    mode === 'day' ? date : null,
+    effectiveGroupId
+  );
   const { mutate: createExpense, isPending: creating } = useCreateOrgExpense();
   const { mutate: deleteExpense } = useDeleteOrgExpense(date, effectiveGroupId);
 
@@ -203,7 +210,7 @@ const PrintTotalsModal = ({
               <Label>Fecha</Label>
               <SelectDayToSearch
                 selectedDay={date}
-                onDayChange={(d) => d && setDate(d)}
+                onDayChange={setDate}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />
@@ -218,7 +225,9 @@ const PrintTotalsModal = ({
                 <div key={exp.expense_id} className="flex items-center gap-2">
                   <span className="flex-1 text-sm">{exp.name}</span>
                   <span className="text-sm w-24 text-right">
-                    {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(exp.amount)}
+                    {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(
+                      exp.amount
+                    )}
                   </span>
                   <Button
                     type="button"
@@ -276,7 +285,7 @@ const PrintTotalsModal = ({
               <Label>Desde</Label>
               <SelectDayToSearch
                 selectedDay={dateFrom}
-                onDayChange={(d) => d && setDateFrom(d)}
+                onDayChange={setDateFrom}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />
@@ -285,7 +294,7 @@ const PrintTotalsModal = ({
               <Label>Hasta</Label>
               <SelectDayToSearch
                 selectedDay={dateTo}
-                onDayChange={(d) => d && setDateTo(d)}
+                onDayChange={setDateTo}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />
