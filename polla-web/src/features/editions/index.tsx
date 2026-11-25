@@ -232,7 +232,8 @@ const EditionDialog = ({
   organizationId,
   onClose,
 }: EditionDialogProps) => {
-  // Una edición nueva abre la carga ahora, salvo que se elija otro momento (R29).
+  // Una edición nueva abre la carga ahora, salvo que se elija otro momento (R29);
+  // inicio, fin y cierre de carga arrancan en hoy.
   const [form, setForm] = useState<EditionForm>(() => {
     if (edition) return formOf(edition);
     const today = todayIso();

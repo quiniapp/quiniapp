@@ -11,13 +11,16 @@ import { resolveCurrentAccountDate, type LatestDateState } from './resolveDate';
 export function useCurrentAccountDate(): string | null {
   const [searchParams, setSearchParams] = useSearchParams();
   const date = searchParams.get('date');
-  const { isPending, isError, data } = useGetCurrentAccountLatestDate(!date);
+  const { isPending, isFetching, isError, data } = useGetCurrentAccountLatestDate(!date);
 
-  const latest: LatestDateState = isPending
-    ? { status: 'pending' }
-    : isError
-      ? { status: 'error' }
-      : { status: 'success', date: data ?? null };
+  // Mientras hay una búsqueda en curso (aunque haya un valor en caché de antes) se espera
+  // la fecha fresca: si no, podría escribirse en la URL una última liquidación vieja.
+  const latest: LatestDateState =
+    isPending || isFetching
+      ? { status: 'pending' }
+      : isError
+        ? { status: 'error' }
+        : { status: 'success', date: data ?? null };
   const resolved = resolveCurrentAccountDate(date, latest, dayjs().format('YYYY-MM-DD'));
 
   useEffect(() => {
