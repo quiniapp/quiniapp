@@ -19,6 +19,9 @@ export function useGetCurrentAccountLatestDate(enabled: boolean) {
     queryKey: ['currentAccountLatestDate'],
     queryFn: fetchLatestDate,
     enabled,
+    // Sin cache entre montajes: liquidar o actualizar crea una fecha nueva y una copia vieja
+    // se escribiría en la URL antes del refetch.
+    gcTime: 0,
     staleTime: 0,
     retry: 1,
   });
