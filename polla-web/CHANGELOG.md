@@ -8,6 +8,8 @@ All notable changes to the Polla Web workspace are documented in this file.
 
 - **El parte diario dice de qué juego es** (`src/lib/exportNames.ts`, `groupDailyReportPDF.ts`, `EditionReportDialog.tsx`, `DailyHistoryView.tsx`, `GroupEditionAccounts.tsx`): el título dentro del PDF pasa de `Parte diario` / `Parte diario de grupos` a `Polla semanal · Parte diario`, `Polla plus · Parte diario` o `Polla · Parte diario` (y `… · Parte diario de grupos`). Nuevos `pollaProductName` y `pollaDailyReportTitle`; `title` es obligatorio en `downloadGroupDailyReportPDF` y `downloadGroupRangeReportPDF`. Los nombres de archivo no cambian.
 
+- **Ediciones → Nueva: fechas en hoy** (`src/features/editions/index.tsx`): inicio, fin y cierre de carga arrancan en hoy (el inicio de carga ya lo hacía), para que los inputs de fecha muestren siempre una fecha.
+
 ### Added - 2026-11-24
 
 - **Código del pasador en Usuarios** (`src/features/users/index.tsx`, `src/lib/pollaUsers.ts`): junto al nombre de cada jugador se muestra el código de su pasador, p. ej. `7 · Pedro Gómez (10-938)`, en la tarjeta del celular y en la tabla. Lo ven OWNER, CAPITALIST, SUPERADMIN, ASSISTANT y ADMIN; el pasador, el jugador y los demás no. Es solo de visualización: no se guarda. Nuevo helper `pollaListCashierCode` con test en `src/__tests__/users/list-cashier-code.test.ts`.
