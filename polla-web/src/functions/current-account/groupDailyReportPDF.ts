@@ -110,12 +110,14 @@ export async function downloadGroupDailyReportPDF(params: {
   unliquidated: string[];
   /** Grupos con la liquidación vieja. */
   outdated: string[];
+  /** T�tulo del PDF, con el juego (`pollaDailyReportTitle`). */
+  title: string;
   fileName: string;
 }) {
   const { doc, autoTable, width } = await newDoc();
   doc.setProperties({ title: params.fileName });
 
-  const startY = header(doc, 'Parte diario de grupos', [
+  const startY = header(doc, params.title, [
     `Edición: ${params.editionTitle}`,
     `Liquidación: ${dayjs(params.date).format('DD/MM/YYYY')}`,
   ]);
@@ -143,12 +145,14 @@ export async function downloadGroupRangeReportPDF(params: {
   editions: (GroupRangeEditionRow & { title: string })[];
   groups: GroupReportRow[];
   totals: GroupReportAmounts;
+  /** T�tulo del PDF, con el juego (`pollaDailyReportTitle`). */
+  title: string;
   fileName: string;
 }) {
   const { doc, autoTable, width } = await newDoc();
   doc.setProperties({ title: params.fileName });
 
-  const startY = header(doc, 'Parte diario de grupos', [
+  const startY = header(doc, params.title, [
     `Del ${dayjs(params.from).format('DD/MM/YYYY')} al ${dayjs(params.to).format('DD/MM/YYYY')} (por fecha de liquidación)`,
   ]);
 

@@ -45,7 +45,7 @@ import {
   hasEditionMovement,
   reportEditionsInRange,
 } from '@/lib/editionAccount';
-import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
+import { groupFileLabel, pollaDailyReportName, pollaDailyReportTitle } from '@/lib/exportNames';
 import { todayIso } from '@/lib/dates';
 import {
   fetchEditionAccounts,
@@ -245,7 +245,7 @@ export const EditionReportDialog = ({
       await downloadDailyAccountsPDF({
         date,
         rows: views,
-        title: kind === 'summary' ? 'Resumen Cuenta Corriente' : undefined,
+        title: kind === 'summary' ? 'Resumen Cuenta Corriente' : pollaDailyReportTitle({ special }),
         groupName,
         periodText: title,
         fileTag,
@@ -331,7 +331,7 @@ export const EditionReportDialog = ({
         totals,
         groupName,
         ...(kind === 'daily' && {
-          title: 'Parte diario',
+          title: pollaDailyReportTitle({}),
           fileName: pollaDailyReportName({
             date: from,
             to,

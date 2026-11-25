@@ -6,6 +6,8 @@ All notable changes to the Web workspace are documented in this file.
 
 ### Changed - 2026-11-24
 
+- **El parte diario dice de qué juego es** (`functions/exportDiarioPDF.ts`): el título dentro del PDF pasa de `Parte diario` a `Quiniela · Parte diario`. El nombre del archivo no cambia.
+
 - **Cta Cte arranca con la fecha de la última liquidación** (`features/current-account/index.tsx`, `useCurrentAccountDate.ts`, `resolveDate.ts`, `hooks/fetchs/current-account/useGetCurrentAccountLatestDate.ts`): sin `?date=` en la URL, la pantalla consulta `GET /current_account/latest-date` y deja esa fecha en la URL (`replace`). Sin liquidaciones, o si el endpoint falla, usa hoy. Mientras se resuelve muestra `LoadingState`.
   - "Actualizar", "Liquidar" y los exportes actúan sobre la fecha del input; el front ya no llama al GET sin fecha.
 

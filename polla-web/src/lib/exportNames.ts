@@ -15,6 +15,19 @@ const cleanFileText = (text: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+/** `Polla semanal` (regular), `Polla plus` (especial) o `Polla` si no hay una edici�n. */
+export const pollaProductName = (special?: boolean) =>
+  special === undefined ? 'Polla' : special ? 'Polla plus' : 'Polla semanal';
+
+/** T�tulo dentro del PDF: `Polla plus � Parte diario`, `Polla � Parte diario de grupos`. */
+export const pollaDailyReportTitle = ({
+  special,
+  groups,
+}: {
+  special?: boolean;
+  groups?: boolean;
+}) => `${pollaProductName(special)} � Parte diario${groups ? ' de grupos' : ''}`;
+
 export interface DailyReportNameParams {
   /** `true` especial, `false` regular, sin valor cuando no hay una edición. */
   special?: boolean;
@@ -40,7 +53,7 @@ export const pollaDailyReportName = ({
   group,
   groups,
 }: DailyReportNameParams) => {
-  const product = special === undefined ? 'Polla' : special ? 'Polla plus' : 'Polla semanal';
+  const product = pollaProductName(special);
   const dates = to && to !== date ? `${fmt(date)} al ${fmt(to)}` : fmt(date);
   return cleanFileText(
     [product, 'parte diario', groups ? 'grupos' : '', group ?? '', dates].filter(Boolean).join(' ')
