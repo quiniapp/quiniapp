@@ -67,12 +67,18 @@ describe('editionLiquidationDate', () => {
 
 describe('pollaDailyReportTitle', () => {
   it('lleva el juego', () => {
-    expect(pollaDailyReportTitle({ special: false })).toBe('Polla semanal � Parte diario');
-    expect(pollaDailyReportTitle({ special: true })).toBe('Polla plus � Parte diario');
-    expect(pollaDailyReportTitle({})).toBe('Polla � Parte diario');
+    expect(pollaDailyReportTitle({ special: false })).toBe('Polla semanal · Parte diario');
+    expect(pollaDailyReportTitle({ special: true })).toBe('Polla plus · Parte diario');
+    expect(pollaDailyReportTitle({})).toBe('Polla · Parte diario');
     expect(pollaDailyReportTitle({ special: true, groups: true })).toBe(
-      'Polla plus � Parte diario de grupos'
+      'Polla plus · Parte diario de grupos'
     );
-    expect(pollaDailyReportTitle({ groups: true })).toBe('Polla � Parte diario de grupos');
+    expect(pollaDailyReportTitle({ groups: true })).toBe('Polla · Parte diario de grupos');
+  });
+
+  it('usa el punto medio y no un carácter de reemplazo', () => {
+    const title = pollaDailyReportTitle({ special: true });
+    expect(title).toContain('·');
+    expect(title).not.toContain(String.fromCharCode(0xfffd));
   });
 });

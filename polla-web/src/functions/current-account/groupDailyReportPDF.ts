@@ -110,7 +110,7 @@ export async function downloadGroupDailyReportPDF(params: {
   unliquidated: string[];
   /** Grupos con la liquidación vieja. */
   outdated: string[];
-  /** T�tulo del PDF, con el juego (`pollaDailyReportTitle`). */
+  /** Título del PDF, con el juego (`pollaDailyReportTitle`). */
   title: string;
   fileName: string;
 }) {
@@ -145,7 +145,7 @@ export async function downloadGroupRangeReportPDF(params: {
   editions: (GroupRangeEditionRow & { title: string })[];
   groups: GroupReportRow[];
   totals: GroupReportAmounts;
-  /** T�tulo del PDF, con el juego (`pollaDailyReportTitle`). */
+  /** Título del PDF, con el juego (`pollaDailyReportTitle`). */
   title: string;
   fileName: string;
 }) {
