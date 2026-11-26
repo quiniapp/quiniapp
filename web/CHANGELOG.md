@@ -4,6 +4,16 @@ All notable changes to the Web workspace are documented in this file.
 
 ## [Unreleased]
 
+### Changed - 2026-11-24
+
+- **El parte diario dice de qué juego es** (`functions/exportDiarioPDF.ts`): el título dentro del PDF pasa de `Parte diario` a `Quiniela · Parte diario`. El nombre del archivo no cambia.
+
+- **Cta Cte arranca con la fecha de la última liquidación** (`features/current-account/index.tsx`, `useCurrentAccountDate.ts`, `resolveDate.ts`, `hooks/fetchs/current-account/useGetCurrentAccountLatestDate.ts`): sin `?date=` en la URL, la pantalla consulta `GET /current_account/latest-date` y deja esa fecha en la URL (`replace`). Sin liquidaciones, o si el endpoint falla, usa hoy. Mientras se resuelve muestra `LoadingState`.
+  - "Actualizar", "Liquidar" y los exportes actúan sobre la fecha del input; el front ya no llama al GET sin fecha.
+  - Mientras se busca la fecha de la última liquidación no se usa un valor en caché (`isFetching` cuenta como pendiente).
+
+- **Selector de fecha siempre con fecha** (`components/button/SelectDayToSearch.tsx`): `selectedDay` y `onDayChange(date: string)` son obligatorios, el estado interno sale (la fecha se deriva de `selectedDay`) y el calendario es `required`, así que ya no muestra "Seleccionar Fecha" ni deja deseleccionar el día. Jugadas, Resultados y Tickets muestran la fecha (hoy por defecto) que ya mandaban en la consulta. Se simplificaron los `onDayChange` de los modales de impresión, Cta Cte por usuario, Mis Jugadas y el filtro de Cta Cte, que ya no reciben `undefined`.
+
 ### Added - 2026-11-23 (muestreo de Speed Insights)
 
 - **Muestreo de Vercel Speed Insights** (`pages/App.tsx`): `<SpeedInsights sampleRate={…} />` toma la fracción de page views que se envían de la variable de build **`SPEED_INSIGHTS_SAMPLE_RATE`**. Sin la variable, **0.01** (1 %), para no gastar la cuota de eventos.

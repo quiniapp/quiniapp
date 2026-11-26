@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import React, { Suspense, memo, useCallback } from 'react';
 import { PencilIcon, SaveIcon, TrashIcon } from 'lucide-react';
 
@@ -55,11 +54,7 @@ const ResultsContent = () => {
       <HeaderSection title={'Resultados'} />
       <FlexCol className="w-full gap-1 xl:gap-3 p-1 items-center  max-h-[60px] justify-between">
         <Flex className="w-full  items-center  max-h-[60px] justify-between">
-          <SelectDayToSearch
-            onDayChange={(date) => {
-              setSelectedDate(dayjs(date).format('YYYY-MM-DD'));
-            }}
-          />
+          <SelectDayToSearch selectedDay={selectedDate} onDayChange={setSelectedDate} />
           {role !== USER_TYPE.CASHIER && role !== USER_TYPE.ADMIN && (
             <Flex className={'gap-6'}>
               <IconButton
@@ -76,7 +71,7 @@ const ResultsContent = () => {
             <ResultShifts />
             <QuiniChecks />
           </FlexCol>
-          <FlexCol className='gap-1 xl:gap-2 2xl:h-full  2xl:gap-6 '>
+          <FlexCol className="gap-1 xl:gap-2 2xl:h-full  2xl:gap-6 ">
             <Box className="grid grid-flow-col grid-rows-10 sm:grid-rows-5 gap-1 md:gap-2  p-1 xl:p-2 2xl:p-4 justify-between bg-card rounded h-full">
               {results.map((value, i) => (
                 <ResultInput
@@ -151,21 +146,27 @@ const ResultInput = memo<{
   inputRefs: React.MutableRefObject<(HTMLInputElement | null)[]>;
   resultsLength: number;
 }>(function ResultInput({ index, value, onEdit, setResults, inputRefs, resultsLength }) {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const numericValue = e.target.value.replace(/[^0-9]/g, '');
-    setResults((prev) => {
-      const newResults = [...prev];
-      newResults[index] = numericValue;
-      return newResults;
-    });
-  }, [index, setResults]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const numericValue = e.target.value.replace(/[^0-9]/g, '');
+      setResults((prev) => {
+        const newResults = [...prev];
+        newResults[index] = numericValue;
+        return newResults;
+      });
+    },
+    [index, setResults]
+  );
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && index < resultsLength - 1) {
-      inputRefs.current[index + 1]?.focus();
-      e.preventDefault();
-    }
-  }, [index, resultsLength, inputRefs]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && index < resultsLength - 1) {
+        inputRefs.current[index + 1]?.focus();
+        e.preventDefault();
+      }
+    },
+    [index, resultsLength, inputRefs]
+  );
 
   return (
     <Flex className="flex items-center gap-2 2xl:gap-4">

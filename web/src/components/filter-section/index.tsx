@@ -25,7 +25,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SearchIcon, XIcon } from 'lucide-react';
 
-
 const FilterSection = () => {
   const [userNumber, setUserNumber] = useState<string>('');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -34,7 +33,7 @@ const FilterSection = () => {
   const { role, organizationId, groupId } = useAuth();
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const date = searchParams.get('date') ?? undefined;
+  const date = searchParams.get('date') ?? dayjs().format('YYYY-MM-DD');
   const group_id = searchParams.get('group_id') ?? undefined;
   const activeUserId = searchParams.get('user_id') ?? undefined;
 
@@ -53,8 +52,7 @@ const FilterSection = () => {
   const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
 
   // No pises otros params al setear la fecha
-  const handleDayChange = (newDate?: string) => {
-    if (!newDate) return;
+  const handleDayChange = (newDate: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('date', newDate);
     setSearchParams(params);
@@ -132,7 +130,11 @@ const FilterSection = () => {
             <Flex className="items-center">
               <Label className="text-sm text-muted-foreground mr-2">Grupo:</Label>
               <Box>
-                <Select value={group_id ?? 'Todos'} onValueChange={handleGroupChange} disabled={adminHasGroup}>
+                <Select
+                  value={group_id ?? 'Todos'}
+                  onValueChange={handleGroupChange}
+                  disabled={adminHasGroup}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar Grupo" />
                   </SelectTrigger>

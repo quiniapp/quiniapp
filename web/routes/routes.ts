@@ -57,6 +57,7 @@ export const BACKEND_ROUTES = {
     liquidate: `${PRIVATE}/current_account/liquidate`,
     totals: `${PRIVATE}/current_account/totals`,
     daily_summary: `${PRIVATE}/current_account/daily-summary`,
+    latest_date: `${PRIVATE}/current_account/latest-date`,
   },
   results: {
     base: `${PRIVATE}/results`,

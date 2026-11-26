@@ -22,7 +22,11 @@ import { fetchCurrentAccountDailySummary } from '@/hooks/fetchs/current-account/
 import { printSubtotalsDayTicket, printSubtotalsRangeTicket } from '@/functions/printTotalsTicket';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { BACKEND_ROUTES } from '../../../routes/routes';
-import { useGetOrgExpenses, fetchOrgExpenses, type OrgExpense } from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
+import {
+  useGetOrgExpenses,
+  fetchOrgExpenses,
+  type OrgExpense,
+} from '@/hooks/fetchs/org-expense/useGetOrgExpenses';
 import { useCreateOrgExpense } from '@/hooks/mutations/org-expense/useCreateOrgExpense';
 import { useDeleteOrgExpense } from '@/hooks/mutations/org-expense/useDeleteOrgExpense';
 
@@ -59,7 +63,10 @@ const PrintSubtotalsModal = ({
   const effectiveGroupId = groupId === ALL_GROUPS ? null : groupId;
   const selectedGroup = groups?.find((g) => g.organization_id === groupId);
 
-  const { data: savedExpenses = [] } = useGetOrgExpenses(mode === 'day' ? date : null, effectiveGroupId);
+  const { data: savedExpenses = [] } = useGetOrgExpenses(
+    mode === 'day' ? date : null,
+    effectiveGroupId
+  );
   const { mutate: createExpense, isPending: creating } = useCreateOrgExpense();
   const { mutate: deleteExpense } = useDeleteOrgExpense(date, effectiveGroupId);
 
@@ -119,7 +126,11 @@ const PrintSubtotalsModal = ({
           expenses: freshExpenses.map((e) => ({ nombre: e.name, monto: e.amount })),
         });
       } else {
-        const dailySummary = await fetchCurrentAccountDailySummary(dateFrom, dateTo, effectiveGroupId);
+        const dailySummary = await fetchCurrentAccountDailySummary(
+          dateFrom,
+          dateTo,
+          effectiveGroupId
+        );
         if (!dailySummary.length) {
           toast.error('Sin datos para ese rango.');
           return;
@@ -193,7 +204,7 @@ const PrintSubtotalsModal = ({
               <Label>Fecha</Label>
               <SelectDayToSearch
                 selectedDay={date}
-                onDayChange={(d) => d && setDate(d)}
+                onDayChange={setDate}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />
@@ -206,7 +217,9 @@ const PrintSubtotalsModal = ({
                 <div key={exp.expense_id} className="flex items-center gap-2">
                   <span className="flex-1 text-sm">{exp.name}</span>
                   <span className="text-sm w-24 text-right">
-                    {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(exp.amount)}
+                    {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(
+                      exp.amount
+                    )}
                   </span>
                   <Button
                     type="button"
@@ -247,7 +260,9 @@ const PrintSubtotalsModal = ({
               {totalExpenses > 0 && (
                 <div className="text-sm text-right opacity-70">
                   Total gastos:{' '}
-                  {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(totalExpenses)}
+                  {new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(
+                    totalExpenses
+                  )}
                 </div>
               )}
             </div>
@@ -260,7 +275,7 @@ const PrintSubtotalsModal = ({
               <Label>Desde</Label>
               <SelectDayToSearch
                 selectedDay={dateFrom}
-                onDayChange={(d) => d && setDateFrom(d)}
+                onDayChange={setDateFrom}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />
@@ -269,7 +284,7 @@ const PrintSubtotalsModal = ({
               <Label>Hasta</Label>
               <SelectDayToSearch
                 selectedDay={dateTo}
-                onDayChange={(d) => d && setDateTo(d)}
+                onDayChange={setDateTo}
                 toDate={dayjs().toDate()}
                 className="w-full"
               />

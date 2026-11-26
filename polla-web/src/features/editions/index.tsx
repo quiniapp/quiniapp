@@ -232,12 +232,20 @@ const EditionDialog = ({
   organizationId,
   onClose,
 }: EditionDialogProps) => {
-  // Una edición nueva abre la carga ahora, salvo que se elija otro momento (R29).
-  const [form, setForm] = useState<EditionForm>(() =>
-    edition
-      ? formOf(edition)
-      : { ...emptyForm, load_start_date: todayIso(), load_start_time: dayjs().format('HH:mm') }
-  );
+  // Una edición nueva abre la carga ahora, salvo que se elija otro momento (R29);
+  // inicio, fin y cierre de carga arrancan en hoy.
+  const [form, setForm] = useState<EditionForm>(() => {
+    if (edition) return formOf(edition);
+    const today = todayIso();
+    return {
+      ...emptyForm,
+      start_date: today,
+      end_date: today,
+      load_start_date: today,
+      load_start_time: dayjs().format('HH:mm'),
+      load_limit_date: today,
+    };
+  });
   const { mutate: createEdition, isPending: isCreating } = useCreateEdition();
   const { mutate: updateEdition, isPending: isUpdating } = useUpdateEdition();
   const isPending = isCreating || isUpdating;

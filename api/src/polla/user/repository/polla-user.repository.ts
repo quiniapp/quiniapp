@@ -5,6 +5,7 @@ import {
   IPollaUserEntityBack,
   IPollaUserOption,
   POLLA_USER_TYPE,
+  pollaCashierCode,
 } from '@helper/polla/types/user.type';
 import { throwIfPollaError } from '../../helper/polla-errors';
 import { PollaPagination, buildPaginated } from '../../helper/pagination';
@@ -39,9 +40,10 @@ export class PollaUserRepository {
     let query = supabase
       .from('polla_users')
       // Embebido por columna: el pasador del jugador, para avisar si está
-      // deshabilitado (el jugador queda frenado sin estarlo él).
+      // deshabilitado (el jugador queda frenado sin estarlo él) y armar su
+      // código. El grupo del jugador es el de su pasador (lo sincroniza la base).
       .select(
-        `${PUBLIC_COLUMNS}, parent:parent_polla_user_id(disabled)`,
+        `${PUBLIC_COLUMNS}, parent:parent_polla_user_id(disabled, number), grp:polla_group_id(number)`,
         pagination.withCount ? { count: 'exact' } : {}
       )
       .is('deleted_at', null)
@@ -83,8 +85,18 @@ export class PollaUserRepository {
 
     throwIfPollaError(error);
     const users = (
-      (data ?? []) as unknown as (IPollaUserEntityBack & { parent: { disabled: boolean } | null })[]
-    ).map(({ parent, ...user }) => ({ ...user, cashier_disabled: Boolean(parent?.disabled) }));
+      (data ?? []) as unknown as (IPollaUserEntityBack & {
+        parent: { disabled: boolean; number: number | null } | null;
+        grp: { number: number } | null;
+      })[]
+    ).map(({ parent, grp, ...user }) => ({
+      ...user,
+      cashier_disabled: Boolean(parent?.disabled),
+      cashier_code:
+        user.user_type === POLLA_USER_TYPE.PLAYER && parent
+          ? pollaCashierCode(grp?.number, parent.number) || null
+          : null,
+    }));
     return buildPaginated(users, pagination, pagination.withCount ? (count ?? 0) : null);
   }
 

@@ -85,8 +85,7 @@ const CurrentAcoountByUserTable = () => {
     }
   };
 
-  const handleDayChange = (newDate?: string) => {
-    if (!newDate) return;
+  const handleDayChange = (newDate: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('date', newDate);
     setSearchParams(params);
@@ -227,7 +226,9 @@ const CurrentAcoountByUserTable = () => {
                   <SkeletonList />
                 ) : tickets?.length === 0 ? (
                   <div className="text-center py-4 rounded-md border border-dashed">
-                    <Text size="lg" weight="semibold">No se encontraron tickets</Text>
+                    <Text size="lg" weight="semibold">
+                      No se encontraron tickets
+                    </Text>
                   </div>
                 ) : (
                   tickets?.map((t: ITicketEntityFront) => (
@@ -265,7 +266,9 @@ const CurrentAcoountByUserTable = () => {
                       <TableRow>
                         <TableCell colSpan={3} className="text-center">
                           <FlexCol className="items-center justify-center gap-1">
-                            <Text size="lg" weight="semibold">No se encontraron tickets</Text>
+                            <Text size="lg" weight="semibold">
+                              No se encontraron tickets
+                            </Text>
                           </FlexCol>
                         </TableCell>
                       </TableRow>
@@ -292,7 +295,9 @@ const CurrentAcoountByUserTable = () => {
                   <SkeletonList />
                 ) : bets?.length === 0 ? (
                   <div className="text-center py-4 rounded-md border border-dashed">
-                    <Text size="lg" weight="semibold">No se encontraron jugadas ganadoras</Text>
+                    <Text size="lg" weight="semibold">
+                      No se encontraron jugadas ganadoras
+                    </Text>
                   </div>
                 ) : (
                   bets?.map((b: IBetEntityFront) => (

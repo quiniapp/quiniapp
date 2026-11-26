@@ -40,7 +40,7 @@ export async function downloadDailyAccountsPDF(params: {
   rows: AccountPeriodView[];
   /** Liquidación por rango: primer día del rango. */
   from?: string;
-  title?: string;
+  title: string;
   groupName?: string;
   /** Cuenta por edición: reemplaza el texto del período bajo el título. */
   periodText?: string;
@@ -50,7 +50,7 @@ export async function downloadDailyAccountsPDF(params: {
   fileName?: string;
 }) {
   const { doc, autoTable, available, minMoneyCol } = await newDoc();
-  const title = params.title ?? 'Parte diario';
+  const title = params.title;
   const dateStr = dayjs(params.date).format('DD/MM/YYYY');
   const fileName =
     params.fileName ??
