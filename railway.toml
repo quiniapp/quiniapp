@@ -5,7 +5,8 @@
 [build]
 # Railpack toma Node de `engines.node` del package.json raíz (26.x). Nixpacks llega solo hasta
 # Node 23: con 26.x volvía sin avisar a Node 18, donde tsx 4.23 no resuelve los alias `@helper/*`.
-# Railpack deja NPM_CONFIG_PRODUCTION=false, así que instala las devDependencies (tsx es el runtime).
+# Railpack deja NPM_CONFIG_PRODUCTION=false, así que instala las devDependencies. `tsx` (el runtime)
+# es dependency de `api`, no devDependency: se instala igual aunque se poden las devDependencies.
 builder = "railpack"
 # La API no se compila: corre con tsx. Sin esto, Railpack corre el `build` de la raíz
 # (`npm run build --workspaces`), que arma web y polla-web y falla en helper (no tiene `build`).

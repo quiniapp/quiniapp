@@ -3,9 +3,19 @@
 # Passive standby for the main Railway backend. Shares the SAME Supabase DB and the SAME JWT
 # secrets so sessions minted by Railway validate here (transparent failover via the Vercel proxy).
 #
-# NOTE: `npm install` (not `npm ci --omit=dev`) is used on purpose — the start command runs `tsx`,
-# which is a devDependency. The project has no compiled dist/ output and relies on tsconfig path
-# aliases, so tsx is the runtime (same as local dev).
+# NOTE: the project has no compiled dist/ output and relies on tsconfig path aliases, so `tsx` is the
+# runtime (same as local dev). It is a regular `dependency` of `api` (not a devDependency): with
+# NODE_ENV=production (set below) `npm install` skips devDependencies, and from 2026-11-22 to
+# 2026-11-26 every Render deploy failed with `sh: 1: tsx: not found` (exit 127) because of that.
+# Node comes from `engines.node` (26.x): Render reads it from the service root directory, so it is
+# declared in both the root and `api/` package.json.
+#
+# WARNING: the live Render service (`quiniapp`, srv-d0431djuibrs73an5mu0) was created by hand and is
+# NOT managed by this Blueprint, so editing this file does not change it. As of 2026-11-26 it uses
+# rootDir `api`, build `npm install`, start `npm run dev` (tsx watch) and no health check. Its
+# dashboard settings and env vars must be kept in line with this file by hand — in particular
+# INSTANCE_NAME=render and ENABLE_BACKGROUND_JOBS=false (envs.ts defaults it to true; the
+# 2026-11-21 deploy logged `instance=main` and started the archive cron).
 services:
   - type: web
     name: quiniapp-api-backup
