@@ -16,18 +16,22 @@ const HeaderPlayAndHits = () => {
       params.set('date', today.format('YYYY-MM-DD'));
       setSearchParams(params, { replace: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
-  const handleDayChange = (date?: string) => {
+  const handleDayChange = (newDate: string) => {
     const params = new URLSearchParams(searchParams);
-    params.set('date', date ?? today.format('YYYY-MM-DD'));
+    params.set('date', newDate);
     setSearchParams(params);
   };
 
   return (
     <HeaderSection title={'Jugadas'}>
-      <SelectDayToSearch onDayChange={handleDayChange} toDate={today.toDate()} />
+      <SelectDayToSearch
+        selectedDay={date ?? today.format('YYYY-MM-DD')}
+        onDayChange={handleDayChange}
+        toDate={today.toDate()}
+      />
     </HeaderSection>
   );
 };

@@ -78,7 +78,7 @@ import {
 } from '@/lib/editionAccount';
 import { cn } from '@/lib/utils';
 import { todayIso } from '@/lib/dates';
-import { pollaDailyReportName } from '@/lib/exportNames';
+import { pollaDailyReportName, pollaDailyReportTitle } from '@/lib/exportNames';
 import {
   GroupRef,
   groupRangeByEdition,
@@ -1352,6 +1352,7 @@ const GroupRangeReportDialog = ({
         })),
         groups,
         totals: groupReportTotals(groups),
+        title: pollaDailyReportTitle({ groups: true }),
         fileName: pollaDailyReportName({ date: from, to, groups: true }),
       });
       onClose();
@@ -1549,6 +1550,10 @@ export const GroupEditionAccounts = () => {
         totals: groupReportTotals(rows),
         unliquidated: unliquidatedGroupNames(previews),
         outdated: outdatedGroupNames(previews),
+        title: pollaDailyReportTitle({
+          special: isPollaSpecialEdition(current.edition),
+          groups: true,
+        }),
         fileName: pollaDailyReportName({
           special: isPollaSpecialEdition(current.edition),
           date,

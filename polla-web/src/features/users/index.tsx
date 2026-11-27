@@ -14,6 +14,7 @@ import {
   pollaUserListTypes,
 } from '@helper/polla/types/user.type';
 import { useAuth } from '@/providers/AuthContext';
+import { pollaListCashierCode } from '@/lib/pollaUsers';
 import { useNextUserNumber, useUsers } from '@/hooks/fetchs/usePollaData';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useGroups } from '@/hooks/fetchs/useCatalogs';
@@ -233,6 +234,12 @@ export const UsersPage = () => {
       : item.number
         ? String(item.number)
         : '';
+
+  /** Nombre y, para quien puede verlo, el código del pasador: `Pedro Gómez (10-938)`. */
+  const userNameWithCashier = (item: IPollaUserEntityFront) => {
+    const cashierCode = pollaListCashierCode(item, role);
+    return `${item.name} ${item.last_name ?? ''}`.trim() + (cashierCode ? ` (${cashierCode})` : '');
+  };
 
   /** Usuario, grupo y comisión de la tarjeta mobile; lo que falta no se muestra. */
   const userDetails = (item: IPollaUserEntityFront) => {
@@ -553,7 +560,7 @@ export const UsersPage = () => {
                   <div className="min-w-0">
                     <p className="break-words font-medium">
                       {userCode(item) ? `${userCode(item)} · ` : ''}
-                      {item.name} {item.last_name ?? ''}
+                      {userNameWithCashier(item)}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-1">
                       <Badge variant="secondary">{POLLA_USER_TYPE_LABEL[item.user_type]}</Badge>
@@ -592,7 +599,7 @@ export const UsersPage = () => {
                   <TableRow key={item.polla_user_id}>
                     <TableCell>
                       {userCode(item) ? `${userCode(item)} · ` : ''}
-                      {item.name} {item.last_name ?? ''}
+                      {userNameWithCashier(item)}
                       {item.is_street && (
                         <Badge variant="outline" className="ml-2">
                           Calle

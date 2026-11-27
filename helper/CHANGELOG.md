@@ -4,6 +4,10 @@ All notable changes to the Helper workspace are documented in this file.
 
 ## [Unreleased]
 
+### Added - 2026-11-24
+
+- **`IPollaUserEntityFront.cashier_code`** (`helper/polla/types/user.type.ts`): `cashier_code?: string | null`, el código `{grupo}-{número}` del pasador de un jugador; `null` en el resto. Lo trae la lista de usuarios y solo se muestra.
+
 ### Fixed - 2026-11-23 (GET de resultados con zod 4)
 
 - **`getResultsSchema`** (`helper/schemas/results.schema.ts`): las claves excluidas de cada rama del union pasan de `z.undefined()` a `z.undefined().optional()`. Desde zod 4.4 una clave ausente solo se acepta si el schema es `.optional()`, así que `GET /api/private/results?date=…&lottery_id=…&schedule_id=…` respondía 400 (`results_id: expected nonoptional`) y `?results_id=…` también fallaba. Se mantiene la exclusión: mezclar `results_id` con `date`/`lottery_id`/`schedule_id` sigue siendo inválido.

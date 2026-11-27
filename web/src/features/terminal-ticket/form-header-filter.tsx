@@ -26,7 +26,18 @@ import { useTerminalTicket } from './provider/TerminalTicketProvider';
 
 const FormHeaderFilter = () => {
   const { role, organizationId, user } = useAuth();
-  const { cashier_id, group_id, setDate, toggleCashier, setCashierId, setGroupId, setTicketNumber, resetTicketNumber, setFilter } = useTerminalTicket();
+  const {
+    cashier_id,
+    group_id,
+    date,
+    setDate,
+    toggleCashier,
+    setCashierId,
+    setGroupId,
+    setTicketNumber,
+    resetTicketNumber,
+    setFilter,
+  } = useTerminalTicket();
   const { data: allCashiers } = useUsers(role);
   const { data: groups } = useGroups(organizationId, role);
   const { data: groupUsers } = useGroupUsers(group_id ?? null, role);
@@ -56,16 +67,12 @@ const FormHeaderFilter = () => {
     }
   };
 
-  const handleSelectDate = (date?: string) => {
-    setDate(date);
-  };
-
   const onChangeFilter = (value: 'all' | 'winner' | 'paid' | 'not_paid') => {
     setFilter(value);
   };
 
   useEffect(() => {
-    handleSelectDate();
+    setDate();
   }, []);
   return (
     <FlexCol className={'sm:flex-row mb-1 sm:mb-4 w-full gap-1 sm:gap-3'}>
@@ -92,10 +99,7 @@ const FormHeaderFilter = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={cashier_id ?? '__all__'}
-                onValueChange={handleSelectCashier}
-              >
+              <Select value={cashier_id ?? '__all__'} onValueChange={handleSelectCashier}>
                 <SelectTrigger className={'border w-full '}>
                   <SelectValue />
                 </SelectTrigger>
@@ -113,14 +117,12 @@ const FormHeaderFilter = () => {
 
           <Flex className={'w-full gap-2 justify-between'}>
             <SelectDayToSearch
-              onDayChange={(value) => {
-                handleSelectDate(value);
-              }}
+              selectedDay={date ?? dayjs().format('YYYY-MM-DD')}
+              onDayChange={setDate}
               toDate={dayjs().toDate()}
             />
             <Flex className={' items-center gap-3'}>
-
-                <Text size="sm">Tickets</Text>
+              <Text size="sm">Tickets</Text>
 
               <Select
                 onValueChange={(value: 'all' | 'winner' | 'paid' | 'not_paid') => {

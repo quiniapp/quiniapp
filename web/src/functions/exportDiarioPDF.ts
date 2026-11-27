@@ -37,7 +37,7 @@ export async function downloadCurrentAccountTablePDF(params: {
   const fileName = `Quiniela parte diario ${dateFile}`;
   doc.setProperties({ title: fileName });
   doc.setFontSize(14);
-  doc.text('Parte diario', 14, 14);
+  doc.text('Quiniela · Parte diario', 14, 14);
   doc.setFontSize(10);
   doc.text(`Fecha de la Liquidación: ${dateStr}`, 14, 20);
   doc.setFontSize(BASE_FONT);

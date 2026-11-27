@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
+import { groupFileLabel, pollaDailyReportName, pollaDailyReportTitle } from '@/lib/exportNames';
 import { editionLiquidationDate } from '@/lib/editionAccount';
 
 describe('pollaDailyReportName', () => {
@@ -62,5 +62,23 @@ describe('editionLiquidationDate', () => {
       '2026-11-10'
     );
     expect(editionLiquidationDate([], null)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('pollaDailyReportTitle', () => {
+  it('lleva el juego', () => {
+    expect(pollaDailyReportTitle({ special: false })).toBe('Polla semanal · Parte diario');
+    expect(pollaDailyReportTitle({ special: true })).toBe('Polla plus · Parte diario');
+    expect(pollaDailyReportTitle({})).toBe('Polla · Parte diario');
+    expect(pollaDailyReportTitle({ special: true, groups: true })).toBe(
+      'Polla plus · Parte diario de grupos'
+    );
+    expect(pollaDailyReportTitle({ groups: true })).toBe('Polla · Parte diario de grupos');
+  });
+
+  it('usa el punto medio y no un carácter de reemplazo', () => {
+    const title = pollaDailyReportTitle({ special: true });
+    expect(title).toContain('·');
+    expect(title).not.toContain(String.fromCharCode(0xfffd));
   });
 });

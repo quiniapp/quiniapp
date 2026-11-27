@@ -42,6 +42,7 @@ export class CurrentAccountRouter {
     this.router.get('/network/summary', this.getNetworkSummaryHandler);
     this.router.get('/totals', this.getTotalsByDateRangeHandler);
     this.router.get('/daily-summary', this.getDailySummaryByDateRangeHandler);
+    this.router.get('/latest-date', this.getLatestDateHandler);
     this.router.get('/:id', this.getCurrentAccountHandler);
     this.router.get('/', this.getAllCurrentAccountHandler);
     this.router.post('/calculate', this.calculateCurrentAccountHandler);
@@ -124,6 +125,37 @@ export class CurrentAccountRouter {
         res.status(statusCode).json(response);
         return;
       }
+    }
+  };
+
+  private getLatestDateHandler: RequestHandler = async (req: Request, res: Response) => {
+    const { user } = req;
+    if (!user?.user) {
+      const response: APIResponse<null> = {
+        error: {
+          error: ERROR_TYPE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        },
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    try {
+      const date = await this.controller.getLatestCurrentAccountDateHandler({
+        user_type: user.user.user_type,
+        user_id: user.user.user_id,
+        organization_id: req.organization_id!,
+      });
+      const response: APIResponse<string | null> = { data: { date } };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const response: APIResponse<null> = {
+        error: { error: ERROR_TYPE.AUTH_ERROR, message },
+      };
+      res.status(500).json(response);
     }
   };
 

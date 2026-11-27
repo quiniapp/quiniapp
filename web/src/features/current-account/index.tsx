@@ -14,6 +14,8 @@ import CurrentAcoountByUserTable from './CurrentAcoountByUserTable';
 import React, { Suspense, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { LoadingState } from '@/components/molecules/LoadingState';
+import { useCurrentAccountDate } from './useCurrentAccountDate';
 import { exportDiario } from './handlers/exportDiario';
 import { exportLiquidacion, loadLiquidationAccounts } from './handlers/exportLiquidacion';
 import { PageWrapper } from '@/components/wrapper/PageWrapper';
@@ -37,11 +39,12 @@ const CurrentAccountContent = () => {
   const [printing, setPrinting] = useState(false);
   // Cuentas del modal de "Exportar liquidación" (abierto si no es null).
   const [exportAccounts, setExportAccounts] = useState<ICurrentAccountEntityFront[] | null>(null);
-  const date = searchParams.get('date'); // puede ser null: backend devuelve la última
+  // La URL siempre lleva la fecha (la última liquidación o hoy); null mientras se resuelve.
+  const date = useCurrentAccountDate();
   const group_id = searchParams.get('group_id');
 
   const handleUpdateCurrentAccount = () => {
-    calculateCurrentAccount(searchParams.get('date'), {
+    calculateCurrentAccount(date, {
       onSuccess: () => {
         toast.success('Cuenta corriente actualizada correctamente');
       },
@@ -69,6 +72,7 @@ const CurrentAccountContent = () => {
   };
   const handlePrintDiaryLiquidation = () => exportDiario(queryClient, date, setPrinting);
 
+  if (!date) return <LoadingState />;
   if (role === USER_TYPE.CASHIER) return <CurrentAcoountByUserTable />;
   return (
     <PageWrapper>

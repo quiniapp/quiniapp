@@ -49,7 +49,7 @@ import { downloadDailyAccountsPDF } from '@/functions/current-account/accountTab
 import type { LiquidationFormat } from '@/functions/current-account/liquidationDelivery';
 import { prepareLiquidationSlips } from '@/functions/current-account/liquidationSlipPDF';
 import { liquidationZipName } from '@/lib/liquidationZip';
-import { groupFileLabel, pollaDailyReportName } from '@/lib/exportNames';
+import { groupFileLabel, pollaDailyReportName, pollaDailyReportTitle } from '@/lib/exportNames';
 import { computeAccountTotals } from '@/functions/current-account/pdf-shared';
 import { groupLabel } from '@/lib/pollaGroups';
 import { ReportMode, fmtMoney } from '../format';
@@ -184,6 +184,7 @@ export const DailyHistoryView = () => {
         from: rangeFrom,
         rows: views,
         groupName,
+        title: pollaDailyReportTitle({}),
         // Sin edición: "Polla parte diario <día>" o "<desde> al <hasta>".
         fileName: pollaDailyReportName({
           date: rangeFrom ?? date,
